@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>CLF Trading — POD Submission</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --navy: #0B1F3A;
+    --navy-mid: #1A3A5C;
+    --navy-light: #1E4976;
+    --teal: #0E7490;
+    --teal-light: #22D3EE;
+    --teal-pale: #E0F7FA;
+    --gold: #C9A84C;
+    --gold-light: #E8C97A;
+    --white: #FFFFFF;
+    --off-white: #F4F7FB;
+    --gray: #8A9BB0;
+    --gray-light: #D8E4F0;
+    --success: #22C55E;
+    --error: #EF4444;
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--navy);
+    min-height: 100vh;
+    color: var(--white);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app { max-width: 480px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+
+  .header {
+    background: linear-gradient(135deg, #0B1F3A 0%, #0E3D5E 100%);
+    padding: 28px 24px 24px;
+    border-bottom: 1px solid rgba(14,116,144,0.35);
+    position: relative; overflow: hidden;
+  }
+  .header::before {
+    content: ''; position: absolute; top: -40px; right: -40px;
+    width: 140px; height: 140px; border-radius: 50%;
+    border: 1px solid rgba(34,211,238,0.1);
+  }
+  .header::after {
+    content: ''; position: absolute; bottom: -60px; left: -30px;
+    width: 160px; height: 160px; border-radius: 50%;
+    border: 1px solid rgba(34,211,238,0.06);
+  }
+
+  .logo-row { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; position: relative; z-index: 1; }
+  .logo-box {
+    width: 52px; height: 52px; background: var(--white);
+    border-radius: 12px; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; overflow: hidden; border: 2px solid rgba(14,116,144,0.4);
+  }
+  .logo-text-clf { font-size: 13px; font-weight: 600; color: var(--navy); line-height: 1; text-align: center; }
+  .logo-text-clf span { display: block; font-size: 9px; color: var(--teal); font-weight: 500; margin-top: 2px; }
+  .company-name { font-size: 16px; font-weight: 600; color: var(--white); line-height: 1.2; }
+  .company-reg { font-size: 11px; color: var(--teal-light); margin-top: 2px; font-weight: 400; }
+
+  .form-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(14,116,144,0.2); border: 1px solid rgba(34,211,238,0.3);
+    border-radius: 20px; padding: 6px 14px; position: relative; z-index: 1;
+  }
+  .form-badge-dot { width: 7px; height: 7px; background: var(--teal-light); border-radius: 50%; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+  .form-badge-text { font-size: 12px; font-weight: 500; color: var(--teal-light); }
+
+  .form-title { font-size: 22px; font-weight: 600; color: var(--white); margin: 10px 0 4px; position: relative; z-index: 1; }
+  .form-subtitle { font-size: 12px; color: var(--gray); position: relative; z-index: 1; line-height: 1.5; }
+
+  .form-body { flex: 1; background: var(--off-white); padding: 24px 20px 32px; }
+
+  .notice {
+    background: rgba(11,31,58,0.08); border: 1px solid rgba(11,31,58,0.12);
+    border-left: 3px solid var(--teal); border-radius: var(--radius-sm);
+    padding: 10px 14px; margin-bottom: 20px;
+    font-size: 12px; color: var(--navy-mid); line-height: 1.5;
+  }
+  .notice b { color: var(--navy); }
+
+  .section-label {
+    font-size: 10px; font-weight: 600; letter-spacing: 1.2px;
+    text-transform: uppercase; color: var(--navy-light); margin: 20px 0 10px;
+  }
+
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 13px; font-weight: 500; color: var(--navy); margin-bottom: 6px; }
+  .field label .bm { display: block; font-size: 11px; font-weight: 400; color: var(--gray); margin-top: 1px; }
+  .field label .req { color: var(--teal); margin-left: 2px; }
+
+  input[type="text"], input[type="number"], input[type="date"], select, textarea {
+    width: 100%; padding: 13px 16px;
+    background: var(--white); border: 1.5px solid var(--gray-light);
+    border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif;
+    font-size: 15px; color: var(--navy); outline: none;
+    transition: border-color 0.2s; -webkit-appearance: none; appearance: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--teal);
+    box-shadow: 0 0 0 3px rgba(14,116,144,0.12);
+  }
+  input::placeholder { color: var(--gray); font-size: 14px; }
+  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238A9BB0' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; padding-right: 40px; }
+
+  .photo-btn {
+    width: 100%; padding: 20px; background: var(--white);
+    border: 2px dashed var(--gray-light); border-radius: var(--radius);
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    cursor: pointer; transition: all 0.2s; position: relative;
+  }
+  .photo-btn:active { transform: scale(0.98); }
+  .photo-btn.has-photo { border-style: solid; border-color: var(--success); background: rgba(34,197,94,0.06); }
+  .photo-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .photo-icon {
+    width: 44px; height: 44px; background: var(--navy);
+    border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  }
+  .photo-icon svg { width: 22px; height: 22px; stroke: var(--teal-light); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .photo-label { font-size: 14px; font-weight: 600; color: var(--navy); }
+  .photo-sublabel { font-size: 12px; color: var(--gray); }
+  .photo-preview { width: 100%; max-height: 200px; object-fit: cover; border-radius: var(--radius-sm); display: none; margin-top: 8px; }
+  .photo-preview.visible { display: block; }
+
+  .confirm-row {
+    display: flex; gap: 12px; align-items: flex-start;
+    background: rgba(11,31,58,0.05); border: 1px solid var(--gray-light);
+    border-radius: var(--radius-sm); padding: 14px; margin: 20px 0; cursor: pointer;
+  }
+  .confirm-row input[type="checkbox"] { width: 20px; height: 20px; flex-shrink: 0; margin-top: 1px; accent-color: var(--teal); cursor: pointer; }
+  .confirm-text { font-size: 12px; color: var(--navy-mid); line-height: 1.6; }
+  .confirm-text b { color: var(--navy); }
+
+  .btn-wrap { position: relative; }
+  .submit-btn {
+    width: 100%; padding: 17px; background: var(--teal);
+    color: var(--white); border: none; border-radius: var(--radius);
+    font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px; letter-spacing: 0.3px;
+  }
+  .submit-btn:active { transform: scale(0.98); opacity: 0.9; }
+  .teal-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: var(--gold); border-radius: 0 0 var(--radius) var(--radius); }
+
+  .success-screen {
+    display: none; position: fixed; inset: 0; background: var(--navy);
+    z-index: 100; flex-direction: column; align-items: center; justify-content: center;
+    padding: 40px 32px; text-align: center;
+  }
+  .success-screen.show { display: flex; }
+  .success-icon {
+    width: 80px; height: 80px; background: rgba(34,197,94,0.15);
+    border: 2px solid var(--success); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 24px; animation: pop 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
+  }
+  @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
+  .success-icon svg { width: 36px; height: 36px; stroke: var(--success); fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+  .success-title { font-size: 26px; font-weight: 600; color: var(--white); margin-bottom: 8px; }
+  .success-subtitle { font-size: 15px; color: var(--gray); margin-bottom: 24px; line-height: 1.5; }
+  .success-time {
+    background: rgba(14,116,144,0.15); border: 1px solid rgba(34,211,238,0.3);
+    border-radius: var(--radius-sm); padding: 12px 20px; margin-bottom: 20px;
+  }
+  .success-time-label { font-size: 11px; color: var(--teal-light); font-weight: 500; letter-spacing: 0.8px; text-transform: uppercase; }
+  .success-time-val { font-family: 'DM Mono', monospace; font-size: 18px; color: var(--white); margin-top: 4px; }
+  .success-info { font-size: 13px; color: var(--gray); margin-bottom: 6px; }
+  .success-info b { color: var(--teal-light); }
+  .new-btn {
+    width: 100%; padding: 16px; background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15); border-radius: var(--radius);
+    color: var(--white); font-family: 'DM Sans', sans-serif;
+    font-size: 15px; font-weight: 500; cursor: pointer; margin-top: 12px;
+  }
+
+  .loading-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(11,31,58,0.85);
+    z-index: 99; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+  }
+  .loading-overlay.show { display: flex; }
+  .spinner { width: 44px; height: 44px; border: 3px solid rgba(34,211,238,0.2); border-top-color: var(--teal-light); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { color: var(--white); font-size: 14px; }
+
+  .error-msg { font-size: 12px; color: var(--error); margin-top: 4px; display: none; }
+  .error-msg.show { display: block; }
+
+  .remembered-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25);
+    border-radius: 20px; padding: 2px 8px;
+    font-size: 10px; color: var(--success); font-weight: 500;
+    margin-left: 6px; vertical-align: middle;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <div class="logo-row">
+      <div class="logo-box">
+        <div class="logo-text-clf">CLF<span>利發貿易</span></div>
+      </div>
+      <div>
+        <div class="company-name">CLF Trading Sdn. Bhd.</div>
+        <div class="company-reg">557522-A · Mentakab, Pahang</div>
+      </div>
+    </div>
+    <div class="form-badge">
+      <div class="form-badge-dot"></div>
+      <div class="form-badge-text">POD SUBMISSION · PENGHANTARAN BUKTI PENGHANTARAN</div>
+    </div>
+    <div class="form-title">Proof of Delivery</div>
+    <div class="form-subtitle">Submit after every delivery · Hantar selepas setiap penghantaran</div>
+  </div>
+
+  <div class="form-body">
+    <div class="notice">
+      <b>Important / Penting:</b> Upload the SIGNED invoice. Submit on the same day as delivery. Missing or late POD will result in penalty points.<br>
+      Muat naik invois yang telah DITANDATANGANI. Hantar pada hari penghantaran. POD yang hilang atau lewat akan dikenakan mata penalti.
+    </div>
+
+    <form id="podForm" novalidate>
+
+      <div class="section-label">Delivery Info · Maklumat Penghantaran</div>
+
+      <div class="field">
+        <label>Delivery Date · Tarikh Penghantaran <span class="req">*</span></label>
+        <input type="date" id="deliveryDate" required>
+        <div class="error-msg" id="err-date">Please select a date · Sila pilih tarikh</div>
+      </div>
+
+      <div class="field">
+        <label>
+          Driver Name · Nama Pemandu <span class="req">*</span>
+          <span id="rememberedBadge" class="remembered-badge" style="display:none;">✓ Remembered</span>
+        </label>
+        <select id="driverName" required>
+          <option value="">— Select your name · Pilih nama anda —</option>
+          <option>MUHAMMAD ZULKIFLI BIN OTHMAN</option>
+          <option>MOHAMAD FARID IKMAL BIN MOHD AJIB</option>
+          <option>MOHAMAD KHAIRUDDIN BIN KHAIDIR</option>
+          <option>MOHAMAD IZZRUL FIKRIE BIN ROSLI</option>
+          <option>MAZLAN BIN MOHD RADZUAN</option>
+          <option>ABDUL SALAM BIN IDRUS</option>
+          <option>MOHD FIRDAUS BIN MD MASHOD FAKEH</option>
+          <option>MUHAMMAD SYAFQ IZZAT BIN PUTERA AHMAD HILMI</option>
+          <option>HAIRUL ANUAR BIN YAAKUB</option>
+          <option>MOHAMAD NORAZAMAN BIN MOHAMED SHURY</option>
+          <option>AZMAN BIN MAT RASHID</option>
+          <option>MOHD KHAIRUL AZHAR BIN ABDUL MUTALIB</option>
+          <option>MUHAMMAD NAZMI BIN MUSTAPHA ALBAKRI</option>
+          <option>MOHAMAD AZUWAN BIN MT DESA</option>
+          <option>TAUFIK AFFENDI BIN MUHAMMAD</option>
+          <option>ASRIZAL BIN MOHD YATIM</option>
+          <option>MUHAMMAD FIRDAUS BIN UNIZAR</option>
+          <option>MUHAMMAD KHAIRUL HAFIZ BIN ROSHARUDIN</option>
+          <option>ABDUL HADI BIN KHALIB</option>
+          <option>AZRIN BIN JAMALUDDIN</option>
+          <option>JAMALUDIN BIN MOHAMAD YUSOF</option>
+          <option>AHMAD ASMADI BIN AMRAN</option>
+          <option>MOHD FADHIL BIN AHMAD RANI</option>
+          <option>MOHAMAD KHAIRUL ANAM BIN MOHAMAD ROSLI</option>
+        </select>
+        <div class="error-msg" id="err-driver">Please select your name · Sila pilih nama anda</div>
+      </div>
+
+      <div class="field">
+        <label>Vehicle Number · Nombor Kenderaan <span class="req">*</span></label>
+        <select id="vehicleNo" required>
+          <option value="">— Select vehicle · Pilih kenderaan —</option>
+          <option>KER 9223</option>
+          <option>RY 7233</option>
+          <option>CDQ 9098</option>
+          <option>CDA 3633</option>
+          <option>CDU 2133</option>
+          <option>CDK 8878</option>
+          <option>RX 8733</option>
+          <option>CDX 6233</option>
+          <option>JUM 1033</option>
+          <option>SMB 7633</option>
+          <option>VFE 9633</option>
+          <option>VHT 4642</option>
+          <option>VDQ 6864</option>
+          <option>CCY 9233</option>
+          <option>VJX 5786</option>
+          <option>SYS 4642</option>
+        </select>
+        <div class="error-msg" id="err-vehicle">Please select a vehicle · Sila pilih kenderaan</div>
+      </div>
+
+      <div class="section-label">Signed Invoice Photo · Foto Invois Ditandatangani</div>
+
+      <div class="notice" style="border-left-color:#0E7490;margin-bottom:14px;">
+        <b>Photo only · Foto sahaja:</b> Just photograph the signed invoice — no manual entry needed. All details will be read from the photo.<br>
+        Hanya ambil foto invois yang ditandatangani — tidak perlu isi secara manual. Semua butiran akan dibaca dari foto.
+      </div>
+
+      <div class="field">
+        <label>Upload Signed Invoice · Muat Naik Invois Ditandatangani <span class="req">*</span></label>
+        <div class="photo-btn" id="photoBtn">
+          <input type="file" id="invoicePhoto" accept="image/*" capture="environment" onchange="handlePhoto(this)">
+          <div class="photo-icon">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          </div>
+          <div class="photo-label" id="photoLabel">Tap to photograph signed invoice<br>Ketik untuk fotograf invois yang ditandatangani</div>
+          <div class="photo-sublabel" id="photoSub">Must be SIGNED by customer · Mesti DITANDATANGANI oleh pelanggan</div>
+          <img class="photo-preview" id="photoPreview" alt="Invoice preview">
+        </div>
+        <div class="error-msg" id="err-photo">Please take a photo of the signed invoice · Sila ambil gambar invois yang ditandatangani</div>
+      </div>
+
+      <label class="confirm-row" for="confirmCheck">
+        <input type="checkbox" id="confirmCheck">
+        <div class="confirm-text">
+          <b>I confirm / Saya mengesahkan</b> that the delivery has been completed and the uploaded invoice is signed by the customer. All information is accurate.<br><br>
+          Penghantaran telah selesai dan invois yang dimuat naik telah ditandatangani oleh pelanggan. Semua maklumat adalah tepat.
+        </div>
+      </label>
+      <div class="error-msg" id="err-confirm">Please confirm the declaration · Sila sahkan perisytiharan</div>
+
+      <div class="btn-wrap">
+        <button type="button" class="submit-btn" onclick="submitForm()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Submit POD · Hantar Bukti Penghantaran
+        </button>
+        <div class="teal-bar"></div>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text">Submitting... · Menghantar...</div>
+</div>
+
+<div class="success-screen" id="successScreen">
+  <div class="success-icon">
+    <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+  </div>
+  <div class="success-title">POD Submitted! · POD Berjaya!</div>
+  <div class="success-subtitle">Proof of delivery recorded successfully.<br>Bukti penghantaran berjaya direkodkan.</div>
+  <div class="success-time">
+    <div class="success-time-label">Submission Time · Masa Penghantaran</div>
+    <div class="success-time-val" id="successTime"></div>
+  </div>
+  <div class="success-info">Driver · Pemandu: <b id="successDriver"></b></div>
+  <div class="success-info">Vehicle · Kenderaan: <b id="successVehicle"></b></div>
+  <button class="new-btn" onclick="resetForm()">Submit Another POD · Hantar POD Lagi</button>
+</div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwMF3OEx26Us0SEjFRALEb_ywhOdI93TacP7CM-7NIvDb7F1o7GcNGtazWhpUjuXJHC/exec';
+const STORAGE_KEY = 'clf_driver_name';
+
+window.onload = function() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('deliveryDate').value = today;
+  document.getElementById('deliveryDate').max = today;
+
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    const sel = document.getElementById('driverName');
+    for (let i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === saved) {
+        sel.value = saved;
+        document.getElementById('rememberedBadge').style.display = 'inline-flex';
+        break;
+      }
+    }
+  }
+};
+
+document.getElementById('driverName').addEventListener('change', function() {
+  if (this.value) {
+    localStorage.setItem(STORAGE_KEY, this.value);
+    document.getElementById('rememberedBadge').style.display = 'inline-flex';
+  }
+});
+
+function handlePhoto(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const preview = document.getElementById('photoPreview');
+      preview.src = e.target.result;
+      preview.classList.add('visible');
+      document.getElementById('photoBtn').classList.add('has-photo');
+      document.getElementById('photoLabel').textContent = 'Invoice photo taken! · Foto invois diambil!';
+      document.getElementById('photoSub').textContent = 'Tap to retake · Ketik untuk ambil semula';
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+function validate() {
+  let valid = true;
+  const fields = [
+    { id: 'deliveryDate', err: 'err-date' },
+    { id: 'driverName', err: 'err-driver' },
+    { id: 'vehicleNo', err: 'err-vehicle' },
+  ];
+  fields.forEach(f => {
+    const el = document.getElementById(f.id);
+    const err = document.getElementById(f.err);
+    if (!el.value) { err.classList.add('show'); if (valid) el.focus(); valid = false; }
+    else { err.classList.remove('show'); }
+  });
+  if (!document.getElementById('invoicePhoto').files.length) {
+    document.getElementById('err-photo').classList.add('show'); valid = false;
+  } else { document.getElementById('err-photo').classList.remove('show'); }
+  if (!document.getElementById('confirmCheck').checked) {
+    document.getElementById('err-confirm').classList.add('show'); valid = false;
+  } else { document.getElementById('err-confirm').classList.remove('show'); }
+  return valid;
+}
+
+async function submitForm() {
+  if (!validate()) return;
+  document.getElementById('loadingOverlay').classList.add('show');
+  try {
+    const photoFile = document.getElementById('invoicePhoto').files[0];
+    const base64 = await toBase64(photoFile);
+    const now = new Date();
+    const payload = {
+      formType: 'POD',
+      timestamp: now.toISOString(),
+      deliveryDate: document.getElementById('deliveryDate').value,
+      driverName: document.getElementById('driverName').value,
+      vehicleNo: document.getElementById('vehicleNo').value,
+
+      photoBase64: base64,
+      photoName: photoFile.name,
+      photoType: photoFile.type,
+    };
+    await fetch(SCRIPT_URL, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    document.getElementById('loadingOverlay').classList.remove('show');
+    const timeStr = now.toLocaleDateString('en-MY', { day:'2-digit', month:'short', year:'numeric' })
+      + ' · ' + now.toLocaleTimeString('en-MY', { hour:'2-digit', minute:'2-digit' });
+    document.getElementById('successTime').textContent = timeStr;
+    document.getElementById('successDriver').textContent = payload.driverName;
+    document.getElementById('successVehicle').textContent = payload.vehicleNo;
+
+    document.getElementById('successScreen').classList.add('show');
+  } catch (err) {
+    document.getElementById('loadingOverlay').classList.remove('show');
+    alert('Submission failed. Please check your connection and try again.\nPenghantaran gagal. Sila semak sambungan anda dan cuba lagi.');
+  }
+}
+
+function toBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function resetForm() {
+  document.getElementById('successScreen').classList.remove('show');
+  document.getElementById('podForm').reset();
+  document.getElementById('photoPreview').classList.remove('visible');
+  document.getElementById('photoBtn').classList.remove('has-photo');
+  document.getElementById('photoLabel').textContent = 'Tap to photograph signed invoice\nKetik untuk fotograf invois yang ditandatangani';
+  document.getElementById('photoSub').textContent = 'Must be SIGNED by customer · Mesti DITANDATANGANI oleh pelanggan';
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('deliveryDate').value = today;
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) document.getElementById('driverName').value = saved;
+}
+</script>
+</body>
+</html>
