@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CLF Transport Control Tower — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #0B1F3A;
+  --navy-mid: #1A3A5C;
+  --blue: #185FA5;
+  --blue-light: #E6F1FB;
+  --gold: #C9A84C;
+  --gold-light: #F5E6B8;
+  --green: #3B6D11;
+  --green-light: #EAF3DE;
+  --amber: #854F0B;
+  --amber-light: #FAEEDA;
+  --red: #A32D2D;
+  --red-light: #FCEBEB;
+  --gray: #6B7A8D;
+  --gray-light: #F4F6F9;
+  --border: #E2E8F0;
+  --text: #1A2A3A;
+  --text-2: #4A5568;
+  --white: #FFFFFF;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body {
+  font-family: 'Geist', -apple-system, sans-serif;
+  background: #F0F4F8;
+  color: var(--text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* LOADING */
+.loading-screen {
+  position: fixed; inset: 0;
+  background: var(--navy);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 20px; z-index: 999;
+  transition: opacity 0.5s ease;
+}
+.loading-screen.fade { opacity: 0; pointer-events: none; }
+.loading-logo {
+  width: 60px; height: 60px;
+  background: white; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+}
+.loading-logo-text { font-size: 14px; font-weight: 600; color: var(--navy); text-align: center; line-height: 1.2; }
+.loading-logo-text span { display: block; font-size: 9px; color: var(--gold); margin-top: 2px; }
+.loading-title { color: white; font-size: 18px; font-weight: 500; }
+.loading-sub { color: #8A9BB0; font-size: 13px; }
+.loading-bar { width: 200px; height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
+.loading-fill { height: 100%; background: var(--gold); border-radius: 2px; animation: loadfill 1.5s ease forwards; }
+@keyframes loadfill { from{width:0} to{width:100%} }
+
+/* LAYOUT */
+.page { max-width: 1400px; margin: 0 auto; padding: 0 24px 40px; }
+
+/* HEADER */
+.header {
+  background: var(--navy);
+  margin-bottom: 24px;
+  padding: 0 24px;
+}
+.header-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+}
+.header-left { display: flex; align-items: center; gap: 14px; }
+.logo {
+  width: 46px; height: 46px;
+  background: white; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  border: 1.5px solid rgba(201,168,76,0.3);
+}
+.logo-text { font-size: 12px; font-weight: 600; color: var(--navy); text-align: center; line-height: 1.2; }
+.logo-text span { display: block; font-size: 8px; color: var(--gold); margin-top: 1px; }
+.company { color: white; }
+.company-name { font-size: 16px; font-weight: 600; }
+.company-sub { font-size: 11px; color: #8A9BB0; margin-top: 1px; }
+.header-right { display: flex; align-items: center; gap: 20px; }
+.live-badge {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 20px;
+  padding: 5px 12px;
+}
+.live-dot { width: 7px; height: 7px; background: #4ADE80; border-radius: 50%; animation: blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.live-text { font-size: 11px; color: #A0AEC0; font-weight: 500; }
+.clock-wrap { text-align: right; }
+.clock { font-family: 'Geist Mono', monospace; font-size: 18px; font-weight: 500; color: white; }
+.clock-date { font-size: 11px; color: #8A9BB0; margin-top: 1px; }
+.refresh-btn {
+  padding: 7px 14px;
+  background: rgba(201,168,76,0.15);
+  border: 1px solid rgba(201,168,76,0.3);
+  border-radius: 8px;
+  color: var(--gold);
+  font-family: 'Geist', sans-serif;
+  font-size: 12px; font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex; align-items: center; gap: 6px;
+}
+.refresh-btn:hover { background: rgba(201,168,76,0.25); }
+.refresh-btn svg { width: 13px; height: 13px; }
+
+/* ALERT BAR */
+.alert-bar {
+  background: var(--red-light);
+  border: 1px solid #F7C1C1;
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  display: none;
+  align-items: flex-start;
+  gap: 12px;
+}
+.alert-bar.show { display: flex; }
+.alert-icon { color: var(--red); flex-shrink: 0; margin-top: 1px; }
+.alert-content { flex: 1; }
+.alert-title { font-size: 13px; font-weight: 600; color: var(--red); margin-bottom: 6px; }
+.alert-drivers { display: flex; flex-wrap: wrap; gap: 6px; }
+.alert-chip {
+  display: flex; align-items: center; gap: 5px;
+  background: white;
+  border: 1px solid #F7C1C1;
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 11px; color: var(--red);
+}
+
+/* KPI GRID */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.kpi-card {
+  background: white;
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+.kpi-top-bar {
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 3px;
+}
+.kpi-label {
+  font-size: 11px; font-weight: 500;
+  color: var(--gray);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.kpi-value {
+  font-size: 36px; font-weight: 600;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+.kpi-footer {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.kpi-sub { font-size: 12px; color: var(--gray); }
+.kpi-trend {
+  display: flex; align-items: center; gap: 3px;
+  font-size: 12px; font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+.trend-up { background: var(--green-light); color: var(--green); }
+.trend-down { background: var(--red-light); color: var(--red); }
+.trend-flat { background: var(--gray-light); color: var(--gray); }
+
+/* MAIN GRID */
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+/* PANEL */
+.panel {
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.panel-header {
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.panel-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 600; color: var(--text);
+}
+.panel-dot { width: 7px; height: 7px; border-radius: 50%; }
+.panel-count {
+  font-size: 11px; font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: var(--gray-light);
+  color: var(--gray);
+}
+.panel-body { padding: 16px 20px; }
+
+/* MVP CARD */
+.mvp-card {
+  background: linear-gradient(135deg, var(--navy) 0%, #1A3A5C 100%);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 14px;
+  position: relative; overflow: hidden;
+}
+.mvp-card::before {
+  content: '';
+  position: absolute; top: -30px; right: -30px;
+  width: 100px; height: 100px;
+  border-radius: 50%;
+  border: 1px solid rgba(201,168,76,0.2);
+}
+.mvp-badge {
+  font-size: 10px; font-weight: 600;
+  color: var(--gold);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  display: flex; align-items: center; gap: 5px;
+}
+.mvp-name { font-size: 15px; font-weight: 600; color: white; margin-bottom: 4px; }
+.mvp-score {
+  font-family: 'Geist Mono', monospace;
+  font-size: 28px; font-weight: 500;
+  color: var(--gold);
+}
+.mvp-label { font-size: 11px; color: #8A9BB0; }
+.mvp-medal {
+  position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
+  width: 44px; height: 44px;
+  background: rgba(201,168,76,0.15);
+  border: 1.5px solid rgba(201,168,76,0.4);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+}
+
+/* RISK SUMMARY */
+.risk-summary { margin-bottom: 14px; }
+.risk-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 8px;
+}
+.risk-label { font-size: 12px; color: var(--text-2); width: 70px; flex-shrink: 0; }
+.risk-track { flex: 1; height: 18px; background: var(--gray-light); border-radius: 4px; overflow: hidden; }
+.risk-fill {
+  height: 100%; border-radius: 4px;
+  display: flex; align-items: center; padding-left: 8px;
+  font-size: 10px; font-weight: 600;
+  transition: width 1s ease;
+}
+.risk-num { font-size: 13px; font-weight: 600; width: 28px; text-align: right; }
+
+/* COMPLIANCE BARS */
+.comp-item { margin-bottom: 14px; }
+.comp-header { display: flex; justify-content: space-between; margin-bottom: 5px; }
+.comp-name { font-size: 12px; color: var(--text-2); }
+.comp-pct { font-size: 13px; font-weight: 600; }
+.comp-track { height: 8px; background: var(--gray-light); border-radius: 20px; overflow: hidden; }
+.comp-fill { height: 100%; border-radius: 20px; transition: width 1s ease; }
+.comp-target {
+  font-size: 10px; color: var(--gray);
+  margin-top: 4px;
+  display: flex; align-items: center; gap: 4px;
+}
+.comp-target-line { width: 16px; height: 2px; background: var(--gold); border-radius: 1px; }
+
+/* DRIVER TABLE */
+.driver-table { width: 100%; }
+.driver-thead th {
+  padding: 8px 12px;
+  font-size: 10px; font-weight: 600;
+  color: var(--gray);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  background: var(--gray-light);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+.driver-tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+.driver-tbody tr:hover { background: var(--gray-light); }
+.driver-tbody tr:last-child { border-bottom: none; }
+.driver-tbody td {
+  padding: 10px 12px;
+  font-size: 12px; color: var(--text-2);
+}
+.rank-num {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600;
+}
+.driver-name-cell { font-size: 12px; font-weight: 500; color: var(--text); max-width: 180px; }
+.score-val { font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 500; }
+.risk-badge {
+  display: inline-flex; align-items: center;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-size: 10px; font-weight: 600;
+}
+.section-divider {
+  padding: 6px 12px;
+  background: var(--gray-light);
+  font-size: 10px; font-weight: 600;
+  color: var(--gray);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* LORRY GRID */
+.lorry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+.lorry-card {
+  background: var(--gray-light);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+.lorry-plate {
+  font-family: 'Geist Mono', monospace;
+  font-size: 13px; font-weight: 600;
+  color: var(--navy);
+  margin-bottom: 4px;
+}
+.lorry-driver { font-size: 11px; color: var(--gray); line-height: 1.4; margin-bottom: 6px; }
+.lorry-status {
+  font-size: 10px; font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 20px;
+  display: inline-block;
+}
+
+/* BOTTOM GRID */
+.bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+/* LAST SUBMISSION TABLE */
+.sub-table { width: 100%; }
+.sub-table td { padding: 8px 12px; font-size: 12px; color: var(--text-2); border-bottom: 1px solid var(--border); }
+.sub-table tr:last-child td { border-bottom: none; }
+.sub-table tr:hover td { background: var(--gray-light); }
+.sub-driver { font-weight: 500; color: var(--text); }
+.sub-time { font-family: 'Geist Mono', monospace; font-size: 11px; }
+.sub-type-badge {
+  font-size: 10px; font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 20px;
+}
+
+/* FOOTER */
+.footer {
+  text-align: center;
+  padding: 20px 0 0;
+  font-size: 11px; color: var(--gray);
+}
+.footer a { color: var(--blue); text-decoration: none; }
+.footer a:hover { text-decoration: underline; }
+
+/* SKELETON LOADER */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+/* ANIMATIONS */
+.fade-in { animation: fadeIn 0.4s ease forwards; opacity: 0; }
+@keyframes fadeIn { to { opacity: 1; } }
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+
+/* EMPTY STATE */
+.empty-state {
+  text-align: center; padding: 30px 20px;
+  color: var(--gray); font-size: 13px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 1100px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .main-grid { grid-template-columns: 1fr; }
+  .bottom-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  .page { padding: 0 12px 40px; }
+  .header-inner { padding: 12px 0; }
+  .refresh-btn span { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING SCREEN -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-logo">
+    <div class="loading-logo-text">CLF<span>利發貿易</span></div>
+  </div>
+  <div class="loading-title">Transport Control Tower</div>
+  <div class="loading-sub">Loading live data from Google Sheets...</div>
+  <div class="loading-bar"><div class="loading-fill"></div></div>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-inner">
+    <div class="header-left">
+      <div class="logo">
+        <div class="logo-text">CLF<span>利發貿易</span></div>
+      </div>
+      <div class="company">
+        <div class="company-name">Transport Control Tower</div>
+        <div class="company-sub">CLF Trading Sdn. Bhd. (557522-A) · Mentakab, Pahang</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="live-badge">
+        <div class="live-dot"></div>
+        <div class="live-text">LIVE DATA</div>
+      </div>
+      <div class="clock-wrap">
+        <div class="clock" id="clock">--:--:--</div>
+        <div class="clock-date" id="clockDate">Loading...</div>
+      </div>
+      <button class="refresh-btn" onclick="loadDashboard()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+        <span>Refresh</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- ALERT BAR -->
+  <div class="alert-bar" id="alertBar">
+    <div class="alert-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+    </div>
+    <div class="alert-content">
+      <div class="alert-title" id="alertTitle">Drivers who have NOT submitted today's fuel record:</div>
+      <div class="alert-drivers" id="alertDrivers"></div>
+    </div>
+  </div>
+
+  <!-- KPI GRID -->
+  <div class="kpi-grid">
+    <div class="kpi-card fade-in stagger-1">
+      <div class="kpi-top-bar" style="background:#185FA5;"></div>
+      <div class="kpi-label">Fuel submissions</div>
+      <div class="kpi-value" style="color:#185FA5;" id="kpiFuelTotal">—</div>
+      <div class="kpi-footer">
+        <div class="kpi-sub">This month</div>
+        <div class="kpi-trend" id="kpiFuelTrend"><span>—</span></div>
+      </div>
+    </div>
+    <div class="kpi-card fade-in stagger-2">
+      <div class="kpi-top-bar" id="kpiFuelCompBar" style="background:#3B6D11;"></div>
+      <div class="kpi-label">Fuel compliance</div>
+      <div class="kpi-value" id="kpiFuelComp" style="color:#3B6D11;">—</div>
+      <div class="kpi-footer">
+        <div class="kpi-sub">Same-day rate · Target 90%</div>
+        <div class="kpi-trend" id="kpiFuelCompTrend"><span>—</span></div>
+      </div>
+    </div>
+    <div class="kpi-card fade-in stagger-3">
+      <div class="kpi-top-bar" style="background:#185FA5;"></div>
+      <div class="kpi-label">POD deliveries</div>
+      <div class="kpi-value" style="color:#185FA5;" id="kpiPodTotal">—</div>
+      <div class="kpi-footer">
+        <div class="kpi-sub">This month</div>
+        <div class="kpi-trend" id="kpiPodTrend"><span>—</span></div>
+      </div>
+    </div>
+    <div class="kpi-card fade-in stagger-4">
+      <div class="kpi-top-bar" id="kpiPodCompBar" style="background:#3B6D11;"></div>
+      <div class="kpi-label">POD compliance</div>
+      <div class="kpi-value" id="kpiPodComp" style="color:#3B6D11;">—</div>
+      <div class="kpi-footer">
+        <div class="kpi-sub">Same-day rate · Target 90%</div>
+        <div class="kpi-trend" id="kpiPodCompTrend"><span>—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+
+    <!-- LEFT: DRIVER RANKINGS -->
+    <div class="panel fade-in">
+      <div class="panel-header">
+        <div class="panel-title">
+          <div class="panel-dot" style="background:#185FA5;"></div>
+          Driver performance ranking
+        </div>
+        <span class="panel-count" id="driverCount">24 drivers</span>
+      </div>
+      <div id="driverTableWrap">
+        <table class="driver-table">
+          <thead class="driver-thead">
+            <tr>
+              <th style="width:40px;">Rank</th>
+              <th>Driver name</th>
+              <th>Fuel</th>
+              <th>POD</th>
+              <th>Score</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody class="driver-tbody" id="driverTableBody">
+            <tr><td colspan="6"><div class="empty-state">Loading driver data...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- RIGHT SIDEBAR -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+
+      <!-- MVP -->
+      <div class="mvp-card fade-in stagger-1">
+        <div class="mvp-badge">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          Monthly MVP
+        </div>
+        <div class="mvp-name" id="mvpName">Loading...</div>
+        <div style="display:flex;align-items:baseline;gap:6px;margin-top:4px;">
+          <div class="mvp-score" id="mvpScore">—</div>
+          <div class="mvp-label">points</div>
+        </div>
+        <div class="mvp-medal">🏆</div>
+      </div>
+
+      <!-- RISK BREAKDOWN -->
+      <div class="panel fade-in stagger-2">
+        <div class="panel-header">
+          <div class="panel-title">
+            <div class="panel-dot" style="background:#E24B4A;"></div>
+            Risk breakdown
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="risk-summary">
+            <div class="risk-row">
+              <div class="risk-label" style="color:#3B6D11;">Good</div>
+              <div class="risk-track">
+                <div class="risk-fill" id="riskFillGood" style="width:0%;background:#EAF3DE;">
+                  <span style="color:#3B6D11;" id="riskLabelGood"></span>
+                </div>
+              </div>
+              <div class="risk-num" style="color:#3B6D11;" id="riskNumGood">—</div>
+            </div>
+            <div class="risk-row">
+              <div class="risk-label" style="color:#854F0B;">Warning</div>
+              <div class="risk-track">
+                <div class="risk-fill" id="riskFillWarn" style="width:0%;background:#FAEEDA;">
+                  <span style="color:#854F0B;" id="riskLabelWarn"></span>
+                </div>
+              </div>
+              <div class="risk-num" style="color:#854F0B;" id="riskNumWarn">—</div>
+            </div>
+            <div class="risk-row">
+              <div class="risk-label" style="color:#A32D2D;">High risk</div>
+              <div class="risk-track">
+                <div class="risk-fill" id="riskFillRed" style="width:0%;background:#FCEBEB;">
+                  <span style="color:#A32D2D;" id="riskLabelRed"></span>
+                </div>
+              </div>
+              <div class="risk-num" style="color:#A32D2D;" id="riskNumRed">—</div>
+            </div>
+          </div>
+
+          <!-- COMPLIANCE BARS -->
+          <div style="border-top:1px solid var(--border);padding-top:14px;">
+            <div class="comp-item">
+              <div class="comp-header">
+                <span class="comp-name">Fuel same-day rate</span>
+                <span class="comp-pct" id="compFuelPct" style="color:#3B6D11;">—</span>
+              </div>
+              <div class="comp-track"><div class="comp-fill" id="compFuelBar" style="width:0%;background:#639922;"></div></div>
+              <div class="comp-target"><div class="comp-target-line"></div>Target: 90%</div>
+            </div>
+            <div class="comp-item">
+              <div class="comp-header">
+                <span class="comp-name">POD same-day rate</span>
+                <span class="comp-pct" id="compPodPct" style="color:#3B6D11;">—</span>
+              </div>
+              <div class="comp-track"><div class="comp-fill" id="compPodBar" style="width:0%;background:#639922;"></div></div>
+              <div class="comp-target"><div class="comp-target-line"></div>Target: 90%</div>
+            </div>
+            <div class="comp-item" style="margin-bottom:0;">
+              <div class="comp-header">
+                <span class="comp-name">Missing PODs this month</span>
+                <span class="comp-pct" id="compMissing" style="color:#A32D2D;">—</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- LORRY STATUS -->
+  <div class="panel fade-in" style="margin-bottom:16px;">
+    <div class="panel-header">
+      <div class="panel-title">
+        <div class="panel-dot" style="background:#854F0B;"></div>
+        Fleet status today
+      </div>
+      <span style="font-size:11px;color:var(--gray);" id="fleetDate">—</span>
+    </div>
+    <div style="padding:16px 20px;">
+      <div class="lorry-grid" id="lorryGrid">
+        <div class="empty-state">Loading fleet data...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM GRID -->
+  <div class="bottom-grid">
+
+    <!-- RECENT SUBMISSIONS -->
+    <div class="panel fade-in">
+      <div class="panel-header">
+        <div class="panel-title">
+          <div class="panel-dot" style="background:#185FA5;"></div>
+          Recent submissions
+        </div>
+      </div>
+      <table class="sub-table" id="recentTable">
+        <tr><td colspan="4"><div class="empty-state">Loading...</div></td></tr>
+      </table>
+    </div>
+
+    <!-- HIGH RISK DRIVERS DETAIL -->
+    <div class="panel fade-in">
+      <div class="panel-header">
+        <div class="panel-title">
+          <div class="panel-dot" style="background:#E24B4A;"></div>
+          Needs attention
+        </div>
+        <span class="panel-count" id="highRiskCount" style="background:#FCEBEB;color:#A32D2D;">0 drivers</span>
+      </div>
+      <div id="highRiskList" style="padding:0;">
+        <div class="empty-state" style="padding:30px;">All drivers performing well</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div>Last refreshed: <span id="lastRefresh">—</span></div>
+    <div style="margin-top:6px;">
+      <a href="https://clfproject01.github.io/clf-transport-forms/CLF_Fuel_Form.html" target="_blank">⛽ Fuel Form</a>
+      &nbsp;·&nbsp;
+      <a href="https://clfproject01.github.io/clf-transport-forms/CLF_POD_Form.html" target="_blank">📦 POD Form</a>
+      &nbsp;·&nbsp;
+      CLF Transport Control Tower v1.0
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// CONFIGURATION
+// ============================================================
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwMF3OEx26Us0SEjFRALEb_ywhOdI93TacP7CM-7NIvDb7F1o7GcNGtazWhpUjuXJHC/exec';
+
+const LORRIES = [
+  'KER 9223','RY 7233','CDQ 9098','CDA 3633',
+  'CDU 2133','CDK 8878','RX 8733','CDX 6233',
+  'JUM 1033','SMB 7633','VFE 9633','VHT 4642',
+  'VDQ 6864','CCY 9233','VJX 5786','SYS 4642'
+];
+
+// ============================================================
+// CLOCK
+// ============================================================
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toLocaleTimeString('en-MY', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  document.getElementById('clockDate').textContent =
+    now.toLocaleDateString('en-MY', { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
+  document.getElementById('fleetDate').textContent =
+    'As of ' + now.toLocaleDateString('en-MY', { day:'2-digit', month:'short', year:'numeric' });
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ============================================================
+// LOAD DATA FROM APPS SCRIPT
+// ============================================================
+async function loadDashboard() {
+  try {
+    const res = await fetch(SCRIPT_URL + '?action=getDashboardData', { method: 'GET' });
+    const data = await res.json();
+    if (data && data.status === 'ok') {
+      renderDashboard(data);
+    } else {
+      renderDemoData();
+    }
+  } catch (err) {
+    console.log('Using demo data (API not reachable):', err.message);
+    renderDemoData();
+  }
+  document.getElementById('lastRefresh').textContent =
+    new Date().toLocaleTimeString('en-MY', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+}
+
+// ============================================================
+// RENDER DEMO DATA (shown when API not yet connected)
+// ============================================================
+function renderDemoData() {
+  const demo = {
+    kpi: {
+      fuelTotal: 247, fuelComp: 91, podTotal: 389, podComp: 78,
+      missingPod: 12, highRisk: 2,
+    },
+    risk: { good: 15, warning: 7, highRisk: 2 },
+    mvp: { name: 'MUHAMMAD ZULKIFLI BIN OTHMAN', score: 320 },
+    drivers: [
+      { rank:1, name:'MUHAMMAD ZULKIFLI BIN OTHMAN', fuelPct:100, podPct:100, score:320, risk:'GOOD' },
+      { rank:2, name:'TAUFIK AFFENDI BIN MUHAMMAD', fuelPct:95, podPct:98, score:290, risk:'GOOD' },
+      { rank:3, name:'HAIRUL ANUAR BIN YAAKUB', fuelPct:94, podPct:96, score:270, risk:'GOOD' },
+      { rank:4, name:'ABDUL HADI BIN KHALIB', fuelPct:92, podPct:95, score:250, risk:'GOOD' },
+      { rank:5, name:'JAMALUDIN BIN MOHAMAD YUSOF', fuelPct:90, podPct:94, score:230, risk:'GOOD' },
+      { rank:6, name:'AHMAD ASMADI BIN AMRAN', fuelPct:88, podPct:91, score:180, risk:'GOOD' },
+      { rank:7, name:'MOHD FADHIL BIN AHMAD RANI', fuelPct:87, podPct:90, score:170, risk:'GOOD' },
+      { rank:8, name:'MOHAMAD KHAIRUL ANAM BIN MOHAMAD ROSLI', fuelPct:86, podPct:89, score:150, risk:'WARNING' },
+      { rank:9, name:'AZRIN BIN JAMALUDDIN', fuelPct:85, podPct:88, score:130, risk:'WARNING' },
+      { rank:10, name:'MOHAMAD IZZRUL FIKRIE BIN ROSLI', fuelPct:84, podPct:87, score:120, risk:'WARNING' },
+      { rank:11, name:'MAZLAN BIN MOHD RADZUAN', fuelPct:83, podPct:82, score:100, risk:'WARNING' },
+      { rank:12, name:'MUHAMMAD FIRDAUS BIN UNIZAR', fuelPct:82, podPct:81, score:90, risk:'WARNING' },
+      { rank:13, name:'MUHAMMAD KHAIRUL HAFIZ BIN ROSHARUDIN', fuelPct:81, podPct:80, score:80, risk:'WARNING' },
+      { rank:14, name:'MOHAMAD FARID IKMAL BIN MOHD AJIB', fuelPct:80, podPct:80, score:70, risk:'WARNING' },
+      { rank:15, name:'MOHD KHAIRUL AZHAR BIN ABDUL MUTALIB', fuelPct:79, podPct:79, score:40, risk:'WARNING' },
+      { rank:16, name:'MOHAMAD NORAZAMAN BIN MOHAMED SHURY', fuelPct:78, podPct:78, score:30, risk:'WARNING' },
+      { rank:17, name:'MUHAMMAD NAZMI BIN MUSTAPHA ALBAKRI', fuelPct:76, podPct:76, score:10, risk:'WARNING' },
+      { rank:18, name:'MOHAMAD KHAIRUDDIN BIN KHAIDIR', fuelPct:75, podPct:75, score:-10, risk:'WARNING' },
+      { rank:19, name:'MUHAMMAD SYAFQ IZZAT BIN PUTERA AHMAD HILMI', fuelPct:74, podPct:74, score:-20, risk:'WARNING' },
+      { rank:20, name:'MOHD FIRDAUS BIN MD MASHOD FAKEH', fuelPct:73, podPct:73, score:-30, risk:'WARNING' },
+      { rank:21, name:'ASRIZAL BIN MOHD YATIM', fuelPct:72, podPct:72, score:-40, risk:'WARNING' },
+      { rank:22, name:'MOHAMAD AZUWAN BIN MT DESA', fuelPct:71, podPct:71, score:-50, risk:'WARNING' },
+      { rank:23, name:'ABDUL SALAM BIN IDRUS', fuelPct:65, podPct:60, score:-60, risk:'HIGH RISK' },
+      { rank:24, name:'AZMAN BIN MAT RASHID', fuelPct:55, podPct:45, score:-90, risk:'HIGH RISK' },
+    ],
+    notSubmittedToday: ['AZMAN BIN MAT RASHID', 'ABDUL SALAM BIN IDRUS', 'MOHAMAD AZUWAN BIN MT DESA'],
+    recent: [
+      { time:'16:32', driver:'TAUFIK AFFENDI BIN MUHAMMAD', type:'FUEL', vehicle:'SMB 7633' },
+      { time:'16:15', driver:'HAIRUL ANUAR BIN YAAKUB', type:'POD', vehicle:'RX 8733' },
+      { time:'15:58', driver:'JAMALUDIN BIN MOHAMAD YUSOF', type:'FUEL', vehicle:'VDQ 6864' },
+      { time:'15:42', driver:'AHMAD ASMADI BIN AMRAN', type:'POD', vehicle:'CCY 9233' },
+      { time:'15:20', driver:'MUHAMMAD ZULKIFLI BIN OTHMAN', type:'FUEL', vehicle:'KER 9223' },
+      { time:'14:55', driver:'ABDUL HADI BIN KHALIB', type:'POD', vehicle:'VHT 4642' },
+      { time:'14:30', driver:'MOHD FADHIL BIN AHMAD RANI', type:'FUEL', vehicle:'SYS 4642' },
+      { time:'14:10', driver:'AZRIN BIN JAMALUDDIN', type:'POD', vehicle:'VFE 9633' },
+    ],
+    lorryStatus: LORRIES.map((plate, i) => ({
+      plate,
+      driver: ['MUHAMMAD ZULKIFLI BIN OTHMAN','TAUFIK AFFENDI BIN MUHAMMAD','HAIRUL ANUAR BIN YAAKUB','MOHAMAD KHAIRUDDIN BIN KHAIDIR','MAZLAN BIN MOHD RADZUAN','MOHD FIRDAUS BIN MD MASHOD FAKEH','AZMAN BIN MAT RASHID','MOHD KHAIRUL AZHAR BIN ABDUL MUTALIB','MUHAMMAD NAZMI BIN MUSTAPHA ALBAKRI','MOHAMAD AZUWAN BIN MT DESA','ASRIZAL BIN MOHD YATIM','ABDUL HADI BIN KHALIB','JAMALUDIN BIN MOHAMAD YUSOF','AHMAD ASMADI BIN AMRAN','MOHD FADHIL BIN AHMAD RANI','MOHAMAD KHAIRUL ANAM BIN MOHAMAD ROSLI'][i],
+      submitted: i < 12,
+      mileage: i < 12 ? Math.floor(50000 + Math.random() * 30000) : null,
+    }))
+  };
+  renderDashboard(demo);
+}
+
+// ============================================================
+// RENDER DASHBOARD
+// ============================================================
+function renderDashboard(d) {
+  const k = d.kpi;
+
+  // KPIs
+  document.getElementById('kpiFuelTotal').textContent = k.fuelTotal ?? '—';
+  document.getElementById('kpiPodTotal').textContent = k.podTotal ?? '—';
+
+  const fc = k.fuelComp ?? 0;
+  const pc = k.podComp ?? 0;
+  document.getElementById('kpiFuelComp').textContent = fc + '%';
+  document.getElementById('kpiPodComp').textContent = pc + '%';
+  document.getElementById('kpiFuelComp').style.color = fc >= 90 ? '#3B6D11' : fc >= 80 ? '#854F0B' : '#A32D2D';
+  document.getElementById('kpiPodComp').style.color = pc >= 90 ? '#3B6D11' : pc >= 80 ? '#854F0B' : '#A32D2D';
+  document.getElementById('kpiFuelCompBar').style.background = fc >= 90 ? '#3B6D11' : fc >= 80 ? '#854F0B' : '#A32D2D';
+  document.getElementById('kpiPodCompBar').style.background = pc >= 90 ? '#3B6D11' : pc >= 80 ? '#854F0B' : '#A32D2D';
+
+  setTrend('kpiFuelTrend', fc >= 90 ? 'up' : 'down', fc >= 90 ? 'On target' : 'Below 90%');
+  setTrend('kpiPodTrend', pc >= 90 ? 'up' : 'down', pc >= 90 ? 'On target' : 'Below 90%');
+  setTrend('kpiFuelTrend', null, null);
+  setTrend('kpiPodTrend', null, null);
+
+  // Risk breakdown
+  const total = 24;
+  const r = d.risk;
+  setRiskBar('Good', r.good, total);
+  setRiskBar('Warn', r.warning, total);
+  setRiskBar('Red', r.highRisk, total);
+
+  // Compliance bars
+  document.getElementById('compFuelPct').textContent = fc + '%';
+  document.getElementById('compPodPct').textContent = pc + '%';
+  document.getElementById('compMissing').textContent = (k.missingPod ?? 0) + ' missing';
+  setTimeout(() => {
+    document.getElementById('compFuelBar').style.width = fc + '%';
+    document.getElementById('compFuelBar').style.background = fc >= 90 ? '#639922' : fc >= 80 ? '#BA7517' : '#E24B4A';
+    document.getElementById('compPodBar').style.width = pc + '%';
+    document.getElementById('compPodBar').style.background = pc >= 90 ? '#639922' : pc >= 80 ? '#BA7517' : '#E24B4A';
+    document.getElementById('compFuelPct').style.color = fc >= 90 ? '#3B6D11' : fc >= 80 ? '#854F0B' : '#A32D2D';
+    document.getElementById('compPodPct').style.color = pc >= 90 ? '#3B6D11' : pc >= 80 ? '#854F0B' : '#A32D2D';
+  }, 200);
+
+  // MVP
+  if (d.mvp) {
+    document.getElementById('mvpName').textContent = d.mvp.name;
+    document.getElementById('mvpScore').textContent = '+' + d.mvp.score;
+  }
+
+  // Alert bar — not submitted today
+  const ns = d.notSubmittedToday ?? [];
+  const alertBar = document.getElementById('alertBar');
+  if (ns.length > 0) {
+    alertBar.classList.add('show');
+    document.getElementById('alertTitle').textContent =
+      ns.length + ' driver' + (ns.length > 1 ? 's' : '') + ' have NOT submitted today\'s fuel record:';
+    document.getElementById('alertDrivers').innerHTML = ns.map(n =>
+      `<span class="alert-chip">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        ${n.split(' ').slice(0,2).join(' ')}
+      </span>`
+    ).join('');
+  } else {
+    alertBar.classList.remove('show');
+  }
+
+  // Driver table
+  renderDriverTable(d.drivers ?? []);
+
+  // High risk
+  renderHighRisk(d.drivers ?? []);
+
+  // Lorry grid
+  renderLorryGrid(d.lorryStatus ?? []);
+
+  // Recent submissions
+  renderRecent(d.recent ?? []);
+
+  // Hide loading
+  const ls = document.getElementById('loadingScreen');
+  ls.classList.add('fade');
+  setTimeout(() => { ls.style.display = 'none'; }, 600);
+}
+
+function setRiskBar(key, count, total) {
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  const fill = document.getElementById('riskFill' + key);
+  const label = document.getElementById('riskLabel' + key);
+  const num = document.getElementById('riskNum' + key);
+  if (fill) setTimeout(() => { fill.style.width = Math.max(pct, 5) + '%'; }, 300);
+  if (label) label.textContent = count + ' drivers';
+  if (num) num.textContent = count;
+}
+
+function setTrend(id, dir, text) {
+  const el = document.getElementById(id);
+  if (!el || !dir) { el.style.display = 'none'; return; }
+  el.className = 'kpi-trend ' + (dir === 'up' ? 'trend-up' : 'trend-down');
+  el.innerHTML = (dir === 'up' ? '▲ ' : '▼ ') + text;
+}
+
+function renderDriverTable(drivers) {
+  if (!drivers.length) return;
+  const tbody = document.getElementById('driverTableBody');
+  let html = '';
+  const top5 = drivers.filter(d => d.rank <= 5);
+  const mid = drivers.filter(d => d.rank > 5 && d.risk !== 'HIGH RISK' && d.rank <= 20);
+  const bottom = drivers.filter(d => d.risk === 'HIGH RISK');
+
+  const addSection = (label, color, rows) => {
+    if (!rows.length) return;
+    html += `<tr><td colspan="6" class="section-divider" style="color:${color};">${label}</td></tr>`;
+    rows.forEach(d => { html += driverRow(d); });
+  };
+
+  addSection('Top performers', '#3B6D11', top5);
+  if (mid.length) {
+    html += `<tr><td colspan="6" class="section-divider">All drivers</td></tr>`;
+    mid.forEach(d => { html += driverRow(d); });
+  }
+  addSection('Needs attention — High risk', '#A32D2D', bottom);
+  tbody.innerHTML = html;
+}
+
+function driverRow(d) {
+  const rankBg = d.rank === 1 ? '#C9A84C' : d.rank === 2 ? '#B4B2A9' : d.rank === 3 ? '#D3D1C7' : '#F0F4F8';
+  const rankTxt = d.rank === 1 ? '#412402' : d.rank === 2 ? '#2C2C2A' : d.rank === 3 ? '#444441' : '#6B7A8D';
+  const riskBg = d.risk === 'GOOD' ? '#EAF3DE' : d.risk === 'HIGH RISK' ? '#FCEBEB' : '#FAEEDA';
+  const riskTxt = d.risk === 'GOOD' ? '#27500A' : d.risk === 'HIGH RISK' ? '#791F1F' : '#633806';
+  const riskLabel = d.risk === 'GOOD' ? 'Good' : d.risk === 'HIGH RISK' ? 'High risk' : 'Warning';
+  const scoreTxt = d.score >= 0 ? '+' + d.score : d.score;
+  const scoreColor = d.score >= 0 ? '#3B6D11' : '#A32D2D';
+  const shortName = d.name.split(' ').slice(0,3).join(' ');
+  return `<tr>
+    <td><div class="rank-num" style="background:${rankBg};color:${rankTxt};margin:0 auto;">${d.rank}</div></td>
+    <td><div class="driver-name-cell" title="${d.name}">${shortName}</div></td>
+    <td style="color:${(d.fuelPct??0)>=90?'#3B6D11':(d.fuelPct??0)>=80?'#854F0B':'#A32D2D'};">${d.fuelPct ?? '—'}%</td>
+    <td style="color:${(d.podPct??0)>=90?'#3B6D11':(d.podPct??0)>=80?'#854F0B':'#A32D2D'};">${d.podPct ?? '—'}%</td>
+    <td><span class="score-val" style="color:${scoreColor};">${scoreTxt}</span></td>
+    <td><span class="risk-badge" style="background:${riskBg};color:${riskTxt};">${riskLabel}</span></td>
+  </tr>`;
+}
+
+function renderHighRisk(drivers) {
+  const hr = drivers.filter(d => d.risk === 'HIGH RISK' || d.risk === 'WARNING');
+  const count = drivers.filter(d => d.risk === 'HIGH RISK').length;
+  document.getElementById('highRiskCount').textContent = count + ' high risk';
+  if (!hr.length) {
+    document.getElementById('highRiskList').innerHTML = '<div class="empty-state" style="padding:30px;">All drivers performing well ✓</div>';
+    return;
+  }
+  document.getElementById('highRiskList').innerHTML = hr.slice(0, 8).map(d => {
+    const isHR = d.risk === 'HIGH RISK';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);">
+      <div style="width:32px;height:32px;border-radius:50%;background:${isHR?'#FCEBEB':'#FAEEDA'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:${isHR?'#791F1F':'#633806'};flex-shrink:0;">
+        ${d.name.split(' ').map(w=>w[0]).slice(0,2).join('')}
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${d.name.split(' ').slice(0,3).join(' ')}</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:1px;">Fuel ${d.fuelPct??0}% · POD ${d.podPct??0}% · Score ${d.score >= 0 ? '+'+d.score : d.score}</div>
+      </div>
+      <span class="risk-badge" style="background:${isHR?'#FCEBEB':'#FAEEDA'};color:${isHR?'#791F1F':'#633806'};flex-shrink:0;">${isHR?'High risk':'Warning'}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderLorryGrid(lorries) {
+  if (!lorries.length) {
+    document.getElementById('lorryGrid').innerHTML = '<div class="empty-state">No fleet data available</div>';
+    return;
+  }
+  document.getElementById('lorryGrid').innerHTML = lorries.map(l => {
+    const submitted = l.submitted;
+    const bg = submitted ? '#EAF3DE' : '#FCEBEB';
+    const statusBg = submitted ? '#C6EFCE' : '#FFC7CE';
+    const statusTxt = submitted ? '#276221' : '#9C0006';
+    const statusLabel = submitted ? 'Submitted' : 'Pending';
+    const shortDriver = l.driver ? l.driver.split(' ').slice(0,2).join(' ') : 'Unassigned';
+    return `<div class="lorry-card" style="background:${bg};border-color:${submitted?'#C0DD97':'#F7C1C1'};">
+      <div class="lorry-plate">${l.plate}</div>
+      <div class="lorry-driver">${shortDriver}${l.mileage ? '<br><span style="font-family:Geist Mono,monospace;font-size:10px;color:#6B7A8D;">' + l.mileage.toLocaleString() + ' km</span>' : ''}</div>
+      <span class="lorry-status" style="background:${statusBg};color:${statusTxt};">${statusLabel}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderRecent(recent) {
+  if (!recent.length) {
+    document.getElementById('recentTable').innerHTML = '<tr><td colspan="4"><div class="empty-state">No submissions yet today</div></td></tr>';
+    return;
+  }
+  document.getElementById('recentTable').innerHTML = recent.slice(0, 8).map(r => {
+    const isFuel = r.type === 'FUEL';
+    return `<tr>
+      <td><span class="sub-time" style="color:var(--gray);">${r.time}</span></td>
+      <td><span class="sub-driver">${r.driver.split(' ').slice(0,3).join(' ')}</span></td>
+      <td><span class="sub-type-badge" style="background:${isFuel?'#E6F1FB':'#EAF3DE'};color:${isFuel?'#0C447C':'#27500A'};">${r.type}</span></td>
+      <td style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--gray);">${r.vehicle}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ============================================================
+// INIT
+// ============================================================
+window.onload = function() {
+  loadDashboard();
+};
+</script>
+</body>
+</html>
