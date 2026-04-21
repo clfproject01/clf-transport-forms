@@ -445,10 +445,12 @@ async function submitForm() {
       photoName: photoFile.name,
       photoType: photoFile.type,
     };
+    const formData = new FormData();
+    formData.append('data', JSON.stringify(payload));
     await fetch(SCRIPT_URL, {
-      method: 'POST', mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      method: 'POST',
+      mode: 'no-cors',
+      body: formData
     });
     document.getElementById('loadingOverlay').classList.remove('show');
     const timeStr = now.toLocaleDateString('en-MY', { day:'2-digit', month:'short', year:'numeric' })

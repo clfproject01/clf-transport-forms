@@ -665,11 +665,12 @@ async function submitForm() {
       photoType: photoFile.type,
     };
 
+    const formData = new FormData();
+    formData.append('data', JSON.stringify(payload));
     await fetch(SCRIPT_URL, {
       method: 'POST',
       mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: formData
     });
 
     // Show success (no-cors means we can't read response, assume success)
