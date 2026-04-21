@@ -719,7 +719,7 @@ body {
 // ============================================================
 // CONFIGURATION
 // ============================================================
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwMF3OEx26Us0SEjFRALEb_ywhOdI93TacP7CM-7NIvDb7F1o7GcNGtazWhpUjuXJHC/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxabHh2Kd04z7k0zZOOoaJs2i5hgycQsO_AYoRS99xZx2WqMJ6cowumY0e1znehiRM1/exec';
 
 const LORRIES = [
   'KER 9223','RY 7233','CDQ 9098','CDA 3633',
@@ -949,9 +949,9 @@ function renderDriverTable(drivers) {
 function driverRow(d) {
   const rankBg = d.rank === 1 ? '#C9A84C' : d.rank === 2 ? '#B4B2A9' : d.rank === 3 ? '#D3D1C7' : '#F0F4F8';
   const rankTxt = d.rank === 1 ? '#412402' : d.rank === 2 ? '#2C2C2A' : d.rank === 3 ? '#444441' : '#6B7A8D';
-  const riskBg = d.risk === 'GOOD' ? '#EAF3DE' : d.risk === 'HIGH RISK' ? '#FCEBEB' : '#FAEEDA';
-  const riskTxt = d.risk === 'GOOD' ? '#27500A' : d.risk === 'HIGH RISK' ? '#791F1F' : '#633806';
-  const riskLabel = d.risk === 'GOOD' ? 'Good' : d.risk === 'HIGH RISK' ? 'High risk' : 'Warning';
+  const riskBg = d.risk === 'GOOD' ? '#EAF3DE' : d.risk === 'HIGH RISK' ? '#FCEBEB' : d.risk === 'NEW' ? '#F0F4F8' : '#FAEEDA';
+  const riskTxt = d.risk === 'GOOD' ? '#27500A' : d.risk === 'HIGH RISK' ? '#791F1F' : d.risk === 'NEW' ? '#4A5568' : '#633806';
+  const riskLabel = d.risk === 'GOOD' ? 'Good' : d.risk === 'HIGH RISK' ? 'High risk' : d.risk === 'NEW' ? 'New' : 'Warning';
   const scoreTxt = d.score >= 0 ? '+' + d.score : d.score;
   const scoreColor = d.score >= 0 ? '#3B6D11' : '#A32D2D';
   const shortName = d.name.split(' ').slice(0,3).join(' ');
