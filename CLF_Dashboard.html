@@ -701,6 +701,31 @@ body {
 
   </div>
 
+  <!-- HOLIDAY CALENDAR + ON LEAVE PANELS -->
+  <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-top:20px;">
+
+    <!-- HOLIDAY CALENDAR -->
+    <div class="panel" style="background:white;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);">
+      <div class="panel-title" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;font-size:14px;font-weight:600;color:var(--text);">
+        <span>📅 Holiday Calendar — Next 30 days</span>
+        <span style="font-size:11px;color:var(--gray);font-weight:400;">Click toggle to enable/disable</span>
+      </div>
+      <div id="holidayCalendar" style="max-height:320px;overflow-y:auto;">
+        <div class="empty-state" style="padding:30px;text-align:center;color:var(--gray);">Loading...</div>
+      </div>
+    </div>
+
+    <!-- ON LEAVE TODAY -->
+    <div class="panel" style="background:white;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);">
+      <div class="panel-title" style="margin-bottom:14px;font-size:14px;font-weight:600;color:var(--text);">
+        🏖️ On Leave Today
+      </div>
+      <div id="onLeaveTodayList">
+        <div class="empty-state" style="padding:30px;text-align:center;color:var(--gray);">No drivers on leave today</div>
+      </div>
+    </div>
+  </div>
+
   <!-- FOOTER -->
   <div class="footer">
     <div>Last refreshed: <span id="lastRefresh">—</span></div>
@@ -867,8 +892,8 @@ function renderDashboard(d) {
 
   // MVP
   if (d.mvp) {
-    document.getElementById('mvpName').textContent = d.mvp.name;
-    document.getElementById('mvpScore').textContent = '+' + d.mvp.score;
+    document.getElementById('mvpName').textContent = d.mvp.name + (d.mvp.staffId ? ' (' + d.mvp.staffId + ')' : '');
+    document.getElementById('mvpScore').textContent = (d.mvp.score >= 0 ? '+' : '') + d.mvp.score;
   }
 
   // Alert bar — not submitted today
@@ -899,6 +924,10 @@ function renderDashboard(d) {
 
   // Recent submissions
   renderRecent(d.recent ?? []);
+
+  // Holiday Calendar + On Leave Today (v8 features)
+  renderHolidayCalendar(d.upcomingHolidays ?? []);
+  renderOnLeaveToday(d.onLeaveToday ?? []);
 
   // Hide loading
   const ls = document.getElementById('loadingScreen');
@@ -957,7 +986,7 @@ function driverRow(d) {
   const shortName = d.name.split(' ').slice(0,3).join(' ');
   return `<tr>
     <td><div class="rank-num" style="background:${rankBg};color:${rankTxt};margin:0 auto;">${d.rank}</div></td>
-    <td><div class="driver-name-cell" title="${d.name}">${shortName}</div></td>
+    <td><div class="driver-name-cell" title="${d.name}">${shortName}${d.staffId ? '<span style="display:block;font-size:10px;color:var(--gray);font-weight:400;">' + d.staffId + '</span>' : ''}</div></td>
     <td style="color:${(d.fuelPct??0)>=90?'#3B6D11':(d.fuelPct??0)>=80?'#854F0B':'#A32D2D'};">${d.fuelPct ?? '—'}%</td>
     <td style="color:${(d.podPct??0)>=90?'#3B6D11':(d.podPct??0)>=80?'#854F0B':'#A32D2D'};">${d.podPct ?? '—'}%</td>
     <td><span class="score-val" style="color:${scoreColor};">${scoreTxt}</span></td>
@@ -980,7 +1009,7 @@ function renderHighRisk(drivers) {
         ${d.name.split(' ').map(w=>w[0]).slice(0,2).join('')}
       </div>
       <div style="flex:1;min-width:0;">
-        <div style="font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${d.name.split(' ').slice(0,3).join(' ')}</div>
+        <div style="font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${d.name.split(' ').slice(0,3).join(' ')}${d.staffId ? ' <span style="font-size:10px;color:var(--gray);">('+d.staffId+')</span>' : ''}</div>
         <div style="font-size:11px;color:var(--gray);margin-top:1px;">Fuel ${d.fuelPct??0}% · POD ${d.podPct??0}% · Score ${d.score >= 0 ? '+'+d.score : d.score}</div>
       </div>
       <span class="risk-badge" style="background:${isHR?'#FCEBEB':'#FAEEDA'};color:${isHR?'#791F1F':'#633806'};flex-shrink:0;">${isHR?'High risk':'Warning'}</span>
@@ -1000,9 +1029,11 @@ function renderLorryGrid(lorries) {
     const statusTxt = submitted ? '#276221' : '#9C0006';
     const statusLabel = submitted ? 'Submitted' : 'Pending';
     const shortDriver = l.driver ? l.driver.split(' ').slice(0,2).join(' ') : 'Unassigned';
+    const sid = l.staffId ? '<span style="font-size:9px;color:#6B7A8D;display:block;">' + l.staffId + '</span>' : '';
+    const second = l.secondDriver ? '<div style="font-size:10px;color:#854F0B;margin-top:2px;">+ ' + l.secondDriver.split(' ').slice(0,2).join(' ') + (l.secondStaffId ? ' (' + l.secondStaffId + ')' : '') + '</div>' : '';
     return `<div class="lorry-card" style="background:${bg};border-color:${submitted?'#C0DD97':'#F7C1C1'};">
       <div class="lorry-plate">${l.plate}</div>
-      <div class="lorry-driver">${shortDriver}${l.mileage ? '<br><span style="font-family:Geist Mono,monospace;font-size:10px;color:#6B7A8D;">' + l.mileage.toLocaleString() + ' km</span>' : ''}</div>
+      <div class="lorry-driver">${shortDriver}${sid}${second}${l.mileage ? '<br><span style="font-family:Geist Mono,monospace;font-size:10px;color:#6B7A8D;">' + l.mileage.toLocaleString() + ' km</span>' : ''}</div>
       <span class="lorry-status" style="background:${statusBg};color:${statusTxt};">${statusLabel}</span>
     </div>`;
   }).join('');
@@ -1017,11 +1048,78 @@ function renderRecent(recent) {
     const isFuel = r.type === 'FUEL';
     return `<tr>
       <td><span class="sub-time" style="color:var(--gray);">${r.time}</span></td>
-      <td><span class="sub-driver">${r.driver.split(' ').slice(0,3).join(' ')}</span></td>
+      <td><span class="sub-driver">${r.driver.split(' ').slice(0,3).join(' ')}${r.staffId ? '<span style="display:block;font-size:10px;color:var(--gray);font-weight:400;">'+r.staffId+'</span>' : ''}</span></td>
       <td><span class="sub-type-badge" style="background:${isFuel?'#E6F1FB':'#EAF3DE'};color:${isFuel?'#0C447C':'#27500A'};">${r.type}</span></td>
       <td style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--gray);">${r.vehicle}</td>
     </tr>`;
   }).join('');
+}
+
+// ============================================================
+// HOLIDAY CALENDAR + ON LEAVE
+// ============================================================
+function renderHolidayCalendar(holidays) {
+  const container = document.getElementById('holidayCalendar');
+  if (!holidays.length) {
+    container.innerHTML = '<div class="empty-state" style="padding:30px;text-align:center;color:var(--gray);">No upcoming holidays in next 30 days</div>';
+    return;
+  }
+  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const typeBg = { PH:'#FCEBEB', OFF_SAT:'#FAEEDA', OFF_SUN:'#E6F1FB' };
+  const typeTxt = { PH:'#791F1F', OFF_SAT:'#633806', OFF_SUN:'#0C447C' };
+  const typeLabel = { PH:'Public Holiday', OFF_SAT:'Saturday Rest', OFF_SUN:'Sunday Rest' };
+
+  container.innerHTML = holidays.map(h => {
+    const d = new Date(h.date + 'T00:00:00');
+    const dow = dayNames[d.getDay()];
+    const monthDay = d.toLocaleDateString('en-MY', { day:'2-digit', month:'short' });
+    const isActive = h.status === 'ACTIVE';
+    const toggleLabel = isActive ? '✓ ACTIVE' : '✕ DISABLED';
+    const toggleBg = isActive ? '#C6EFCE' : '#E2E8F0';
+    const toggleTxt = isActive ? '#276221' : '#6B7A8D';
+    const newStatus = isActive ? 'DISABLED' : 'ACTIVE';
+    const lt = h.leaveType || 'PH';
+    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 8px;border-bottom:1px solid var(--border);">
+      <div style="width:50px;text-align:center;">
+        <div style="font-size:11px;color:var(--gray);">${dow}</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text);">${monthDay}</div>
+      </div>
+      <span style="background:${typeBg[lt]||'#F0F4F8'};color:${typeTxt[lt]||'#4A5568'};padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;flex-shrink:0;">${typeLabel[lt]||lt}</span>
+      <div style="flex:1;min-width:0;font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${h.label || ''}</div>
+      <button onclick="toggleHoliday('${h.date}','${lt}','${newStatus}')" style="background:${toggleBg};color:${toggleTxt};border:none;padding:6px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">${toggleLabel}</button>
+    </div>`;
+  }).join('');
+}
+
+function renderOnLeaveToday(list) {
+  const container = document.getElementById('onLeaveTodayList');
+  if (!list.length) {
+    container.innerHTML = '<div class="empty-state" style="padding:30px;text-align:center;color:var(--gray);">No drivers on leave today ✓</div>';
+    return;
+  }
+  container.innerHTML = list.map(l => `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--border);">
+      <div style="width:32px;height:32px;border-radius:50%;background:#FAEEDA;color:#633806;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;">
+        ${l.driverName.split(' ').map(w=>w[0]).slice(0,2).join('')}
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${l.driverName.split(' ').slice(0,3).join(' ')}</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:1px;">${l.staffId || '—'} · ${l.leaveType || 'AL'}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function toggleHoliday(date, leaveType, newStatus) {
+  if (!confirm(`Set ${date} (${leaveType}) to ${newStatus}?`)) return;
+  try {
+    const fd = new FormData();
+    fd.append('data', JSON.stringify({ formType:'TOGGLE_HOLIDAY', date, leaveType, status:newStatus }));
+    await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body: fd });
+    setTimeout(loadDashboard, 800);
+  } catch (err) {
+    alert('Failed to toggle: ' + err.message);
+  }
 }
 
 // ============================================================

@@ -273,6 +273,43 @@
           <option>MOHAMAD KHAIRUL ANAM BIN MOHAMAD ROSLI</option>
         </select>
         <div class="error-msg" id="err-driver">Please select your name · Sila pilih nama anda</div>
+        <div id="staffIdBadge" style="display:none;margin-top:8px;padding:6px 12px;background:#F5E6B8;color:#412402;border-radius:6px;font-size:13px;font-weight:600;"></div>
+      </div>
+
+      <!-- SECOND DRIVER (optional) -->
+      <div class="field">
+        <label>
+          Second Driver · Pemandu Kedua
+          <span class="bm" style="display:block;font-size:11px;color:#6B7A8D;margin-top:2px;">If two drivers · Jika dua pemandu (optional)</span>
+        </label>
+        <select id="secondDriver">
+          <option value="">— None / Tiada —</option>
+          <option>MUHAMMAD ZULKIFLI BIN OTHMAN</option>
+          <option>MOHAMAD FARID IKMAL BIN MOHD AJIB</option>
+          <option>MOHAMAD KHAIRUDDIN BIN KHAIDIR</option>
+          <option>MOHAMAD IZZRUL FIKRIE BIN ROSLI</option>
+          <option>MAZLAN BIN MOHD RADZUAN</option>
+          <option>ABDUL SALAM BIN IDRUS</option>
+          <option>MOHD FIRDAUS BIN MD MASHOD FAKEH</option>
+          <option>MUHAMMAD SYAFQ IZZAT BIN PUTERA AHMAD HILMI</option>
+          <option>HAIRUL ANUAR BIN YAAKUB</option>
+          <option>MOHAMAD NORAZAMAN BIN MOHAMED SHURY</option>
+          <option>AZMAN BIN MAT RASHID</option>
+          <option>MOHD KHAIRUL AZHAR BIN ABDUL MUTALIB</option>
+          <option>MUHAMMAD NAZMI BIN MUSTAPHA ALBAKRI</option>
+          <option>MOHAMAD AZUWAN BIN MT DESA</option>
+          <option>TAUFIK AFFENDI BIN MUHAMMAD</option>
+          <option>ASRIZAL BIN MOHD YATIM</option>
+          <option>MUHAMMAD FIRDAUS BIN UNIZAR</option>
+          <option>MUHAMMAD KHAIRUL HAFIZ BIN ROSHARUDIN</option>
+          <option>ABDUL HADI BIN KHALIB</option>
+          <option>AZRIN BIN JAMALUDDIN</option>
+          <option>JAMALUDIN BIN MOHAMAD YUSOF</option>
+          <option>AHMAD ASMADI BIN AMRAN</option>
+          <option>MOHD FADHIL BIN AHMAD RANI</option>
+          <option>MOHAMAD KHAIRUL ANAM BIN MOHAMAD ROSLI</option>
+        </select>
+        <div id="staffIdBadge2" style="display:none;margin-top:8px;padding:6px 12px;background:#F5E6B8;color:#412402;border-radius:6px;font-size:13px;font-weight:600;"></div>
       </div>
 
       <div class="field">
@@ -362,7 +399,34 @@
 </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwMF3OEx26Us0SEjFRALEb_ywhOdI93TacP7CM-7NIvDb7F1o7GcNGtazWhpUjuXJHC/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxabHh2Kd04z7k0zZOOoaJs2i5hgycQsO_AYoRS99xZx2WqMJ6cowumY0e1znehiRM1/exec';
+
+const STAFF_IDS = {
+  'MUHAMMAD ZULKIFLI BIN OTHMAN':'TER 448','MOHAMAD FARID IKMAL BIN MOHD AJIB':'TER 515',
+  'MOHAMAD KHAIRUDDIN BIN KHAIDIR':'TER 534','MOHAMAD IZZRUL FIKRIE BIN ROSLI':'TER 537',
+  'MAZLAN BIN MOHD RADZUAN':'TER 057','ABDUL SALAM BIN IDRUS':'TER 437',
+  'MOHD FIRDAUS BIN MD MASHOD FAKEH':'TER 424','MUHAMMAD SYAFQ IZZAT BIN PUTERA AHMAD HILMI':'TER 536',
+  'HAIRUL ANUAR BIN YAAKUB':'TER 254','MOHAMAD NORAZAMAN BIN MOHAMED SHURY':'TER 547',
+  'AZMAN BIN MAT RASHID':'TER 171','MOHD KHAIRUL AZHAR BIN ABDUL MUTALIB':'TER 516',
+  'MUHAMMAD NAZMI BIN MUSTAPHA ALBAKRI':'TER 231','MOHAMAD AZUWAN BIN MT DESA':'TER 440',
+  'TAUFIK AFFENDI BIN MUHAMMAD':'TER 240','ASRIZAL BIN MOHD YATIM':'TER 453',
+  'MUHAMMAD FIRDAUS BIN UNIZAR':'TER 390','MUHAMMAD KHAIRUL HAFIZ BIN ROSHARUDIN':'TER 513',
+  'ABDUL HADI BIN KHALIB':'TER 507','AZRIN BIN JAMALUDDIN':'TER 505',
+  'JAMALUDIN BIN MOHAMAD YUSOF':'TER 031','AHMAD ASMADI BIN AMRAN':'TER 540',
+  'MOHD FADHIL BIN AHMAD RANI':'TER 248','MOHAMAD KHAIRUL ANAM BIN MOHAMAD ROSLI':'TER 533'
+};
+
+function updateStaffIdBadge(selectId, badgeId) {
+  const driver = document.getElementById(selectId).value;
+  const badge = document.getElementById(badgeId);
+  if (!badge) return;
+  if (driver && STAFF_IDS[driver]) {
+    badge.textContent = 'Staff ID: ' + STAFF_IDS[driver];
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
 const STORAGE_KEY = 'clf_driver_name';
 
 window.onload = function() {
@@ -377,13 +441,19 @@ window.onload = function() {
       if (sel.options[i].value === saved) {
         sel.value = saved;
         document.getElementById('rememberedBadge').style.display = 'inline-flex';
+        updateStaffIdBadge('driverName', 'staffIdBadge');
         break;
       }
     }
   }
 };
 
+document.getElementById('secondDriver').addEventListener('change', function() {
+  updateStaffIdBadge('secondDriver', 'staffIdBadge2');
+});
+
 document.getElementById('driverName').addEventListener('change', function() {
+  updateStaffIdBadge('driverName', 'staffIdBadge');
   if (this.value) {
     localStorage.setItem(STORAGE_KEY, this.value);
     document.getElementById('rememberedBadge').style.display = 'inline-flex';
@@ -439,6 +509,7 @@ async function submitForm() {
       timestamp: now.toISOString(),
       deliveryDate: document.getElementById('deliveryDate').value,
       driverName: document.getElementById('driverName').value,
+      secondDriver: document.getElementById('secondDriver').value || '',
       vehicleNo: document.getElementById('vehicleNo').value,
 
       photoBase64: base64,
@@ -485,7 +556,10 @@ function resetForm() {
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('deliveryDate').value = today;
   const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) document.getElementById('driverName').value = saved;
+  if (saved) {
+    document.getElementById('driverName').value = saved;
+    updateStaffIdBadge('driverName', 'staffIdBadge');
+  }
 }
 </script>
 </body>
