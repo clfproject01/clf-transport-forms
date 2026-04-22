@@ -701,6 +701,19 @@ body {
 
   </div>
 
+  <!-- POD PLAN PANEL -->
+  <div style="margin-top:20px;">
+    <div class="panel" style="background:white;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);">
+      <div class="panel-title" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;font-size:14px;font-weight:600;color:var(--text);">
+        <span>📋 Today's POD Plan — Supervisor sets number per driver before they leave</span>
+        <span id="podPlanSummary" style="font-size:11px;color:var(--gray);font-weight:400;">—</span>
+      </div>
+      <div id="podPlanGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;max-height:480px;overflow-y:auto;">
+        <div class="empty-state" style="padding:30px;text-align:center;color:var(--gray);grid-column:1/-1;">Loading...</div>
+      </div>
+    </div>
+  </div>
+
   <!-- HOLIDAY CALENDAR + ON LEAVE PANELS -->
   <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-top:20px;">
 
@@ -722,6 +735,28 @@ body {
       </div>
       <div id="onLeaveTodayList">
         <div class="empty-state" style="padding:30px;text-align:center;color:var(--gray);">No drivers on leave today</div>
+      </div>
+
+      <!-- Mark Leave (Range) -->
+      <div style="margin-top:18px;padding-top:16px;border-top:1px solid #eee;">
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px;">📅 Mark Leave (Range)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <select id="mlrDriver" style="padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px;grid-column:1/-1;">
+            <option value="">— Select driver —</option>
+          </select>
+          <input type="date" id="mlrStart" style="padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px;" />
+          <input type="date" id="mlrEnd" style="padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px;" />
+          <select id="mlrType" style="padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px;">
+            <option value="AL">AL (Annual)</option>
+            <option value="MC">MC (Medical)</option>
+            <option value="EL">EL (Emergency)</option>
+            <option value="UL">UL (Unpaid)</option>
+            <option value="OFF">OFF (Off Day)</option>
+          </select>
+          <input type="text" id="mlrRemarks" placeholder="Remarks (optional)" style="padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px;" />
+        </div>
+        <button id="mlrBtn" onclick="submitLeaveRange()" style="width:100%;margin-top:10px;padding:10px;background:#FF9800;color:white;border:0;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">Mark Leave</button>
+        <div id="mlrStatus" style="margin-top:8px;font-size:12px;color:var(--gray);"></div>
       </div>
     </div>
   </div>
@@ -928,6 +963,9 @@ function renderDashboard(d) {
   // Holiday Calendar + On Leave Today (v8 features)
   renderHolidayCalendar(d.upcomingHolidays ?? []);
   renderOnLeaveToday(d.onLeaveToday ?? []);
+  // POD Plan (v10)
+  renderPODPlan(d.drivers ?? [], d.podPlanToday ?? []);
+  populateLeaveRangeDriverDropdown(d.drivers ?? []);
 
   // Hide loading
   const ls = document.getElementById('loadingScreen');
@@ -1108,6 +1146,142 @@ function renderOnLeaveToday(list) {
       </div>
     </div>
   `).join('');
+}
+
+// ============================================================
+// POD PLAN
+// ============================================================
+function renderPODPlan(drivers, plansToday) {
+  const container = document.getElementById('podPlanGrid');
+  const summary = document.getElementById('podPlanSummary');
+  if (!drivers.length) {
+    container.innerHTML = '<div class="empty-state" style="padding:30px;text-align:center;color:var(--gray);grid-column:1/-1;">No drivers</div>';
+    return;
+  }
+  const planMap = {};
+  plansToday.forEach(p => { planMap[p.driverName] = p; });
+
+  let totalPlanned = 0, totalSubmitted = 0, totalMissing = 0;
+
+  container.innerHTML = drivers.map(d => {
+    const p = planMap[d.name] || { planned: 0, submitted: 0, missing: 0 };
+    totalPlanned += p.planned;
+    totalSubmitted += p.submitted;
+    totalMissing += p.missing;
+    const status = p.planned === 0 ? 'no-plan' :
+                   p.missing === 0 ? 'complete' :
+                   p.submitted === 0 ? 'pending' : 'partial';
+    const bg = status === 'complete' ? '#EAF3DE' :
+               status === 'pending' ? '#FCEBEB' :
+               status === 'partial' ? '#FAEEDA' : '#F4F6F9';
+    const border = status === 'complete' ? '#C0DD97' :
+                   status === 'pending' ? '#F7C1C1' :
+                   status === 'partial' ? '#F0D9A8' : '#E2E8F0';
+    const statusLabel = status === 'complete' ? '✓ Done' :
+                        status === 'pending' ? 'Pending' :
+                        status === 'partial' ? p.submitted + '/' + p.planned : '—';
+    const statusColor = status === 'complete' ? '#276221' :
+                        status === 'pending' ? '#9C0006' :
+                        status === 'partial' ? '#854F0B' : '#6B7A8D';
+    const shortName = d.name.split(' ').slice(0, 3).join(' ');
+    return `<div style="background:${bg};border:1px solid ${border};border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:10px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${d.name}">${shortName}</div>
+        <div style="font-size:10px;color:var(--gray);margin-top:1px;">${d.staffId || '—'}</div>
+      </div>
+      <input type="number" min="0" max="50" value="${p.planned || ''}" placeholder="—"
+        onchange="setPlannedPODs('${d.name.replace(/'/g, "\\'")}', this.value, this)"
+        style="width:50px;padding:5px 6px;border:1px solid #CBD5E0;border-radius:5px;font-size:13px;font-weight:600;text-align:center;color:var(--text);">
+      <div style="min-width:60px;text-align:right;font-size:11px;font-weight:600;color:${statusColor};">${statusLabel}</div>
+    </div>`;
+  }).join('');
+
+  summary.textContent = `Total: ${totalPlanned} planned · ${totalSubmitted} done · ${totalMissing} missing`;
+}
+
+async function setPlannedPODs(driverName, plannedValue, inputEl) {
+  const planned = parseInt(plannedValue, 10);
+  if (isNaN(planned) || planned < 0) {
+    inputEl.value = '';
+    return;
+  }
+  const original = inputEl.style.background;
+  inputEl.style.background = '#FFF8E1';
+  try {
+    const fd = new FormData();
+    fd.append('data', JSON.stringify({
+      formType: 'SET_POD_PLAN',
+      date: new Date().toISOString().split('T')[0],
+      driverName: driverName,
+      plannedCount: planned,
+      setBy: 'DASHBOARD'
+    }));
+    await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: fd });
+    inputEl.style.background = '#E0F7E0';
+    setTimeout(() => { inputEl.style.background = original; loadDashboard(); }, 600);
+  } catch (err) {
+    inputEl.style.background = '#FFCDD2';
+    alert('Failed to save: ' + err.message);
+  }
+}
+
+// ── Mark Leave Range (V10.1) ─────────────────────────────────
+function populateLeaveRangeDriverDropdown(drivers) {
+  const sel = document.getElementById('mlrDriver');
+  if (!sel || sel.dataset.populated === 'yes') return;
+  sel.innerHTML = '<option value="">— Select driver —</option>';
+  (drivers || []).forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d.name;
+    opt.textContent = d.staffId ? (d.staffId + ' — ' + d.name) : d.name;
+    sel.appendChild(opt);
+  });
+  sel.dataset.populated = 'yes';
+  // Default start/end to today
+  const today = new Date().toISOString().split('T')[0];
+  const ds = document.getElementById('mlrStart');
+  const de = document.getElementById('mlrEnd');
+  if (ds && !ds.value) ds.value = today;
+  if (de && !de.value) de.value = today;
+}
+
+async function submitLeaveRange() {
+  const driverName = document.getElementById('mlrDriver').value;
+  const startDate  = document.getElementById('mlrStart').value;
+  const endDate    = document.getElementById('mlrEnd').value;
+  const leaveType  = document.getElementById('mlrType').value;
+  const remarks    = document.getElementById('mlrRemarks').value;
+  const status     = document.getElementById('mlrStatus');
+  const btn        = document.getElementById('mlrBtn');
+
+  if (!driverName) { status.textContent = '❌ Select a driver'; status.style.color = '#D32F2F'; return; }
+  if (!startDate || !endDate) { status.textContent = '❌ Pick start and end dates'; status.style.color = '#D32F2F'; return; }
+  if (new Date(endDate) < new Date(startDate)) { status.textContent = '❌ End must be ≥ start'; status.style.color = '#D32F2F'; return; }
+
+  const days = Math.floor((new Date(endDate) - new Date(startDate)) / 86400000) + 1;
+  if (!confirm('Mark ' + driverName + ' on ' + leaveType + ' for ' + days + ' day(s) (' + startDate + ' → ' + endDate + ')?')) return;
+
+  btn.disabled = true; btn.textContent = 'Saving...';
+  status.textContent = '⏳ Saving ' + days + ' day(s)...'; status.style.color = '#666';
+
+  try {
+    const fd = new FormData();
+    fd.append('data', JSON.stringify({
+      formType: 'MARK_LEAVE_RANGE',
+      driverName, startDate, endDate, leaveType, remarks,
+      markedBy: 'DASHBOARD'
+    }));
+    await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: fd });
+    status.textContent = '✅ Marked ' + days + ' day(s) for ' + driverName;
+    status.style.color = '#388E3C';
+    document.getElementById('mlrRemarks').value = '';
+    setTimeout(loadDashboard, 800);
+  } catch (err) {
+    status.textContent = '❌ ' + err.message;
+    status.style.color = '#D32F2F';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Mark Leave';
+  }
 }
 
 async function toggleHoliday(date, leaveType, newStatus) {
