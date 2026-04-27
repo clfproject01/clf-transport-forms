@@ -642,8 +642,8 @@ function updateStaffIdBadge(selectId, badgeId) {
 }
 
 window.onload = function() {
-  // Set today's date as default
-  const today = new Date().toISOString().split('T')[0];
+  // Set today's date as default (Kuala Lumpur timezone — fixes early-morning bug)
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
   document.getElementById('fuelDate').value = today;
   document.getElementById('fuelDate').max = today;
 
@@ -796,7 +796,7 @@ async function submitNoFuel() {
     const payload = {
       formType: 'NO_FUEL',
       timestamp: now.toISOString(),
-      fuelDate: document.getElementById('fuelDate').value || now.toISOString().split('T')[0],
+      fuelDate: document.getElementById('fuelDate').value || now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' }),
       driverName: driver,
       secondDriver: document.getElementById('secondDriver').value || '',
       vehicleNo: vehicle,
@@ -835,8 +835,8 @@ function resetForm() {
   document.getElementById('photoLabel').textContent = 'Tap to take photo · Ketik untuk ambil gambar';
   document.getElementById('photoSub').textContent = 'Camera will open automatically · Kamera akan dibuka secara automatik';
 
-  // Restore date and driver name
-  const today = new Date().toISOString().split('T')[0];
+  // Restore date and driver name (Kuala Lumpur timezone)
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
   document.getElementById('fuelDate').value = today;
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) document.getElementById('driverName').value = saved;

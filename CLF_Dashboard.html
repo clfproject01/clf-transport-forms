@@ -1211,7 +1211,7 @@ async function setPlannedPODs(driverName, plannedValue, inputEl) {
     const fd = new FormData();
     fd.append('data', JSON.stringify({
       formType: 'SET_POD_PLAN',
-      date: new Date().toISOString().split('T')[0],
+      date: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' }),
       driverName: driverName,
       plannedCount: planned,
       setBy: 'DASHBOARD'
@@ -1237,8 +1237,8 @@ function populateLeaveRangeDriverDropdown(drivers) {
     sel.appendChild(opt);
   });
   sel.dataset.populated = 'yes';
-  // Default start/end to today
-  const today = new Date().toISOString().split('T')[0];
+  // Default start/end to today (Kuala Lumpur timezone)
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
   const ds = document.getElementById('mlrStart');
   const de = document.getElementById('mlrEnd');
   if (ds && !ds.value) ds.value = today;
@@ -1301,6 +1301,8 @@ async function toggleHoliday(date, leaveType, newStatus) {
 // ============================================================
 window.onload = function() {
   loadDashboard();
+  // Auto-refresh every 5 minutes so supervisors don't need to manually click Refresh
+  setInterval(loadDashboard, 5 * 60 * 1000);
 };
 </script>
 </body>

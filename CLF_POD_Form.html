@@ -430,7 +430,8 @@ function updateStaffIdBadge(selectId, badgeId) {
 const STORAGE_KEY = 'clf_driver_name';
 
 window.onload = function() {
-  const today = new Date().toISOString().split('T')[0];
+  // Kuala Lumpur timezone — fixes early-morning bug
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
   document.getElementById('deliveryDate').value = today;
   document.getElementById('deliveryDate').max = today;
 
@@ -553,7 +554,8 @@ function resetForm() {
   document.getElementById('photoBtn').classList.remove('has-photo');
   document.getElementById('photoLabel').textContent = 'Tap to photograph signed invoice\nKetik untuk fotograf invois yang ditandatangani';
   document.getElementById('photoSub').textContent = 'Must be SIGNED by customer · Mesti DITANDATANGANI oleh pelanggan';
-  const today = new Date().toISOString().split('T')[0];
+  // Kuala Lumpur timezone
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
   document.getElementById('deliveryDate').value = today;
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
