@@ -348,7 +348,7 @@
       <div class="section-label">Signed Invoice Photo · Foto Invois Ditandatangani</div>
 
       <div class="notice">
-        <b>Up to 5 photos · Sehingga 5 foto:</b> One stop = multiple invoices? Snap each one. Tap "+ Add" to add more.<br>
+        <b>Up to 10 photos · Sehingga 10 foto:</b> One stop = multiple invoices? Snap each one. Tap "+ Add" to add more.<br>
         Satu hentian = banyak invois? Ambil setiap satu. Ketik "+ Add" untuk tambah lagi.
       </div>
 
@@ -360,7 +360,7 @@
             <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
           </div>
           <div class="photo-label" id="photoLabel">+ Tap to add invoice photo<br>Ketik untuk tambah foto invois</div>
-          <div class="photo-sublabel" id="photoSub">Up to 5 · Each must be SIGNED by customer</div>
+          <div class="photo-sublabel" id="photoSub">Up to 10 · Each must be SIGNED by customer</div>
         </div>
         <div class="photo-grid" id="photoGrid"></div>
         <div class="photo-counter" id="photoCounter"></div>
@@ -471,23 +471,86 @@ document.getElementById('driverName').addEventListener('change', function() {
   }
 });
 
-// Multi-photo state (max 5)
-const MAX_PHOTOS = 5;
-let collectedPhotos = []; // [{file, dataUrl}]
+// Multi-photo state (max 10)
+const MAX_PHOTOS = 10;
+const COMPRESS_MAX_DIM = 1600;   // longest side, in pixels
+const COMPRESS_QUALITY = 0.8;    // JPEG quality (0–1)
+let collectedPhotos = []; // [{dataUrl, name, type}]  — already compressed JPEG
 
-function handlePhoto(input) {
-  if (!input.files || !input.files.length) return;
-  for (const file of input.files) {
-    if (collectedPhotos.length >= MAX_PHOTOS) break;
+// Compress an image File to JPEG, max 1600px on longest side, quality 0.8.
+// Returns { dataUrl, name, type } (dataUrl is "data:image/jpeg;base64,...").
+function compressImage(file) {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = function(e) {
-      collectedPhotos.push({ file, dataUrl: e.target.result });
-      renderPhotoGrid();
+      const img = new Image();
+      img.onload = function() {
+        let w = img.naturalWidth;
+        let h = img.naturalHeight;
+        if (w > COMPRESS_MAX_DIM || h > COMPRESS_MAX_DIM) {
+          if (w >= h) {
+            h = Math.round(h * (COMPRESS_MAX_DIM / w));
+            w = COMPRESS_MAX_DIM;
+          } else {
+            w = Math.round(w * (COMPRESS_MAX_DIM / h));
+            h = COMPRESS_MAX_DIM;
+          }
+        }
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          const dataUrl = canvas.toDataURL('image/jpeg', COMPRESS_QUALITY);
+          const name = (file.name || 'invoice.jpg').replace(/\.[^.]+$/, '') + '.jpg';
+          resolve({ dataUrl, name, type: 'image/jpeg' });
+        } catch (err) {
+          reject(err);
+        }
+      };
+      img.onerror = () => reject(new Error('Image decode failed'));
+      img.src = e.target.result;
     };
+    reader.onerror = () => reject(new Error('File read failed'));
     reader.readAsDataURL(file);
+  });
+}
+
+// Fallback: if compression fails, still embed the original file as base64.
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve({ dataUrl: reader.result, name: file.name || 'invoice.jpg', type: file.type || 'image/jpeg' });
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handlePhoto(input) {
+  if (!input.files || !input.files.length) return;
+  const inputEl = input;
+  inputEl.disabled = true;
+  for (const file of input.files) {
+    if (collectedPhotos.length >= MAX_PHOTOS) break;
+    let entry;
+    try {
+      entry = await compressImage(file);
+    } catch (err) {
+      console.warn('Compression failed, using original:', err);
+      try {
+        entry = await readFileAsDataUrl(file);
+      } catch (e2) {
+        console.error('File read failed:', e2);
+        continue;
+      }
+    }
+    collectedPhotos.push(entry);
+    renderPhotoGrid();
   }
   // reset input so user can pick same file again later if removed
   input.value = '';
+  inputEl.disabled = collectedPhotos.length >= MAX_PHOTOS;
 }
 
 function removePhoto(idx) {
@@ -515,7 +578,7 @@ function renderPhotoGrid() {
   } else {
     btn.classList.remove('has-photo');
     document.getElementById('photoLabel').innerHTML = '+ Tap to add invoice photo<br>Ketik untuk tambah foto invois';
-    document.getElementById('photoSub').textContent = 'Up to 5 · Each must be SIGNED by customer';
+    document.getElementById('photoSub').textContent = 'Up to 10 · Each must be SIGNED by customer';
   }
   if (collectedPhotos.length >= MAX_PHOTOS) {
     document.getElementById('invoicePhoto').disabled = true;
@@ -552,12 +615,12 @@ async function submitForm() {
   document.querySelector('.loading-text').textContent =
     `Uploading ${collectedPhotos.length} photo(s)... · Memuat naik ${collectedPhotos.length} foto...`;
   try {
-    // Encode all photos to base64
-    const photos = [];
-    for (const p of collectedPhotos) {
-      const base64 = await toBase64(p.file);
-      photos.push({ base64, name: p.file.name, type: p.file.type });
-    }
+    // Photos are pre-compressed in handlePhoto() — just strip the data URL prefix.
+    const photos = collectedPhotos.map(p => ({
+      base64: p.dataUrl.split(',')[1],
+      name: p.name,
+      type: p.type,
+    }));
     const now = new Date();
     const payload = {
       formType: 'POD',
@@ -594,15 +657,6 @@ async function submitForm() {
     document.getElementById('loadingOverlay').classList.remove('show');
     alert('Submission failed. Please check your connection and try again.\nPenghantaran gagal. Sila semak sambungan anda dan cuba lagi.');
   }
-}
-
-function toBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result.split(',')[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 }
 
 function resetForm() {
