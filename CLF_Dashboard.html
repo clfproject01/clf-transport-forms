@@ -121,6 +121,38 @@ body {
 .refresh-btn:hover { background: rgba(201,168,76,0.25); }
 .refresh-btn svg { width: 13px; height: 13px; }
 
+/* V12: Month picker */
+.month-picker {
+  padding: 7px 32px 7px 14px;
+  background: rgba(201,168,76,0.15);
+  border: 1px solid rgba(201,168,76,0.3);
+  border-radius: 8px;
+  color: var(--gold);
+  font-family: 'Geist', sans-serif;
+  font-size: 12px; font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path fill='%23C9A84C' d='M6 8L1 3h10z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.month-picker:hover { background-color: rgba(201,168,76,0.25); }
+.month-picker option { background: #0B1F3A; color: var(--gold); }
+.history-banner {
+  display: none;
+  background: rgba(201,168,76,0.12);
+  border: 1px solid rgba(201,168,76,0.35);
+  border-radius: 10px;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 500;
+}
+.history-banner.show { display: flex; align-items: center; gap: 8px; }
+
 /* ALERT BAR */
 .alert-bar {
   background: var(--red-light);
@@ -468,6 +500,9 @@ body {
         <div class="clock" id="clock">--:--:--</div>
         <div class="clock-date" id="clockDate">Loading...</div>
       </div>
+      <select class="month-picker" id="monthPicker" onchange="onMonthChange()" title="View report for a different month">
+        <option value="">Loading…</option>
+      </select>
       <button class="refresh-btn" onclick="loadDashboard()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
@@ -480,6 +515,14 @@ body {
 </div>
 
 <div class="page">
+
+  <!-- V12: Historical month banner — shown only when viewing a past month -->
+  <div class="history-banner" id="historyBanner">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+    </svg>
+    <span>Viewing historical report for <b id="historyBannerLabel">—</b>. "Today" widgets below still reflect today's live state.</span>
+  </div>
 
   <!-- ALERT BAR -->
   <div class="alert-bar" id="alertBar">
@@ -806,11 +849,24 @@ setInterval(updateClock, 1000);
 // ============================================================
 // LOAD DATA FROM APPS SCRIPT
 // ============================================================
+// V12: month picker state
+let selectedMonthKey = ''; // empty = backend defaults to current month
+
+function onMonthChange() {
+  const sel = document.getElementById('monthPicker');
+  selectedMonthKey = sel.value || '';
+  loadDashboard();
+}
+
 async function loadDashboard() {
   try {
-    const res = await fetch(SCRIPT_URL + '?action=getDashboardData', { method: 'GET' });
+    const url = SCRIPT_URL + '?action=getDashboardData' +
+      (selectedMonthKey ? '&month=' + encodeURIComponent(selectedMonthKey) : '');
+    const res = await fetch(url, { method: 'GET' });
     const data = await res.json();
     if (data && data.status === 'ok') {
+      // V12: keep dropdown in sync + show banner if viewing past month
+      populateMonthPicker(data);
       renderDashboard(data);
     } else {
       renderDemoData();
@@ -821,6 +877,25 @@ async function loadDashboard() {
   }
   document.getElementById('lastRefresh').textContent =
     new Date().toLocaleTimeString('en-MY', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+}
+
+// V12: populate the month dropdown from API response and toggle history banner
+function populateMonthPicker(data) {
+  const sel = document.getElementById('monthPicker');
+  if (data.availableMonths && data.availableMonths.length) {
+    sel.innerHTML = data.availableMonths.map(m =>
+      '<option value="' + m.key + '"' + (m.key === data.selectedMonth ? ' selected' : '') + '>' + m.label + '</option>'
+    ).join('');
+  }
+  selectedMonthKey = data.selectedMonth || '';
+  const banner = document.getElementById('historyBanner');
+  const label  = document.getElementById('historyBannerLabel');
+  if (data.isCurrentMonth === false) {
+    banner.classList.add('show');
+    label.textContent = data.selectedMonthLabel || data.selectedMonth || '';
+  } else {
+    banner.classList.remove('show');
+  }
 }
 
 // ============================================================
