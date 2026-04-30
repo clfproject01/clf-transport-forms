@@ -140,6 +140,34 @@ body {
 }
 .month-picker:hover { background-color: rgba(201,168,76,0.25); }
 .month-picker option { background: #0B1F3A; color: var(--gold); }
+
+/* V14: Daily / Weekly / Monthly view toggle */
+.view-toggle {
+  display: inline-flex;
+  background: rgba(201,168,76,0.08);
+  border: 1px solid rgba(201,168,76,0.25);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 0;
+}
+.view-tab {
+  padding: 5px 12px;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: rgba(201,168,76,0.7);
+  font-family: 'Geist', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.view-tab:hover { color: var(--gold); }
+.view-tab.active {
+  background: rgba(201,168,76,0.25);
+  color: var(--gold);
+  font-weight: 600;
+}
 .history-banner {
   display: none;
   background: rgba(201,168,76,0.12);
@@ -500,7 +528,12 @@ body {
         <div class="clock" id="clock">--:--:--</div>
         <div class="clock-date" id="clockDate">Loading...</div>
       </div>
-      <select class="month-picker" id="monthPicker" onchange="onMonthChange()" title="View report for a different month">
+      <div class="view-toggle" id="viewToggle">
+        <button class="view-tab" data-view="daily" onclick="onViewChange('daily')">Daily</button>
+        <button class="view-tab" data-view="weekly" onclick="onViewChange('weekly')">Weekly</button>
+        <button class="view-tab active" data-view="monthly" onclick="onViewChange('monthly')">Monthly</button>
+      </div>
+      <select class="month-picker" id="monthPicker" onchange="onMonthChange()" title="View report for a different period">
         <option value="">Loading…</option>
       </select>
       <button class="refresh-btn" onclick="loadDashboard()">
@@ -849,24 +882,42 @@ setInterval(updateClock, 1000);
 // ============================================================
 // LOAD DATA FROM APPS SCRIPT
 // ============================================================
-// V12: month picker state
-let selectedMonthKey = ''; // empty = backend defaults to current month
+// V14: view + period state — defaults to monthly + current month (= V12 behavior)
+let selectedView = 'monthly';   // 'daily' | 'weekly' | 'monthly'
+let selectedPeriodKey = '';     // empty = backend uses current period for the view
 
+// User clicked one of the [Daily] [Weekly] [Monthly] tabs
+function onViewChange(view) {
+  if (view === selectedView) return;
+  selectedView = view;
+  selectedPeriodKey = ''; // reset to current period for the new view
+  // Update active styling
+  document.querySelectorAll('.view-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.view === view);
+  });
+  loadDashboard();
+}
+
+// User changed the period dropdown
 function onMonthChange() {
   const sel = document.getElementById('monthPicker');
-  selectedMonthKey = sel.value || '';
+  selectedPeriodKey = sel.value || '';
   loadDashboard();
 }
 
 async function loadDashboard() {
   try {
-    const url = SCRIPT_URL + '?action=getDashboardData' +
-      (selectedMonthKey ? '&month=' + encodeURIComponent(selectedMonthKey) : '');
+    const params = ['action=getDashboardData', 'view=' + encodeURIComponent(selectedView)];
+    if (selectedPeriodKey) {
+      // Backend reads any of date / week / month — pass under whichever key matches the view
+      const paramName = selectedView === 'daily' ? 'date' : selectedView === 'weekly' ? 'week' : 'month';
+      params.push(paramName + '=' + encodeURIComponent(selectedPeriodKey));
+    }
+    const url = SCRIPT_URL + '?' + params.join('&');
     const res = await fetch(url, { method: 'GET' });
     const data = await res.json();
     if (data && data.status === 'ok') {
-      // V12: keep dropdown in sync + show banner if viewing past month
-      populateMonthPicker(data);
+      populatePeriodPicker(data);
       renderDashboard(data);
     } else {
       renderDemoData();
@@ -879,20 +930,31 @@ async function loadDashboard() {
     new Date().toLocaleTimeString('en-MY', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
 }
 
-// V12: populate the month dropdown from API response and toggle history banner
-function populateMonthPicker(data) {
+// V14: populate the period dropdown (day / week / month options) and toggle history banner
+function populatePeriodPicker(data) {
   const sel = document.getElementById('monthPicker');
-  if (data.availableMonths && data.availableMonths.length) {
-    sel.innerHTML = data.availableMonths.map(m =>
-      '<option value="' + m.key + '"' + (m.key === data.selectedMonth ? ' selected' : '') + '>' + m.label + '</option>'
+  const periods = data.availablePeriods || data.availableMonths || [];
+  const currentKey = data.selectedPeriod || data.selectedMonth || '';
+  if (periods.length) {
+    sel.innerHTML = periods.map(p =>
+      '<option value="' + p.key + '"' + (p.key === currentKey ? ' selected' : '') + '>' + p.label + '</option>'
     ).join('');
   }
-  selectedMonthKey = data.selectedMonth || '';
+  selectedPeriodKey = currentKey;
+  // Sync the active tab in case backend echoed a different view than we requested
+  if (data.view) {
+    selectedView = data.view;
+    document.querySelectorAll('.view-tab').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.view === data.view);
+    });
+  }
+  // History banner — show when looking at a non-current period
   const banner = document.getElementById('historyBanner');
   const label  = document.getElementById('historyBannerLabel');
-  if (data.isCurrentMonth === false) {
+  const isCurrent = (data.isCurrentPeriod !== undefined) ? data.isCurrentPeriod : data.isCurrentMonth;
+  if (isCurrent === false) {
     banner.classList.add('show');
-    label.textContent = data.selectedMonthLabel || data.selectedMonth || '';
+    label.textContent = data.selectedPeriodLabel || data.selectedMonthLabel || '';
   } else {
     banner.classList.remove('show');
   }
