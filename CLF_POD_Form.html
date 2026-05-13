@@ -255,31 +255,7 @@
           <span id="rememberedBadge" class="remembered-badge" style="display:none;">✓ Remembered</span>
         </label>
         <select id="driverName" required>
-          <option value="">— Select your name · Pilih nama anda —</option>
-          <option>MUHAMMAD ZULKIFLI BIN OTHMAN</option>
-          <option>MOHAMAD FARID IKMAL BIN MOHD AJIB</option>
-          <option>MOHAMAD KHAIRUDDIN BIN KHAIDIR</option>
-          <option>MOHAMAD IZZRUL FIKRIE BIN ROSLI</option>
-          <option>MAZLAN BIN MOHD RADZUAN</option>
-          <option>ABDUL SALAM BIN IDRUS</option>
-          <option>MOHD FIRDAUS BIN MD MASHOD FAKEH</option>
-          <option>MUHAMMAD SYAFQ IZZAT BIN PUTERA AHMAD HILMI</option>
-          <option>HAIRUL ANUAR BIN YAAKUB</option>
-          <option>MOHAMAD NORAZAMAN BIN MOHAMED SHURY</option>
-          <option>AZMAN BIN MAT RASHID</option>
-          <option>MOHD KHAIRUL AZHAR BIN ABDUL MUTALIB</option>
-          <option>MUHAMMAD NAZMI BIN MUSTAPHA ALBAKRI</option>
-          <option>MOHAMAD AZUWAN BIN MT DESA</option>
-          <option>TAUFIK AFFENDI BIN MUHAMMAD</option>
-          <option>ASRIZAL BIN MOHD YATIM</option>
-          <option>MUHAMMAD FIRDAUS BIN UNIZAR</option>
-          <option>MUHAMMAD KHAIRUL HAFIZ BIN ROSHARUDIN</option>
-          <option>ABDUL HADI BIN KHALIB</option>
-          <option>AZRIN BIN JAMALUDDIN</option>
-          <option>JAMALUDIN BIN MOHAMAD YUSOF</option>
-          <option>AHMAD ASMADI BIN AMRAN</option>
-          <option>MOHD FADHIL BIN AHMAD RANI</option>
-          <option>MOHAMAD KHAIRUL ANAM BIN MOHAMAD ROSLI</option>
+          <option value="">Loading drivers... · Memuatkan...</option>
         </select>
         <div class="error-msg" id="err-driver">Please select your name · Sila pilih nama anda</div>
         <div id="staffIdBadge" style="display:none;margin-top:8px;padding:6px 12px;background:#F5E6B8;color:#412402;border-radius:6px;font-size:13px;font-weight:600;"></div>
@@ -293,30 +269,6 @@
         </label>
         <select id="secondDriver">
           <option value="">— None / Tiada —</option>
-          <option>MUHAMMAD ZULKIFLI BIN OTHMAN</option>
-          <option>MOHAMAD FARID IKMAL BIN MOHD AJIB</option>
-          <option>MOHAMAD KHAIRUDDIN BIN KHAIDIR</option>
-          <option>MOHAMAD IZZRUL FIKRIE BIN ROSLI</option>
-          <option>MAZLAN BIN MOHD RADZUAN</option>
-          <option>ABDUL SALAM BIN IDRUS</option>
-          <option>MOHD FIRDAUS BIN MD MASHOD FAKEH</option>
-          <option>MUHAMMAD SYAFQ IZZAT BIN PUTERA AHMAD HILMI</option>
-          <option>HAIRUL ANUAR BIN YAAKUB</option>
-          <option>MOHAMAD NORAZAMAN BIN MOHAMED SHURY</option>
-          <option>AZMAN BIN MAT RASHID</option>
-          <option>MOHD KHAIRUL AZHAR BIN ABDUL MUTALIB</option>
-          <option>MUHAMMAD NAZMI BIN MUSTAPHA ALBAKRI</option>
-          <option>MOHAMAD AZUWAN BIN MT DESA</option>
-          <option>TAUFIK AFFENDI BIN MUHAMMAD</option>
-          <option>ASRIZAL BIN MOHD YATIM</option>
-          <option>MUHAMMAD FIRDAUS BIN UNIZAR</option>
-          <option>MUHAMMAD KHAIRUL HAFIZ BIN ROSHARUDIN</option>
-          <option>ABDUL HADI BIN KHALIB</option>
-          <option>AZRIN BIN JAMALUDDIN</option>
-          <option>JAMALUDIN BIN MOHAMAD YUSOF</option>
-          <option>AHMAD ASMADI BIN AMRAN</option>
-          <option>MOHD FADHIL BIN AHMAD RANI</option>
-          <option>MOHAMAD KHAIRUL ANAM BIN MOHAMAD ROSLI</option>
         </select>
         <div id="staffIdBadge2" style="display:none;margin-top:8px;padding:6px 12px;background:#F5E6B8;color:#412402;border-radius:6px;font-size:13px;font-weight:600;"></div>
       </div>
@@ -411,20 +363,38 @@
 <script>
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxabHh2Kd04z7k0zZOOoaJs2i5hgycQsO_AYoRS99xZx2WqMJ6cowumY0e1znehiRM1/exec';
 
-const STAFF_IDS = {
-  'MUHAMMAD ZULKIFLI BIN OTHMAN':'TER 448','MOHAMAD FARID IKMAL BIN MOHD AJIB':'TER 515',
-  'MOHAMAD KHAIRUDDIN BIN KHAIDIR':'TER 534','MOHAMAD IZZRUL FIKRIE BIN ROSLI':'TER 537',
-  'MAZLAN BIN MOHD RADZUAN':'TER 057','ABDUL SALAM BIN IDRUS':'TER 437',
-  'MOHD FIRDAUS BIN MD MASHOD FAKEH':'TER 424','MUHAMMAD SYAFQ IZZAT BIN PUTERA AHMAD HILMI':'TER 536',
-  'HAIRUL ANUAR BIN YAAKUB':'TER 254','MOHAMAD NORAZAMAN BIN MOHAMED SHURY':'TER 547',
-  'AZMAN BIN MAT RASHID':'TER 171','MOHD KHAIRUL AZHAR BIN ABDUL MUTALIB':'TER 516',
-  'MUHAMMAD NAZMI BIN MUSTAPHA ALBAKRI':'TER 231','MOHAMAD AZUWAN BIN MT DESA':'TER 440',
-  'TAUFIK AFFENDI BIN MUHAMMAD':'TER 240','ASRIZAL BIN MOHD YATIM':'TER 453',
-  'MUHAMMAD FIRDAUS BIN UNIZAR':'TER 390','MUHAMMAD KHAIRUL HAFIZ BIN ROSHARUDIN':'TER 513',
-  'ABDUL HADI BIN KHALIB':'TER 507','AZRIN BIN JAMALUDDIN':'TER 505',
-  'JAMALUDIN BIN MOHAMAD YUSOF':'TER 031','AHMAD ASMADI BIN AMRAN':'TER 540',
-  'MOHD FADHIL BIN AHMAD RANI':'TER 248','MOHAMAD KHAIRUL ANAM BIN MOHAMAD ROSLI':'TER 533'
-};
+// V17: Dynamically loaded from backend /getDrivers — empty until fetchDrivers() resolves
+let STAFF_IDS = {};
+
+async function fetchAndPopulateDrivers() {
+  try {
+    const res = await fetch(SCRIPT_URL + '?action=getDrivers', { method: 'GET' });
+    const data = await res.json();
+    if (!data || data.status !== 'ok' || !Array.isArray(data.drivers) || data.drivers.length === 0) {
+      throw new Error('Empty driver roster from server');
+    }
+    STAFF_IDS = {};
+    data.drivers.forEach(d => { STAFF_IDS[d.name] = d.staffId || ''; });
+
+    const primary = document.getElementById('driverName');
+    const second  = document.getElementById('secondDriver');
+    primary.innerHTML = '<option value="">— Select your name · Pilih nama anda —</option>' +
+      data.drivers.map(d => '<option>' + d.name + '</option>').join('');
+    second.innerHTML = '<option value="">— None / Tiada —</option>' +
+      data.drivers.map(d => '<option>' + d.name + '</option>').join('');
+
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved && STAFF_IDS[saved]) {
+      primary.value = saved;
+      document.getElementById('rememberedBadge').style.display = 'inline-flex';
+      updateStaffIdBadge('driverName', 'staffIdBadge');
+    }
+  } catch (err) {
+    console.error('fetchAndPopulateDrivers failed:', err);
+    document.getElementById('driverName').innerHTML =
+      '<option value="">⚠ Failed to load drivers — refresh the page</option>';
+  }
+}
 
 function updateStaffIdBadge(selectId, badgeId) {
   const driver = document.getElementById(selectId).value;
@@ -445,18 +415,8 @@ window.onload = function() {
   document.getElementById('deliveryDate').value = today;
   document.getElementById('deliveryDate').max = today;
 
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) {
-    const sel = document.getElementById('driverName');
-    for (let i = 0; i < sel.options.length; i++) {
-      if (sel.options[i].value === saved) {
-        sel.value = saved;
-        document.getElementById('rememberedBadge').style.display = 'inline-flex';
-        updateStaffIdBadge('driverName', 'staffIdBadge');
-        break;
-      }
-    }
-  }
+  // V17: Fetch driver list from backend; this also restores remembered driver
+  fetchAndPopulateDrivers();
 };
 
 document.getElementById('secondDriver').addEventListener('change', function() {
