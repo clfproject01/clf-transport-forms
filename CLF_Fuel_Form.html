@@ -687,6 +687,16 @@ function validate() {
     document.getElementById('err-confirm').classList.remove('show');
   }
 
+  // B18 fix: driver and secondDriver must not be the same person (would double-count credit)
+  const dr = document.getElementById('driverName').value;
+  const sdEl = document.getElementById('secondDriver');
+  const sd = sdEl ? sdEl.value : '';
+  if (dr && sd && dr === sd) {
+    alert('Driver and Second Driver cannot be the same person.\nPemandu dan Pemandu Kedua tidak boleh sama.');
+    if (sdEl) sdEl.focus();
+    valid = false;
+  }
+
   return valid;
 }
 

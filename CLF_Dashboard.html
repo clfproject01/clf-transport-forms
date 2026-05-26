@@ -5,911 +5,2060 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CLF Transport Control Tower — Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
+/* ============================================================
+   Design System tokens — see outputs/design_system_prompt.md
+   ============================================================ */
 :root {
-  --navy: #0B1F3A;
-  --navy-mid: #1A3A5C;
-  --blue: #185FA5;
-  --blue-light: #E6F1FB;
-  --gold: #C9A84C;
-  --gold-light: #F5E6B8;
-  --green: #3B6D11;
-  --green-light: #EAF3DE;
-  --amber: #854F0B;
-  --amber-light: #FAEEDA;
-  --red: #A32D2D;
-  --red-light: #FCEBEB;
-  --gray: #6B7A8D;
-  --gray-light: #F4F6F9;
-  --border: #E2E8F0;
-  --text: #1A2A3A;
-  --text-2: #4A5568;
-  --white: #FFFFFF;
-  --radius: 12px;
-  --radius-sm: 8px;
-  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  /* Primary (CLF Trading blue) */
+  --blue-50:  #EFF6FF;
+  --blue-500: #3B82F6;
+  --blue-600: #2563EB;
+  --blue-700: #1D4ED8;
+  --blue-900: #1E3A8A;
+
+  /* Neutral gray */
+  --gray-50:  #F9FAFB;
+  --gray-100: #F3F4F6;
+  --gray-200: #E5E7EB;
+  --gray-300: #D1D5DB;
+  --gray-500: #6B7280;
+  --gray-700: #374151;
+  --gray-900: #111827;
+
+  /* Semantic */
+  --success-50:  #ECFDF5;
+  --success-500: #10B981;
+  --success-700: #047857;
+  --warning-50:  #FFFBEB;
+  --warning-500: #F59E0B;
+  --warning-700: #B45309;
+  --danger-50:   #FEF2F2;
+  --danger-500:  #EF4444;
+  --danger-700:  #B91C1C;
+
+  /* Gold — RESERVED: #1 leaderboard, monthly MVP, deadline marker */
+  --gold-50:  #FEFCE8;
+  --gold-500: #EAB308;
+  --gold-700: #A16207;
+
+  /* Surfaces */
+  --surface-page:     #F9FAFB;
+  --surface-card:     #FFFFFF;
+  --surface-elevated: #FFFFFF;
+  --surface-overlay:  rgba(17,24,39,0.5);
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* Typography */
+  --text-h1: 28px;
+  --text-h2: 22px;
+  --text-h3: 18px;
+  --text-body: 14px;
+  --text-caption: 12px;
+  --text-overline: 10.5px;
 }
-*{box-sizing:border-box;margin:0;padding:0;}
+@media (max-width: 767px) {
+  :root {
+    --text-h1: 22px;
+    --text-h2: 18px;
+    --text-h3: 16px;
+  }
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
 body {
   font-family: 'Geist', -apple-system, sans-serif;
-  background: #F0F4F8;
-  color: var(--text);
-  min-height: 100vh;
+  background: var(--surface-page);
+  color: var(--gray-900);
   -webkit-font-smoothing: antialiased;
+  font-size: var(--text-body);
+  line-height: 1.5;
 }
 
-/* LOADING */
+/* ── Loading screen (light) ─────────────────────────── */
 .loading-screen {
   position: fixed; inset: 0;
-  background: var(--navy);
+  background: white;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  gap: 20px; z-index: 999;
-  transition: opacity 0.5s ease;
+  gap: var(--space-4);
+  z-index: 999;
+  transition: opacity 0.4s ease;
 }
-.loading-screen.fade { opacity: 0; pointer-events: none; }
+.loading-screen.is-fading { opacity: 0; pointer-events: none; }
 .loading-logo {
   width: 60px; height: 60px;
-  background: white; border-radius: 14px;
+  background: var(--blue-600);
+  border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
+  color: white; font-weight: 700; font-size: 18px;
 }
-.loading-logo-text { font-size: 14px; font-weight: 600; color: var(--navy); text-align: center; line-height: 1.2; }
-.loading-logo-text span { display: block; font-size: 9px; color: var(--gold); margin-top: 2px; }
-.loading-title { color: white; font-size: 18px; font-weight: 500; }
-.loading-sub { color: #8A9BB0; font-size: 13px; }
-.loading-bar { width: 200px; height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
-.loading-fill { height: 100%; background: var(--gold); border-radius: 2px; animation: loadfill 1.5s ease forwards; }
-@keyframes loadfill { from{width:0} to{width:100%} }
+.loading-title { font-size: var(--text-h3); font-weight: 600; color: var(--gray-900); }
+.loading-sub { font-size: var(--text-caption); color: var(--gray-500); }
+.loading-spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--gray-200);
+  border-top-color: var(--blue-600);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
 
-/* LAYOUT */
-.page { max-width: 1400px; margin: 0 auto; padding: 0 24px 40px; }
-
-/* HEADER */
+/* ── Header ─────────────────────────────────────────── */
 .header {
-  background: var(--navy);
-  margin-bottom: 24px;
-  padding: 0 24px;
+  background: var(--surface-card);
+  border-bottom: 1px solid var(--gray-200);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  padding: 0 var(--space-5);
 }
 .header-inner {
-  max-width: 1400px;
+  max-width: 1280px;
   margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 0;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  min-height: 64px;
 }
-.header-left { display: flex; align-items: center; gap: 14px; }
-.logo {
-  width: 46px; height: 46px;
-  background: white; border-radius: 10px;
+.header-left { display: flex; align-items: center; gap: var(--space-3); flex-shrink: 0; min-width: 0; }
+.header-logo {
+  width: 36px; height: 36px;
+  background: var(--blue-600);
+  border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
+  color: white; font-weight: 700; font-size: 13px;
   flex-shrink: 0;
-  border: 1.5px solid rgba(201,168,76,0.3);
 }
-.logo-text { font-size: 12px; font-weight: 600; color: var(--navy); text-align: center; line-height: 1.2; }
-.logo-text span { display: block; font-size: 8px; color: var(--gold); margin-top: 1px; }
-.company { color: white; }
-.company-name { font-size: 16px; font-weight: 600; }
-.company-sub { font-size: 11px; color: #8A9BB0; margin-top: 1px; }
-.header-right { display: flex; align-items: center; gap: 20px; }
+.header-title {
+  font-size: var(--text-h3);
+  font-weight: 600;
+  color: var(--gray-900);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.header-sub {
+  font-size: var(--text-caption);
+  color: var(--gray-500);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
 .live-badge {
-  display: flex; align-items: center; gap: 6px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 20px;
-  padding: 5px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: var(--success-50);
+  border: 1px solid var(--success-500);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--success-700);
 }
-.live-dot { width: 7px; height: 7px; background: #4ADE80; border-radius: 50%; animation: blink 2s infinite; }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
-.live-text { font-size: 11px; color: #A0AEC0; font-weight: 500; }
-.clock-wrap { text-align: right; }
-.clock { font-family: 'Geist Mono', monospace; font-size: 18px; font-weight: 500; color: white; }
-.clock-date { font-size: 11px; color: #8A9BB0; margin-top: 1px; }
-.refresh-btn {
-  padding: 7px 14px;
-  background: rgba(201,168,76,0.15);
-  border: 1px solid rgba(201,168,76,0.3);
-  border-radius: 8px;
-  color: var(--gold);
-  font-family: 'Geist', sans-serif;
-  font-size: 12px; font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex; align-items: center; gap: 6px;
+.live-dot {
+  width: 7px; height: 7px;
+  background: var(--success-500);
+  border-radius: 50%;
+  animation: blink 2s infinite;
 }
-.refresh-btn:hover { background: rgba(201,168,76,0.25); }
-.refresh-btn svg { width: 13px; height: 13px; }
-
-/* V12: Month picker */
-.month-picker {
-  padding: 7px 32px 7px 14px;
-  background: rgba(201,168,76,0.15);
-  border: 1px solid rgba(201,168,76,0.3);
-  border-radius: 8px;
-  color: var(--gold);
-  font-family: 'Geist', sans-serif;
-  font-size: 12px; font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  appearance: none;
-  -webkit-appearance: none;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path fill='%23C9A84C' d='M6 8L1 3h10z'/></svg>");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+.clock-wrap { text-align: right; line-height: 1.1; }
+.clock {
+  font-family: 'Geist Mono', monospace;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--gray-900);
 }
-.month-picker:hover { background-color: rgba(201,168,76,0.25); }
-.month-picker option { background: #0B1F3A; color: var(--gold); }
-
-/* V14: Daily / Weekly / Monthly view toggle */
+.clock-date {
+  font-size: 11px;
+  color: var(--gray-500);
+  margin-top: 2px;
+}
 .view-toggle {
   display: inline-flex;
-  background: rgba(201,168,76,0.08);
-  border: 1px solid rgba(201,168,76,0.25);
+  background: var(--gray-100);
   border-radius: 8px;
   padding: 2px;
   gap: 0;
 }
 .view-tab {
-  padding: 5px 12px;
+  padding: 6px 12px;
   background: transparent;
   border: 0;
   border-radius: 6px;
-  color: rgba(201,168,76,0.7);
-  font-family: 'Geist', sans-serif;
-  font-size: 11px;
+  color: var(--gray-500);
+  font-family: inherit;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
 }
-.view-tab:hover { color: var(--gold); }
-.view-tab.active {
-  background: rgba(201,168,76,0.25);
-  color: var(--gold);
+.view-tab:hover { color: var(--gray-900); }
+.view-tab.is-active {
+  background: white;
+  color: var(--blue-600);
   font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
 }
-.history-banner {
+.month-picker {
+  padding: 8px 28px 8px 12px;
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  color: var(--gray-700);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path fill='%236B7280' d='M6 8L1 3h10z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+.month-picker:hover { background-color: var(--gray-50); }
+.month-picker:focus {
+  outline: none;
+  border-color: var(--blue-600);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+}
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  color: var(--gray-700);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-secondary:hover:not(:disabled) { background: var(--gray-50); }
+.btn-secondary:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-secondary svg { width: 13px; height: 13px; }
+.btn-refresh-mobile { display: none; }
+
+@media (max-width: 767px) {
+  .header { padding: 0 var(--space-4); }
+  .header-inner { flex-wrap: wrap; gap: var(--space-2); padding: var(--space-2) 0; }
+  .header-sub { display: none; }
+  .header-right { gap: var(--space-2); width: 100%; justify-content: flex-start; }
+  .clock-wrap { display: none; }
+  .live-badge { padding: 3px 8px; font-size: 10px; }
+  .btn-refresh-text { display: none; }
+  /* Should-fix D3: WCAG 2.5.5 — 44px minimum touch target on mobile */
+  .view-tab,
+  .btn-toggle,
+  .btn-edit-small { min-height: 44px; padding-top: 10px; padding-bottom: 10px; }
+}
+@media (max-width: 480px) {
+  .view-tab { padding: 10px 8px; font-size: 11px; }
+}
+
+/* ── Page ───────────────────────────────────────────── */
+.page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: var(--space-5);
+}
+@media (max-width: 767px) {
+  .page { padding: var(--space-4); padding-bottom: 88px; }
+}
+
+/* ── Banners ────────────────────────────────────────── */
+.banner {
   display: none;
-  background: rgba(201,168,76,0.12);
-  border: 1px solid rgba(201,168,76,0.35);
-  border-radius: 10px;
+  align-items: center;
+  gap: 10px;
   padding: 10px 16px;
-  margin-bottom: 16px;
-  color: var(--gold);
+  border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
+  margin-bottom: var(--space-4);
+  border-left-width: 3px;
+  border-left-style: solid;
 }
-.history-banner.show { display: flex; align-items: center; gap: 8px; }
+.banner.is-visible { display: flex; }
+.banner svg { width: 16px; height: 16px; flex-shrink: 0; }
+.banner-info {
+  background: var(--blue-50);
+  border: 1px solid var(--blue-500);
+  border-left-color: var(--blue-500);
+  color: var(--blue-700);
+}
+.banner-danger {
+  background: var(--danger-50);
+  border: 1px solid var(--danger-500);
+  border-left-color: var(--danger-500);
+  color: var(--danger-700);
+}
+.banner-spacer { flex: 1; }
 
-/* ALERT BAR */
-.alert-bar {
-  background: var(--red-light);
-  border: 1px solid #F7C1C1;
-  border-radius: var(--radius);
-  padding: 12px 16px;
-  margin-bottom: 20px;
+/* ── Issues Bar ────────────────────────────────────── */
+.issues-bar {
   display: none;
+  background: var(--surface-card);
+  border: 1px solid var(--gray-200);
+  border-left: 3px solid var(--warning-500);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: var(--space-4);
+  box-shadow: 0 1px 3px rgba(17,24,39,0.06);
+}
+.issues-bar.is-visible { display: block; }
+.issues-bar.is-danger { border-left-color: var(--danger-500); }
+.issues-bar.is-warning { border-left-color: var(--warning-500); }
+.issues-bar.is-info { border-left-color: var(--blue-500); }
+.issues-row {
+  display: flex;
   align-items: flex-start;
   gap: 12px;
 }
-.alert-bar.show { display: flex; }
-.alert-icon { color: var(--red); flex-shrink: 0; margin-top: 1px; }
-.alert-content { flex: 1; }
-.alert-title { font-size: 13px; font-weight: 600; color: var(--red); margin-bottom: 6px; }
-.alert-drivers { display: flex; flex-wrap: wrap; gap: 6px; }
-.alert-chip {
-  display: flex; align-items: center; gap: 5px;
-  background: white;
-  border: 1px solid #F7C1C1;
-  border-radius: 20px;
-  padding: 3px 10px;
-  font-size: 11px; color: var(--red);
+.issues-icon { flex-shrink: 0; margin-top: 1px; }
+.issues-icon svg { width: 18px; height: 18px; }
+.issues-bar.is-danger .issues-icon { color: var(--danger-500); }
+.issues-bar.is-warning .issues-icon { color: var(--warning-500); }
+.issues-bar.is-info .issues-icon { color: var(--blue-500); }
+.issues-content { flex: 1; min-width: 0; }
+.issues-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.issues-bar.is-danger .issues-title { color: var(--danger-700); }
+.issues-bar.is-warning .issues-title { color: var(--warning-700); }
+.issues-bar.is-info .issues-title { color: var(--blue-700); }
+.issues-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
-/* KPI GRID */
+/* ── Card / Panel ──────────────────────────────────── */
+.card {
+  background: var(--surface-card);
+  border: 1px solid var(--gray-200);
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(17,24,39,0.06), 0 1px 2px rgba(17,24,39,0.04);
+  padding: var(--space-5);
+}
+@media (max-width: 767px) {
+  .card { padding: var(--space-4); }
+}
+.card-stripe { border-left: 3px solid var(--blue-600); }
+.card-stripe-gold { border-left: 3px solid var(--gold-500); }
+.card-stripe-danger { border-left: 3px solid var(--danger-500); }
+.card-stripe-warning { border-left: 3px solid var(--warning-500); }
+.card-title {
+  font-size: var(--text-h3);
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: 2px;
+}
+.card-sub {
+  font-size: var(--text-caption);
+  color: var(--gray-500);
+  margin-bottom: var(--space-4);
+}
+.card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+.card-header-text { flex: 1; min-width: 0; }
+.card-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* ── KPI tiles ──────────────────────────────────────── */
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-  margin-bottom: 20px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
-.kpi-card {
-  background: white;
-  border-radius: var(--radius);
-  padding: 20px;
-  box-shadow: var(--shadow);
-  border: 1px solid var(--border);
+@media (max-width: 767px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+.kpi-tile {
   position: relative;
+  background: var(--surface-card);
+  border: 1px solid var(--gray-200);
+  border-radius: 10px;
+  padding: var(--space-4);
+  box-shadow: 0 1px 3px rgba(17,24,39,0.06), 0 1px 2px rgba(17,24,39,0.04);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
   overflow: hidden;
 }
-.kpi-top-bar {
-  position: absolute; top: 0; left: 0; right: 0;
-  height: 3px;
+.kpi-tile:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(17,24,39,0.08);
 }
+.kpi-tile::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--gray-200);
+}
+.kpi-tile.accent-blue::before { background: var(--blue-600); }
+.kpi-tile.accent-success::before { background: var(--success-500); }
+.kpi-tile.accent-warning::before { background: var(--warning-500); }
+.kpi-tile.accent-danger::before { background: var(--danger-500); }
+.kpi-tile.accent-gray::before { background: var(--gray-300); }
 .kpi-label {
-  font-size: 11px; font-weight: 500;
-  color: var(--gray);
-  letter-spacing: 0.5px;
+  font-size: var(--text-overline);
+  font-weight: 600;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  margin-bottom: 10px;
+  color: var(--gray-500);
+  margin-bottom: var(--space-2);
 }
 .kpi-value {
-  font-size: 36px; font-weight: 600;
-  line-height: 1;
-  margin-bottom: 8px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 30px;
+  font-weight: 600;
+  color: var(--gray-900);
+  line-height: 1.1;
 }
-.kpi-footer {
-  display: flex; align-items: center; justify-content: space-between;
+@media (max-width: 767px) {
+  .kpi-value { font-size: 24px; }
 }
-.kpi-sub { font-size: 12px; color: var(--gray); }
-.kpi-trend {
-  display: flex; align-items: center; gap: 3px;
-  font-size: 12px; font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 20px;
-}
-.trend-up { background: var(--green-light); color: var(--green); }
-.trend-down { background: var(--red-light); color: var(--red); }
-.trend-flat { background: var(--gray-light); color: var(--gray); }
-
-/* MAIN GRID */
-.main-grid {
-  display: grid;
-  grid-template-columns: 1fr 340px;
-  gap: 16px;
-  margin-bottom: 16px;
+.kpi-sub {
+  font-size: 12px;
+  color: var(--gray-500);
+  margin-top: var(--space-2);
 }
 
-/* PANEL */
-.panel {
-  background: white;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  border: 1px solid var(--border);
+/* ── Monthly Health collapsible strip ──────────────── */
+.month-strip {
+  background: var(--surface-card);
+  border: 1px solid var(--gray-200);
+  border-radius: 10px;
+  margin-bottom: var(--space-4);
   overflow: hidden;
 }
-.panel-header {
-  padding: 16px 20px 14px;
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between;
-}
-.panel-title {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 13px; font-weight: 600; color: var(--text);
-}
-.panel-dot { width: 7px; height: 7px; border-radius: 50%; }
-.panel-count {
-  font-size: 11px; font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 20px;
-  background: var(--gray-light);
-  color: var(--gray);
-}
-.panel-body { padding: 16px 20px; }
-
-/* MVP CARD */
-.mvp-card {
-  background: linear-gradient(135deg, var(--navy) 0%, #1A3A5C 100%);
-  border-radius: var(--radius);
-  padding: 20px;
-  margin-bottom: 14px;
-  position: relative; overflow: hidden;
-}
-.mvp-card::before {
-  content: '';
-  position: absolute; top: -30px; right: -30px;
-  width: 100px; height: 100px;
-  border-radius: 50%;
-  border: 1px solid rgba(201,168,76,0.2);
-}
-.mvp-badge {
-  font-size: 10px; font-weight: 600;
-  color: var(--gold);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  margin-bottom: 8px;
-  display: flex; align-items: center; gap: 5px;
-}
-.mvp-name { font-size: 15px; font-weight: 600; color: white; margin-bottom: 4px; }
-.mvp-score {
-  font-family: 'Geist Mono', monospace;
-  font-size: 28px; font-weight: 500;
-  color: var(--gold);
-}
-.mvp-label { font-size: 11px; color: #8A9BB0; }
-.mvp-medal {
-  position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
-  width: 44px; height: 44px;
-  background: rgba(201,168,76,0.15);
-  border: 1.5px solid rgba(201,168,76,0.4);
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px;
-}
-
-/* RISK SUMMARY */
-.risk-summary { margin-bottom: 14px; }
-.risk-row {
-  display: flex; align-items: center; gap: 10px;
-  margin-bottom: 8px;
-}
-.risk-label { font-size: 12px; color: var(--text-2); width: 70px; flex-shrink: 0; }
-.risk-track { flex: 1; height: 18px; background: var(--gray-light); border-radius: 4px; overflow: hidden; }
-.risk-fill {
-  height: 100%; border-radius: 4px;
-  display: flex; align-items: center; padding-left: 8px;
-  font-size: 10px; font-weight: 600;
-  transition: width 1s ease;
-}
-.risk-num { font-size: 13px; font-weight: 600; width: 28px; text-align: right; }
-
-/* COMPLIANCE BARS */
-.comp-item { margin-bottom: 14px; }
-.comp-header { display: flex; justify-content: space-between; margin-bottom: 5px; }
-.comp-name { font-size: 12px; color: var(--text-2); }
-.comp-pct { font-size: 13px; font-weight: 600; }
-.comp-track { height: 8px; background: var(--gray-light); border-radius: 20px; overflow: hidden; }
-.comp-fill { height: 100%; border-radius: 20px; transition: width 1s ease; }
-.comp-target {
-  font-size: 10px; color: var(--gray);
-  margin-top: 4px;
-  display: flex; align-items: center; gap: 4px;
-}
-.comp-target-line { width: 16px; height: 2px; background: var(--gold); border-radius: 1px; }
-
-/* DRIVER TABLE */
-.driver-table { width: 100%; }
-.driver-thead th {
-  padding: 8px 12px;
-  font-size: 10px; font-weight: 600;
-  color: var(--gray);
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  background: var(--gray-light);
-  border-bottom: 1px solid var(--border);
+.month-strip-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px var(--space-4);
+  cursor: pointer;
+  background: var(--surface-card);
+  border: 0;
+  width: 100%;
   text-align: left;
-}
-.driver-tbody tr {
-  border-bottom: 1px solid var(--border);
+  font-family: inherit;
   transition: background 0.15s;
 }
-.driver-tbody tr:hover { background: var(--gray-light); }
-.driver-tbody tr:last-child { border-bottom: none; }
-.driver-tbody td {
+.month-strip-head:hover { background: var(--gray-50); }
+.month-strip-caret {
+  width: 14px; height: 14px;
+  transition: transform 0.2s;
+  color: var(--gray-500);
+  flex-shrink: 0;
+}
+.month-strip.is-open .month-strip-caret { transform: rotate(90deg); }
+.month-strip-summary {
+  font-family: 'Geist Mono', monospace;
+  font-size: 13px;
+  color: var(--gray-700);
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.month-strip-body {
+  display: none;
+  padding: var(--space-4);
+  padding-top: 0;
+  border-top: 1px solid var(--gray-200);
+}
+.month-strip.is-open .month-strip-body { display: block; padding-top: var(--space-4); }
+.month-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-3);
+}
+@media (max-width: 767px) {
+  .month-mini-grid { grid-template-columns: repeat(2, 1fr); }
+}
+.month-mini { padding: 0; }
+.month-mini-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gray-500);
+  margin-bottom: 4px;
+}
+.month-mini-value {
+  font-family: 'Geist Mono', monospace;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--gray-900);
+}
+
+/* ── Main grid ─────────────────────────────────────── */
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+@media (max-width: 1279px) {
+  .main-grid { grid-template-columns: 1fr 320px; }
+}
+@media (max-width: 1024px) { /* Should-fix D2: was 1023, aligned with spec §18 */
+  .main-grid { grid-template-columns: 1fr; }
+}
+.sidebar-stack { display: flex; flex-direction: column; gap: var(--space-4); }
+
+/* ── Driver Ranking ─────────────────────────────────── */
+.driver-ranking-wrap {
+  max-height: 480px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin: 0 calc(-1 * var(--space-5)) calc(-1 * var(--space-5));
+  padding: 0 var(--space-5) var(--space-5);
+}
+@media (max-width: 767px) {
+  .driver-ranking-wrap {
+    margin: 0 calc(-1 * var(--space-4)) calc(-1 * var(--space-4));
+    padding: 0 var(--space-4) var(--space-4);
+  }
+}
+.driver-table { width: 100%; border-collapse: collapse; }
+.driver-table thead th {
+  padding: 8px 12px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--gray-500);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--gray-50);
+  border-bottom: 1px solid var(--gray-200);
+  text-align: left;
+  position: sticky;
+  top: 0;
+}
+.driver-table tbody tr {
+  border-bottom: 1px solid var(--gray-100);
+  transition: background 0.15s;
+}
+.driver-table tbody tr:hover { background: var(--gray-50); }
+.driver-table tbody tr:last-child { border-bottom: none; }
+.driver-table tbody tr.row-top { background: var(--gold-50); }
+.driver-table tbody td {
   padding: 10px 12px;
-  font-size: 12px; color: var(--text-2);
+  font-size: 13px;
+  color: var(--gray-700);
 }
 .rank-num {
   width: 22px; height: 22px;
   border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 600;
+  background: var(--gray-100);
+  color: var(--gray-700);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
 }
-.driver-name-cell { font-size: 12px; font-weight: 500; color: var(--text); max-width: 180px; }
-.score-val { font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 500; }
-.risk-badge {
-  display: inline-flex; align-items: center;
-  padding: 3px 8px;
-  border-radius: 20px;
-  font-size: 10px; font-weight: 600;
+.rank-num.is-gold { background: var(--gold-50); color: var(--gold-700); border: 1px solid var(--gold-500); }
+.driver-name-cell {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gray-900);
 }
-.section-divider {
-  padding: 6px 12px;
-  background: var(--gray-light);
-  font-size: 10px; font-weight: 600;
-  color: var(--gray);
-  letter-spacing: 0.5px;
+.driver-id {
+  display: block;
+  font-size: 10px;
+  color: var(--gray-500);
+  font-weight: 400;
+  margin-top: 1px;
+  font-family: 'Geist Mono', monospace;
+}
+.section-divider td {
+  padding: 6px 12px !important;
+  background: var(--gray-50);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--gray-500);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+.score-val { font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600; }
 
-/* LORRY GRID */
-.lorry-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 8px;
+/* highlight pulse — for click-from-chip */
+.row-highlight { animation: pulse-row 1s ease; }
+@keyframes pulse-row {
+  0%, 100% { background: transparent; }
+  30% { background: var(--blue-50); }
 }
-.lorry-card {
-  background: var(--gray-light);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+
+/* ── Buttons ────────────────────────────────────────── */
+.btn-primary {
+  background: var(--blue-600);
+  color: white;
+  font-weight: 600;
+  padding: 11px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--text-body);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background 0.15s;
+}
+.btn-primary:hover:not(:disabled) { background: var(--blue-700); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-primary.is-success { background: var(--success-700); }
+.btn-primary.is-success:hover:not(:disabled) { background: #035d44; }
+.btn-toggle {
+  background: white;
+  font-weight: 500;
+  padding: 5px 10px;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--gray-700);
+  transition: all 0.15s;
+}
+.btn-toggle:hover { background: var(--gray-50); }
+.btn-toggle.is-active {
+  background: var(--blue-50);
+  color: var(--blue-700);
+  border-color: var(--blue-500);
+  font-weight: 600;
+}
+.btn-toggle svg { width: 12px; height: 12px; }
+
+.btn-edit-small {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gray-700);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-edit-small:hover:not(:disabled) { background: var(--gray-50); }
+.btn-edit-small.is-hidden { display: none; }
+.btn-edit-small.is-primary {
+  background: var(--blue-600);
+  color: white;
+  border-color: var(--blue-600);
+}
+.btn-edit-small.is-primary:hover:not(:disabled) { background: var(--blue-700); }
+.btn-edit-small:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-edit-small svg { width: 12px; height: 12px; }
+
+/* ── Toggle group (chart/table) ─────────────────────── */
+.toggle-group {
+  display: inline-flex;
+  background: var(--gray-100);
+  border-radius: 6px;
+  padding: 2px;
+  gap: 0;
+}
+.toggle-group .btn-toggle {
+  border: 0;
+  background: transparent;
+  color: var(--gray-500);
+}
+.toggle-group .btn-toggle.is-active {
+  background: white;
+  color: var(--blue-600);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  border: 0;
+}
+
+/* ── Toggle visibility helpers ──────────────────────── */
+.is-hidden { display: none !important; }
+
+/* ── Badges ─────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.badge-success { background: var(--success-50); color: var(--success-700); border: 1px solid var(--success-500); }
+.badge-warning { background: var(--warning-50); color: var(--warning-700); border: 1px solid var(--warning-500); }
+.badge-danger  { background: var(--danger-50);  color: var(--danger-700);  border: 1px solid var(--danger-500); }
+.badge-info    { background: var(--blue-50);    color: var(--blue-700);    border: 1px solid var(--blue-500); }
+.badge-gray    { background: var(--gray-100);   color: var(--gray-700);    border: 1px solid var(--gray-300); }
+.badge-gold    { background: var(--gold-50);    color: var(--gold-700);    border: 1px solid var(--gold-500); }
+.badge-clickable { cursor: pointer; transition: transform 0.1s; }
+.badge-clickable:hover { transform: translateY(-1px); }
+
+/* ── MVP card ───────────────────────────────────────── */
+.mvp-card {
+  background: var(--surface-card);
+  border: 1px solid var(--gray-200);
+  border-left: 3px solid var(--gold-500);
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(17,24,39,0.06), 0 1px 2px rgba(17,24,39,0.04);
+  padding: var(--space-4);
+  position: relative;
+  overflow: hidden;
+}
+.mvp-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-overline);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold-700);
+  margin-bottom: var(--space-2);
+}
+.mvp-label svg { width: 14px; height: 14px; }
+.mvp-name {
+  font-size: var(--text-h3);
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: var(--space-1);
+  padding-right: 56px;
+}
+.mvp-score-row { display: flex; align-items: baseline; gap: 6px; padding-right: 56px; }
+.mvp-score {
+  font-family: 'Geist Mono', monospace;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--gold-700);
+  line-height: 1;
+}
+.mvp-points {
+  font-size: 12px;
+  color: var(--gray-500);
+}
+.mvp-medal {
+  position: absolute;
+  right: var(--space-4);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px; height: 44px;
+  background: var(--gold-50);
+  border: 1.5px solid var(--gold-500);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gold-700);
+}
+.mvp-medal svg { width: 22px; height: 22px; }
+.mvp-empty {
+  color: var(--gray-500);
+  font-size: 13px;
+}
+
+/* ── Risk breakdown ────────────────────────────────── */
+.risk-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: 8px;
+}
+.risk-row:last-child { margin-bottom: 0; }
+.risk-label {
+  width: 90px;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.risk-label::before {
+  content: '';
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.risk-row[data-kind="good"] .risk-label { color: var(--success-700); }
+.risk-row[data-kind="good"] .risk-label::before { background: var(--success-500); }
+.risk-row[data-kind="warning"] .risk-label { color: var(--warning-700); }
+.risk-row[data-kind="warning"] .risk-label::before { background: var(--warning-500); }
+.risk-row[data-kind="danger"] .risk-label { color: var(--danger-700); }
+.risk-row[data-kind="danger"] .risk-label::before { background: var(--danger-500); }
+.risk-track {
+  flex: 1;
+  height: 18px;
+  background: var(--gray-100);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.risk-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.8s ease;
+  width: 0%;
+}
+.risk-row[data-kind="good"] .risk-fill { background: var(--success-500); }
+.risk-row[data-kind="warning"] .risk-fill { background: var(--warning-500); }
+.risk-row[data-kind="danger"] .risk-fill { background: var(--danger-500); }
+.risk-num {
+  font-family: 'Geist Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  width: 28px;
+  text-align: right;
+}
+.risk-row[data-kind="good"] .risk-num { color: var(--success-700); }
+.risk-row[data-kind="warning"] .risk-num { color: var(--warning-700); }
+.risk-row[data-kind="danger"] .risk-num { color: var(--danger-700); }
+.no-activity-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: var(--space-3);
+  margin-top: var(--space-3);
+  border-top: 1px solid var(--gray-200);
+}
+.no-activity-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--gray-700);
+}
+.no-activity-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--gray-300);
+  border: 1px solid var(--gray-500);
+}
+
+/* ── Compliance bars ───────────────────────────────── */
+.comp-section {
+  border-top: 1px solid var(--gray-200);
+  padding-top: var(--space-4);
+  margin-top: var(--space-4);
+}
+.comp-item { margin-bottom: var(--space-3); }
+.comp-item:last-child { margin-bottom: 0; }
+.comp-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+.comp-name { font-size: 12px; color: var(--gray-700); }
+.comp-pct {
+  font-family: 'Geist Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+}
+.comp-pct.is-success { color: var(--success-700); }
+.comp-pct.is-warning { color: var(--warning-700); }
+.comp-pct.is-danger { color: var(--danger-700); }
+.comp-pct.is-pending { color: var(--gray-500); }
+.comp-track {
+  position: relative;
+  height: 8px;
+  background: var(--gray-100);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.comp-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.8s ease;
+  width: 0%;
+}
+.comp-fill.is-success { background: var(--success-500); }
+.comp-fill.is-warning { background: var(--warning-500); }
+.comp-fill.is-danger { background: var(--danger-500); }
+.comp-fill.is-pending { background: var(--gray-300); }
+.comp-target-marker {
+  position: absolute;
+  top: -2px; bottom: -2px;
+  left: 90%;
+  width: 2px;
+  background: var(--gold-500);
+  opacity: 0.7;
+}
+.comp-target-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 3px;
+  font-size: 10px;
+  color: var(--gray-500);
+}
+.comp-target-bar {
+  width: 12px; height: 2px;
+  background: var(--gold-500);
+}
+
+/* ── Fleet status (normal-invisible) ───────────────── */
+.fleet-section { padding: 0; }
+.fleet-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-overline);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: var(--space-3);
+}
+.fleet-section-title.is-attention { color: var(--danger-700); }
+.fleet-section-title.is-normal { color: var(--gray-500); margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--gray-200); }
+.fleet-abnormal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-3);
+}
+.lorry-card-abnormal {
+  background: white;
+  border: 1px solid var(--danger-500);
+  border-left: 3px solid var(--danger-500);
+  border-radius: 8px;
   padding: 10px 12px;
 }
-.lorry-plate {
+.lorry-card-abnormal .lorry-plate {
   font-family: 'Geist Mono', monospace;
-  font-size: 13px; font-weight: 600;
-  color: var(--navy);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-900);
   margin-bottom: 4px;
 }
-.lorry-driver { font-size: 11px; color: var(--gray); line-height: 1.4; margin-bottom: 6px; }
-.lorry-status {
-  font-size: 10px; font-weight: 600;
-  padding: 2px 7px;
-  border-radius: 20px;
-  display: inline-block;
+.lorry-card-abnormal .lorry-driver {
+  font-size: 11px;
+  color: var(--gray-700);
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+.lorry-card-abnormal .lorry-staff {
+  display: block;
+  font-size: 10px;
+  color: var(--gray-500);
+  margin-top: 1px;
+  font-family: 'Geist Mono', monospace;
+}
+.lorry-card-abnormal .lorry-second {
+  font-size: 10px;
+  color: var(--warning-700);
+  margin-top: 3px;
+}
+.lorry-card-abnormal .lorry-mileage {
+  display: block;
+  font-family: 'Geist Mono', monospace;
+  font-size: 10px;
+  color: var(--gray-500);
+  margin-top: 3px;
+}
+.fleet-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.lorry-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: 999px;
+  transition: background 0.15s;
+  cursor: default;
+}
+.lorry-chip:hover { background: var(--gray-50); }
+.lorry-chip-plate {
+  font-family: 'Geist Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gray-900);
+}
+.lorry-chip-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--success-500);
+  flex-shrink: 0;
+}
+@media (max-width: 767px) {
+  .fleet-chips { gap: 5px; }
 }
 
-/* BOTTOM GRID */
-.bottom-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 16px;
+/* ── Submission tables / lists ─────────────────────── */
+.sub-table { width: 100%; border-collapse: collapse; }
+.sub-table td {
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--gray-700);
+  border-bottom: 1px solid var(--gray-100);
 }
-
-/* LAST SUBMISSION TABLE */
-.sub-table { width: 100%; }
-.sub-table td { padding: 8px 12px; font-size: 12px; color: var(--text-2); border-bottom: 1px solid var(--border); }
 .sub-table tr:last-child td { border-bottom: none; }
-.sub-table tr:hover td { background: var(--gray-light); }
-.sub-driver { font-weight: 500; color: var(--text); }
-.sub-time { font-family: 'Geist Mono', monospace; font-size: 11px; }
-.sub-type-badge {
-  font-size: 10px; font-weight: 600;
-  padding: 2px 7px;
-  border-radius: 20px;
+.sub-table tr:hover td { background: var(--gray-50); }
+.sub-time {
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  color: var(--gray-500);
+}
+.sub-driver {
+  font-weight: 500;
+  color: var(--gray-900);
+  font-size: 13px;
+}
+.sub-vehicle {
+  font-family: 'Geist Mono', monospace;
+  font-size: 12px;
+  color: var(--gray-700);
 }
 
-/* FOOTER */
-.footer {
+.attention-list { display: flex; flex-direction: column; }
+.attention-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--gray-100);
+}
+.attention-item:last-child { border-bottom: none; }
+.attention-item:first-child { padding-top: 0; }
+.attention-avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.attention-avatar.is-danger { background: var(--danger-50); color: var(--danger-700); }
+.attention-avatar.is-warning { background: var(--warning-50); color: var(--warning-700); }
+.attention-body { flex: 1; min-width: 0; }
+.attention-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gray-900);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.attention-meta {
+  font-size: 11px;
+  color: var(--gray-500);
+  margin-top: 1px;
+}
+
+/* ── POD Plan ────────────────────────────────────────── */
+.pod-plan-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-3);
+  max-height: 480px;
+  overflow-y: auto;
+}
+@media (max-width: 767px) {
+  .pod-plan-grid { max-height: none; grid-template-columns: 1fr; }
+}
+.pod-card {
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-top: 2px solid var(--gray-200);
+  border-radius: 8px;
+  padding: var(--space-3);
+}
+.pod-card.is-complete { border-top-color: var(--success-500); }
+.pod-card.is-partial { border-top-color: var(--warning-500); }
+.pod-card.is-pending { border-top-color: var(--danger-500); }
+.pod-card.is-noplan { border-top-color: var(--gray-300); }
+.pod-card.is-leave { opacity: 0.6; }
+.pod-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.pod-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-900);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pod-card-id {
+  font-family: 'Geist Mono', monospace;
+  font-size: 10px;
+  color: var(--gray-500);
+  margin-top: 1px;
+}
+.pod-card-progress-track {
+  height: 6px;
+  background: var(--gray-100);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.pod-card-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+  width: 0%;
+}
+.pod-card.is-complete .pod-card-progress-fill { background: var(--success-500); }
+.pod-card.is-partial .pod-card-progress-fill { background: var(--warning-500); }
+.pod-card.is-pending .pod-card-progress-fill { background: var(--danger-500); }
+.pod-card.is-noplan .pod-card-progress-fill { background: var(--gray-300); }
+.pod-card-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+.pod-card-progress-text {
+  font-family: 'Geist Mono', monospace;
+  color: var(--gray-500);
+}
+.pod-card-status { font-weight: 600; }
+.pod-card.is-complete .pod-card-status { color: var(--success-700); }
+.pod-card.is-partial .pod-card-status { color: var(--warning-700); }
+.pod-card.is-pending .pod-card-status { color: var(--danger-700); }
+.pod-card.is-noplan .pod-card-status { color: var(--gray-500); }
+.pod-input {
+  width: 54px;
+  padding: 5px 6px;
+  border: 1.5px solid var(--gray-300);
+  border-radius: 5px;
+  font-size: 14px;
+  font-weight: 700;
   text-align: center;
-  padding: 20px 0 0;
-  font-size: 11px; color: var(--gray);
+  font-family: 'Geist Mono', monospace;
+  background: white;
+  color: var(--gray-900);
 }
-.footer a { color: var(--blue); text-decoration: none; }
-.footer a:hover { text-decoration: underline; }
+.pod-input:focus {
+  outline: none;
+  border-color: var(--blue-600);
+  background: var(--blue-50);
+}
+.pod-input.is-changed { border-color: var(--warning-500); background: var(--warning-50); }
+.pod-input.is-readonly { background: var(--gray-50); cursor: default; }
+.pod-edit-note {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  background: var(--warning-50);
+  border: 1px solid var(--warning-500);
+  color: var(--warning-700);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: var(--space-3);
+}
+.pod-edit-note.is-visible { display: flex; }
+.pod-edit-note svg { width: 14px; height: 14px; }
 
-/* SKELETON LOADER */
-.skeleton {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+/* ── Inputs ─────────────────────────────────────────── */
+.input, .select, .textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: var(--text-body);
+  background: white;
+  color: var(--gray-900);
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 44px;
+}
+.input:focus, .select:focus, .textarea:focus {
+  outline: none;
+  border-color: var(--blue-600);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+}
+
+/* ── Empty state ────────────────────────────────────── */
+.empty-state {
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  color: var(--gray-500);
+  font-size: 13px;
+}
+.empty-state svg {
+  display: block;
+  margin: 0 auto var(--space-2);
+  color: var(--gray-300);
+  width: 28px;
+  height: 28px;
+}
+.skeleton-block {
+  background: linear-gradient(90deg, var(--gray-50) 25%, var(--gray-100) 50%, var(--gray-50) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 4px;
 }
-@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-/* ANIMATIONS */
-.fade-in { animation: fadeIn 0.4s ease forwards; opacity: 0; }
-@keyframes fadeIn { to { opacity: 1; } }
-.stagger-1 { animation-delay: 0.05s; }
-.stagger-2 { animation-delay: 0.1s; }
-.stagger-3 { animation-delay: 0.15s; }
-.stagger-4 { animation-delay: 0.2s; }
+/* ── Spinner (small inline) ────────────────────────── */
+.spinner {
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,0.35);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
-/* EMPTY STATE */
-.empty-state {
-  text-align: center; padding: 30px 20px;
-  color: var(--gray); font-size: 13px;
+/* ── Toast ──────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  top: var(--space-4);
+  right: var(--space-4);
+  z-index: 100;
+  padding: 12px 16px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(17,24,39,0.08);
+  font-size: 13px;
+  font-weight: 500;
+  max-width: 360px;
+  line-height: 1.4;
+  display: none;
+}
+.toast.is-visible { display: block; }
+.toast.is-success { background: var(--success-50); border: 1px solid var(--success-500); color: var(--success-700); }
+.toast.is-warning { background: var(--warning-50); border: 1px solid var(--warning-500); color: var(--warning-700); }
+.toast.is-danger  { background: var(--danger-50);  border: 1px solid var(--danger-500);  color: var(--danger-700); }
+.toast.is-info    { background: var(--blue-50);    border: 1px solid var(--blue-500);    color: var(--blue-700); }
+@media (max-width: 480px) {
+  .toast { left: var(--space-3); right: var(--space-3); max-width: none; }
 }
 
-/* RESPONSIVE */
-@media (max-width: 1100px) {
-  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-  .main-grid { grid-template-columns: 1fr; }
+/* ── Modal (replaces native confirm) ───────────────── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: var(--surface-overlay);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  animation: fade-in 0.2s ease;
+}
+.modal-overlay.is-visible { display: flex; }
+.modal-dialog {
+  background: white;
+  border-radius: 10px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 8px 24px rgba(17,24,39,0.18);
+  animation: scale-in 0.2s ease;
+}
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scale-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+.modal-head { padding: var(--space-4); border-bottom: 1px solid var(--gray-200); }
+.modal-title { font-size: var(--text-h3); font-weight: 600; color: var(--gray-900); }
+.modal-body { padding: var(--space-4); font-size: 14px; color: var(--gray-700); }
+.modal-foot {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--gray-200);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+/* ── Footer ─────────────────────────────────────────── */
+.footer {
+  text-align: center;
+  padding: var(--space-5) 0;
+  font-size: 12px;
+  color: var(--gray-500);
+}
+.footer-links {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  flex-wrap: wrap;
+}
+.footer-links a { text-decoration: none; }
+
+/* ── Mobile sticky bottom nav ──────────────────────── */
+.bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-top: 1px solid var(--gray-200);
+  box-shadow: 0 -2px 8px rgba(17,24,39,0.06);
+  z-index: 60;
+  padding: 8px;
+  gap: 6px;
+}
+.bottom-nav a {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 10px 8px;
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  color: var(--gray-700);
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+  min-height: 44px;
+}
+.bottom-nav a:hover { background: var(--gray-50); }
+.bottom-nav a svg { width: 14px; height: 14px; }
+@media (max-width: 767px) {
+  .bottom-nav { display: flex; }
+  .footer-links { display: none; }
+}
+
+/* ── Focus visible ──────────────────────────────────── */
+:focus-visible { outline: 2px solid var(--blue-600); outline-offset: 2px; }
+
+/* ── Bottom grid ───────────────────────────────────── */
+.bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+@media (max-width: 767px) {
   .bottom-grid { grid-template-columns: 1fr; }
 }
-@media (max-width: 640px) {
-  .kpi-grid { grid-template-columns: 1fr 1fr; }
-  .page { padding: 0 12px 40px; }
-  .header-inner { padding: 12px 0; }
-  .refresh-btn span { display: none; }
+
+/* ── Card body (no padding override) ───────────────── */
+.card-flush { padding: 0; }
+.card-flush .card-header-wrap {
+  padding: var(--space-4) var(--space-5) var(--space-3);
+  border-bottom: 1px solid var(--gray-200);
 }
+.card-flush .card-body { padding: var(--space-4) var(--space-5); }
+@media (max-width: 767px) {
+  .card-flush .card-header-wrap { padding: var(--space-3) var(--space-4) var(--space-3); }
+  .card-flush .card-body { padding: var(--space-3) var(--space-4); }
+}
+.card-count-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: var(--gray-100);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+/* ── Animation utilities ───────────────────────────── */
+.fade-in { animation: fade-in 0.4s ease forwards; opacity: 0; }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.49.1/dist/apexcharts.min.js"></script>
 </head>
 <body>
 
-<!-- LOADING SCREEN -->
+<!-- LOADING -->
 <div class="loading-screen" id="loadingScreen">
-  <div class="loading-logo">
-    <div class="loading-logo-text">CLF<span>利發貿易</span></div>
-  </div>
+  <div class="loading-logo">CLF</div>
+  <div class="loading-spinner"></div>
   <div class="loading-title">Transport Control Tower</div>
   <div class="loading-sub">Loading live data from Google Sheets...</div>
-  <div class="loading-bar"><div class="loading-fill"></div></div>
 </div>
 
 <!-- HEADER -->
-<div class="header">
+<header class="header">
   <div class="header-inner">
     <div class="header-left">
-      <div class="logo">
-        <div class="logo-text">CLF<span>利發貿易</span></div>
-      </div>
-      <div class="company">
-        <div class="company-name">Transport Control Tower</div>
-        <div class="company-sub">CLF Trading Sdn. Bhd. (557522-A) · Mentakab, Pahang</div>
+      <div class="header-logo">CLF</div>
+      <div>
+        <div class="header-title">Transport Control Tower</div>
+        <div class="header-sub">CLF Trading Sdn. Bhd. · Mentakab, Pahang</div>
       </div>
     </div>
     <div class="header-right">
       <div class="live-badge">
-        <div class="live-dot"></div>
-        <div class="live-text">LIVE DATA</div>
+        <span class="live-dot"></span>
+        <span>LIVE</span>
       </div>
       <div class="clock-wrap">
         <div class="clock" id="clock">--:--:--</div>
-        <div class="clock-date" id="clockDate">Loading...</div>
+        <div class="clock-date" id="clockDate">Loading…</div>
       </div>
-      <div class="view-toggle" id="viewToggle">
-        <button class="view-tab active" data-view="daily" onclick="onViewChange('daily')">Daily</button>
-        <button class="view-tab" data-view="weekly" onclick="onViewChange('weekly')">Weekly</button>
-        <button class="view-tab" data-view="monthly" onclick="onViewChange('monthly')">Monthly</button>
+      <div class="view-toggle" role="tablist">
+        <button type="button" class="view-tab is-active" data-view="daily">Daily</button>
+        <button type="button" class="view-tab" data-view="weekly">Weekly</button>
+        <button type="button" class="view-tab" data-view="monthly">Monthly</button>
       </div>
-      <select class="month-picker" id="monthPicker" onchange="onMonthChange()" title="View report for a different period">
+      <select class="month-picker" id="monthPicker" title="View report for a different period" aria-label="Select period">
         <option value="">Loading…</option>
       </select>
-      <button class="refresh-btn" onclick="loadDashboard()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <button type="button" class="btn-secondary" id="refreshBtn" aria-label="Refresh data">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
           <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
         </svg>
-        <span>Refresh</span>
+        <span class="btn-refresh-text">Refresh</span>
       </button>
     </div>
   </div>
-</div>
+</header>
 
-<div class="page">
+<main class="page">
 
-  <!-- V12: Historical month banner — shown only when viewing a past month -->
-  <div class="history-banner" id="historyBanner">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+  <!-- HISTORY BANNER -->
+  <div class="banner banner-info" id="historyBanner" role="status">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
     </svg>
     <span>Viewing historical report for <b id="historyBannerLabel">—</b>. "Today" widgets below still reflect today's live state.</span>
   </div>
 
-  <!-- ALERT BAR -->
-  <div class="alert-bar" id="alertBar">
-    <div class="alert-icon">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-      </svg>
-    </div>
-    <div class="alert-content">
-      <div class="alert-title" id="alertTitle">Drivers who have NOT submitted today's fuel record:</div>
-      <div class="alert-drivers" id="alertDrivers"></div>
+  <!-- API ERROR BANNER -->
+  <div class="banner banner-danger" id="apiErrorBanner" role="alert">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+      <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+    <span id="apiErrorMessage" class="banner-spacer">Cannot reach server.</span>
+    <button type="button" class="btn-secondary" id="apiRetryBtn">Retry</button>
+  </div>
+
+  <!-- ISSUES BAR -->
+  <div class="issues-bar" id="issuesBar">
+    <div class="issues-row">
+      <div class="issues-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <div class="issues-content">
+        <div class="issues-title" id="issuesTitle">Issues today</div>
+        <div class="issues-chips" id="issuesChips"></div>
+      </div>
     </div>
   </div>
 
-  <!-- KPI GRID -->
+  <!-- TODAY SNAPSHOT (4 KPI tiles) -->
   <div class="kpi-grid">
-    <div class="kpi-card fade-in stagger-1">
-      <div class="kpi-top-bar" style="background:#185FA5;"></div>
-      <div class="kpi-label">Fuel submissions</div>
-      <div class="kpi-value" style="color:#185FA5;" id="kpiFuelTotal">—</div>
-      <div class="kpi-footer">
-        <div class="kpi-sub">This month</div>
-        <div class="kpi-trend" id="kpiFuelTrend"><span>—</span></div>
-      </div>
-    </div>
-    <div class="kpi-card fade-in stagger-2">
-      <div class="kpi-top-bar" id="kpiFuelCompBar" style="background:#3B6D11;"></div>
-      <div class="kpi-label">Fuel compliance</div>
-      <div class="kpi-value" id="kpiFuelComp" style="color:#3B6D11;">—</div>
-      <div class="kpi-footer">
-        <div class="kpi-sub">Same-day rate · Target 90%</div>
-        <div class="kpi-trend" id="kpiFuelCompTrend"><span>—</span></div>
-      </div>
-    </div>
-    <div class="kpi-card fade-in stagger-3">
-      <div class="kpi-top-bar" style="background:#185FA5;"></div>
-      <div class="kpi-label">POD deliveries</div>
-      <div class="kpi-value" style="color:#185FA5;" id="kpiPodTotal">—</div>
-      <div class="kpi-footer">
-        <div class="kpi-sub">This month</div>
-        <div class="kpi-trend" id="kpiPodTrend"><span>—</span></div>
-      </div>
-    </div>
-    <div class="kpi-card fade-in stagger-4">
-      <div class="kpi-top-bar" id="kpiPodCompBar" style="background:#3B6D11;"></div>
-      <div class="kpi-label">POD compliance</div>
-      <div class="kpi-value" id="kpiPodComp" style="color:#3B6D11;">—</div>
-      <div class="kpi-footer">
-        <div class="kpi-sub">Same-day rate · Target 90%</div>
-        <div class="kpi-trend" id="kpiPodCompTrend"><span>—</span></div>
+    <button type="button" class="kpi-tile accent-blue" data-scroll="fleetSection" aria-label="Drivers on the road">
+      <div class="kpi-label">On the road</div>
+      <div class="kpi-value" id="kpiOnRoad">—</div>
+      <div class="kpi-sub" id="kpiOnRoadSub">Loading…</div>
+    </button>
+    <button type="button" class="kpi-tile accent-success" data-scroll="recentSection" aria-label="Submitted today">
+      <div class="kpi-label">Submitted today</div>
+      <div class="kpi-value" id="kpiSubmitted">—</div>
+      <div class="kpi-sub" id="kpiSubmittedSub">Loading…</div>
+    </button>
+    <button type="button" class="kpi-tile accent-warning" data-scroll="podPlanSection" aria-label="Pending submissions">
+      <div class="kpi-label">Pending</div>
+      <div class="kpi-value" id="kpiPending">—</div>
+      <div class="kpi-sub" id="kpiPendingSub">Loading…</div>
+    </button>
+    <a class="kpi-tile accent-gray" href="CLF_Leave_Management.html" style="text-decoration:none;color:inherit;display:block;" aria-label="View leave management">
+      <div class="kpi-label">On leave</div>
+      <div class="kpi-value" id="kpiOnLeave">—</div>
+      <div class="kpi-sub" id="kpiOnLeaveSub">Loading…</div>
+    </a>
+  </div>
+
+  <!-- MONTHLY HEALTH STRIP (collapsible) -->
+  <div class="month-strip" id="monthStrip">
+    <button type="button" class="month-strip-head" id="monthStripHead" aria-expanded="false">
+      <svg class="month-strip-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+      <span class="month-strip-summary" id="monthStripSummary">This month — loading…</span>
+    </button>
+    <div class="month-strip-body">
+      <div class="month-mini-grid">
+        <div class="month-mini">
+          <div class="month-mini-label">Fuel submissions</div>
+          <div class="month-mini-value" id="monthFuelTotal">—</div>
+        </div>
+        <div class="month-mini">
+          <div class="month-mini-label">Fuel compliance</div>
+          <div class="month-mini-value" id="monthFuelComp">—</div>
+        </div>
+        <div class="month-mini">
+          <div class="month-mini-label">POD deliveries</div>
+          <div class="month-mini-value" id="monthPodTotal">—</div>
+        </div>
+        <div class="month-mini">
+          <div class="month-mini-label">POD compliance</div>
+          <div class="month-mini-value" id="monthPodComp">—</div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- MAIN GRID -->
+  <!-- MAIN GRID: Driver Ranking + Sidebar (MVP / Risk / Compliance) -->
   <div class="main-grid">
 
-    <!-- LEFT: DRIVER RANKINGS -->
-    <div class="panel fade-in">
-      <div class="panel-header">
-        <div class="panel-title">
-          <div class="panel-dot" style="background:#185FA5;"></div>
-          Driver performance ranking
+    <!-- Driver Performance Ranking -->
+    <section class="card card-stripe card-flush">
+      <div class="card-header-wrap">
+        <div class="card-header">
+          <div class="card-header-text">
+            <div class="card-title">Driver performance ranking</div>
+            <div class="card-sub">Sorted by score. Click chart bar / table row for details.</div>
+          </div>
+          <div class="card-header-actions">
+            <span class="card-count-badge" id="driverCount">— drivers</span>
+            <div class="toggle-group">
+              <button type="button" class="btn-toggle is-active" id="driverViewChart" data-driver-view="chart">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/>
+                </svg>
+                <span>Chart</span>
+              </button>
+              <button type="button" class="btn-toggle" id="driverViewTable" data-driver-view="table">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="21"/>
+                </svg>
+                <span>Table</span>
+              </button>
+            </div>
+          </div>
         </div>
-        <span class="panel-count" id="driverCount">24 drivers</span>
       </div>
-      <div id="driverTableWrap">
-        <table class="driver-table">
-          <thead class="driver-thead">
-            <tr>
-              <th style="width:40px;">Rank</th>
-              <th>Driver name</th>
-              <th>Fuel</th>
-              <th>POD</th>
-              <th>Score</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody class="driver-tbody" id="driverTableBody">
-            <tr><td colspan="6"><div class="empty-state">Loading driver data...</div></td></tr>
-          </tbody>
-        </table>
+      <div class="card-body">
+        <div class="driver-ranking-wrap" id="driverChartWrap"></div>
+        <div class="driver-ranking-wrap is-hidden" id="driverTableWrap">
+          <table class="driver-table">
+            <thead>
+              <tr>
+                <th style="width:48px;">Rank</th>
+                <th>Driver</th>
+                <th>Fuel</th>
+                <th>POD</th>
+                <th>Score</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="driverTableBody">
+              <tr><td colspan="6"><div class="empty-state">Loading driver data…</div></td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+    </section>
 
-    <!-- RIGHT SIDEBAR -->
-    <div style="display:flex;flex-direction:column;gap:14px;">
+    <!-- Sidebar (MVP + Risk + Compliance) -->
+    <div class="sidebar-stack">
 
       <!-- MVP -->
-      <div class="mvp-card fade-in stagger-1">
-        <div class="mvp-badge">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <div class="mvp-card" id="mvpCard">
+        <div class="mvp-label">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+            <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+            <path d="M4 22h16"/>
+            <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+            <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+            <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+          </svg>
           Monthly MVP
         </div>
-        <div class="mvp-name" id="mvpName">Loading...</div>
-        <div style="display:flex;align-items:baseline;gap:6px;margin-top:4px;">
-          <div class="mvp-score" id="mvpScore">—</div>
-          <div class="mvp-label">points</div>
-        </div>
-        <div class="mvp-medal">🏆</div>
-      </div>
-
-      <!-- RISK BREAKDOWN -->
-      <div class="panel fade-in stagger-2">
-        <div class="panel-header">
-          <div class="panel-title">
-            <div class="panel-dot" style="background:#E24B4A;"></div>
-            Risk breakdown
-          </div>
-        </div>
-        <div class="panel-body">
-          <div class="risk-summary">
-            <div class="risk-row">
-              <div class="risk-label" style="color:#3B6D11;">Good</div>
-              <div class="risk-track">
-                <div class="risk-fill" id="riskFillGood" style="width:0%;background:#EAF3DE;">
-                  <span style="color:#3B6D11;" id="riskLabelGood"></span>
-                </div>
-              </div>
-              <div class="risk-num" style="color:#3B6D11;" id="riskNumGood">—</div>
-            </div>
-            <div class="risk-row">
-              <div class="risk-label" style="color:#854F0B;">Warning</div>
-              <div class="risk-track">
-                <div class="risk-fill" id="riskFillWarn" style="width:0%;background:#FAEEDA;">
-                  <span style="color:#854F0B;" id="riskLabelWarn"></span>
-                </div>
-              </div>
-              <div class="risk-num" style="color:#854F0B;" id="riskNumWarn">—</div>
-            </div>
-            <div class="risk-row">
-              <div class="risk-label" style="color:#A32D2D;">High risk</div>
-              <div class="risk-track">
-                <div class="risk-fill" id="riskFillRed" style="width:0%;background:#FCEBEB;">
-                  <span style="color:#A32D2D;" id="riskLabelRed"></span>
-                </div>
-              </div>
-              <div class="risk-num" style="color:#A32D2D;" id="riskNumRed">—</div>
-            </div>
-          </div>
-
-          <!-- COMPLIANCE BARS -->
-          <div style="border-top:1px solid var(--border);padding-top:14px;">
-            <div class="comp-item">
-              <div class="comp-header">
-                <span class="comp-name">Fuel same-day rate</span>
-                <span class="comp-pct" id="compFuelPct" style="color:#3B6D11;">—</span>
-              </div>
-              <div class="comp-track"><div class="comp-fill" id="compFuelBar" style="width:0%;background:#639922;"></div></div>
-              <div class="comp-target"><div class="comp-target-line"></div>Target: 90%</div>
-            </div>
-            <div class="comp-item">
-              <div class="comp-header">
-                <span class="comp-name">POD same-day rate</span>
-                <span class="comp-pct" id="compPodPct" style="color:#3B6D11;">—</span>
-              </div>
-              <div class="comp-track"><div class="comp-fill" id="compPodBar" style="width:0%;background:#639922;"></div></div>
-              <div class="comp-target"><div class="comp-target-line"></div>Target: 90%</div>
-            </div>
-            <div class="comp-item" style="margin-bottom:0;">
-              <div class="comp-header">
-                <span class="comp-name">Missing PODs this month</span>
-                <span class="comp-pct" id="compMissing" style="color:#A32D2D;">—</span>
-              </div>
-            </div>
-          </div>
+        <div id="mvpBody">
+          <div class="mvp-empty">Loading…</div>
         </div>
       </div>
+
+      <!-- Risk + Compliance combined panel -->
+      <section class="card card-stripe">
+        <div class="card-title">Risk breakdown</div>
+        <div class="card-sub">Distribution of drivers by performance risk</div>
+
+        <div class="risk-row" data-kind="good">
+          <span class="risk-label">Good</span>
+          <div class="risk-track"><div class="risk-fill" id="riskFillGood"></div></div>
+          <span class="risk-num" id="riskNumGood">—</span>
+        </div>
+        <div class="risk-row" data-kind="warning">
+          <span class="risk-label">Warning</span>
+          <div class="risk-track"><div class="risk-fill" id="riskFillWarn"></div></div>
+          <span class="risk-num" id="riskNumWarn">—</span>
+        </div>
+        <div class="risk-row" data-kind="danger">
+          <span class="risk-label">High risk</span>
+          <div class="risk-track"><div class="risk-fill" id="riskFillRed"></div></div>
+          <span class="risk-num" id="riskNumRed">—</span>
+        </div>
+
+        <!-- No Activity, separated -->
+        <div class="no-activity-row">
+          <span class="no-activity-left">
+            <span class="no-activity-dot"></span>
+            <span id="noActivityLabel">No activity today</span>
+          </span>
+          <span class="badge badge-gray" id="noActivityCount">0</span>
+        </div>
+
+        <!-- Compliance bars -->
+        <div class="comp-section">
+          <div class="card-title" style="font-size:14px;margin-bottom:4px;">Monthly compliance</div>
+          <div class="card-sub" style="margin-bottom:14px;">Same-day submission rates vs 90% target</div>
+
+          <div class="comp-item">
+            <div class="comp-head">
+              <span class="comp-name">Fuel same-day rate</span>
+              <span class="comp-pct" id="compFuelPct">—</span>
+            </div>
+            <div class="comp-track">
+              <div class="comp-fill" id="compFuelBar"></div>
+              <div class="comp-target-marker"></div>
+            </div>
+          </div>
+
+          <div class="comp-item">
+            <div class="comp-head">
+              <span class="comp-name">POD same-day rate</span>
+              <span class="comp-pct" id="compPodPct">—</span>
+            </div>
+            <div class="comp-track">
+              <div class="comp-fill" id="compPodBar"></div>
+              <div class="comp-target-marker"></div>
+            </div>
+          </div>
+
+          <div class="comp-item">
+            <div class="comp-head">
+              <span class="comp-name">Missing PODs this month</span>
+              <span class="comp-pct" id="compMissing">—</span>
+            </div>
+          </div>
+
+          <div class="comp-target-label">
+            <span class="comp-target-bar"></span>
+            <span>Target: 90%</span>
+          </div>
+        </div>
+      </section>
 
     </div>
   </div>
 
-  <!-- LORRY STATUS -->
-  <div class="panel fade-in" style="margin-bottom:16px;">
-    <div class="panel-header">
-      <div class="panel-title">
-        <div class="panel-dot" style="background:#854F0B;"></div>
-        Fleet status today
-      </div>
-      <span style="font-size:11px;color:var(--gray);" id="fleetDate">—</span>
-    </div>
-    <div style="padding:16px 20px;">
-      <div class="lorry-grid" id="lorryGrid">
-        <div class="empty-state">Loading fleet data...</div>
+  <!-- FLEET STATUS (normal-invisible) -->
+  <section class="card card-stripe card-flush" id="fleetSection" style="margin-bottom:var(--space-4);">
+    <div class="card-header-wrap">
+      <div class="card-header">
+        <div class="card-header-text">
+          <div class="card-title">Fleet status today</div>
+          <div class="card-sub" id="fleetDate">—</div>
+        </div>
+        <span class="card-count-badge" id="fleetCount">— lorries</span>
       </div>
     </div>
-  </div>
+    <div class="card-body" id="fleetBody">
+      <div class="empty-state">Loading fleet data…</div>
+    </div>
+  </section>
 
-  <!-- BOTTOM GRID -->
+  <!-- BOTTOM GRID: Recent + Needs Attention -->
   <div class="bottom-grid">
 
-    <!-- RECENT SUBMISSIONS -->
-    <div class="panel fade-in">
-      <div class="panel-header">
-        <div class="panel-title">
-          <div class="panel-dot" style="background:#185FA5;"></div>
-          Recent submissions
+    <section class="card card-stripe card-flush" id="recentSection">
+      <div class="card-header-wrap">
+        <div class="card-header">
+          <div class="card-header-text">
+            <div class="card-title">Recent submissions</div>
+            <div class="card-sub">Latest fuel and POD entries today</div>
+          </div>
         </div>
       </div>
-      <table class="sub-table" id="recentTable">
-        <tr><td colspan="4"><div class="empty-state">Loading...</div></td></tr>
-      </table>
-    </div>
+      <div class="card-body" style="padding:0;">
+        <table class="sub-table" id="recentTable">
+          <tr><td colspan="4"><div class="empty-state">Loading…</div></td></tr>
+        </table>
+      </div>
+    </section>
 
-    <!-- HIGH RISK DRIVERS DETAIL -->
-    <div class="panel fade-in">
-      <div class="panel-header">
-        <div class="panel-title">
-          <div class="panel-dot" style="background:#E24B4A;"></div>
-          Needs attention
+    <section class="card card-stripe-danger card-flush">
+      <div class="card-header-wrap">
+        <div class="card-header">
+          <div class="card-header-text">
+            <div class="card-title">Needs attention</div>
+            <div class="card-sub">High-risk and warning drivers</div>
+          </div>
+          <span class="card-count-badge" id="highRiskCount">0 drivers</span>
         </div>
-        <span class="panel-count" id="highRiskCount" style="background:#FCEBEB;color:#A32D2D;">0 drivers</span>
       </div>
-      <div id="highRiskList" style="padding:0;">
-        <div class="empty-state" style="padding:30px;">All drivers performing well</div>
+      <div class="card-body" id="highRiskList">
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+          All drivers performing well
+        </div>
       </div>
-    </div>
+    </section>
 
   </div>
 
-  <!-- POD PLAN PANEL -->
-  <div style="margin-top:20px;">
-    <div class="panel" style="background:white;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);">
-      <div class="panel-title" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;font-size:14px;font-weight:600;color:var(--text);">
-        <span>📋 Today's POD Plan — Supervisor sets number per driver before they leave</span>
-        <span id="podPlanSummary" style="font-size:11px;color:var(--gray);font-weight:400;">—</span>
-      </div>
-      <div id="podPlanGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;max-height:480px;overflow-y:auto;">
-        <div class="empty-state" style="padding:30px;text-align:center;color:var(--gray);grid-column:1/-1;">Loading...</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- HOLIDAY CALENDAR + ON LEAVE PANELS -->
-  <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-top:20px;">
-
-    <!-- HOLIDAY CALENDAR -->
-    <div class="panel" style="background:white;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);">
-      <div class="panel-title" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;font-size:14px;font-weight:600;color:var(--text);">
-        <span>📅 Holiday Calendar — Next 30 days</span>
-        <span style="font-size:11px;color:var(--gray);font-weight:400;">Click toggle to enable/disable</span>
-      </div>
-      <div id="holidayCalendar" style="max-height:320px;overflow-y:auto;">
-        <div class="empty-state" style="padding:30px;text-align:center;color:var(--gray);">Loading...</div>
-      </div>
-    </div>
-
-    <!-- ON LEAVE TODAY -->
-    <div class="panel" style="background:white;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);">
-      <div class="panel-title" style="margin-bottom:14px;font-size:14px;font-weight:600;color:var(--text);">
-        🏖️ On Leave Today
-      </div>
-      <div id="onLeaveTodayList">
-        <div class="empty-state" style="padding:30px;text-align:center;color:var(--gray);">No drivers on leave today</div>
-      </div>
-
-      <!-- Mark Leave (Range) -->
-      <div style="margin-top:18px;padding-top:16px;border-top:1px solid #eee;">
-        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px;">📅 Mark Leave (Range)</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <select id="mlrDriver" style="padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px;grid-column:1/-1;">
-            <option value="">— Select driver —</option>
-          </select>
-          <input type="date" id="mlrStart" style="padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px;" />
-          <input type="date" id="mlrEnd" style="padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px;" />
-          <select id="mlrType" style="padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px;">
-            <option value="AL">AL (Annual)</option>
-            <option value="MC">MC (Medical)</option>
-            <option value="EL">EL (Emergency)</option>
-            <option value="UL">UL (Unpaid)</option>
-            <option value="OFF">OFF (Off Day)</option>
-          </select>
-          <input type="text" id="mlrRemarks" placeholder="Remarks (optional)" style="padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px;" />
+  <!-- POD PLAN -->
+  <section class="card card-stripe card-flush" id="podPlanSection" style="margin-bottom:var(--space-4);">
+    <div class="card-header-wrap">
+      <div class="card-header">
+        <div class="card-header-text">
+          <div class="card-title">Today's POD plan</div>
+          <div class="card-sub" id="podPlanSummary">Numbers count down as drivers submit · —</div>
         </div>
-        <button id="mlrBtn" onclick="submitLeaveRange()" style="width:100%;margin-top:10px;padding:10px;background:#FF9800;color:white;border:0;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">Mark Leave</button>
-        <div id="mlrStatus" style="margin-top:8px;font-size:12px;color:var(--gray);"></div>
+        <div class="card-header-actions">
+          <button type="button" class="btn-edit-small" id="podPlanEditBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/>
+            </svg>
+            <span>Edit plans</span>
+          </button>
+          <button type="button" class="btn-edit-small is-primary is-hidden" id="podPlanSaveBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span id="podPlanSaveBtnLabel">Save (0)</span>
+          </button>
+          <button type="button" class="btn-edit-small is-hidden" id="podPlanCancelBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+            <span>Cancel</span>
+          </button>
+        </div>
+      </div>
+      <div class="pod-edit-note" id="podPlanEditNote">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/>
+        </svg>
+        <span>Edit mode — change any plan number, then click Save to apply all at once.</span>
       </div>
     </div>
-  </div>
+    <div class="card-body">
+      <div class="pod-plan-grid" id="podPlanGrid">
+        <div class="empty-state" style="grid-column:1/-1;">Loading…</div>
+      </div>
+    </div>
+  </section>
 
   <!-- FOOTER -->
-  <div class="footer">
-    <div>Last refreshed: <span id="lastRefresh">—</span></div>
-    <div style="margin-top:6px;">
-      <a href="https://clfproject01.github.io/clf-transport-forms/CLF_Fuel_Form.html" target="_blank">⛽ Fuel Form</a>
-      &nbsp;·&nbsp;
-      <a href="https://clfproject01.github.io/clf-transport-forms/CLF_POD_Form.html" target="_blank">📦 POD Form</a>
-      &nbsp;·&nbsp;
-      CLF Transport Control Tower v1.0
+  <footer class="footer">
+    <div>Last refreshed <span id="lastRefresh">—</span> · Auto-refresh every 5 min</div>
+    <div class="footer-links">
+      <a class="btn-secondary" href="https://clfproject01.github.io/clf-transport-forms/CLF_Fuel_Form.html" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 22h12"/><path d="M4 9h10v13H4z"/><path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2 2 2 0 0 0 2-2V9l-3-3"/><circle cx="9" cy="6" r="2"/></svg>
+        <span>Fuel Form</span>
+      </a>
+      <a class="btn-secondary" href="https://clfproject01.github.io/clf-transport-forms/CLF_POD_Form.html" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <span>POD Form</span>
+      </a>
+      <a class="btn-secondary" href="CLF_Leave_Management.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span>Leave Management</span>
+      </a>
+    </div>
+  </footer>
+
+</main>
+
+<!-- Mobile sticky bottom nav -->
+<nav class="bottom-nav" aria-label="Quick links">
+  <a href="https://clfproject01.github.io/clf-transport-forms/CLF_Fuel_Form.html" target="_blank" rel="noopener noreferrer">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 22h12"/><path d="M4 9h10v13H4z"/><path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2 2 2 0 0 0 2-2V9l-3-3"/><circle cx="9" cy="6" r="2"/></svg>
+    <span>Fuel</span>
+  </a>
+  <a href="https://clfproject01.github.io/clf-transport-forms/CLF_POD_Form.html" target="_blank" rel="noopener noreferrer">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+    <span>POD</span>
+  </a>
+  <a href="CLF_Leave_Management.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    <span>Leave</span>
+  </a>
+</nav>
+
+<!-- Toast -->
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<!-- Confirm Modal -->
+<div class="modal-overlay" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+  <div class="modal-dialog">
+    <div class="modal-head"><div class="modal-title" id="confirmTitle">Confirm</div></div>
+    <div class="modal-body" id="confirmBody">—</div>
+    <div class="modal-foot">
+      <button type="button" class="btn-edit-small" id="confirmCancelBtn">Cancel</button>
+      <button type="button" class="btn-edit-small is-primary" id="confirmOkBtn">Confirm</button>
     </div>
   </div>
-
 </div>
 
 <script>
 // ============================================================
-// CONFIGURATION
+// CONFIG
 // ============================================================
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxabHh2Kd04z7k0zZOOoaJs2i5hgycQsO_AYoRS99xZx2WqMJ6cowumY0e1znehiRM1/exec';
+const CHART_PALETTE = ['#2563EB', '#10B981', '#F59E0B', '#EF4444', '#A16207', '#3B82F6', '#6B7280'];
+const COMMON_APEX_OPTIONS = {
+  chart: {
+    fontFamily: 'Geist, -apple-system, sans-serif',
+    foreColor: '#374151',
+    background: 'transparent',
+    toolbar: { show: false },
+    animations: { enabled: true, speed: 400 },
+  },
+  colors: CHART_PALETTE,
+  grid: {
+    borderColor: '#E5E7EB',
+    strokeDashArray: 3,
+  },
+  tooltip: {
+    theme: 'light',
+    style: { fontSize: '12px', fontFamily: 'Geist' },
+  },
+  legend: { fontSize: '12px', fontFamily: 'Geist', labels: { colors: '#6B7280' } },
+};
 
-const LORRIES = [
-  'KER 9223','RY 7233','CDQ 9098','CDA 3633',
-  'CDU 2133','CDK 8878','RX 8733','CDX 6233',
-  'JUM 1033','SMB 7633','VFE 9633','VHT 4642',
-  'VDQ 6864','CCY 9233','VJX 5786','SYS 4642'
-];
+// ============================================================
+// HELPERS
+// ============================================================
+// XSS guard for any DB string going into innerHTML / tooltip.custom
+function escHtml(s) {
+  if (s === null || s === undefined) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+function shortName(name, n) {
+  if (!name) return '—';
+  n = n || 3;
+  return String(name).split(/\s+/).filter(Boolean).slice(0, n).join(' ');
+}
+
+// Kuala Lumpur hour 0-23 — avoids browser-local-time drift (VPN, travel)
+function klHour() {
+  const s = new Date().toLocaleString('en-GB', {
+    timeZone: 'Asia/Kuala_Lumpur', hour: '2-digit', hour12: false
+  });
+  return parseInt(s, 10) || 0;
+}
+function initials(name) {
+  if (!name) return '?';
+  return String(name).split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+}
+function fmtPct(v) {
+  if (v === null || v === undefined || v === '') return '—';
+  const n = Number(v);
+  return isNaN(n) ? '—' : n + '%';
+}
+function pctClass(v) {
+  const n = Number(v);
+  if (v === null || v === undefined || v === '' || isNaN(n) || n === 0) return 'is-pending';
+  return n >= 90 ? 'is-success' : n >= 70 ? 'is-warning' : 'is-danger';
+}
+function riskLabel(risk) {
+  if (risk === 'GOOD') return 'Good';
+  if (risk === 'HIGH RISK') return 'High risk';
+  if (risk === 'WARNING') return 'Warning';
+  return {
+    daily:   'No activity today',
+    weekly:  'No activity this week',
+    monthly: 'No activity this month'
+  }[selectedView] || 'No activity';
+}
+function noActivityLabelForView() {
+  return {
+    daily:   'No activity today',
+    weekly:  'No activity this week',
+    monthly: 'No activity this month'
+  }[selectedView] || 'No activity';
+}
+
+// Toast
+function showToast(message, type) {
+  const toast = document.getElementById('toast');
+  toast.className = 'toast is-' + (type || 'info') + ' is-visible';
+  toast.textContent = message;
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(() => toast.classList.remove('is-visible'), 6000);
+}
+
+// Modal confirm (focus-trap + esc, returns Promise<boolean>)
+function confirmModal(title, body, opts) {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('confirmModal');
+    const titleEl = document.getElementById('confirmTitle');
+    const bodyEl  = document.getElementById('confirmBody');
+    const okBtn   = document.getElementById('confirmOkBtn');
+    const cancelBtn = document.getElementById('confirmCancelBtn');
+    const okLabel  = (opts && opts.ok) || 'Confirm';
+    const cancelLabel = (opts && opts.cancel) || 'Cancel';
+    titleEl.textContent = title || 'Confirm';
+    bodyEl.textContent = body || '';
+    okBtn.textContent = okLabel;
+    cancelBtn.textContent = cancelLabel;
+    const lastFocus = document.activeElement;
+    overlay.classList.add('is-visible');
+    okBtn.focus();
+    function cleanup(result) {
+      overlay.classList.remove('is-visible');
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      overlay.removeEventListener('click', onOverlay);
+      document.removeEventListener('keydown', onKey);
+      if (lastFocus && lastFocus.focus) lastFocus.focus();
+      resolve(result);
+    }
+    function onOk() { cleanup(true); }
+    function onCancel() { cleanup(false); }
+    function onOverlay(e) { if (e.target === overlay) cleanup(false); }
+    function onKey(e) {
+      if (e.key === 'Escape') cleanup(false);
+      else if (e.key === 'Tab') {
+        // focus-trap
+        const focusables = [cancelBtn, okBtn];
+        const idx = focusables.indexOf(document.activeElement);
+        if (e.shiftKey) {
+          if (idx <= 0) { e.preventDefault(); focusables[focusables.length - 1].focus(); }
+        } else {
+          if (idx === focusables.length - 1) { e.preventDefault(); focusables[0].focus(); }
+        }
+      }
+    }
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+    overlay.addEventListener('click', onOverlay);
+    document.addEventListener('keydown', onKey);
+  });
+}
+
+// Scroll-to with smooth + highlight
+function scrollToId(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function highlightDriverRow(name) {
+  // try table row first; if table is hidden, switch to table view for visibility
+  setDriverView('table');
+  scrollToId('driverTableBody');
+  const safe = String(name || '').toLowerCase();
+  document.querySelectorAll('#driverTableBody tr[data-driver]').forEach(tr => {
+    if (String(tr.dataset.driver || '').toLowerCase() === safe) {
+      tr.classList.add('row-highlight');
+      setTimeout(() => tr.classList.remove('row-highlight'), 1100);
+      tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  });
+}
 
 // ============================================================
 // CLOCK
 // ============================================================
 function updateClock() {
   const now = new Date();
-  document.getElementById('clock').textContent =
-    now.toLocaleTimeString('en-MY', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
-  document.getElementById('clockDate').textContent =
-    now.toLocaleDateString('en-MY', { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
-  document.getElementById('fleetDate').textContent =
-    'As of ' + now.toLocaleDateString('en-MY', { day:'2-digit', month:'short', year:'numeric' });
+  const c = document.getElementById('clock');
+  const cd = document.getElementById('clockDate');
+  const fd = document.getElementById('fleetDate');
+  if (c) c.textContent = now.toLocaleTimeString('en-MY', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  if (cd) cd.textContent = now.toLocaleDateString('en-MY', { weekday:'short', day:'2-digit', month:'short' });
+  if (fd) fd.textContent = 'As of ' + now.toLocaleDateString('en-MY', { weekday:'long', day:'2-digit', month:'short' });
 }
 updateClock();
 setInterval(updateClock, 1000);
 
 // ============================================================
-// LOAD DATA FROM APPS SCRIPT
+// STATE
 // ============================================================
-// V14: view + period state — defaults to monthly + current month (= V12 behavior)
-let selectedView = 'daily';   // 'daily' | 'weekly' | 'monthly' — V15: default Daily
-let selectedPeriodKey = '';     // empty = backend uses current period for the view
+let selectedView = 'daily';
+let selectedPeriodKey = '';
+let _loadInFlight = false;
+let _driverChart = null;
+// POD plan state
+let podPlanEditMode = false;
+let podPlanChanges = {};
+let _podDrivers = [];
+let _podPlans = [];
+let _onLeaveNames = new Set();
 
-// User clicked one of the [Daily] [Weekly] [Monthly] tabs
-function onViewChange(view) {
-  if (view === selectedView) return;
-  selectedView = view;
-  selectedPeriodKey = ''; // reset to current period for the new view
-  // Update active styling
-  document.querySelectorAll('.view-tab').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.view === view);
-  });
-  loadDashboard();
-}
-
-// User changed the period dropdown
-function onMonthChange() {
-  const sel = document.getElementById('monthPicker');
-  selectedPeriodKey = sel.value || '';
-  loadDashboard();
-}
-
+// ============================================================
+// LOAD DATA
+// ============================================================
 async function loadDashboard() {
+  // Don't auto-refresh while editing POD plans (would clobber user input)
+  if (podPlanEditMode) return;
+  if (_loadInFlight) return;
+  _loadInFlight = true;
   try {
     const params = ['action=getDashboardData', 'view=' + encodeURIComponent(selectedView)];
     if (selectedPeriodKey) {
-      // Backend reads any of date / week / month — pass under whichever key matches the view
       const paramName = selectedView === 'daily' ? 'date' : selectedView === 'weekly' ? 'week' : 'month';
       params.push(paramName + '=' + encodeURIComponent(selectedPeriodKey));
     }
@@ -917,382 +2066,701 @@ async function loadDashboard() {
     const res = await fetch(url, { method: 'GET' });
     const data = await res.json();
     if (data && data.status === 'ok') {
+      hideApiErrorBanner();
       populatePeriodPicker(data);
       renderDashboard(data);
     } else {
-      renderDemoData();
+      showApiErrorBanner('Backend returned an unexpected response. Last successful data may be stale.');
+      hideLoadingScreen();
     }
   } catch (err) {
-    console.log('Using demo data (API not reachable):', err.message);
-    renderDemoData();
+    console.error('loadDashboard fetch failed:', err);
+    showApiErrorBanner('Cannot reach server (' + (err && err.message ? err.message : 'network error') + '). Showing last loaded data — please refresh.');
+    hideLoadingScreen();
+  } finally {
+    _loadInFlight = false;
+    const refresh = document.getElementById('lastRefresh');
+    if (refresh) refresh.textContent = new Date().toLocaleTimeString('en-MY', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
   }
-  document.getElementById('lastRefresh').textContent =
-    new Date().toLocaleTimeString('en-MY', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
 }
 
-// V14: populate the period dropdown (day / week / month options) and toggle history banner
+function showApiErrorBanner(message) {
+  const banner = document.getElementById('apiErrorBanner');
+  const msg = document.getElementById('apiErrorMessage');
+  if (msg) msg.textContent = message;
+  if (banner) banner.classList.add('is-visible');
+}
+function hideApiErrorBanner() {
+  const banner = document.getElementById('apiErrorBanner');
+  if (banner) banner.classList.remove('is-visible');
+}
+
 function populatePeriodPicker(data) {
   const sel = document.getElementById('monthPicker');
   const periods = data.availablePeriods || data.availableMonths || [];
   const currentKey = data.selectedPeriod || data.selectedMonth || '';
   if (periods.length) {
     sel.innerHTML = periods.map(p =>
-      '<option value="' + p.key + '"' + (p.key === currentKey ? ' selected' : '') + '>' + p.label + '</option>'
+      '<option value="' + escHtml(p.key) + '"' + (p.key === currentKey ? ' selected' : '') + '>' + escHtml(p.label) + '</option>'
     ).join('');
   }
   selectedPeriodKey = currentKey;
-  // Sync the active tab in case backend echoed a different view than we requested
+  // Sync the active tab if backend echoed a different view than we requested
   if (data.view) {
     selectedView = data.view;
     document.querySelectorAll('.view-tab').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.view === data.view);
+      btn.classList.toggle('is-active', btn.dataset.view === data.view);
     });
   }
-  // History banner — show when looking at a non-current period
   const banner = document.getElementById('historyBanner');
   const label  = document.getElementById('historyBannerLabel');
   const isCurrent = (data.isCurrentPeriod !== undefined) ? data.isCurrentPeriod : data.isCurrentMonth;
   if (isCurrent === false) {
-    banner.classList.add('show');
+    banner.classList.add('is-visible');
     label.textContent = data.selectedPeriodLabel || data.selectedMonthLabel || '';
   } else {
-    banner.classList.remove('show');
+    banner.classList.remove('is-visible');
   }
 }
 
 // ============================================================
-// RENDER DEMO DATA (shown when API not yet connected)
+// RENDER
 // ============================================================
-function renderDemoData() {
-  const demo = {
-    kpi: {
-      fuelTotal: 247, fuelComp: 91, podTotal: 389, podComp: 78,
-      missingPod: 12, highRisk: 2,
-    },
-    risk: { good: 15, warning: 7, highRisk: 2 },
-    mvp: { name: 'MUHAMMAD ZULKIFLI BIN OTHMAN', score: 320 },
-    drivers: [
-      { rank:1, name:'MUHAMMAD ZULKIFLI BIN OTHMAN', fuelPct:100, podPct:100, score:320, risk:'GOOD' },
-      { rank:2, name:'TAUFIK AFFENDI BIN MUHAMMAD', fuelPct:95, podPct:98, score:290, risk:'GOOD' },
-      { rank:3, name:'HAIRUL ANUAR BIN YAAKUB', fuelPct:94, podPct:96, score:270, risk:'GOOD' },
-      { rank:4, name:'ABDUL HADI BIN KHALIB', fuelPct:92, podPct:95, score:250, risk:'GOOD' },
-      { rank:5, name:'JAMALUDIN BIN MOHAMAD YUSOF', fuelPct:90, podPct:94, score:230, risk:'GOOD' },
-      { rank:6, name:'AHMAD ASMADI BIN AMRAN', fuelPct:88, podPct:91, score:180, risk:'GOOD' },
-      { rank:7, name:'MOHD FADHIL BIN AHMAD RANI', fuelPct:87, podPct:90, score:170, risk:'GOOD' },
-      { rank:8, name:'MOHAMAD KHAIRUL ANAM BIN MOHAMAD ROSLI', fuelPct:86, podPct:89, score:150, risk:'WARNING' },
-      { rank:9, name:'AZRIN BIN JAMALUDDIN', fuelPct:85, podPct:88, score:130, risk:'WARNING' },
-      { rank:10, name:'MOHAMAD IZZRUL FIKRIE BIN ROSLI', fuelPct:84, podPct:87, score:120, risk:'WARNING' },
-      { rank:11, name:'MAZLAN BIN MOHD RADZUAN', fuelPct:83, podPct:82, score:100, risk:'WARNING' },
-      { rank:12, name:'MUHAMMAD FIRDAUS BIN UNIZAR', fuelPct:82, podPct:81, score:90, risk:'WARNING' },
-      { rank:13, name:'MUHAMMAD KHAIRUL HAFIZ BIN ROSHARUDIN', fuelPct:81, podPct:80, score:80, risk:'WARNING' },
-      { rank:14, name:'MOHAMAD FARID IKMAL BIN MOHD AJIB', fuelPct:80, podPct:80, score:70, risk:'WARNING' },
-      { rank:15, name:'MOHD KHAIRUL AZHAR BIN ABDUL MUTALIB', fuelPct:79, podPct:79, score:40, risk:'WARNING' },
-      { rank:16, name:'MOHAMAD NORAZAMAN BIN MOHAMED SHURY', fuelPct:78, podPct:78, score:30, risk:'WARNING' },
-      { rank:17, name:'MUHAMMAD NAZMI BIN MUSTAPHA ALBAKRI', fuelPct:76, podPct:76, score:10, risk:'WARNING' },
-      { rank:18, name:'MOHAMAD KHAIRUDDIN BIN KHAIDIR', fuelPct:75, podPct:75, score:-10, risk:'WARNING' },
-      { rank:19, name:'MUHAMMAD SYAFQ IZZAT BIN PUTERA AHMAD HILMI', fuelPct:74, podPct:74, score:-20, risk:'WARNING' },
-      { rank:20, name:'MOHD FIRDAUS BIN MD MASHOD FAKEH', fuelPct:73, podPct:73, score:-30, risk:'WARNING' },
-      { rank:21, name:'ASRIZAL BIN MOHD YATIM', fuelPct:72, podPct:72, score:-40, risk:'WARNING' },
-      { rank:22, name:'MOHAMAD AZUWAN BIN MT DESA', fuelPct:71, podPct:71, score:-50, risk:'WARNING' },
-      { rank:23, name:'ABDUL SALAM BIN IDRUS', fuelPct:65, podPct:60, score:-60, risk:'HIGH RISK' },
-      { rank:24, name:'AZMAN BIN MAT RASHID', fuelPct:55, podPct:45, score:-90, risk:'HIGH RISK' },
-    ],
-    notSubmittedToday: ['AZMAN BIN MAT RASHID', 'ABDUL SALAM BIN IDRUS', 'MOHAMAD AZUWAN BIN MT DESA'],
-    recent: [
-      { time:'16:32', driver:'TAUFIK AFFENDI BIN MUHAMMAD', type:'FUEL', vehicle:'SMB 7633' },
-      { time:'16:15', driver:'HAIRUL ANUAR BIN YAAKUB', type:'POD', vehicle:'RX 8733' },
-      { time:'15:58', driver:'JAMALUDIN BIN MOHAMAD YUSOF', type:'FUEL', vehicle:'VDQ 6864' },
-      { time:'15:42', driver:'AHMAD ASMADI BIN AMRAN', type:'POD', vehicle:'CCY 9233' },
-      { time:'15:20', driver:'MUHAMMAD ZULKIFLI BIN OTHMAN', type:'FUEL', vehicle:'KER 9223' },
-      { time:'14:55', driver:'ABDUL HADI BIN KHALIB', type:'POD', vehicle:'VHT 4642' },
-      { time:'14:30', driver:'MOHD FADHIL BIN AHMAD RANI', type:'FUEL', vehicle:'SYS 4642' },
-      { time:'14:10', driver:'AZRIN BIN JAMALUDDIN', type:'POD', vehicle:'VFE 9633' },
-    ],
-    lorryStatus: LORRIES.map((plate, i) => ({
-      plate,
-      driver: ['MUHAMMAD ZULKIFLI BIN OTHMAN','TAUFIK AFFENDI BIN MUHAMMAD','HAIRUL ANUAR BIN YAAKUB','MOHAMAD KHAIRUDDIN BIN KHAIDIR','MAZLAN BIN MOHD RADZUAN','MOHD FIRDAUS BIN MD MASHOD FAKEH','AZMAN BIN MAT RASHID','MOHD KHAIRUL AZHAR BIN ABDUL MUTALIB','MUHAMMAD NAZMI BIN MUSTAPHA ALBAKRI','MOHAMAD AZUWAN BIN MT DESA','ASRIZAL BIN MOHD YATIM','ABDUL HADI BIN KHALIB','JAMALUDIN BIN MOHAMAD YUSOF','AHMAD ASMADI BIN AMRAN','MOHD FADHIL BIN AHMAD RANI','MOHAMAD KHAIRUL ANAM BIN MOHAMAD ROSLI'][i],
-      submitted: i < 12,
-      mileage: i < 12 ? Math.floor(50000 + Math.random() * 30000) : null,
-    }))
-  };
-  renderDashboard(demo);
-}
-
-// ============================================================
-// RENDER DASHBOARD
-// ============================================================
-function renderDashboard(d) {
-  const k = d.kpi;
-
-  // KPIs
-  document.getElementById('kpiFuelTotal').textContent = k.fuelTotal ?? '—';
-  document.getElementById('kpiPodTotal').textContent = k.podTotal ?? '—';
-
-  const fc = k.fuelComp ?? 0;
-  const pc = k.podComp ?? 0;
-  document.getElementById('kpiFuelComp').textContent = fc + '%';
-  document.getElementById('kpiPodComp').textContent = pc + '%';
-  document.getElementById('kpiFuelComp').style.color = fc >= 90 ? '#3B6D11' : fc >= 80 ? '#854F0B' : '#A32D2D';
-  document.getElementById('kpiPodComp').style.color = pc >= 90 ? '#3B6D11' : pc >= 80 ? '#854F0B' : '#A32D2D';
-  document.getElementById('kpiFuelCompBar').style.background = fc >= 90 ? '#3B6D11' : fc >= 80 ? '#854F0B' : '#A32D2D';
-  document.getElementById('kpiPodCompBar').style.background = pc >= 90 ? '#3B6D11' : pc >= 80 ? '#854F0B' : '#A32D2D';
-
-  setTrend('kpiFuelTrend', fc >= 90 ? 'up' : 'down', fc >= 90 ? 'On target' : 'Below 90%');
-  setTrend('kpiPodTrend', pc >= 90 ? 'up' : 'down', pc >= 90 ? 'On target' : 'Below 90%');
-  setTrend('kpiFuelTrend', null, null);
-  setTrend('kpiPodTrend', null, null);
-
-  // Risk breakdown
-  const total = 24;
-  const r = d.risk;
-  setRiskBar('Good', r.good, total);
-  setRiskBar('Warn', r.warning, total);
-  setRiskBar('Red', r.highRisk, total);
-
-  // Compliance bars
-  document.getElementById('compFuelPct').textContent = fc + '%';
-  document.getElementById('compPodPct').textContent = pc + '%';
-  document.getElementById('compMissing').textContent = (k.missingPod ?? 0) + ' missing';
-  setTimeout(() => {
-    document.getElementById('compFuelBar').style.width = fc + '%';
-    document.getElementById('compFuelBar').style.background = fc >= 90 ? '#639922' : fc >= 80 ? '#BA7517' : '#E24B4A';
-    document.getElementById('compPodBar').style.width = pc + '%';
-    document.getElementById('compPodBar').style.background = pc >= 90 ? '#639922' : pc >= 80 ? '#BA7517' : '#E24B4A';
-    document.getElementById('compFuelPct').style.color = fc >= 90 ? '#3B6D11' : fc >= 80 ? '#854F0B' : '#A32D2D';
-    document.getElementById('compPodPct').style.color = pc >= 90 ? '#3B6D11' : pc >= 80 ? '#854F0B' : '#A32D2D';
-  }, 200);
-
-  // MVP
-  if (d.mvp) {
-    document.getElementById('mvpName').textContent = d.mvp.name + (d.mvp.staffId ? ' (' + d.mvp.staffId + ')' : '');
-    document.getElementById('mvpScore').textContent = (d.mvp.score >= 0 ? '+' : '') + d.mvp.score;
-  }
-
-  // Alert bar — not submitted today
-  const ns = d.notSubmittedToday ?? [];
-  const alertBar = document.getElementById('alertBar');
-  if (ns.length > 0) {
-    alertBar.classList.add('show');
-    document.getElementById('alertTitle').textContent =
-      ns.length + ' driver' + (ns.length > 1 ? 's' : '') + ' have NOT submitted today\'s fuel record:';
-    document.getElementById('alertDrivers').innerHTML = ns.map(n =>
-      `<span class="alert-chip">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        ${n.split(' ').slice(0,2).join(' ')}
-      </span>`
-    ).join('');
-  } else {
-    alertBar.classList.remove('show');
-  }
-
-  // Driver table
-  renderDriverTable(d.drivers ?? []);
-
-  // High risk
-  renderHighRisk(d.drivers ?? []);
-
-  // Lorry grid
-  renderLorryGrid(d.lorryStatus ?? []);
-
-  // Recent submissions
-  renderRecent(d.recent ?? []);
-
-  // Holiday Calendar + On Leave Today (v8 features)
-  renderHolidayCalendar(d.upcomingHolidays ?? []);
-  renderOnLeaveToday(d.onLeaveToday ?? []);
-  // POD Plan (v10)
-  renderPODPlan(d.drivers ?? [], d.podPlanToday ?? []);
-  populateLeaveRangeDriverDropdown(d.drivers ?? []);
-
-  // Hide loading
+function hideLoadingScreen() {
   const ls = document.getElementById('loadingScreen');
-  ls.classList.add('fade');
-  setTimeout(() => { ls.style.display = 'none'; }, 600);
+  if (!ls) return;
+  ls.classList.add('is-fading');
+  setTimeout(() => { ls.style.display = 'none'; }, 500);
 }
 
+function renderDashboard(d) {
+  try {
+    _renderDashboardInner(d);
+  } catch (err) {
+    console.error('renderDashboard failed:', err);
+    hideLoadingScreen();
+    const refresh = document.getElementById('lastRefresh');
+    if (refresh) refresh.textContent = 'render error — see console';
+  }
+}
+
+function _renderDashboardInner(d) {
+  d = d || {};
+  const k = d.kpi || {};
+  const drivers = d.drivers || [];
+  const onLeave = d.onLeaveToday || [];
+  const notSubmitted = d.notSubmittedToday || [];
+  const podPlanToday = d.podPlanToday || [];
+
+  // Track on-leave for POD plan grayscale
+  _onLeaveNames = new Set(onLeave.map(l => (l && l.driverName) || '').filter(Boolean));
+
+  // ───────── TODAY SNAPSHOT (4 tiles) ─────────
+  renderTodaySnapshot(drivers, onLeave, notSubmitted, podPlanToday);
+
+  // ───────── MONTHLY HEALTH STRIP ─────────
+  renderMonthStrip(k);
+
+  // ───────── RISK BREAKDOWN ─────────
+  renderRiskBreakdown(d.risk || {}, drivers);
+
+  // ───────── COMPLIANCE BARS ─────────
+  renderCompliance(k);
+
+  // ───────── MVP CARD ─────────
+  renderMVP(d.mvp);
+
+  // ───────── ISSUES BAR ─────────
+  renderIssuesBar(notSubmitted, podPlanToday);
+
+  // ───────── DRIVER COUNT + RANKING ─────────
+  const driverCountEl = document.getElementById('driverCount');
+  if (driverCountEl) {
+    const n = drivers.length;
+    driverCountEl.textContent = n + ' driver' + (n === 1 ? '' : 's');
+  }
+  renderDriverTable(drivers);
+  renderDriverChart(drivers);
+
+  // ───────── HIGH RISK / NEEDS ATTENTION ─────────
+  renderHighRisk(drivers);
+
+  // ───────── FLEET STATUS ─────────
+  renderFleet(d.lorryStatus || []);
+
+  // ───────── RECENT SUBMISSIONS ─────────
+  renderRecent(d.recent || []);
+
+  // ───────── POD PLAN ─────────
+  renderPODPlan(drivers, podPlanToday);
+
+  hideLoadingScreen();
+}
+
+// ============================================================
+// TODAY SNAPSHOT (4 tiles)
+// ============================================================
+function renderTodaySnapshot(drivers, onLeave, notSubmitted, podPlanToday) {
+  const totalDrivers = drivers.length;
+  const onLeaveCount = onLeave.length;
+  const onRoad = Math.max(0, totalDrivers - onLeaveCount);
+
+  // Submitted today: derive from driver fuel data — drivers whose name is NOT in notSubmittedToday and not on leave
+  const notSubmittedSet = new Set(notSubmitted.map(n => String(n).toLowerCase()));
+  const onLeaveSet = new Set(onLeave.map(l => String((l && l.driverName) || '').toLowerCase()));
+  let fuelSubmitted = 0, fuelExpected = 0;
+  drivers.forEach(dr => {
+    const nm = String(dr.name || '').toLowerCase();
+    if (onLeaveSet.has(nm)) return;
+    fuelExpected += 1;
+    if (!notSubmittedSet.has(nm)) fuelSubmitted += 1;
+  });
+  if (fuelExpected === 0) fuelExpected = onRoad; // fallback
+  const subPct = fuelExpected > 0 ? Math.round((fuelSubmitted / fuelExpected) * 100) : 0;
+
+  // Pending = union of (not submitted fuel today) ∪ (drivers with POD missing)
+  // Use driver names as the dedup key
+  const pendingNames = new Set(notSubmitted.map(n => String(n).toLowerCase()));
+  let podMissingDrivers = 0;
+  podPlanToday.forEach(p => {
+    const planned = Number(p.planned) || 0;
+    const submitted = Number(p.submitted) || 0;
+    if (planned > 0 && submitted < planned) {
+      pendingNames.add(String(p.driverName || '').toLowerCase());
+      podMissingDrivers += 1;
+    }
+  });
+  const pending = pendingNames.size;
+
+  // Should-fix I1: before 08:00 KL, force all tiles to gray "Day not started"
+  // (drivers haven't started yet, 0/22 should not look red)
+  const beforeDayStart = klHour() < 8;
+
+  // Render tiles
+  const onRoadEl = document.getElementById('kpiOnRoad');
+  const onRoadSubEl = document.getElementById('kpiOnRoadSub');
+  onRoadEl.textContent = onRoad;
+  onRoadSubEl.textContent = totalDrivers ? 'of ' + totalDrivers + ' drivers' : 'No drivers';
+
+  const subEl = document.getElementById('kpiSubmitted');
+  const subSubEl = document.getElementById('kpiSubmittedSub');
+  if (beforeDayStart) {
+    subEl.textContent = '—';
+    subSubEl.textContent = 'Day not started';
+  } else {
+    subEl.textContent = fuelExpected > 0 ? (fuelSubmitted + ' / ' + fuelExpected) : '—';
+    subSubEl.textContent = fuelExpected > 0 ? (subPct + '% · target 90%') : 'Day not started';
+  }
+
+  // Update accent
+  const subTile = subEl.closest('.kpi-tile');
+  subTile.classList.remove('accent-success', 'accent-warning', 'accent-danger', 'accent-gray');
+  if (beforeDayStart || fuelExpected === 0) subTile.classList.add('accent-gray');
+  else if (subPct >= 90) subTile.classList.add('accent-success');
+  else if (subPct >= 70) subTile.classList.add('accent-warning');
+  else subTile.classList.add('accent-danger');
+
+  const pendEl = document.getElementById('kpiPending');
+  const pendSubEl = document.getElementById('kpiPendingSub');
+  if (beforeDayStart) {
+    pendEl.textContent = '—';
+    pendSubEl.textContent = 'Day not started';
+  } else {
+    pendEl.textContent = pending;
+    if (pending === 0) {
+      pendSubEl.textContent = 'All caught up';
+    } else {
+      const fuelOnly = notSubmitted.length;
+      pendSubEl.textContent = fuelOnly + ' fuel · ' + podMissingDrivers + ' POD';
+    }
+  }
+  const pendTile = pendEl.closest('.kpi-tile');
+  pendTile.classList.remove('accent-warning', 'accent-gray');
+  if (beforeDayStart || pending === 0) pendTile.classList.add('accent-gray');
+  else pendTile.classList.add('accent-warning');
+
+  const olEl = document.getElementById('kpiOnLeave');
+  const olSubEl = document.getElementById('kpiOnLeaveSub');
+  olEl.textContent = onLeaveCount;
+  if (onLeaveCount === 0) {
+    olSubEl.textContent = 'All drivers on duty';
+  } else {
+    const first = onLeave[0];
+    const name = first && first.driverName ? shortName(first.driverName, 2) : '';
+    const type = first && first.leaveType ? first.leaveType : '';
+    olSubEl.textContent = onLeaveCount === 1 ? (name + (type ? ' · ' + type : '')) : (onLeaveCount + ' drivers off');
+  }
+}
+
+// ============================================================
+// MONTHLY HEALTH STRIP
+// ============================================================
+function renderMonthStrip(k) {
+  const ft = k.fuelTotal ?? 0;
+  const fc = k.fuelComp ?? 0;
+  const pt = k.podTotal ?? 0;
+  const pc = k.podComp ?? 0;
+  const missing = k.missingPod ?? 0;
+  document.getElementById('monthStripSummary').textContent =
+    'This month — Fuel ' + ft + ' · ' + fc + '% comp · POD ' + pt + ' · ' + pc + '% comp · ' + missing + ' missing';
+  document.getElementById('monthFuelTotal').textContent = ft;
+  document.getElementById('monthFuelComp').textContent = fc + '%';
+  document.getElementById('monthPodTotal').textContent = pt;
+  document.getElementById('monthPodComp').textContent = pc + '%';
+}
+
+// ============================================================
+// RISK BREAKDOWN
+// ============================================================
+function renderRiskBreakdown(r, drivers) {
+  const total = (r.good || 0) + (r.warning || 0) + (r.highRisk || 0) + (r.new || 0) || drivers.length || 1;
+  setRiskBar('Good', r.good || 0, total);
+  setRiskBar('Warn', r.warning || 0, total);
+  setRiskBar('Red', r.highRisk || 0, total);
+  document.getElementById('noActivityLabel').textContent = noActivityLabelForView();
+  document.getElementById('noActivityCount').textContent =
+    (r.new || 0) + ' driver' + ((r.new || 0) === 1 ? '' : 's');
+}
 function setRiskBar(key, count, total) {
   const pct = total > 0 ? Math.round((count / total) * 100) : 0;
   const fill = document.getElementById('riskFill' + key);
-  const label = document.getElementById('riskLabel' + key);
   const num = document.getElementById('riskNum' + key);
-  if (fill) setTimeout(() => { fill.style.width = Math.max(pct, 5) + '%'; }, 300);
-  if (label) label.textContent = count + ' drivers';
+  if (fill) setTimeout(() => { fill.style.width = pct + '%'; }, 200);
   if (num) num.textContent = count;
 }
 
-function setTrend(id, dir, text) {
-  const el = document.getElementById(id);
-  if (!el || !dir) { el.style.display = 'none'; return; }
-  el.className = 'kpi-trend ' + (dir === 'up' ? 'trend-up' : 'trend-down');
-  el.innerHTML = (dir === 'up' ? '▲ ' : '▼ ') + text;
+// ============================================================
+// COMPLIANCE BARS
+// ============================================================
+function renderCompliance(k) {
+  const fc = k.fuelComp ?? null;
+  const pc = k.podComp ?? null;
+  const fcClass = pctClass(fc);
+  const pcClass = pctClass(pc);
+
+  const fcEl = document.getElementById('compFuelPct');
+  const pcEl = document.getElementById('compPodPct');
+  const fcBar = document.getElementById('compFuelBar');
+  const pcBar = document.getElementById('compPodBar');
+
+  fcEl.className = 'comp-pct ' + fcClass;
+  pcEl.className = 'comp-pct ' + pcClass;
+  fcBar.className = 'comp-fill ' + fcClass;
+  pcBar.className = 'comp-fill ' + pcClass;
+
+  fcEl.textContent = (fc === null || fc === undefined || fc === '' || fc === 0) ? 'Pending' : (fc + '%');
+  pcEl.textContent = (pc === null || pc === undefined || pc === '' || pc === 0) ? 'Pending' : (pc + '%');
+
+  const fcNum = Number(fc) || 0;
+  const pcNum = Number(pc) || 0;
+  setTimeout(() => {
+    fcBar.style.width = (fc === null || fc === undefined || fc === '') ? '100%' : (fcClass === 'is-pending' ? '100%' : fcNum + '%');
+    pcBar.style.width = (pc === null || pc === undefined || pc === '') ? '100%' : (pcClass === 'is-pending' ? '100%' : pcNum + '%');
+  }, 200);
+
+  const missing = k.missingPod ?? 0;
+  const missEl = document.getElementById('compMissing');
+  missEl.textContent = missing + ' missing';
+  missEl.className = 'comp-pct ' + (missing > 0 ? 'is-danger' : 'is-success');
+}
+
+// ============================================================
+// MVP CARD
+// ============================================================
+function renderMVP(mvp) {
+  const body = document.getElementById('mvpBody');
+  const medal = '<div class="mvp-medal" aria-hidden="true">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>' +
+      '<path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>' +
+      '<path d="M4 22h16"/>' +
+      '<path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>' +
+      '<path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>' +
+      '<path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>' +
+    '</svg></div>';
+  if (!mvp || !mvp.name) {
+    body.innerHTML = '<div class="mvp-empty">No MVP yet — waiting for first scores</div>' + medal;
+    return;
+  }
+  const nameSafe = escHtml(mvp.name);
+  const idSafe = mvp.staffId ? ' (' + escHtml(mvp.staffId) + ')' : '';
+  const score = (mvp.score >= 0 ? '+' : '') + (mvp.score || 0);
+  body.innerHTML =
+    '<div class="mvp-name">' + nameSafe + idSafe + '</div>' +
+    '<div class="mvp-score-row">' +
+      '<span class="mvp-score">' + escHtml(score) + '</span>' +
+      '<span class="mvp-points">points</span>' +
+    '</div>' +
+    medal;
+}
+
+// ============================================================
+// ISSUES BAR (basic time-aware)
+// ============================================================
+function renderIssuesBar(notSubmitted, podPlanToday) {
+  const bar = document.getElementById('issuesBar');
+  const title = document.getElementById('issuesTitle');
+  const chips = document.getElementById('issuesChips');
+
+  // Use Asia/Kuala_Lumpur hour, not browser local — avoids drift when supervisor
+  // travels / VPN. (Should-fix F1)
+  const hour = klHour();
+  const fuelLate = hour >= 17;
+
+  // POD shortfall only reported after 12:00 — early morning shortfall is expected
+  // because the day just started. (Should-fix F4 / Designer spec §5)
+  let podMissing = podPlanToday.filter(p => (Number(p.planned) || 0) > (Number(p.submitted) || 0));
+  if (hour < 12) podMissing = [];
+
+  if (notSubmitted.length === 0 && podMissing.length === 0) {
+    bar.classList.remove('is-visible');
+    return;
+  }
+  bar.classList.remove('is-danger', 'is-warning', 'is-info');
+  if (fuelLate && notSubmitted.length > 0) {
+    bar.classList.add('is-danger');
+  } else {
+    bar.classList.add('is-warning');
+  }
+
+  const parts = [];
+  if (notSubmitted.length > 0) {
+    parts.push(notSubmitted.length + ' driver' + (notSubmitted.length > 1 ? 's' : '') + " haven't submitted fuel");
+  }
+  if (podMissing.length > 0) {
+    parts.push(podMissing.length + ' driver' + (podMissing.length > 1 ? 's' : '') + ' with POD pending');
+  }
+  title.textContent = parts.join(' · ');
+
+  // Chips for not-submitted drivers (event delegation, no inline onclick)
+  const cap = 6;
+  const visible = notSubmitted.slice(0, cap);
+  let chipsHtml = visible.map(n =>
+    '<button type="button" class="badge badge-danger badge-clickable" data-driver="' + escHtml(n) + '">' +
+      escHtml(shortName(n, 2)) +
+    '</button>'
+  ).join('');
+  if (notSubmitted.length > cap) {
+    chipsHtml += '<span class="badge badge-gray">+' + (notSubmitted.length - cap) + ' more</span>';
+  }
+  chips.innerHTML = chipsHtml;
+  // Wire up clicks via delegation
+  chips.querySelectorAll('button[data-driver]').forEach(btn => {
+    btn.addEventListener('click', () => highlightDriverRow(btn.dataset.driver));
+  });
+  bar.classList.add('is-visible');
+}
+
+// ============================================================
+// DRIVER RANKING — chart + table
+// ============================================================
+function setDriverView(view) {
+  const tableWrap = document.getElementById('driverTableWrap');
+  const chartWrap = document.getElementById('driverChartWrap');
+  const tabChart  = document.getElementById('driverViewChart');
+  const tabTable  = document.getElementById('driverViewTable');
+  if (view === 'table') {
+    tableWrap.classList.remove('is-hidden');
+    chartWrap.classList.add('is-hidden');
+    tabTable.classList.add('is-active');
+    tabChart.classList.remove('is-active');
+  } else {
+    tableWrap.classList.add('is-hidden');
+    chartWrap.classList.remove('is-hidden');
+    tabChart.classList.add('is-active');
+    tabTable.classList.remove('is-active');
+    if (_driverChart) setTimeout(() => _driverChart.render && _driverChart.render(), 0);
+  }
+}
+
+function renderDriverChart(drivers) {
+  const wrap = document.getElementById('driverChartWrap');
+  if (!wrap) return;
+  if (!drivers.length) {
+    wrap.innerHTML = '<div class="empty-state">No driver data for this period</div>';
+    return;
+  }
+  // Fallback to table view if ApexCharts CDN failed
+  if (typeof ApexCharts === 'undefined') {
+    wrap.innerHTML = '<div class="empty-state">Chart unavailable — viewing table</div>';
+    setDriverView('table');
+    return;
+  }
+
+  const sorted = [...drivers].sort((a, b) => (b.score || 0) - (a.score || 0));
+  const categories = sorted.map(d => d.staffId || shortName(d.name, 2));
+  const toNum = v => (v === null || v === undefined || v === '') ? 0 : Number(v) || 0;
+  const fuelData = sorted.map(d => toNum(d.fuelPct));
+  const podData  = sorted.map(d => toNum(d.podPct));
+
+  if (_driverChart) {
+    try { _driverChart.destroy(); } catch (e) {}
+    _driverChart = null;
+  }
+  wrap.innerHTML = '';
+
+  const heightPx = Math.max(360, sorted.length * 38 + 80);
+
+  const options = Object.assign({}, COMMON_APEX_OPTIONS, {
+    series: [
+      { name: 'Fuel %', data: fuelData },
+      { name: 'POD %',  data: podData  },
+    ],
+    chart: Object.assign({}, COMMON_APEX_OPTIONS.chart, {
+      type: 'bar',
+      height: heightPx,
+    }),
+    colors: ['#2563EB', '#10B981'],
+    plotOptions: {
+      bar: {
+        horizontal: true,
+        barHeight: '78%',
+        dataLabels: { position: 'top' }
+      }
+    },
+    dataLabels: {
+      enabled: true,
+      formatter: v => (v > 0 ? v + '%' : ''),
+      offsetX: 28,
+      style: { fontSize: '10px', fontWeight: 600, colors: ['#111827'] }
+    },
+    xaxis: {
+      categories: categories,
+      min: 0, max: 100,
+      tickAmount: 5,
+      labels: { formatter: v => v + '%', style: { fontSize: '10px', colors: '#6B7280' } },
+      axisBorder: { show: false },
+      axisTicks: { show: false }
+    },
+    yaxis: {
+      labels: {
+        style: { fontSize: '11px', colors: '#111827', fontWeight: 600, fontFamily: 'Geist Mono, monospace' }
+      }
+    },
+    grid: Object.assign({}, COMMON_APEX_OPTIONS.grid, {
+      xaxis: { lines: { show: true } },
+      yaxis: { lines: { show: false } }
+    }),
+    legend: {
+      show: true, position: 'top', horizontalAlign: 'left',
+      fontSize: '11px', fontWeight: 500, fontFamily: 'Geist, sans-serif',
+      labels: { colors: '#6B7280' },
+      markers: { width: 12, height: 12, radius: 3 },
+      itemMargin: { horizontal: 12, vertical: 4 }
+    },
+    tooltip: {
+      shared: true, intersect: false,
+      theme: 'light',
+      style: { fontSize: '12px', fontFamily: 'Geist' },
+      // XSS guard: ALL DB strings via escHtml()
+      custom: function({ dataPointIndex }) {
+        const dd = sorted[dataPointIndex];
+        if (!dd) return '';
+        const fuel = (dd.fuelPct === null || dd.fuelPct === undefined || dd.fuelPct === '') ? '—' : (escHtml(dd.fuelPct) + '%');
+        const pod  = (dd.podPct  === null || dd.podPct  === undefined || dd.podPct  === '') ? '—' : (escHtml(dd.podPct)  + '%');
+        const rlabel = escHtml(riskLabel(dd.risk));
+        const scoreColor = dd.score >= 0 ? '#047857' : '#B91C1C';
+        const scoreSign = dd.score >= 0 ? '+' : '';
+        return '<div style="padding:8px 12px;font-family:Geist,sans-serif;font-size:12px;min-width:220px;">' +
+               '<div style="font-weight:600;color:#111827;margin-bottom:4px;">#' + escHtml(dd.rank || (dataPointIndex + 1)) + ' · ' + escHtml(dd.name) + '</div>' +
+               (dd.staffId ? '<div style="font-size:11px;color:#6B7280;margin-bottom:6px;font-family:Geist Mono,monospace;">' + escHtml(dd.staffId) + '</div>' : '') +
+               '<div style="color:#374151;">Fuel: <b style="color:#2563EB;">' + fuel + '</b> · POD: <b style="color:#047857;">' + pod + '</b></div>' +
+               '<div style="color:#374151;margin-top:2px;">Score: <b style="color:' + scoreColor + ';">' + scoreSign + escHtml(dd.score || 0) + '</b> · ' + rlabel + '</div>' +
+               '</div>';
+      }
+    }
+  });
+
+  _driverChart = new ApexCharts(wrap, options);
+  _driverChart.render();
 }
 
 function renderDriverTable(drivers) {
-  if (!drivers.length) return;
   const tbody = document.getElementById('driverTableBody');
-  let html = '';
+  if (!tbody) return;
+  if (!drivers.length) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state">No driver data for this period</div></td></tr>';
+    return;
+  }
   const top5 = drivers.filter(d => d.rank <= 5);
-  const mid = drivers.filter(d => d.rank > 5 && d.risk !== 'HIGH RISK' && d.rank <= 20);
+  const mid = drivers.filter(d => d.rank > 5 && d.risk !== 'HIGH RISK');
   const bottom = drivers.filter(d => d.risk === 'HIGH RISK');
 
-  const addSection = (label, color, rows) => {
+  let html = '';
+  const addSection = (label, rows) => {
     if (!rows.length) return;
-    html += `<tr><td colspan="6" class="section-divider" style="color:${color};">${label}</td></tr>`;
+    html += '<tr class="section-divider"><td colspan="6">' + escHtml(label) + '</td></tr>';
     rows.forEach(d => { html += driverRow(d); });
   };
-
-  addSection('Top performers', '#3B6D11', top5);
+  addSection('Top performers', top5);
   if (mid.length) {
-    html += `<tr><td colspan="6" class="section-divider">All drivers</td></tr>`;
+    html += '<tr class="section-divider"><td colspan="6">All drivers</td></tr>';
     mid.forEach(d => { html += driverRow(d); });
   }
-  addSection('Needs attention — High risk', '#A32D2D', bottom);
+  addSection('Needs attention — High risk', bottom);
   tbody.innerHTML = html;
 }
 
 function driverRow(d) {
-  const rankBg = d.rank === 1 ? '#C9A84C' : d.rank === 2 ? '#B4B2A9' : d.rank === 3 ? '#D3D1C7' : '#F0F4F8';
-  const rankTxt = d.rank === 1 ? '#412402' : d.rank === 2 ? '#2C2C2A' : d.rank === 3 ? '#444441' : '#6B7A8D';
-  const riskBg = d.risk === 'GOOD' ? '#EAF3DE' : d.risk === 'HIGH RISK' ? '#FCEBEB' : d.risk === 'NEW' ? '#F0F4F8' : '#FAEEDA';
-  const riskTxt = d.risk === 'GOOD' ? '#27500A' : d.risk === 'HIGH RISK' ? '#791F1F' : d.risk === 'NEW' ? '#4A5568' : '#633806';
-  const riskLabel = d.risk === 'GOOD' ? 'Good' : d.risk === 'HIGH RISK' ? 'High risk' : d.risk === 'NEW' ? 'New' : 'Warning';
-  const scoreTxt = d.score >= 0 ? '+' + d.score : d.score;
-  const scoreColor = d.score >= 0 ? '#3B6D11' : '#A32D2D';
-  const shortName = d.name.split(' ').slice(0,3).join(' ');
-  return `<tr>
-    <td><div class="rank-num" style="background:${rankBg};color:${rankTxt};margin:0 auto;">${d.rank}</div></td>
-    <td><div class="driver-name-cell" title="${d.name}">${shortName}${d.staffId ? '<span style="display:block;font-size:10px;color:var(--gray);font-weight:400;">' + d.staffId + '</span>' : ''}</div></td>
-    <td style="color:${(d.fuelPct??0)>=90?'#3B6D11':(d.fuelPct??0)>=80?'#854F0B':'#A32D2D'};">${d.fuelPct ?? '—'}%</td>
-    <td style="color:${(d.podPct??0)>=90?'#3B6D11':(d.podPct??0)>=80?'#854F0B':'#A32D2D'};">${d.podPct ?? '—'}%</td>
-    <td><span class="score-val" style="color:${scoreColor};">${scoreTxt}</span></td>
-    <td><span class="risk-badge" style="background:${riskBg};color:${riskTxt};">${riskLabel}</span></td>
-  </tr>`;
+  const isGold = d.rank === 1;
+  const rankCls = isGold ? 'rank-num is-gold' : 'rank-num';
+  const rowCls = isGold ? 'row-top' : '';
+  const score = d.score >= 0 ? '+' + (d.score || 0) : (d.score || 0);
+  const scoreColor = d.score >= 0 ? 'var(--success-700)' : 'var(--danger-700)';
+  const riskBadge = d.risk === 'GOOD' ? 'badge-success'
+                 : d.risk === 'HIGH RISK' ? 'badge-danger'
+                 : d.risk === 'WARNING' ? 'badge-warning'
+                 : 'badge-gray';
+  const fuelCls = pctClass(d.fuelPct);
+  const podCls = pctClass(d.podPct);
+  const fuelColor = fuelCls === 'is-success' ? 'var(--success-700)' : fuelCls === 'is-warning' ? 'var(--warning-700)' : fuelCls === 'is-danger' ? 'var(--danger-700)' : 'var(--gray-500)';
+  const podColor = podCls === 'is-success' ? 'var(--success-700)' : podCls === 'is-warning' ? 'var(--warning-700)' : podCls === 'is-danger' ? 'var(--danger-700)' : 'var(--gray-500)';
+  return '<tr class="' + rowCls + '" data-driver="' + escHtml(d.name || '') + '">' +
+    '<td><span class="' + rankCls + '">' + escHtml(d.rank || '—') + '</span></td>' +
+    '<td><div class="driver-name-cell">' + escHtml(shortName(d.name, 3)) +
+      (d.staffId ? '<span class="driver-id">' + escHtml(d.staffId) + '</span>' : '') +
+    '</div></td>' +
+    '<td style="color:' + fuelColor + ';">' + escHtml(fmtPct(d.fuelPct)) + '</td>' +
+    '<td style="color:' + podColor + ';">' + escHtml(fmtPct(d.podPct)) + '</td>' +
+    '<td><span class="score-val" style="color:' + scoreColor + ';">' + escHtml(score) + '</span></td>' +
+    '<td><span class="badge ' + riskBadge + '">' + escHtml(riskLabel(d.risk)) + '</span></td>' +
+  '</tr>';
 }
 
+// ============================================================
+// HIGH RISK / NEEDS ATTENTION
+// ============================================================
 function renderHighRisk(drivers) {
   const hr = drivers.filter(d => d.risk === 'HIGH RISK' || d.risk === 'WARNING');
   const count = drivers.filter(d => d.risk === 'HIGH RISK').length;
   document.getElementById('highRiskCount').textContent = count + ' high risk';
+  const list = document.getElementById('highRiskList');
   if (!hr.length) {
-    document.getElementById('highRiskList').innerHTML = '<div class="empty-state" style="padding:30px;">All drivers performing well ✓</div>';
+    list.innerHTML = '<div class="empty-state">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>' +
+      '</svg>All drivers performing well</div>';
     return;
   }
-  document.getElementById('highRiskList').innerHTML = hr.slice(0, 8).map(d => {
+  list.innerHTML = '<div class="attention-list">' + hr.slice(0, 8).map(d => {
     const isHR = d.risk === 'HIGH RISK';
-    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);">
-      <div style="width:32px;height:32px;border-radius:50%;background:${isHR?'#FCEBEB':'#FAEEDA'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:${isHR?'#791F1F':'#633806'};flex-shrink:0;">
-        ${d.name.split(' ').map(w=>w[0]).slice(0,2).join('')}
-      </div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${d.name.split(' ').slice(0,3).join(' ')}${d.staffId ? ' <span style="font-size:10px;color:var(--gray);">('+d.staffId+')</span>' : ''}</div>
-        <div style="font-size:11px;color:var(--gray);margin-top:1px;">Fuel ${d.fuelPct??0}% · POD ${d.podPct??0}% · Score ${d.score >= 0 ? '+'+d.score : d.score}</div>
-      </div>
-      <span class="risk-badge" style="background:${isHR?'#FCEBEB':'#FAEEDA'};color:${isHR?'#791F1F':'#633806'};flex-shrink:0;">${isHR?'High risk':'Warning'}</span>
-    </div>`;
-  }).join('');
+    const avatarCls = isHR ? 'attention-avatar is-danger' : 'attention-avatar is-warning';
+    const badgeCls = isHR ? 'badge-danger' : 'badge-warning';
+    const idTxt = d.staffId ? ' · ' + escHtml(d.staffId) : '';
+    const scoreSign = d.score >= 0 ? '+' : '';
+    return '<div class="attention-item">' +
+      '<div class="' + avatarCls + '">' + escHtml(initials(d.name)) + '</div>' +
+      '<div class="attention-body">' +
+        '<div class="attention-name">' + escHtml(shortName(d.name, 3)) + idTxt + '</div>' +
+        '<div class="attention-meta">Fuel ' + escHtml(fmtPct(d.fuelPct)) + ' · POD ' + escHtml(fmtPct(d.podPct)) + ' · Score ' + scoreSign + escHtml(d.score || 0) + '</div>' +
+      '</div>' +
+      '<span class="badge ' + badgeCls + '">' + escHtml(isHR ? 'High risk' : 'Warning') + '</span>' +
+    '</div>';
+  }).join('') + '</div>';
 }
 
-function renderLorryGrid(lorries) {
+// ============================================================
+// FLEET STATUS (normal-invisible)
+// ============================================================
+function renderFleet(lorries) {
+  const body = document.getElementById('fleetBody');
+  const cntEl = document.getElementById('fleetCount');
   if (!lorries.length) {
-    document.getElementById('lorryGrid').innerHTML = '<div class="empty-state">No fleet data available</div>';
+    body.innerHTML = '<div class="empty-state">No fleet data available</div>';
+    cntEl.textContent = '0 lorries';
     return;
   }
-  document.getElementById('lorryGrid').innerHTML = lorries.map(l => {
-    const submitted = l.submitted;
-    const bg = submitted ? '#EAF3DE' : '#FCEBEB';
-    const statusBg = submitted ? '#C6EFCE' : '#FFC7CE';
-    const statusTxt = submitted ? '#276221' : '#9C0006';
-    const statusLabel = submitted ? 'Submitted' : 'Pending';
-    const shortDriver = l.driver ? l.driver.split(' ').slice(0,2).join(' ') : 'Unassigned';
-    const sid = l.staffId ? '<span style="font-size:9px;color:#6B7A8D;display:block;">' + l.staffId + '</span>' : '';
-    const second = l.secondDriver ? '<div style="font-size:10px;color:#854F0B;margin-top:2px;">+ ' + l.secondDriver.split(' ').slice(0,2).join(' ') + (l.secondStaffId ? ' (' + l.secondStaffId + ')' : '') + '</div>' : '';
-    return `<div class="lorry-card" style="background:${bg};border-color:${submitted?'#C0DD97':'#F7C1C1'};">
-      <div class="lorry-plate">${l.plate}</div>
-      <div class="lorry-driver">${shortDriver}${sid}${second}${l.mileage ? '<br><span style="font-family:Geist Mono,monospace;font-size:10px;color:#6B7A8D;">' + l.mileage.toLocaleString() + ' km</span>' : ''}</div>
-      <span class="lorry-status" style="background:${statusBg};color:${statusTxt};">${statusLabel}</span>
-    </div>`;
-  }).join('');
+  cntEl.textContent = lorries.length + ' lorr' + (lorries.length === 1 ? 'y' : 'ies');
+
+  const abnormal = lorries.filter(l => !l.submitted);
+  const normal = lorries.filter(l => l.submitted);
+
+  let html = '';
+
+  if (abnormal.length > 0) {
+    html += '<div class="fleet-section-title is-attention">' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>' +
+        '<line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>' +
+      '</svg>Needs attention (' + abnormal.length + ')</div>';
+    html += '<div class="fleet-abnormal-grid">' + abnormal.map(l => {
+      const driver = l.driver ? shortName(l.driver, 2) : 'Unassigned';
+      const sid = l.staffId ? '<span class="lorry-staff">' + escHtml(l.staffId) + '</span>' : '';
+      const second = l.secondDriver ? '<div class="lorry-second">+ ' + escHtml(shortName(l.secondDriver, 2)) + (l.secondStaffId ? ' (' + escHtml(l.secondStaffId) + ')' : '') + '</div>' : '';
+      const mileage = l.mileage ? '<span class="lorry-mileage">' + escHtml(Number(l.mileage).toLocaleString()) + ' km</span>' : '';
+      return '<div class="lorry-card-abnormal">' +
+        '<div class="lorry-plate">' + escHtml(l.plate || '—') + '</div>' +
+        '<div class="lorry-driver">' + escHtml(driver) + sid + second + mileage + '</div>' +
+        '<span class="badge badge-danger">Not submitted</span>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+
+  if (normal.length > 0) {
+    html += '<div class="fleet-section-title is-normal">All other (' + normal.length + ')</div>';
+    html += '<div class="fleet-chips">' + normal.map(l => {
+      const titleAttr = l.driver ? ('Driver: ' + l.driver + (l.staffId ? ' (' + l.staffId + ')' : '')) : 'Submitted';
+      return '<span class="lorry-chip" title="' + escHtml(titleAttr) + '">' +
+        '<span class="lorry-chip-plate">' + escHtml(l.plate || '—') + '</span>' +
+        '<span class="lorry-chip-dot" aria-hidden="true"></span>' +
+      '</span>';
+    }).join('') + '</div>';
+  }
+
+  if (abnormal.length === 0 && normal.length === 0) {
+    body.innerHTML = '<div class="empty-state">No fleet data available</div>';
+    return;
+  }
+
+  body.innerHTML = html;
 }
 
+// ============================================================
+// RECENT SUBMISSIONS
+// ============================================================
 function renderRecent(recent) {
+  const tbl = document.getElementById('recentTable');
   if (!recent.length) {
-    document.getElementById('recentTable').innerHTML = '<tr><td colspan="4"><div class="empty-state">No submissions yet today</div></td></tr>';
+    tbl.innerHTML = '<tr><td colspan="4"><div class="empty-state">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>' +
+      '</svg>No submissions yet today</div></td></tr>';
     return;
   }
-  document.getElementById('recentTable').innerHTML = recent.slice(0, 8).map(r => {
-    const isFuel = r.type === 'FUEL';
-    return `<tr>
-      <td><span class="sub-time" style="color:var(--gray);">${r.time}</span></td>
-      <td><span class="sub-driver">${r.driver.split(' ').slice(0,3).join(' ')}${r.staffId ? '<span style="display:block;font-size:10px;color:var(--gray);font-weight:400;">'+r.staffId+'</span>' : ''}</span></td>
-      <td><span class="sub-type-badge" style="background:${isFuel?'#E6F1FB':'#EAF3DE'};color:${isFuel?'#0C447C':'#27500A'};">${r.type}</span></td>
-      <td style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--gray);">${r.vehicle}</td>
-    </tr>`;
+  tbl.innerHTML = recent.slice(0, 8).map(r => {
+    const typeUpper = String(r.type || '').toUpperCase();
+    const isFuel = typeUpper === 'FUEL';
+    // POD uses success (green) to match chart series color — was warning (amber).
+    // Should-fix G2 from Reviewer.
+    const typeBadge = isFuel ? 'badge-info' : 'badge-success';
+    const typeLabel = isFuel ? 'Fuel' : 'POD';
+    const idSuffix = r.staffId ? '<span class="driver-id">' + escHtml(r.staffId) + '</span>' : '';
+    return '<tr>' +
+      '<td><span class="sub-time">' + escHtml(r.time || '—') + '</span></td>' +
+      '<td><span class="sub-driver">' + escHtml(shortName(r.driver, 3)) + '</span>' + idSuffix + '</td>' +
+      '<td><span class="badge ' + typeBadge + '">' + escHtml(typeLabel) + '</span></td>' +
+      '<td><span class="sub-vehicle">' + escHtml(r.vehicle || '—') + '</span></td>' +
+    '</tr>';
   }).join('');
 }
 
 // ============================================================
-// HOLIDAY CALENDAR + ON LEAVE
-// ============================================================
-function renderHolidayCalendar(holidays) {
-  const container = document.getElementById('holidayCalendar');
-  if (!holidays.length) {
-    container.innerHTML = '<div class="empty-state" style="padding:30px;text-align:center;color:var(--gray);">No upcoming holidays in next 30 days</div>';
-    return;
-  }
-  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const typeBg = { PH:'#FCEBEB', OFF_SAT:'#FAEEDA', OFF_SUN:'#E6F1FB' };
-  const typeTxt = { PH:'#791F1F', OFF_SAT:'#633806', OFF_SUN:'#0C447C' };
-  const typeLabel = { PH:'Public Holiday', OFF_SAT:'Saturday Rest', OFF_SUN:'Sunday Rest' };
-
-  container.innerHTML = holidays.map(h => {
-    const d = new Date(h.date + 'T00:00:00');
-    const dow = dayNames[d.getDay()];
-    const monthDay = d.toLocaleDateString('en-MY', { day:'2-digit', month:'short' });
-    const isActive = h.status === 'ACTIVE';
-    const toggleLabel = isActive ? '✓ ACTIVE' : '✕ DISABLED';
-    const toggleBg = isActive ? '#C6EFCE' : '#E2E8F0';
-    const toggleTxt = isActive ? '#276221' : '#6B7A8D';
-    const newStatus = isActive ? 'DISABLED' : 'ACTIVE';
-    const lt = h.leaveType || 'PH';
-    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 8px;border-bottom:1px solid var(--border);">
-      <div style="width:50px;text-align:center;">
-        <div style="font-size:11px;color:var(--gray);">${dow}</div>
-        <div style="font-size:13px;font-weight:600;color:var(--text);">${monthDay}</div>
-      </div>
-      <span style="background:${typeBg[lt]||'#F0F4F8'};color:${typeTxt[lt]||'#4A5568'};padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;flex-shrink:0;">${typeLabel[lt]||lt}</span>
-      <div style="flex:1;min-width:0;font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${h.label || ''}</div>
-      <button onclick="toggleHoliday('${h.date}','${lt}','${newStatus}')" style="background:${toggleBg};color:${toggleTxt};border:none;padding:6px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">${toggleLabel}</button>
-    </div>`;
-  }).join('');
-}
-
-function renderOnLeaveToday(list) {
-  const container = document.getElementById('onLeaveTodayList');
-  if (!list.length) {
-    container.innerHTML = '<div class="empty-state" style="padding:30px;text-align:center;color:var(--gray);">No drivers on leave today ✓</div>';
-    return;
-  }
-  container.innerHTML = list.map(l => `
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--border);">
-      <div style="width:32px;height:32px;border-radius:50%;background:#FAEEDA;color:#633806;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;">
-        ${l.driverName.split(' ').map(w=>w[0]).slice(0,2).join('')}
-      </div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${l.driverName.split(' ').slice(0,3).join(' ')}</div>
-        <div style="font-size:11px;color:var(--gray);margin-top:1px;">${l.staffId || '—'} · ${l.leaveType || 'AL'}</div>
-      </div>
-    </div>
-  `).join('');
-}
-
-// ============================================================
-// POD PLAN
+// POD PLAN (preserves Edit Mode state machine)
 // ============================================================
 function renderPODPlan(drivers, plansToday) {
+  _podDrivers = drivers;
+  _podPlans = plansToday;
+  doRenderPODPlan();
+}
+
+function doRenderPODPlan() {
+  const drivers = _podDrivers;
+  const plansToday = _podPlans;
   const container = document.getElementById('podPlanGrid');
   const summary = document.getElementById('podPlanSummary');
   if (!drivers.length) {
-    container.innerHTML = '<div class="empty-state" style="padding:30px;text-align:center;color:var(--gray);grid-column:1/-1;">No drivers</div>';
+    container.innerHTML = '<div class="empty-state" style="grid-column:1/-1;">No drivers</div>';
+    summary.textContent = 'Numbers count down as drivers submit · —';
     return;
   }
   const planMap = {};
@@ -1302,145 +2770,237 @@ function renderPODPlan(drivers, plansToday) {
 
   container.innerHTML = drivers.map(d => {
     const p = planMap[d.name] || { planned: 0, submitted: 0, missing: 0 };
-    totalPlanned += p.planned;
-    totalSubmitted += p.submitted;
-    totalMissing += p.missing;
-    const status = p.planned === 0 ? 'no-plan' :
-                   p.missing === 0 ? 'complete' :
-                   p.submitted === 0 ? 'pending' : 'partial';
-    const bg = status === 'complete' ? '#EAF3DE' :
-               status === 'pending' ? '#FCEBEB' :
-               status === 'partial' ? '#FAEEDA' : '#F4F6F9';
-    const border = status === 'complete' ? '#C0DD97' :
-                   status === 'pending' ? '#F7C1C1' :
-                   status === 'partial' ? '#F0D9A8' : '#E2E8F0';
-    const statusLabel = status === 'complete' ? '✓ Done' :
-                        status === 'pending' ? 'Pending' :
-                        status === 'partial' ? p.submitted + '/' + p.planned : '—';
-    const statusColor = status === 'complete' ? '#276221' :
-                        status === 'pending' ? '#9C0006' :
-                        status === 'partial' ? '#854F0B' : '#6B7A8D';
-    const shortName = d.name.split(' ').slice(0, 3).join(' ');
-    return `<div style="background:${bg};border:1px solid ${border};border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:10px;">
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${d.name}">${shortName}</div>
-        <div style="font-size:10px;color:var(--gray);margin-top:1px;">${d.staffId || '—'}</div>
-      </div>
-      <input type="number" min="0" max="50" value="${p.planned || ''}" placeholder="—"
-        onchange="setPlannedPODs('${d.name.replace(/'/g, "\\'")}', this.value, this)"
-        style="width:50px;padding:5px 6px;border:1px solid #CBD5E0;border-radius:5px;font-size:13px;font-weight:600;text-align:center;color:var(--text);">
-      <div style="min-width:60px;text-align:right;font-size:11px;font-weight:600;color:${statusColor};">${statusLabel}</div>
-    </div>`;
+    const planned   = Number(p.planned)   || 0;
+    const submitted = Number(p.submitted) || 0;
+    const missing   = Math.max(0, planned - submitted);
+    totalPlanned += planned;
+    totalSubmitted += submitted;
+    totalMissing += missing;
+
+    const onLeave = _onLeaveNames.has(String(d.name || '').toLowerCase());
+    let statusCls, statusLabel;
+    if (onLeave) {
+      statusCls = 'is-noplan is-leave';
+      statusLabel = 'On leave';
+    } else if (planned === 0) {
+      statusCls = 'is-noplan';
+      statusLabel = 'Not planned';
+    } else if (missing === 0) {
+      statusCls = 'is-complete';
+      statusLabel = 'All done';
+    } else if (submitted === 0) {
+      statusCls = 'is-pending';
+      statusLabel = missing + ' left';
+    } else {
+      statusCls = 'is-partial';
+      statusLabel = missing + ' left';
+    }
+
+    const pctFilled = planned > 0 ? Math.min(100, Math.round((submitted / planned) * 100)) : 0;
+
+    // Edit Mode: input = planned (editable); Normal: input = countdown (readonly)
+    let inputValue, inputCls, inputReadonly, inputTitle;
+    if (podPlanEditMode && !onLeave) {
+      const pendingChange = podPlanChanges[d.name];
+      inputValue = (pendingChange !== undefined) ? pendingChange : (planned || '');
+      inputCls = 'pod-input' + (pendingChange !== undefined ? ' is-changed' : '');
+      inputReadonly = '';
+      inputTitle = 'Total target for today (editable)';
+    } else {
+      inputValue = onLeave ? '' : (planned === 0 ? '' : (missing === 0 ? '0' : missing));
+      inputCls = 'pod-input is-readonly';
+      inputReadonly = 'readonly';
+      inputTitle = onLeave ? 'On leave today'
+                : planned === 0 ? 'Not planned yet'
+                : missing === 0 ? 'All delivered'
+                : missing + ' left of ' + planned;
+    }
+
+    return '<div class="pod-card ' + statusCls + '" data-driver="' + escHtml(d.name || '') + '">' +
+      '<div class="pod-card-head">' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div class="pod-card-name" title="' + escHtml(d.name || '') + '">' + escHtml(shortName(d.name, 3)) + '</div>' +
+          '<div class="pod-card-id">' + escHtml(d.staffId || '—') + '</div>' +
+        '</div>' +
+        '<input type="number" min="0" max="999" value="' + escHtml(inputValue) + '" placeholder="—" ' + inputReadonly +
+          ' class="' + inputCls + '"' +
+          ' title="' + escHtml(inputTitle) + '"' +
+          ' data-driver-name="' + escHtml(d.name || '') + '">' +
+      '</div>' +
+      '<div class="pod-card-progress-track"><div class="pod-card-progress-fill" data-pct="' + pctFilled + '"></div></div>' +
+      '<div class="pod-card-foot">' +
+        '<span class="pod-card-progress-text">' + escHtml(submitted) + ' / ' + escHtml(planned) + (planned > 0 ? ' (' + pctFilled + '%)' : '') + '</span>' +
+        '<span class="pod-card-status">' + escHtml(statusLabel) + '</span>' +
+      '</div>' +
+    '</div>';
   }).join('');
 
-  summary.textContent = `Total: ${totalPlanned} planned · ${totalSubmitted} done · ${totalMissing} missing`;
-}
+  // Animate progress bars in
+  setTimeout(() => {
+    container.querySelectorAll('.pod-card-progress-fill').forEach(f => {
+      f.style.width = (f.dataset.pct || '0') + '%';
+    });
+  }, 50);
 
-async function setPlannedPODs(driverName, plannedValue, inputEl) {
-  const planned = parseInt(plannedValue, 10);
-  if (isNaN(planned) || planned < 0) {
-    inputEl.value = '';
-    return;
-  }
-  const original = inputEl.style.background;
-  inputEl.style.background = '#FFF8E1';
-  try {
-    const fd = new FormData();
-    fd.append('data', JSON.stringify({
-      formType: 'SET_POD_PLAN',
-      date: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' }),
-      driverName: driverName,
-      plannedCount: planned,
-      setBy: 'DASHBOARD'
-    }));
-    await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: fd });
-    inputEl.style.background = '#E0F7E0';
-    setTimeout(() => { inputEl.style.background = original; loadDashboard(); }, 600);
-  } catch (err) {
-    inputEl.style.background = '#FFCDD2';
-    alert('Failed to save: ' + err.message);
-  }
-}
-
-// ── Mark Leave Range (V10.1) ─────────────────────────────────
-function populateLeaveRangeDriverDropdown(drivers) {
-  const sel = document.getElementById('mlrDriver');
-  if (!sel || sel.dataset.populated === 'yes') return;
-  sel.innerHTML = '<option value="">— Select driver —</option>';
-  (drivers || []).forEach(d => {
-    const opt = document.createElement('option');
-    opt.value = d.name;
-    opt.textContent = d.staffId ? (d.staffId + ' — ' + d.name) : d.name;
-    sel.appendChild(opt);
+  // Wire up edit-mode inputs (event delegation pattern)
+  container.querySelectorAll('input.pod-input:not(.is-readonly)').forEach(inp => {
+    inp.addEventListener('input', () => {
+      onPODPlanInput(inp.dataset.driverName, inp.value);
+    });
   });
-  sel.dataset.populated = 'yes';
-  // Default start/end to today (Kuala Lumpur timezone)
-  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
-  const ds = document.getElementById('mlrStart');
-  const de = document.getElementById('mlrEnd');
-  if (ds && !ds.value) ds.value = today;
-  if (de && !de.value) de.value = today;
+
+  const totalPct = totalPlanned > 0 ? Math.round((totalSubmitted / totalPlanned) * 100) : 0;
+  const summaryText = 'Numbers count down as drivers submit · ' +
+    totalSubmitted + ' / ' + totalPlanned +
+    (totalPlanned > 0 ? ' delivered (' + totalPct + '%)' : '') +
+    (totalMissing > 0 ? ' · ' + totalMissing + ' left' : (totalPlanned > 0 ? ' · all done' : ''));
+  summary.textContent = summaryText;
 }
 
-async function submitLeaveRange() {
-  const driverName = document.getElementById('mlrDriver').value;
-  const startDate  = document.getElementById('mlrStart').value;
-  const endDate    = document.getElementById('mlrEnd').value;
-  const leaveType  = document.getElementById('mlrType').value;
-  const remarks    = document.getElementById('mlrRemarks').value;
-  const status     = document.getElementById('mlrStatus');
-  const btn        = document.getElementById('mlrBtn');
+function onPODPlanInput(driverName, newValue) {
+  if (!podPlanEditMode) return;
+  const origPlan = (_podPlans.find(p => p.driverName === driverName) || {}).planned || 0;
+  const newNum = parseInt(newValue, 10);
+  if (isNaN(newNum) || newNum < 0) return;
+  if (newNum === Number(origPlan)) {
+    delete podPlanChanges[driverName];
+  } else {
+    podPlanChanges[driverName] = newNum;
+  }
+  const label = document.getElementById('podPlanSaveBtnLabel');
+  if (label) label.textContent = 'Save (' + Object.keys(podPlanChanges).length + ')';
 
-  if (!driverName) { status.textContent = '❌ Select a driver'; status.style.color = '#D32F2F'; return; }
-  if (!startDate || !endDate) { status.textContent = '❌ Pick start and end dates'; status.style.color = '#D32F2F'; return; }
-  if (new Date(endDate) < new Date(startDate)) { status.textContent = '❌ End must be ≥ start'; status.style.color = '#D32F2F'; return; }
+  // Update visual changed state of the input
+  const inp = document.querySelector('input.pod-input[data-driver-name="' + CSS.escape(driverName) + '"]');
+  if (inp) inp.classList.toggle('is-changed', podPlanChanges[driverName] !== undefined);
+}
 
-  const days = Math.floor((new Date(endDate) - new Date(startDate)) / 86400000) + 1;
-  if (!confirm('Mark ' + driverName + ' on ' + leaveType + ' for ' + days + ' day(s) (' + startDate + ' → ' + endDate + ')?')) return;
+function enterPODEditMode() {
+  podPlanEditMode = true;
+  podPlanChanges = {};
+  document.getElementById('podPlanEditBtn').classList.add('is-hidden');
+  document.getElementById('podPlanSaveBtn').classList.remove('is-hidden');
+  document.getElementById('podPlanCancelBtn').classList.remove('is-hidden');
+  document.getElementById('podPlanSaveBtnLabel').textContent = 'Save (0)';
+  document.getElementById('podPlanEditNote').classList.add('is-visible');
+  doRenderPODPlan();
+}
 
-  btn.disabled = true; btn.textContent = 'Saving...';
-  status.textContent = '⏳ Saving ' + days + ' day(s)...'; status.style.color = '#666';
+function cancelPODEditMode() {
+  podPlanEditMode = false;
+  podPlanChanges = {};
+  document.getElementById('podPlanEditBtn').classList.remove('is-hidden');
+  document.getElementById('podPlanSaveBtn').classList.add('is-hidden');
+  document.getElementById('podPlanCancelBtn').classList.add('is-hidden');
+  document.getElementById('podPlanEditNote').classList.remove('is-visible');
+  doRenderPODPlan();
+}
 
+async function savePODEditChanges() {
+  const entries = Object.entries(podPlanChanges);
+  if (entries.length === 0) { cancelPODEditMode(); return; }
+  // Use modal confirm (replaces native confirm())
+  const ok = await confirmModal(
+    'Save POD plan changes',
+    'Save ' + entries.length + ' POD plan change' + (entries.length > 1 ? 's' : '') + '? This will update Today\'s plan for the affected drivers.',
+    { ok: 'Save', cancel: 'Cancel' }
+  );
+  if (!ok) return;
+  // Snapshot + clear shared state so further edits go to a fresh diff
+  podPlanChanges = {};
+  const saveBtn = document.getElementById('podPlanSaveBtn');
+  const cancelBtn = document.getElementById('podPlanCancelBtn');
+  saveBtn.disabled = true;
+  cancelBtn.disabled = true;
+  document.getElementById('podPlanSaveBtnLabel').textContent = 'Saving ' + entries.length + '…';
+  const inputs = document.querySelectorAll('#podPlanGrid input.pod-input');
+  inputs.forEach(i => i.disabled = true);
   try {
-    const fd = new FormData();
-    fd.append('data', JSON.stringify({
-      formType: 'MARK_LEAVE_RANGE',
-      driverName, startDate, endDate, leaveType, remarks,
-      markedBy: 'DASHBOARD'
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
+    await Promise.all(entries.map(([name, planned]) => {
+      const fd = new FormData();
+      fd.append('data', JSON.stringify({
+        formType: 'SET_POD_PLAN',
+        date: today,
+        driverName: name,
+        plannedCount: parseInt(planned, 10) || 0,
+        setBy: 'DASHBOARD'
+      }));
+      return fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: fd });
     }));
-    await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: fd });
-    status.textContent = '✅ Marked ' + days + ' day(s) for ' + driverName;
-    status.style.color = '#388E3C';
-    document.getElementById('mlrRemarks').value = '';
-    setTimeout(loadDashboard, 800);
+    cancelPODEditMode();
+    saveBtn.disabled = false;
+    cancelBtn.disabled = false;
+    showToast('Sent ' + entries.length + ' POD plan change(s) — please verify in the Google Sheet', 'warning');
+    setTimeout(loadDashboard, 1200);
   } catch (err) {
-    status.textContent = '❌ ' + err.message;
-    status.style.color = '#D32F2F';
-  } finally {
-    btn.disabled = false; btn.textContent = 'Mark Leave';
+    entries.forEach(([name, val]) => { if (podPlanChanges[name] === undefined) podPlanChanges[name] = val; });
+    saveBtn.disabled = false;
+    cancelBtn.disabled = false;
+    document.getElementById('podPlanSaveBtnLabel').textContent = 'Save (' + Object.keys(podPlanChanges).length + ')';
+    inputs.forEach(i => i.disabled = false);
+    showToast('Save request failed before reaching server: ' + (err && err.message ? err.message : 'unknown error'), 'danger');
   }
 }
 
-async function toggleHoliday(date, leaveType, newStatus) {
-  if (!confirm(`Set ${date} (${leaveType}) to ${newStatus}?`)) return;
-  try {
-    const fd = new FormData();
-    fd.append('data', JSON.stringify({ formType:'TOGGLE_HOLIDAY', date, leaveType, status:newStatus }));
-    await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body: fd });
-    setTimeout(loadDashboard, 800);
-  } catch (err) {
-    alert('Failed to toggle: ' + err.message);
-  }
+// ============================================================
+// EVENT WIRING (no inline onclick)
+// ============================================================
+function onViewChange(view) {
+  if (view === selectedView) return;
+  selectedView = view;
+  selectedPeriodKey = '';
+  document.querySelectorAll('.view-tab').forEach(btn => {
+    btn.classList.toggle('is-active', btn.dataset.view === view);
+  });
+  loadDashboard();
+}
+
+function onMonthChange() {
+  const sel = document.getElementById('monthPicker');
+  selectedPeriodKey = sel.value || '';
+  loadDashboard();
+}
+
+function wireUp() {
+  // View tabs
+  document.querySelectorAll('.view-tab').forEach(btn => {
+    btn.addEventListener('click', () => onViewChange(btn.dataset.view));
+  });
+  // Month picker
+  document.getElementById('monthPicker').addEventListener('change', onMonthChange);
+  // Refresh
+  document.getElementById('refreshBtn').addEventListener('click', loadDashboard);
+  // API retry
+  document.getElementById('apiRetryBtn').addEventListener('click', loadDashboard);
+  // Driver view toggle
+  document.getElementById('driverViewChart').addEventListener('click', () => setDriverView('chart'));
+  document.getElementById('driverViewTable').addEventListener('click', () => setDriverView('table'));
+  // POD plan edit buttons
+  document.getElementById('podPlanEditBtn').addEventListener('click', enterPODEditMode);
+  document.getElementById('podPlanSaveBtn').addEventListener('click', savePODEditChanges);
+  document.getElementById('podPlanCancelBtn').addEventListener('click', cancelPODEditMode);
+  // Monthly health strip toggle
+  const strip = document.getElementById('monthStrip');
+  document.getElementById('monthStripHead').addEventListener('click', () => {
+    const open = strip.classList.toggle('is-open');
+    document.getElementById('monthStripHead').setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  // KPI tile clicks (data-scroll attribute)
+  document.querySelectorAll('.kpi-tile[data-scroll]').forEach(tile => {
+    tile.addEventListener('click', () => scrollToId(tile.dataset.scroll));
+  });
 }
 
 // ============================================================
 // INIT
 // ============================================================
-window.onload = function() {
+window.addEventListener('DOMContentLoaded', () => {
+  wireUp();
   loadDashboard();
-  // Auto-refresh every 5 minutes so supervisors don't need to manually click Refresh
+  // Auto-refresh every 5 minutes (skipped while POD edit mode is open — see loadDashboard guard)
   setInterval(loadDashboard, 5 * 60 * 1000);
-};
+});
 </script>
 </body>
 </html>

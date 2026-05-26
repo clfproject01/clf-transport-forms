@@ -566,6 +566,14 @@ function validate() {
   if (!document.getElementById('confirmCheck').checked) {
     document.getElementById('err-confirm').classList.add('show'); valid = false;
   } else { document.getElementById('err-confirm').classList.remove('show'); }
+  // B18 fix: driver and secondDriver must not be the same person (would double-count credit)
+  const dr = document.getElementById('driverName').value;
+  const sd = document.getElementById('secondDriver').value;
+  if (dr && sd && dr === sd) {
+    alert('Driver and Second Driver cannot be the same person.\nPemandu dan Pemandu Kedua tidak boleh sama.');
+    document.getElementById('secondDriver').focus();
+    valid = false;
+  }
   return valid;
 }
 
