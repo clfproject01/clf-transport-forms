@@ -714,7 +714,12 @@ async function submitLeaveRange() {
       const createdCount = (json.created && json.created.length) || days;
       const skippedCount = (json.skipped && json.skipped.length) || 0;
       const errCount     = (json.errors && json.errors.length) || 0;
-      let msg = 'Saved ' + createdCount + ' day(s) for ' + shortName(driverName, 3);
+      // Include staffId (e.g. "TER 448 — MUHAMMAD ZULKIFLI BIN") so supervisor can
+      // disambiguate same-first-name drivers — matches the dropdown format.
+      const driverObj = (_drivers || []).find(d => d.name === driverName);
+      const staffId = (driverObj && driverObj.staffId) || '';
+      const driverLabel = staffId ? (staffId + ' — ' + shortName(driverName, 3)) : shortName(driverName, 3);
+      let msg = 'Saved ' + createdCount + ' day(s) for ' + driverLabel;
       if (skippedCount > 0) msg += ' · ' + skippedCount + ' already marked';
       if (errCount > 0)     msg += ' · ' + errCount + ' failed';
       setStatus('✓ ' + msg, errCount > 0 ? 'warning' : 'success');
