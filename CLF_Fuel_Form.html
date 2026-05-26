@@ -551,6 +551,10 @@
   </div>
   <div class="success-driver">Driver · Pemandu: <b id="successDriver"></b></div>
   <div class="success-driver">Vehicle · Kenderaan: <b id="successVehicle"></b></div>
+  <div class="success-subtitle" style="margin-top:12px;font-size:12px;color:#854F0B;background:#FFF8E1;border:1px solid #F0D9A8;border-radius:6px;padding:8px 10px;">
+    ⓘ Photo uploaded — please verify it appears in the supervisor dashboard within 1 minute.<br>
+    Foto dimuat naik — sila sahkan ia muncul dalam papan pemuka penyelia dalam 1 minit.
+  </div>
   <br>
   <button class="new-btn" onclick="resetForm()">Submit Another · Hantar Lagi</button>
 </div>
@@ -765,26 +769,30 @@ async function submitNoFuel() {
 
   document.getElementById('loadingOverlay').classList.add('show');
   try {
+    // V20: GET-as-write so browser reads JSON response and reports real success/failure
     const now = new Date();
-    const payload = {
-      formType: 'NO_FUEL',
-      timestamp: now.toISOString(),
-      fuelDate: document.getElementById('fuelDate').value || now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' }),
-      driverName: driver,
-      secondDriver: document.getElementById('secondDriver').value || '',
-      vehicleNo: vehicle,
-    };
-    const formData = new FormData();
-    formData.append('data', JSON.stringify(payload));
-    await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: formData });
-
+    const fuelDate = document.getElementById('fuelDate').value || now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
+    const secondDriver = document.getElementById('secondDriver').value || '';
+    const url = SCRIPT_URL
+      + '?action=NO_FUEL'
+      + '&driverName=' + encodeURIComponent(driver)
+      + '&secondDriver=' + encodeURIComponent(secondDriver)
+      + '&vehicleNo=' + encodeURIComponent(vehicle)
+      + '&fuelDate=' + encodeURIComponent(fuelDate)
+      + '&timestamp=' + encodeURIComponent(now.toISOString());
+    const res = await fetch(url);
+    const json = await res.json();
     document.getElementById('loadingOverlay').classList.remove('show');
-    const timeStr = now.toLocaleDateString('en-MY', { day:'2-digit', month:'short', year:'numeric' })
-      + ' · ' + now.toLocaleTimeString('en-MY', { hour:'2-digit', minute:'2-digit' });
-    document.getElementById('successTime').textContent = timeStr;
-    document.getElementById('successDriver').textContent = driver + ' (NO FUEL)';
-    document.getElementById('successVehicle').textContent = vehicle;
-    document.getElementById('successScreen').classList.add('show');
+    if (json.status === 'success' || json.status === 'ok') {
+      const timeStr = now.toLocaleDateString('en-MY', { day:'2-digit', month:'short', year:'numeric' })
+        + ' · ' + now.toLocaleTimeString('en-MY', { hour:'2-digit', minute:'2-digit' });
+      document.getElementById('successTime').textContent = timeStr;
+      document.getElementById('successDriver').textContent = driver + ' (NO FUEL)';
+      document.getElementById('successVehicle').textContent = vehicle;
+      document.getElementById('successScreen').classList.add('show');
+    } else {
+      alert('Submission failed: ' + (json.message || 'unknown error') + '\nPenghantaran gagal: ' + (json.message || 'sila cuba lagi'));
+    }
   } catch (err) {
     document.getElementById('loadingOverlay').classList.remove('show');
     alert('Submission failed. Please check your connection.\nPenghantaran gagal. Sila semak sambungan anda.');

@@ -1909,6 +1909,23 @@ function klHour() {
   });
   return parseInt(s, 10) || 0;
 }
+
+// V20: Format recent feed timestamp with date context (Today / Yesterday / MMM DD).
+// Backend now returns recent[].date as 'yyyy-MM-dd' so we can disambiguate days.
+// Without this, supervisor mistakes a 17:13 entry from last week for today.
+function formatRecentTime(dateStr, timeStr) {
+  if (!dateStr) return timeStr || '—';
+  const todayKL = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
+  if (dateStr === todayKL) return 'Today ' + (timeStr || '');
+  const yesterday = new Date(Date.now() - 86400000);
+  const yKL = yesterday.toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
+  if (dateStr === yKL) return 'Yesterday ' + (timeStr || '');
+  // Parse as KL midnight to avoid timezone shift to previous day
+  const d = new Date(dateStr + 'T00:00:00+08:00');
+  if (isNaN(d.getTime())) return (dateStr + ' ' + (timeStr || '')).trim();
+  const mmmDD = d.toLocaleDateString('en-MY', { timeZone: 'Asia/Kuala_Lumpur', month: 'short', day: '2-digit' });
+  return mmmDD + ' · ' + (timeStr || '');
+}
 function initials(name) {
   if (!name) return '?';
   return String(name).split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
@@ -2736,7 +2753,7 @@ function renderRecent(recent) {
     const typeLabel = isFuel ? 'Fuel' : 'POD';
     const idSuffix = r.staffId ? '<span class="driver-id">' + escHtml(r.staffId) + '</span>' : '';
     return '<tr>' +
-      '<td><span class="sub-time">' + escHtml(r.time || '—') + '</span></td>' +
+      '<td><span class="sub-time">' + escHtml(formatRecentTime(r.date, r.time)) + '</span></td>' +
       '<td><span class="sub-driver">' + escHtml(shortName(r.driver, 3)) + '</span>' + idSuffix + '</td>' +
       '<td><span class="badge ' + typeBadge + '">' + escHtml(typeLabel) + '</span></td>' +
       '<td><span class="sub-vehicle">' + escHtml(r.vehicle || '—') + '</span></td>' +
@@ -2916,23 +2933,42 @@ async function savePODEditChanges() {
   const inputs = document.querySelectorAll('#podPlanGrid input.pod-input');
   inputs.forEach(i => i.disabled = true);
   try {
+    // V20: switched from no-cors POST → GET so browser can read backend response
+    // and report real success/failure (was always lying "Saved" before).
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
-    await Promise.all(entries.map(([name, planned]) => {
-      const fd = new FormData();
-      fd.append('data', JSON.stringify({
-        formType: 'SET_POD_PLAN',
-        date: today,
-        driverName: name,
-        plannedCount: parseInt(planned, 10) || 0,
-        setBy: 'DASHBOARD'
-      }));
-      return fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: fd });
+    const results = await Promise.all(entries.map(async ([name, planned]) => {
+      const url = SCRIPT_URL
+        + '?action=SET_POD_PLAN'
+        + '&driverName=' + encodeURIComponent(name)
+        + '&plannedCount=' + (parseInt(planned, 10) || 0)
+        + '&planDate=' + today
+        + '&setBy=DASHBOARD';
+      try {
+        const res = await fetch(url);
+        const json = await res.json();
+        return { name, planned, ok: (json.status === 'success' || json.status === 'ok'), message: json.message || null };
+      } catch (e) {
+        return { name, planned, ok: false, message: (e && e.message) || 'network error' };
+      }
     }));
-    cancelPODEditMode();
-    saveBtn.disabled = false;
-    cancelBtn.disabled = false;
-    showToast('Sent ' + entries.length + ' POD plan change(s) — please verify in the Google Sheet', 'warning');
-    setTimeout(loadDashboard, 1200);
+    const failed = results.filter(r => !r.ok);
+    if (failed.length === 0) {
+      cancelPODEditMode();
+      saveBtn.disabled = false;
+      cancelBtn.disabled = false;
+      showToast('Saved ' + entries.length + ' POD plan change(s)', 'success');
+      setTimeout(loadDashboard, 600);
+    } else {
+      // Restore failed entries so user can retry
+      failed.forEach(r => { if (podPlanChanges[r.name] === undefined) podPlanChanges[r.name] = r.planned; });
+      saveBtn.disabled = false;
+      cancelBtn.disabled = false;
+      document.getElementById('podPlanSaveBtnLabel').textContent = 'Save (' + Object.keys(podPlanChanges).length + ')';
+      inputs.forEach(i => i.disabled = false);
+      const okCount = results.length - failed.length;
+      const firstErr = failed[0].message || 'unknown error';
+      showToast('Saved ' + okCount + ' / ' + results.length + ' — ' + failed.length + ' failed (' + firstErr + ')', 'danger');
+    }
   } catch (err) {
     entries.forEach(([name, val]) => { if (podPlanChanges[name] === undefined) podPlanChanges[name] = val; });
     saveBtn.disabled = false;

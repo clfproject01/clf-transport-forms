@@ -531,7 +531,7 @@ function shortName(name, n) {
   return String(name).split(/\s+/).filter(Boolean).slice(0, n).join(' ');
 }
 
-// Toast (honest: no-cors POST → "sent, verify in sheet")
+// Toast — used for both real success (V20 GET reads JSON) and network failures
 function showToast(message, type) {
   const toast = document.getElementById('toast');
   toast.className = 'toast is-' + (type || 'info') + ' is-visible';
@@ -699,24 +699,36 @@ async function submitLeaveRange() {
   setStatus('Saving ' + days + ' day(s)…');
 
   try {
-    const fd = new FormData();
-    fd.append('data', JSON.stringify({
-      formType: 'MARK_LEAVE_RANGE',
-      driverName: driverName,
-      startDate: startDate,
-      endDate: endDate,
-      leaveType: leaveType,
-      remarks: remarks,
-      markedBy: 'LEAVE_MGMT'
-    }));
-    // no-cors → cannot read response. Phrase as "sent" + ask user to verify.
-    await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: fd });
-    setStatus('→ Sent ' + days + ' day(s) for ' + shortName(driverName, 3) + ' — please verify in Google Sheet', 'warning');
-    document.getElementById('mlrRemarks').value = '';
-    showToast('Leave request sent — please verify in the Leave_Records sheet', 'warning');
-    setTimeout(loadLeaveData, 1200);
+    // V20: GET-as-write — browser can read JSON response so we report real success/failure
+    const url = SCRIPT_URL
+      + '?action=MARK_LEAVE_RANGE'
+      + '&driverName=' + encodeURIComponent(driverName)
+      + '&startDate=' + encodeURIComponent(startDate)
+      + '&endDate=' + encodeURIComponent(endDate)
+      + '&leaveType=' + encodeURIComponent(leaveType)
+      + '&remarks=' + encodeURIComponent(remarks || '')
+      + '&markedBy=LEAVE_MGMT';
+    const res = await fetch(url);
+    const json = await res.json();
+    if (json.status === 'success' || json.status === 'ok' || json.status === 'partial') {
+      const createdCount = (json.created && json.created.length) || days;
+      const skippedCount = (json.skipped && json.skipped.length) || 0;
+      const errCount     = (json.errors && json.errors.length) || 0;
+      let msg = 'Saved ' + createdCount + ' day(s) for ' + shortName(driverName, 3);
+      if (skippedCount > 0) msg += ' · ' + skippedCount + ' already marked';
+      if (errCount > 0)     msg += ' · ' + errCount + ' failed';
+      setStatus('✓ ' + msg, errCount > 0 ? 'warning' : 'success');
+      document.getElementById('mlrRemarks').value = '';
+      showToast(msg, errCount > 0 ? 'warning' : 'success');
+      setTimeout(loadLeaveData, 600);
+    } else {
+      const errMsg = json.message || 'Server returned status: ' + (json.status || 'unknown');
+      setStatus('✗ ' + errMsg, 'error');
+      showToast('Save failed: ' + errMsg, 'danger');
+    }
   } catch (err) {
     setStatus('✗ ' + (err && err.message ? err.message : 'request failed before reaching server'), 'error');
+    showToast('Network error: ' + (err && err.message ? err.message : 'unknown'), 'danger');
   } finally {
     btn.disabled = false;
     btnLabel.textContent = 'Mark Leave';
@@ -728,18 +740,24 @@ async function toggleHoliday(date, leaveType, newStatus, btn) {
   const originalText = btn ? btn.textContent : null;
   if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
   try {
-    const fd = new FormData();
-    fd.append('data', JSON.stringify({
-      formType: 'TOGGLE_HOLIDAY',
-      date: date,
-      leaveType: leaveType,
-      status: newStatus
-    }));
-    await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: fd });
-    showToast('Holiday toggle sent for ' + date + ' — please verify in the Leave_Records sheet', 'warning');
-    setTimeout(loadLeaveData, 1200);
+    // V20: GET-as-write — browser reads JSON response for real success/failure
+    const url = SCRIPT_URL
+      + '?action=TOGGLE_HOLIDAY'
+      + '&date=' + encodeURIComponent(date)
+      + '&leaveType=' + encodeURIComponent(leaveType)
+      + '&status=' + encodeURIComponent(newStatus);
+    const res = await fetch(url);
+    const json = await res.json();
+    if (json.status === 'success' || json.status === 'ok') {
+      showToast('Holiday ' + date + ' → ' + newStatus, 'success');
+      setTimeout(loadLeaveData, 600);
+    } else {
+      const errMsg = json.message || 'status: ' + (json.status || 'unknown');
+      showToast('Toggle failed: ' + errMsg, 'danger');
+      if (btn) { btn.disabled = false; btn.textContent = originalText; }
+    }
   } catch (err) {
-    showToast('Holiday toggle failed before reaching server: ' + (err && err.message ? err.message : 'unknown error'), 'danger');
+    showToast('Network error: ' + (err && err.message ? err.message : 'unknown'), 'danger');
     if (btn) { btn.disabled = false; btn.textContent = originalText; }
   }
 }
