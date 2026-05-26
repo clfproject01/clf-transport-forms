@@ -1,0 +1,24 @@
+# ============================================================
+# Local-only — never push to public GitHub repo
+# ============================================================
+# These folders contain:
+#   - Backend Apps Script code (.gs files with Spreadsheet ID, admin emails,
+#     business logic — security risk if exposed)
+#   - Internal docs (project handoff, API spec, WhatsApp templates with
+#     driver personal info — PDPA risk if exposed)
+#   - Legacy/historical files (Excel sheets, V1 deployment guide)
+#
+# Both you and cowork should sync these via OneDrive / company drive,
+# NOT via GitHub. GitHub only hosts the public front-end HTML.
+
+backend/
+docs/
+legacy/
+
+# Common ignores
+.DS_Store
+Thumbs.db
+*.tmp
+.~lock.*
+.fuse_hidden*
+node_modules/
