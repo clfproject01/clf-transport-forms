@@ -614,6 +614,20 @@ body {
   margin-top: 1px;
   font-family: 'Geist Mono', monospace;
 }
+.driver-id-primary {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-900);
+  font-family: 'Geist Mono', monospace;
+}
+.driver-name-sub {
+  display: block;
+  font-size: 10px;
+  color: var(--gray-500);
+  font-weight: 400;
+  margin-top: 1px;
+}
 .section-divider td {
   padding: 6px 12px !important;
   background: var(--gray-50);
@@ -746,6 +760,13 @@ body {
 .badge-gold    { background: var(--gold-50);    color: var(--gold-700);    border: 1px solid var(--gold-500); }
 .badge-clickable { cursor: pointer; transition: transform 0.1s; }
 .badge-clickable:hover { transform: translateY(-1px); }
+.issue-chip {
+  min-width: 64px;
+  justify-content: center;
+  font-family: 'Geist Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
 
 /* ── MVP card ───────────────────────────────────────── */
 .mvp-card {
@@ -1765,6 +1786,29 @@ function shortName(name, n) {
   return String(name).split(/\s+/).filter(Boolean).slice(0, n).join(' ');
 }
 
+// Staff-ID-first label: "TER 448 · MAZLAN BIN ..." — ID leads, name follows.
+// Falls back to name alone when staffId missing. NOTE: returns a RAW string;
+// caller MUST escHtml() it before innerHTML. nameWords caps the name length.
+function idName(d, nameWords) {
+  const nm = shortName(d && d.name, nameWords || 3);
+  const id = d && d.staffId ? String(d.staffId).trim() : '';
+  if (!id) return nm;
+  return nm && nm !== '—' ? id + ' · ' + nm : id;
+}
+
+// Build a name(lowercased) -> staffId map from the drivers array.
+// Used by renderIssuesBar to turn the names-only `notSubmitted` list into
+// Staff-ID chips. Names are matched case-insensitively (same keying as
+// highlightDriverRow / notSubmittedSet elsewhere).
+function buildStaffIdMap(drivers) {
+  const m = new Map();
+  (drivers || []).forEach(d => {
+    const nm = String((d && d.name) || '').toLowerCase().trim();
+    if (nm && d.staffId) m.set(nm, String(d.staffId).trim());
+  });
+  return m;
+}
+
 // Kuala Lumpur hour 0-23 — avoids browser-local-time drift (VPN, travel)
 function klHour() {
   const s = new Date().toLocaleString('en-GB', {
@@ -2039,7 +2083,7 @@ function _renderDashboardInner(d) {
   renderMVP(d.mvp);
 
   // ───────── ISSUES BAR ─────────
-  renderIssuesBar(notSubmitted);
+  renderIssuesBar(notSubmitted, buildStaffIdMap(drivers));
 
   // ───────── DRIVER COUNT + RANKING ─────────
   const driverCountEl = document.getElementById('driverCount');
@@ -2234,11 +2278,10 @@ function renderMVP(mvp) {
     body.innerHTML = '<div class="mvp-empty">No MVP yet — waiting for first scores</div>' + medal;
     return;
   }
-  const nameSafe = escHtml(mvp.name);
-  const idSafe = mvp.staffId ? ' (' + escHtml(mvp.staffId) + ')' : '';
+  const mvpLabel = escHtml(idName(mvp, 3));
   const score = (mvp.score >= 0 ? '+' : '') + (mvp.score || 0);
   body.innerHTML =
-    '<div class="mvp-name">' + nameSafe + idSafe + '</div>' +
+    '<div class="mvp-name">' + mvpLabel + '</div>' +
     '<div class="mvp-score-row">' +
       '<span class="mvp-score">' + escHtml(score) + '</span>' +
       '<span class="mvp-points">points</span>' +
@@ -2249,7 +2292,7 @@ function renderMVP(mvp) {
 // ============================================================
 // ISSUES BAR (basic time-aware)
 // ============================================================
-function renderIssuesBar(notSubmitted) {
+function renderIssuesBar(notSubmitted, staffIdMap) {
   const bar = document.getElementById('issuesBar');
   const title = document.getElementById('issuesTitle');
   const chips = document.getElementById('issuesChips');
@@ -2279,16 +2322,24 @@ function renderIssuesBar(notSubmitted) {
   // Chips for not-submitted drivers (event delegation, no inline onclick)
   const cap = 6;
   const visible = notSubmitted.slice(0, cap);
-  let chipsHtml = visible.map(n =>
-    '<button type="button" class="badge badge-danger badge-clickable" data-driver="' + escHtml(n) + '">' +
-      escHtml(shortName(n, 2)) +
-    '</button>'
-  ).join('');
+  const map = staffIdMap || new Map();
+  let chipsHtml = visible.map(n => {
+    const id = map.get(String(n || '').toLowerCase().trim());
+    // Chip label = Staff ID (tidy, uniform). Fallback to a 1-word short name
+    // when this driver has no staffId. Full name lives in title= for hover.
+    const label = id || shortName(n, 1);
+    return '<button type="button" class="badge badge-danger badge-clickable issue-chip"' +
+      ' data-driver="' + escHtml(n) + '"' +
+      ' title="' + escHtml(n) + '">' +
+      escHtml(label) +
+    '</button>';
+  }).join('');
   if (notSubmitted.length > cap) {
     chipsHtml += '<span class="badge badge-gray">+' + (notSubmitted.length - cap) + ' more</span>';
   }
   chips.innerHTML = chipsHtml;
-  // Wire up clicks via delegation
+  // Wire up clicks via delegation — data-driver stays the FULL NAME so
+  // highlightDriverRow() can match the table row (keyed on full name).
   chips.querySelectorAll('button[data-driver]').forEach(btn => {
     btn.addEventListener('click', () => highlightDriverRow(btn.dataset.driver));
   });
@@ -2335,7 +2386,7 @@ function renderDriverChart(drivers) {
   const hasVal = v => v !== null && v !== undefined && v !== '' && !isNaN(Number(v));
   const sorted = sortedAll.filter(d => hasVal(d.fuelPct) || hasVal(d.podPct));
   if (!sorted.length) { wrap.innerHTML = '<div class="empty-state">No driver data for this period</div>'; return; }
-  const categories = sorted.map(d => d.staffId || shortName(d.name, 2));
+  const categories = sorted.map(d => d.staffId || shortName(d.name, 1));
   const toNum = v => (v === null || v === undefined || v === '') ? 0 : Number(v) || 0;
   const fuelData = sorted.map(d => toNum(d.fuelPct));
   const podData  = sorted.map(d => toNum(d.podPct));
@@ -2464,8 +2515,11 @@ function driverRow(d) {
   const podColor = podCls === 'is-success' ? 'var(--success-700)' : podCls === 'is-warning' ? 'var(--warning-700)' : podCls === 'is-danger' ? 'var(--danger-700)' : 'var(--gray-500)';
   return '<tr class="' + rowCls + '" data-driver="' + escHtml(d.name || '') + '">' +
     '<td><span class="' + rankCls + '">' + escHtml(d.rank || '—') + '</span></td>' +
-    '<td><div class="driver-name-cell">' + escHtml(shortName(d.name, 3)) +
-      (d.staffId ? '<span class="driver-id">' + escHtml(d.staffId) + '</span>' : '') +
+    '<td><div class="driver-name-cell">' +
+      (d.staffId
+        ? '<span class="driver-id-primary">' + escHtml(d.staffId) + '</span>' +
+          '<span class="driver-name-sub">' + escHtml(shortName(d.name, 3)) + '</span>'
+        : escHtml(shortName(d.name, 3))) +
     '</div></td>' +
     '<td style="color:' + fuelColor + ';">' + escHtml(fmtPct(d.fuelPct)) + '</td>' +
     '<td style="color:' + podColor + ';">' + escHtml(fmtPct(d.podPct)) + '</td>' +
@@ -2497,12 +2551,11 @@ function renderHighRisk(drivers, onLeave) {
     const avatarCls = isHR ? 'attention-avatar is-danger' : 'attention-avatar is-warning';
     const badgeCls  = isHR ? 'badge-danger' : 'badge-warning';
     const badgeText = isHR ? 'High risk' : (isNew ? 'No activity' : 'Warning');
-    const idTxt = d.staffId ? ' · ' + escHtml(d.staffId) : '';
     const scoreSign = d.score >= 0 ? '+' : '';
     return '<div class="attention-item">' +
       '<div class="' + avatarCls + '">' + escHtml(initials(d.name)) + '</div>' +
       '<div class="attention-body">' +
-        '<div class="attention-name">' + escHtml(shortName(d.name, 3)) + idTxt + '</div>' +
+        '<div class="attention-name">' + escHtml(idName(d, 3)) + '</div>' +
         '<div class="attention-meta">Fuel ' + escHtml(fmtPct(d.fuelPct)) + ' · POD ' + escHtml(fmtPct(d.podPct)) + ' · Score ' + scoreSign + escHtml(d.score || 0) + '</div>' +
       '</div>' +
       '<span class="badge ' + badgeCls + '">' + escHtml(badgeText) + '</span>' +
@@ -2585,10 +2638,12 @@ function renderRecent(recent) {
     // Should-fix G2 from Reviewer.
     const typeBadge = isFuel ? 'badge-info' : 'badge-success';
     const typeLabel = isFuel ? 'Fuel' : 'POD';
-    const idSuffix = r.staffId ? '<span class="driver-id">' + escHtml(r.staffId) + '</span>' : '';
+    const recLabel = r.staffId
+      ? escHtml(r.staffId) + ' · ' + escHtml(shortName(r.driver, 3))
+      : escHtml(shortName(r.driver, 3));
     return '<tr>' +
       '<td><span class="sub-time">' + escHtml(formatRecentTime(r.date, r.time)) + '</span></td>' +
-      '<td><span class="sub-driver">' + escHtml(shortName(r.driver, 3)) + '</span>' + idSuffix + '</td>' +
+      '<td><span class="sub-driver">' + recLabel + '</span></td>' +
       '<td><span class="badge ' + typeBadge + '">' + escHtml(typeLabel) + '</span></td>' +
       '<td><span class="sub-vehicle">' + escHtml(r.vehicle || '—') + '</span></td>' +
     '</tr>';

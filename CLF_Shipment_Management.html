@@ -48,6 +48,8 @@ input[type=date]{ font-family:inherit; font-size:var(--text-body); padding:8px 1
 .btn-ghost{ background:#fff; color:var(--gray-700); border-color:var(--gray-300); }
 .btn-ghost:hover:not(:disabled){ background:var(--gray-50); }
 .btn-sm{ padding:7px 13px; font-size:var(--text-caption); }
+.btn-danger{ background:#fff; color:var(--danger-700); border-color:var(--danger-500); }
+.btn-danger:hover:not(:disabled){ background:var(--danger-50); }
 
 /* Upload card */
 .upload-card{ background:var(--surface-card); border:1px dashed var(--gray-300); border-radius:var(--radius); padding:var(--space-5); margin-bottom:var(--space-5); display:flex; align-items:center; justify-content:space-between; gap:var(--space-4); flex-wrap:wrap; }
@@ -89,7 +91,7 @@ input[type=date]{ font-family:inherit; font-size:var(--text-body); padding:8px 1
 .crew-field{ flex:1; }
 .field-label{ display:block; font-size:11px; font-weight:500; color:var(--gray-500); margin-bottom:3px; }
 .select{ width:100%; font-family:inherit; font-size:var(--text-body); padding:8px 9px; border:1px solid var(--gray-300); border-radius:8px; background:#fff; color:var(--gray-900); }
-.crew-actions{ display:flex; justify-content:flex-end; }
+.crew-actions{ display:flex; justify-content:space-between; align-items:center; gap:var(--space-2); }
 
 /* states */
 .empty,.loading{ text-align:center; color:var(--gray-500); padding:var(--space-6) var(--space-4); background:var(--surface-card); border:1px solid var(--gray-200); border-radius:var(--radius); }
@@ -146,6 +148,7 @@ let _date = '';
 function escHtml(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function _normId(s){ return String(s == null ? '' : s).replace(/\s+/g, '').toUpperCase(); }
 function pad(n){ return (n < 10 ? '0' : '') + n; }
+function fmtNum(n){ return (n == null) ? '?' : Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 }); }  // 79000 -> "79,000"
 function todayStr(){ const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
 function showToast(msg, type){
   const t = document.getElementById('toast');
@@ -264,7 +267,10 @@ function renderShipments(ships){
       + crewPicker('primary', s.assignedPrimary || '')+'</div>'
       + '<div class="crew-field" style="position:relative;"><label class="field-label">Helper (optional)</label>'
       + crewPicker('secondary', s.assignedSecondary || '')+'</div>'
-      + '</div><div class="crew-actions"><button class="btn btn-primary btn-sm save-crew">Save assignment</button></div></div>'
+      + '</div><div class="crew-actions">'
+      + '<button class="btn btn-danger btn-sm del-ship">Delete</button>'
+      + '<button class="btn btn-primary btn-sm save-crew">Save assignment</button>'
+      + '</div></div>'
       + '</div>';
   });
   html += '</div>';
@@ -279,6 +285,15 @@ function renderShipments(ships){
       const primary = card.querySelector('.sel-primary').value;
       const secondary = card.querySelector('.sel-secondary').value;
       saveCrew(shipmentNo, primary, secondary, btn);
+    });
+  });
+
+  // attach delete handlers
+  list.querySelectorAll('.del-ship').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const card = btn.closest('.card');
+      const shipmentNo = card.getAttribute('data-ship');
+      deleteShipment(shipmentNo, btn);
     });
   });
 }
@@ -307,27 +322,90 @@ async function saveCrew(shipmentNo, primary, secondary, btn){
   }
 }
 
-// Import is a POST (CSV can be large). no-cors = blind, so we read back the list to confirm.
+// Delete a wrongly-imported shipment. GET-write (no photo), like saveCrew.
+// Two-step: a 'blocked' response means it has delivered/POD items — offer a forced override.
+async function deleteShipment(shipmentNo, btn, force){
+  if(!force && !confirm('Delete shipment ' + shipmentNo + '?\n\nThis removes the lorry card and all its invoice rows. This cannot be undone.')) return;
+  btn.disabled = true; const old = btn.textContent; btn.textContent = 'Deleting…';
+  try{
+    const url = SCRIPT_URL + '?action=DELETE_SHIPMENT'
+      + '&shipmentNo=' + encodeURIComponent(shipmentNo)
+      + (force ? '&force=true' : '');
+    const res = await fetch(url);
+    const data = await res.json();
+    if(data && data.status === 'success'){
+      showToast('Deleted ' + shipmentNo + ' (' + (data.itemsDeleted||0) + ' invoice rows removed)', 'success');
+      loadShipments();
+      return;
+    }
+    if(data && data.status === 'blocked'){
+      btn.disabled = false; btn.textContent = old;
+      const ok = confirm('⚠ ' + (data.message || 'This shipment has delivered invoices.')
+        + '\n\nDelete ANYWAY? The lorry card and invoice rows are removed, but the delivered POD photo records are KEPT (driver KPI is unaffected).');
+      if(ok) deleteShipment(shipmentNo, btn, true);   // retry forced
+      else showToast('Delete cancelled — POD records kept.', 'info');
+      return;
+    }
+    showToast('Delete failed: ' + ((data && data.message) || 'unknown'), 'danger');
+    btn.disabled = false; btn.textContent = old;
+  }catch(e){
+    showToast('Network error: ' + (e.message || 'unknown'), 'danger');
+    btn.disabled = false; btn.textContent = old;
+  }
+}
+
+// Import is a POST (CSV can be large, must ride in the body). no-cors = the POST response is
+// unreadable, so we send a clientToken and poll a readable GET for the structured result.
 async function uploadCsv(file){
   let text;
-  try{ text = await file.text(); }catch(e){ showToast('Could not read file.', 'danger'); return; }
-  if(!text || text.indexOf(',') < 0){ showToast('That does not look like a CSV.', 'warning'); return; }
+  try{ text = await file.text(); }catch(e){ showToast('❌ Could not read this file — NOT imported.', 'danger'); return; }
+  if(!text || !text.trim()){ showToast('❌ This file is empty — NOT imported.', 'danger'); return; }
+  // NOTE: no comma pre-check — space-aligned fixed-width forms with small amounts have no commas.
+  // The server-side arithmetic gate (sum == TOTAL) is the real guard against a wrong/garbage file.
+
+  const token = 'imp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
   showToast('Uploading "' + file.name + '"… verifying…', 'info');
   try{
     await fetch(SCRIPT_URL, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ formType: 'IMPORT_SHIPMENT', csvText: text, fileName: file.name, importedBy: 'SUPERVISOR' })
+      body: JSON.stringify({ formType: 'IMPORT_SHIPMENT', csvText: text, fileName: file.name,
+                             importedBy: 'SUPERVISOR', clientToken: token })
     });
   }catch(e){ showToast('Upload error: ' + (e.message || 'unknown'), 'danger'); return; }
-  // Import response is unreadable (no-cors) → read back the list to confirm.
-  // Apps Script can be slow, so refresh twice (the row may not exist on the first pass).
-  setTimeout(loadShipments, 2000);
-  setTimeout(() => {
+
+  // Poll the readable GET for the stashed result (Apps Script can be slow). ~10 tries over ~15s.
+  let result = null;
+  for(let i = 0; i < 10; i++){
+    await new Promise(r => setTimeout(r, 1500));
+    try{
+      const res = await fetch(SCRIPT_URL + '?action=getImportResult&token=' + encodeURIComponent(token));
+      const data = await res.json();
+      if(data && data.status && data.status !== 'pending'){ result = data; break; }
+    }catch(e){ /* keep polling */ }
+  }
+
+  if(!result){
+    showToast('Upload sent, but no confirmation yet. Tap ↻ Refresh in a moment to check.', 'warning');
     loadShipments();
-    showToast('Upload sent. If your lorry / invoice count is not shown below yet, tap ↻ Refresh in a moment.', 'info');
-  }, 4500);
+    return;
+  }
+
+  if(result.status === 'success'){
+    const via = result.parserUsed === 'gemini' ? ' (auto-recovered)' : '';
+    showToast('✅ Imported ' + (result.lorryNo || result.shipmentNo || '') + ' — ' +
+              result.itemCount + ' invoices.' + via, 'success');
+  }else if(result.status === 'failed' && result.formTotal != null){
+    showToast('❌ TOTAL ERROR — invoices add up to RM ' + fmtNum(result.parsedSum) +
+              ' but the form TOTAL is RM ' + fmtNum(result.formTotal) +
+              ' (off by RM ' + fmtNum(result.diff) + '). NOT imported — please check the file.', 'danger');
+  }else if(result.status === 'failed'){
+    showToast('❌ Could not read this file — NOT imported.', 'danger');
+  }else{
+    showToast('Import error: ' + (result.message || 'unknown') + ' — not imported.', 'danger');
+  }
+  loadShipments();
 }
 
 // ── init ──
