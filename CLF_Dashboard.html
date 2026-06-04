@@ -1104,117 +1104,6 @@ body {
   margin-top: 1px;
 }
 
-/* ── POD Plan ────────────────────────────────────────── */
-.pod-plan-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: var(--space-3);
-  max-height: 480px;
-  overflow-y: auto;
-}
-@media (max-width: 767px) {
-  .pod-plan-grid { max-height: none; grid-template-columns: 1fr; }
-}
-.pod-card {
-  background: white;
-  border: 1px solid var(--gray-200);
-  border-top: 2px solid var(--gray-200);
-  border-radius: 8px;
-  padding: var(--space-3);
-}
-.pod-card.is-complete { border-top-color: var(--success-500); }
-.pod-card.is-partial { border-top-color: var(--warning-500); }
-.pod-card.is-pending { border-top-color: var(--danger-500); }
-.pod-card.is-noplan { border-top-color: var(--gray-300); }
-.pod-card.is-leave { opacity: 0.6; }
-.pod-card-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
-}
-.pod-card-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--gray-900);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.pod-card-id {
-  font-family: 'Geist Mono', monospace;
-  font-size: 10px;
-  color: var(--gray-500);
-  margin-top: 1px;
-}
-.pod-card-progress-track {
-  height: 6px;
-  background: var(--gray-100);
-  border-radius: 999px;
-  overflow: hidden;
-  margin-bottom: 6px;
-}
-.pod-card-progress-fill {
-  height: 100%;
-  border-radius: 999px;
-  transition: width 0.4s ease;
-  width: 0%;
-}
-.pod-card.is-complete .pod-card-progress-fill { background: var(--success-500); }
-.pod-card.is-partial .pod-card-progress-fill { background: var(--warning-500); }
-.pod-card.is-pending .pod-card-progress-fill { background: var(--danger-500); }
-.pod-card.is-noplan .pod-card-progress-fill { background: var(--gray-300); }
-.pod-card-foot {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 11px;
-}
-.pod-card-progress-text {
-  font-family: 'Geist Mono', monospace;
-  color: var(--gray-500);
-}
-.pod-card-status { font-weight: 600; }
-.pod-card.is-complete .pod-card-status { color: var(--success-700); }
-.pod-card.is-partial .pod-card-status { color: var(--warning-700); }
-.pod-card.is-pending .pod-card-status { color: var(--danger-700); }
-.pod-card.is-noplan .pod-card-status { color: var(--gray-500); }
-.pod-input {
-  width: 54px;
-  padding: 5px 6px;
-  border: 1.5px solid var(--gray-300);
-  border-radius: 5px;
-  font-size: 14px;
-  font-weight: 700;
-  text-align: center;
-  font-family: 'Geist Mono', monospace;
-  background: white;
-  color: var(--gray-900);
-}
-.pod-input:focus {
-  outline: none;
-  border-color: var(--blue-600);
-  background: var(--blue-50);
-}
-.pod-input.is-changed { border-color: var(--warning-500); background: var(--warning-50); }
-.pod-input.is-readonly { background: var(--gray-50); cursor: default; }
-.pod-edit-note {
-  display: none;
-  align-items: center;
-  gap: 6px;
-  background: var(--warning-50);
-  border: 1px solid var(--warning-500);
-  color: var(--warning-700);
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  margin-bottom: var(--space-3);
-}
-.pod-edit-note.is-visible { display: flex; }
-.pod-edit-note svg { width: 14px; height: 14px; }
-
 /* ── Inputs ─────────────────────────────────────────── */
 .input, .select, .textarea {
   width: 100%;
@@ -1516,7 +1405,7 @@ body {
       <div class="kpi-value" id="kpiSubmitted">—</div>
       <div class="kpi-sub" id="kpiSubmittedSub">Loading…</div>
     </button>
-    <button type="button" class="kpi-tile accent-warning" data-scroll="podPlanSection" aria-label="Pending submissions">
+    <button type="button" class="kpi-tile accent-warning" data-scroll="shipmentSection" aria-label="Pending submissions">
       <div class="kpi-label">Pending</div>
       <div class="kpi-value" id="kpiPending">—</div>
       <div class="kpi-sub" id="kpiPendingSub">Loading…</div>
@@ -1761,49 +1650,6 @@ body {
     </section>
 
   </div>
-
-  <!-- POD PLAN -->
-  <section class="card card-stripe card-flush" id="podPlanSection" style="margin-bottom:var(--space-4);">
-    <div class="card-header-wrap">
-      <div class="card-header">
-        <div class="card-header-text">
-          <div class="card-title">Today's POD plan</div>
-          <div class="card-sub" id="podPlanSummary">Numbers count down as drivers submit · —</div>
-        </div>
-        <div class="card-header-actions">
-          <button type="button" class="btn-edit-small" id="podPlanEditBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/>
-            </svg>
-            <span>Edit plans</span>
-          </button>
-          <button type="button" class="btn-edit-small is-primary is-hidden" id="podPlanSaveBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
-            <span id="podPlanSaveBtnLabel">Save (0)</span>
-          </button>
-          <button type="button" class="btn-edit-small is-hidden" id="podPlanCancelBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-            <span>Cancel</span>
-          </button>
-        </div>
-      </div>
-      <div class="pod-edit-note" id="podPlanEditNote">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/>
-        </svg>
-        <span>Edit mode — change any plan number, then click Save to apply all at once.</span>
-      </div>
-    </div>
-    <div class="card-body">
-      <div class="pod-plan-grid" id="podPlanGrid">
-        <div class="empty-state" style="grid-column:1/-1;">Loading…</div>
-      </div>
-    </div>
-  </section>
 
   <!-- TODAY'S SHIPMENTS — B3 hybrid panel (additive; reads new Shipment sheet) -->
   <section class="card card-stripe card-flush" id="shipmentSection" style="margin-bottom:var(--space-4);">
@@ -2075,19 +1921,11 @@ let selectedView = 'daily';
 let selectedPeriodKey = '';
 let _loadInFlight = false;
 let _driverChart = null;
-// POD plan state
-let podPlanEditMode = false;
-let podPlanChanges = {};
-let _podDrivers = [];
-let _podPlans = [];
-let _onLeaveNames = new Set();
 
 // ============================================================
 // LOAD DATA
 // ============================================================
 async function loadDashboard() {
-  // Don't auto-refresh while editing POD plans (would clobber user input)
-  if (podPlanEditMode) return;
   if (_loadInFlight) return;
   _loadInFlight = true;
   try {
@@ -2184,13 +2022,9 @@ function _renderDashboardInner(d) {
   const drivers = d.drivers || [];
   const onLeave = d.onLeaveToday || [];
   const notSubmitted = d.notSubmittedToday || [];
-  const podPlanToday = d.podPlanToday || [];
-
-  // Track on-leave for POD plan grayscale
-  _onLeaveNames = new Set(onLeave.map(l => (l && l.driverName) || '').filter(Boolean));
 
   // ───────── TODAY SNAPSHOT (4 tiles) ─────────
-  renderTodaySnapshot(drivers, onLeave, notSubmitted, podPlanToday);
+  renderTodaySnapshot(drivers, onLeave, notSubmitted);
 
   // ───────── MONTHLY HEALTH STRIP ─────────
   renderMonthStrip(k);
@@ -2205,7 +2039,7 @@ function _renderDashboardInner(d) {
   renderMVP(d.mvp);
 
   // ───────── ISSUES BAR ─────────
-  renderIssuesBar(notSubmitted, podPlanToday);
+  renderIssuesBar(notSubmitted);
 
   // ───────── DRIVER COUNT + RANKING ─────────
   const driverCountEl = document.getElementById('driverCount');
@@ -2217,7 +2051,7 @@ function _renderDashboardInner(d) {
   renderDriverChart(drivers);
 
   // ───────── HIGH RISK / NEEDS ATTENTION ─────────
-  renderHighRisk(drivers);
+  renderHighRisk(drivers, onLeave);
 
   // ───────── FLEET STATUS ─────────
   renderFleet(d.lorryStatus || []);
@@ -2225,16 +2059,13 @@ function _renderDashboardInner(d) {
   // ───────── RECENT SUBMISSIONS ─────────
   renderRecent(d.recent || []);
 
-  // ───────── POD PLAN ─────────
-  renderPODPlan(drivers, podPlanToday);
-
   hideLoadingScreen();
 }
 
 // ============================================================
 // TODAY SNAPSHOT (4 tiles)
 // ============================================================
-function renderTodaySnapshot(drivers, onLeave, notSubmitted, podPlanToday) {
+function renderTodaySnapshot(drivers, onLeave, notSubmitted) {
   const totalDrivers = drivers.length;
   const onLeaveCount = onLeave.length;
   const onRoad = Math.max(0, totalDrivers - onLeaveCount);
@@ -2252,19 +2083,7 @@ function renderTodaySnapshot(drivers, onLeave, notSubmitted, podPlanToday) {
   if (fuelExpected === 0) fuelExpected = onRoad; // fallback
   const subPct = fuelExpected > 0 ? Math.round((fuelSubmitted / fuelExpected) * 100) : 0;
 
-  // Pending = union of (not submitted fuel today) ∪ (drivers with POD missing)
-  // Use driver names as the dedup key
-  const pendingNames = new Set(notSubmitted.map(n => String(n).toLowerCase()));
-  let podMissingDrivers = 0;
-  podPlanToday.forEach(p => {
-    const planned = Number(p.planned) || 0;
-    const submitted = Number(p.submitted) || 0;
-    if (planned > 0 && submitted < planned) {
-      pendingNames.add(String(p.driverName || '').toLowerCase());
-      podMissingDrivers += 1;
-    }
-  });
-  const pending = pendingNames.size;
+  const pending = new Set(notSubmitted.map(n => String(n).toLowerCase())).size;
 
   // Should-fix I1: before 08:00 KL, force all tiles to gray "Day not started"
   // (drivers haven't started yet, 0/22 should not look red)
@@ -2304,8 +2123,7 @@ function renderTodaySnapshot(drivers, onLeave, notSubmitted, podPlanToday) {
     if (pending === 0) {
       pendSubEl.textContent = 'All caught up';
     } else {
-      const fuelOnly = notSubmitted.length;
-      pendSubEl.textContent = fuelOnly + ' fuel · ' + podMissingDrivers + ' POD';
+      pendSubEl.textContent = notSubmitted.length + ' fuel pending';
     }
   }
   const pendTile = pendEl.closest('.kpi-tile');
@@ -2431,7 +2249,7 @@ function renderMVP(mvp) {
 // ============================================================
 // ISSUES BAR (basic time-aware)
 // ============================================================
-function renderIssuesBar(notSubmitted, podPlanToday) {
+function renderIssuesBar(notSubmitted) {
   const bar = document.getElementById('issuesBar');
   const title = document.getElementById('issuesTitle');
   const chips = document.getElementById('issuesChips');
@@ -2441,12 +2259,7 @@ function renderIssuesBar(notSubmitted, podPlanToday) {
   const hour = klHour();
   const fuelLate = hour >= 17;
 
-  // POD shortfall only reported after 12:00 — early morning shortfall is expected
-  // because the day just started. (Should-fix F4 / Designer spec §5)
-  let podMissing = podPlanToday.filter(p => (Number(p.planned) || 0) > (Number(p.submitted) || 0));
-  if (hour < 12) podMissing = [];
-
-  if (notSubmitted.length === 0 && podMissing.length === 0) {
+  if (notSubmitted.length === 0) {
     bar.classList.remove('is-visible');
     return;
   }
@@ -2460,9 +2273,6 @@ function renderIssuesBar(notSubmitted, podPlanToday) {
   const parts = [];
   if (notSubmitted.length > 0) {
     parts.push(notSubmitted.length + ' driver' + (notSubmitted.length > 1 ? 's' : '') + " haven't submitted fuel");
-  }
-  if (podMissing.length > 0) {
-    parts.push(podMissing.length + ' driver' + (podMissing.length > 1 ? 's' : '') + ' with POD pending');
   }
   title.textContent = parts.join(' · ');
 
@@ -2521,7 +2331,10 @@ function renderDriverChart(drivers) {
     return;
   }
 
-  const sorted = [...drivers].sort((a, b) => (b.score || 0) - (a.score || 0));
+  const sortedAll = [...drivers].sort((a, b) => (b.score || 0) - (a.score || 0));
+  const hasVal = v => v !== null && v !== undefined && v !== '' && !isNaN(Number(v));
+  const sorted = sortedAll.filter(d => hasVal(d.fuelPct) || hasVal(d.podPct));
+  if (!sorted.length) { wrap.innerHTML = '<div class="empty-state">No driver data for this period</div>'; return; }
   const categories = sorted.map(d => d.staffId || shortName(d.name, 2));
   const toNum = v => (v === null || v === undefined || v === '') ? 0 : Number(v) || 0;
   const fuelData = sorted.map(d => toNum(d.fuelPct));
@@ -2664,9 +2477,11 @@ function driverRow(d) {
 // ============================================================
 // HIGH RISK / NEEDS ATTENTION
 // ============================================================
-function renderHighRisk(drivers) {
-  const hr = drivers.filter(d => d.risk === 'HIGH RISK' || d.risk === 'WARNING');
-  const count = drivers.filter(d => d.risk === 'HIGH RISK').length;
+function renderHighRisk(drivers, onLeave) {
+  const onLeaveSet = new Set((onLeave || []).map(l => String((l && l.driverName) || '').toLowerCase()).filter(Boolean));
+  const isOnLeave = d => onLeaveSet.has(String(d.name || '').toLowerCase());
+  const hr = drivers.filter(d => !isOnLeave(d) && (d.risk === 'HIGH RISK' || d.risk === 'WARNING' || d.risk === 'NEW'));
+  const count = drivers.filter(d => !isOnLeave(d) && (d.risk === 'HIGH RISK' || d.risk === 'NEW')).length;
   document.getElementById('highRiskCount').textContent = count + ' high risk';
   const list = document.getElementById('highRiskList');
   if (!hr.length) {
@@ -2677,9 +2492,11 @@ function renderHighRisk(drivers) {
     return;
   }
   list.innerHTML = '<div class="attention-list">' + hr.slice(0, 8).map(d => {
-    const isHR = d.risk === 'HIGH RISK';
+    const isHR  = d.risk === 'HIGH RISK';
+    const isNew = d.risk === 'NEW';
     const avatarCls = isHR ? 'attention-avatar is-danger' : 'attention-avatar is-warning';
-    const badgeCls = isHR ? 'badge-danger' : 'badge-warning';
+    const badgeCls  = isHR ? 'badge-danger' : 'badge-warning';
+    const badgeText = isHR ? 'High risk' : (isNew ? 'No activity' : 'Warning');
     const idTxt = d.staffId ? ' · ' + escHtml(d.staffId) : '';
     const scoreSign = d.score >= 0 ? '+' : '';
     return '<div class="attention-item">' +
@@ -2688,7 +2505,7 @@ function renderHighRisk(drivers) {
         '<div class="attention-name">' + escHtml(shortName(d.name, 3)) + idTxt + '</div>' +
         '<div class="attention-meta">Fuel ' + escHtml(fmtPct(d.fuelPct)) + ' · POD ' + escHtml(fmtPct(d.podPct)) + ' · Score ' + scoreSign + escHtml(d.score || 0) + '</div>' +
       '</div>' +
-      '<span class="badge ' + badgeCls + '">' + escHtml(isHR ? 'High risk' : 'Warning') + '</span>' +
+      '<span class="badge ' + badgeCls + '">' + escHtml(badgeText) + '</span>' +
     '</div>';
   }).join('') + '</div>';
 }
@@ -2779,224 +2596,6 @@ function renderRecent(recent) {
 }
 
 // ============================================================
-// POD PLAN (preserves Edit Mode state machine)
-// ============================================================
-function renderPODPlan(drivers, plansToday) {
-  _podDrivers = drivers;
-  _podPlans = plansToday;
-  doRenderPODPlan();
-}
-
-function doRenderPODPlan() {
-  const drivers = _podDrivers;
-  const plansToday = _podPlans;
-  const container = document.getElementById('podPlanGrid');
-  const summary = document.getElementById('podPlanSummary');
-  if (!drivers.length) {
-    container.innerHTML = '<div class="empty-state" style="grid-column:1/-1;">No drivers</div>';
-    summary.textContent = 'Numbers count down as drivers submit · —';
-    return;
-  }
-  const planMap = {};
-  plansToday.forEach(p => { planMap[p.driverName] = p; });
-
-  let totalPlanned = 0, totalSubmitted = 0, totalMissing = 0;
-
-  container.innerHTML = drivers.map(d => {
-    const p = planMap[d.name] || { planned: 0, submitted: 0, missing: 0 };
-    const planned   = Number(p.planned)   || 0;
-    const submitted = Number(p.submitted) || 0;
-    const missing   = Math.max(0, planned - submitted);
-    totalPlanned += planned;
-    totalSubmitted += submitted;
-    totalMissing += missing;
-
-    const onLeave = _onLeaveNames.has(String(d.name || '').toLowerCase());
-    let statusCls, statusLabel;
-    if (onLeave) {
-      statusCls = 'is-noplan is-leave';
-      statusLabel = 'On leave';
-    } else if (planned === 0) {
-      statusCls = 'is-noplan';
-      statusLabel = 'Not planned';
-    } else if (missing === 0) {
-      statusCls = 'is-complete';
-      statusLabel = 'All done';
-    } else if (submitted === 0) {
-      statusCls = 'is-pending';
-      statusLabel = missing + ' left';
-    } else {
-      statusCls = 'is-partial';
-      statusLabel = missing + ' left';
-    }
-
-    const pctFilled = planned > 0 ? Math.min(100, Math.round((submitted / planned) * 100)) : 0;
-
-    // Edit Mode: input = planned (editable); Normal: input = countdown (readonly)
-    let inputValue, inputCls, inputReadonly, inputTitle;
-    if (podPlanEditMode && !onLeave) {
-      const pendingChange = podPlanChanges[d.name];
-      inputValue = (pendingChange !== undefined) ? pendingChange : (planned || '');
-      inputCls = 'pod-input' + (pendingChange !== undefined ? ' is-changed' : '');
-      inputReadonly = '';
-      inputTitle = 'Total target for today (editable)';
-    } else {
-      inputValue = onLeave ? '' : (planned === 0 ? '' : (missing === 0 ? '0' : missing));
-      inputCls = 'pod-input is-readonly';
-      inputReadonly = 'readonly';
-      inputTitle = onLeave ? 'On leave today'
-                : planned === 0 ? 'Not planned yet'
-                : missing === 0 ? 'All delivered'
-                : missing + ' left of ' + planned;
-    }
-
-    return '<div class="pod-card ' + statusCls + '" data-driver="' + escHtml(d.name || '') + '">' +
-      '<div class="pod-card-head">' +
-        '<div style="flex:1;min-width:0;">' +
-          '<div class="pod-card-name" title="' + escHtml(d.name || '') + '">' + escHtml(shortName(d.name, 3)) + '</div>' +
-          '<div class="pod-card-id">' + escHtml(d.staffId || '—') + '</div>' +
-        '</div>' +
-        '<input type="number" min="0" max="999" value="' + escHtml(inputValue) + '" placeholder="—" ' + inputReadonly +
-          ' class="' + inputCls + '"' +
-          ' title="' + escHtml(inputTitle) + '"' +
-          ' data-driver-name="' + escHtml(d.name || '') + '">' +
-      '</div>' +
-      '<div class="pod-card-progress-track"><div class="pod-card-progress-fill" data-pct="' + pctFilled + '"></div></div>' +
-      '<div class="pod-card-foot">' +
-        '<span class="pod-card-progress-text">' + escHtml(submitted) + ' / ' + escHtml(planned) + (planned > 0 ? ' (' + pctFilled + '%)' : '') + '</span>' +
-        '<span class="pod-card-status">' + escHtml(statusLabel) + '</span>' +
-      '</div>' +
-    '</div>';
-  }).join('');
-
-  // Animate progress bars in
-  setTimeout(() => {
-    container.querySelectorAll('.pod-card-progress-fill').forEach(f => {
-      f.style.width = (f.dataset.pct || '0') + '%';
-    });
-  }, 50);
-
-  // Wire up edit-mode inputs (event delegation pattern)
-  container.querySelectorAll('input.pod-input:not(.is-readonly)').forEach(inp => {
-    inp.addEventListener('input', () => {
-      onPODPlanInput(inp.dataset.driverName, inp.value);
-    });
-  });
-
-  const totalPct = totalPlanned > 0 ? Math.round((totalSubmitted / totalPlanned) * 100) : 0;
-  const summaryText = 'Numbers count down as drivers submit · ' +
-    totalSubmitted + ' / ' + totalPlanned +
-    (totalPlanned > 0 ? ' delivered (' + totalPct + '%)' : '') +
-    (totalMissing > 0 ? ' · ' + totalMissing + ' left' : (totalPlanned > 0 ? ' · all done' : ''));
-  summary.textContent = summaryText;
-}
-
-function onPODPlanInput(driverName, newValue) {
-  if (!podPlanEditMode) return;
-  const origPlan = (_podPlans.find(p => p.driverName === driverName) || {}).planned || 0;
-  const newNum = parseInt(newValue, 10);
-  if (isNaN(newNum) || newNum < 0) return;
-  if (newNum === Number(origPlan)) {
-    delete podPlanChanges[driverName];
-  } else {
-    podPlanChanges[driverName] = newNum;
-  }
-  const label = document.getElementById('podPlanSaveBtnLabel');
-  if (label) label.textContent = 'Save (' + Object.keys(podPlanChanges).length + ')';
-
-  // Update visual changed state of the input
-  const inp = document.querySelector('input.pod-input[data-driver-name="' + CSS.escape(driverName) + '"]');
-  if (inp) inp.classList.toggle('is-changed', podPlanChanges[driverName] !== undefined);
-}
-
-function enterPODEditMode() {
-  podPlanEditMode = true;
-  podPlanChanges = {};
-  document.getElementById('podPlanEditBtn').classList.add('is-hidden');
-  document.getElementById('podPlanSaveBtn').classList.remove('is-hidden');
-  document.getElementById('podPlanCancelBtn').classList.remove('is-hidden');
-  document.getElementById('podPlanSaveBtnLabel').textContent = 'Save (0)';
-  document.getElementById('podPlanEditNote').classList.add('is-visible');
-  doRenderPODPlan();
-}
-
-function cancelPODEditMode() {
-  podPlanEditMode = false;
-  podPlanChanges = {};
-  document.getElementById('podPlanEditBtn').classList.remove('is-hidden');
-  document.getElementById('podPlanSaveBtn').classList.add('is-hidden');
-  document.getElementById('podPlanCancelBtn').classList.add('is-hidden');
-  document.getElementById('podPlanEditNote').classList.remove('is-visible');
-  doRenderPODPlan();
-}
-
-async function savePODEditChanges() {
-  const entries = Object.entries(podPlanChanges);
-  if (entries.length === 0) { cancelPODEditMode(); return; }
-  // Use modal confirm (replaces native confirm())
-  const ok = await confirmModal(
-    'Save POD plan changes',
-    'Save ' + entries.length + ' POD plan change' + (entries.length > 1 ? 's' : '') + '? This will update Today\'s plan for the affected drivers.',
-    { ok: 'Save', cancel: 'Cancel' }
-  );
-  if (!ok) return;
-  // Snapshot + clear shared state so further edits go to a fresh diff
-  podPlanChanges = {};
-  const saveBtn = document.getElementById('podPlanSaveBtn');
-  const cancelBtn = document.getElementById('podPlanCancelBtn');
-  saveBtn.disabled = true;
-  cancelBtn.disabled = true;
-  document.getElementById('podPlanSaveBtnLabel').textContent = 'Saving ' + entries.length + '…';
-  const inputs = document.querySelectorAll('#podPlanGrid input.pod-input');
-  inputs.forEach(i => i.disabled = true);
-  try {
-    // V20: switched from no-cors POST → GET so browser can read backend response
-    // and report real success/failure (was always lying "Saved" before).
-    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
-    const results = await Promise.all(entries.map(async ([name, planned]) => {
-      const url = SCRIPT_URL
-        + '?action=SET_POD_PLAN'
-        + '&driverName=' + encodeURIComponent(name)
-        + '&plannedCount=' + (parseInt(planned, 10) || 0)
-        + '&planDate=' + today
-        + '&setBy=DASHBOARD';
-      try {
-        const res = await fetch(url);
-        const json = await res.json();
-        return { name, planned, ok: (json.status === 'success' || json.status === 'ok'), message: json.message || null };
-      } catch (e) {
-        return { name, planned, ok: false, message: (e && e.message) || 'network error' };
-      }
-    }));
-    const failed = results.filter(r => !r.ok);
-    if (failed.length === 0) {
-      cancelPODEditMode();
-      saveBtn.disabled = false;
-      cancelBtn.disabled = false;
-      showToast('Saved ' + entries.length + ' POD plan change(s)', 'success');
-      setTimeout(loadDashboard, 600);
-    } else {
-      // Restore failed entries so user can retry
-      failed.forEach(r => { if (podPlanChanges[r.name] === undefined) podPlanChanges[r.name] = r.planned; });
-      saveBtn.disabled = false;
-      cancelBtn.disabled = false;
-      document.getElementById('podPlanSaveBtnLabel').textContent = 'Save (' + Object.keys(podPlanChanges).length + ')';
-      inputs.forEach(i => i.disabled = false);
-      const okCount = results.length - failed.length;
-      const firstErr = failed[0].message || 'unknown error';
-      showToast('Saved ' + okCount + ' / ' + results.length + ' — ' + failed.length + ' failed (' + firstErr + ')', 'danger');
-    }
-  } catch (err) {
-    entries.forEach(([name, val]) => { if (podPlanChanges[name] === undefined) podPlanChanges[name] = val; });
-    saveBtn.disabled = false;
-    cancelBtn.disabled = false;
-    document.getElementById('podPlanSaveBtnLabel').textContent = 'Save (' + Object.keys(podPlanChanges).length + ')';
-    inputs.forEach(i => i.disabled = false);
-    showToast('Save request failed before reaching server: ' + (err && err.message ? err.message : 'unknown error'), 'danger');
-  }
-}
-
-// ============================================================
 // EVENT WIRING (no inline onclick)
 // ============================================================
 function onViewChange(view) {
@@ -3029,10 +2628,6 @@ function wireUp() {
   // Driver view toggle
   document.getElementById('driverViewChart').addEventListener('click', () => setDriverView('chart'));
   document.getElementById('driverViewTable').addEventListener('click', () => setDriverView('table'));
-  // POD plan edit buttons
-  document.getElementById('podPlanEditBtn').addEventListener('click', enterPODEditMode);
-  document.getElementById('podPlanSaveBtn').addEventListener('click', savePODEditChanges);
-  document.getElementById('podPlanCancelBtn').addEventListener('click', cancelPODEditMode);
   // Monthly health strip toggle
   const strip = document.getElementById('monthStrip');
   document.getElementById('monthStripHead').addEventListener('click', () => {
@@ -3088,7 +2683,7 @@ window.addEventListener('DOMContentLoaded', () => {
   wireUp();
   loadDashboard();
   loadShipmentProgress();                              // B3: shipment panel (independent of loadDashboard)
-  // Auto-refresh every 5 minutes (skipped while POD edit mode is open — see loadDashboard guard)
+  // Auto-refresh every 5 minutes
   setInterval(loadDashboard, 5 * 60 * 1000);
   setInterval(loadShipmentProgress, 5 * 60 * 1000);    // B3
 });

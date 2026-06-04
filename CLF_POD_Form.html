@@ -47,16 +47,14 @@
     border-bottom: 1px solid rgba(255,255,255,0.2);
     position: relative; overflow: hidden;
   }
-  .header::before {
-    content: ''; position: absolute; top: -40px; right: -40px;
-    width: 140px; height: 140px; border-radius: 50%;
-    border: 1px solid rgba(255,255,255,0.18);
+  /* form identity — big icon + name so drivers instantly know which app this is */
+  .form-identity { display: flex; align-items: center; gap: 14px; position: relative; z-index: 1; margin-top: 4px; }
+  .form-icon {
+    width: 54px; height: 54px; flex-shrink: 0;
+    background: rgba(255,255,255,0.16); border: 1.5px solid rgba(255,255,255,0.55);
+    border-radius: 14px; display: flex; align-items: center; justify-content: center;
   }
-  .header::after {
-    content: ''; position: absolute; bottom: -60px; left: -30px;
-    width: 160px; height: 160px; border-radius: 50%;
-    border: 1px solid rgba(255,255,255,0.1);
-  }
+  .form-icon svg { width: 30px; height: 30px; stroke: var(--white); fill: none; }
 
   .logo-row { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; position: relative; z-index: 1; }
   .logo-box {
@@ -78,7 +76,7 @@
   @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
   .form-badge-text { font-size: 12px; font-weight: 600; color: var(--white); letter-spacing: 0.4px; }
 
-  .form-title { font-size: 22px; font-weight: 600; color: var(--white); margin: 10px 0 4px; position: relative; z-index: 1; }
+  .form-title { font-size: 30px; font-weight: 600; color: var(--white); letter-spacing: 1px; line-height: 1; margin: 0; position: relative; z-index: 1; }
   .form-subtitle { font-size: 12px; color: rgba(255,255,255,0.85); position: relative; z-index: 1; line-height: 1.5; }
 
   .form-body { flex: 1; background: var(--white); padding: 24px 20px 32px; }
@@ -218,25 +216,28 @@
   <div class="header">
     <div class="logo-row">
       <div class="logo-box">
-        <div class="logo-text-clf">CLF<span>利發貿易</span></div>
+        <div class="logo-text-clf">CLF<span>Trading</span></div>
       </div>
       <div>
         <div class="company-name">CLF Trading Sdn. Bhd.</div>
         <div class="company-reg">557522-A · Mentakab, Pahang</div>
       </div>
     </div>
-    <div class="form-badge">
-      <div class="form-badge-dot"></div>
-      <div class="form-badge-text">POD SUBMISSION · PENGHANTARAN BUKTI PENGHANTARAN</div>
+    <div class="form-identity">
+      <div class="form-icon">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      </div>
+      <div>
+        <div class="form-title">POD</div>
+        <div class="form-subtitle">Proof of Delivery · Bukti Penghantaran</div>
+      </div>
     </div>
-    <div class="form-title">Proof of Delivery</div>
-    <div class="form-subtitle">Submit after every delivery · Hantar selepas setiap penghantaran</div>
   </div>
 
   <div class="form-body">
     <div class="notice">
-      <b>Important / Penting:</b> Upload the SIGNED invoice. Submit on the same day as delivery. Missing or late POD will result in penalty points.<br>
-      Muat naik invois yang telah DITANDATANGANI. Hantar pada hari penghantaran. POD yang hilang atau lewat akan dikenakan mata penalti.
+      <b>Important · Penting:</b> Upload the <b>SIGNED</b> invoice on the <b>same delivery day</b>. Late or missing = penalty.<br>
+      <span style="opacity:.75;">Muat naik invois DITANDATANGANI pada hari sama. Lewat/hilang = penalti.</span>
     </div>
 
     <form id="podForm" novalidate>
@@ -249,28 +250,28 @@
         <div class="error-msg" id="err-date">Please select a date · Sila pilih tarikh</div>
       </div>
 
-      <div class="field">
+      <div class="field" style="position:relative;">
         <label>
-          Driver Name · Nama Pemandu <span class="req">*</span>
+          Driver · Pemandu <span class="req">*</span>
           <span id="rememberedBadge" class="remembered-badge" style="display:none;">✓ Remembered</span>
         </label>
-        <select id="driverName" required>
-          <option value="">Loading drivers... · Memuatkan...</option>
-        </select>
-        <div class="error-msg" id="err-driver">Please select your name · Sila pilih nama anda</div>
-        <div id="staffIdBadge" style="display:none;margin-top:8px;padding:6px 12px;background:#F5E6B8;color:#412402;border-radius:6px;font-size:13px;font-weight:600;"></div>
+        <input type="text" id="driverSearch" autocomplete="off" placeholder="Staff ID (e.g. 448) atau nama" style="width:100%;box-sizing:border-box;padding:13px 16px;font-size:16px;border:1.5px solid #C7D0DC;border-radius:10px;background:#fff;">
+        <input type="hidden" id="driverName" required>
+        <div id="driverPanel" style="display:none;position:absolute;left:0;right:0;z-index:20;border:1.5px solid #C7D0DC;border-top:none;border-radius:0 0 10px 10px;max-height:240px;overflow-y:auto;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,.12);"></div>
+        <div class="error-msg" id="err-driver">Please select your name · Sila pilih nama</div>
+        <div id="staffIdBadge" style="display:none;margin-top:8px;padding:8px 12px;background:#FFF1E6;color:#9A3412;border-radius:8px;font-size:14px;font-weight:600;"></div>
       </div>
 
       <!-- SECOND DRIVER (optional) -->
-      <div class="field">
+      <div class="field" style="position:relative;">
         <label>
           Second Driver · Pemandu Kedua
-          <span class="bm" style="display:block;font-size:11px;color:#6B7A8D;margin-top:2px;">If two drivers · Jika dua pemandu (optional)</span>
+          <span class="bm" style="display:block;font-size:11px;color:#6B7A8D;margin-top:2px;">If two drivers · optional</span>
         </label>
-        <select id="secondDriver">
-          <option value="">— None / Tiada —</option>
-        </select>
-        <div id="staffIdBadge2" style="display:none;margin-top:8px;padding:6px 12px;background:#F5E6B8;color:#412402;border-radius:6px;font-size:13px;font-weight:600;"></div>
+        <input type="text" id="secondSearch" autocomplete="off" placeholder="Staff ID atau nama (optional)" style="width:100%;box-sizing:border-box;padding:13px 16px;font-size:16px;border:1.5px solid #C7D0DC;border-radius:10px;background:#fff;">
+        <input type="hidden" id="secondDriver">
+        <div id="secondPanel" style="display:none;position:absolute;left:0;right:0;z-index:20;border:1.5px solid #C7D0DC;border-top:none;border-radius:0 0 10px 10px;max-height:240px;overflow-y:auto;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,.12);"></div>
+        <div id="staffIdBadge2" style="display:none;margin-top:8px;padding:8px 12px;background:#FFF1E6;color:#9A3412;border-radius:8px;font-size:14px;font-weight:600;"></div>
       </div>
 
       <div class="field">
@@ -305,8 +306,8 @@
       <div class="section-label">Signed Invoice Photo · Foto Invois Ditandatangani</div>
 
       <div class="notice">
-        <b>Up to 10 photos · Sehingga 10 foto:</b> One stop = multiple invoices? Snap each one. Tap "+ Add" to add more.<br>
-        Satu hentian = banyak invois? Ambil setiap satu. Ketik "+ Add" untuk tambah lagi.
+        <b>Up to 10 photos · 10 foto:</b> Multiple invoices? Snap each, tap <b>+ Add</b>.<br>
+        <span style="opacity:.75;">Banyak invois? Ambil setiap satu, ketik <b>+ Add</b>.</span>
       </div>
 
       <div class="field">
@@ -327,8 +328,8 @@
       <label class="confirm-row" for="confirmCheck">
         <input type="checkbox" id="confirmCheck">
         <div class="confirm-text">
-          <b>I confirm / Saya mengesahkan</b> that the delivery has been completed and the uploaded invoice is signed by the customer. All information is accurate.<br><br>
-          Penghantaran telah selesai dan invois yang dimuat naik telah ditandatangani oleh pelanggan. Semua maklumat adalah tepat.
+          <b>I confirm · Saya sahkan</b> the delivery is done and the invoice is <b>signed by the customer</b>.<br>
+          <span style="opacity:.75;">Penghantaran selesai dan invois ditandatangani pelanggan.</span>
         </div>
       </label>
       <div class="error-msg" id="err-confirm">Please confirm the declaration · Sila sahkan perisytiharan</div>
@@ -375,6 +376,47 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxabHh2Kd04z7k0zZOOo
 
 // V17: Dynamically loaded from backend /getDrivers — empty until fetchDrivers() resolves
 let STAFF_IDS = {};
+let ROSTER = [];   // [{name, staffId}] — drives the searchable Staff-ID picker
+
+function _normId(s){ return String(s == null ? '' : s).replace(/\s+/g, '').toUpperCase(); }
+
+// "Type Staff ID or name -> filtered list -> tap -> name confirmed" picker.
+// The hidden input keeps the NAME (what validate/submit/shipment/KPI read).
+function wireDriverPicker(searchId, hiddenId, panelId, badgeId, onPick){
+  var search = document.getElementById(searchId),
+      hidden = document.getElementById(hiddenId),
+      panel  = document.getElementById(panelId),
+      badge  = document.getElementById(badgeId);
+  if (!search || !hidden || !panel) return;
+  function render(q){
+    var nq = _normId(q), nameq = String(q || '').trim().toLowerCase();
+    if (!q || !q.trim()){ panel.style.display = 'none'; return; }
+    var matches = ROSTER.filter(function(d){
+      return (d.staffId && _normId(d.staffId).indexOf(nq) >= 0) ||
+             (d.name && d.name.toLowerCase().indexOf(nameq) >= 0);
+    }).slice(0, 8);
+    panel.innerHTML = matches.length
+      ? matches.map(function(d){
+          return '<div class="dp-row" data-name="' + _esc(d.name) + '" style="padding:13px 14px;border-bottom:1px solid #F0F0F0;cursor:pointer;font-size:15px;">' +
+                 '<b>' + _esc(d.staffId || '') + '</b> &middot; ' + _esc(d.name) + '</div>';
+        }).join('')
+      : '<div style="padding:13px 14px;color:#8A9BB0;font-size:13px;">No match &middot; Tiada padanan</div>';
+    panel.style.display = 'block';
+  }
+  function pick(name, silent){
+    var d = ROSTER.filter(function(x){ return x.name === name; })[0];
+    hidden.value = name;
+    search.value = (d && d.staffId ? d.staffId + ' · ' : '') + name;
+    if (badge){ badge.textContent = '✓ ' + name; badge.style.display = 'block'; }
+    panel.style.display = 'none';
+    if (!silent && onPick) onPick(name);   // silent=true for auto-fill: fill the field but don't persist/badge as "Remembered"
+  }
+  search.addEventListener('input', function(){ hidden.value = ''; if (badge) badge.style.display = 'none'; render(search.value); });
+  search.addEventListener('focus', function(){ search.select(); if (search.value.trim() && !hidden.value) render(search.value); });
+  panel.addEventListener('click', function(e){ var row = e.target.closest('.dp-row'); if (row) pick(row.getAttribute('data-name')); });
+  document.addEventListener('click', function(e){ if (e.target !== search && !panel.contains(e.target)) panel.style.display = 'none'; });
+  search._pick = pick;
+}
 
 async function fetchAndPopulateDrivers() {
   try {
@@ -383,40 +425,28 @@ async function fetchAndPopulateDrivers() {
     if (!data || data.status !== 'ok' || !Array.isArray(data.drivers) || data.drivers.length === 0) {
       throw new Error('Empty driver roster from server');
     }
-    STAFF_IDS = {};
+    STAFF_IDS = {}; ROSTER = data.drivers.slice();
     data.drivers.forEach(d => { STAFF_IDS[d.name] = d.staffId || ''; });
 
-    const primary = document.getElementById('driverName');
-    const second  = document.getElementById('secondDriver');
-    primary.innerHTML = '<option value="">— Select your name · Pilih nama anda —</option>' +
-      data.drivers.map(d => '<option>' + d.name + '</option>').join('');
-    second.innerHTML = '<option value="">— None / Tiada —</option>' +
-      data.drivers.map(d => '<option>' + d.name + '</option>').join('');
+    wireDriverPicker('driverSearch', 'driverName', 'driverPanel', 'staffIdBadge', function(name){
+      localStorage.setItem(STORAGE_KEY, name);
+      document.getElementById('rememberedBadge').style.display = 'inline-flex';
+    });
+    wireDriverPicker('secondSearch', 'secondDriver', 'secondPanel', 'staffIdBadge2', null);
 
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved && STAFF_IDS[saved]) {
-      primary.value = saved;
+    if (saved && STAFF_IDS[saved] && document.getElementById('driverSearch')._pick) {
+      document.getElementById('driverSearch')._pick(saved);
       document.getElementById('rememberedBadge').style.display = 'inline-flex';
-      updateStaffIdBadge('driverName', 'staffIdBadge');
     }
   } catch (err) {
     console.error('fetchAndPopulateDrivers failed:', err);
-    document.getElementById('driverName').innerHTML =
-      '<option value="">⚠ Failed to load drivers — refresh the page</option>';
+    var ds = document.getElementById('driverSearch');
+    if (ds) ds.placeholder = '⚠ Failed to load — refresh the page';
   }
 }
 
-function updateStaffIdBadge(selectId, badgeId) {
-  const driver = document.getElementById(selectId).value;
-  const badge = document.getElementById(badgeId);
-  if (!badge) return;
-  if (driver && STAFF_IDS[driver]) {
-    badge.textContent = 'Staff ID: ' + STAFF_IDS[driver];
-    badge.style.display = 'inline-block';
-  } else {
-    badge.style.display = 'none';
-  }
-}
+// (driver Staff-ID confirmation is now handled inside wireDriverPicker)
 const STORAGE_KEY = 'clf_driver_name';
 
 window.onload = function() {
@@ -429,17 +459,7 @@ window.onload = function() {
   fetchAndPopulateDrivers();
 };
 
-document.getElementById('secondDriver').addEventListener('change', function() {
-  updateStaffIdBadge('secondDriver', 'staffIdBadge2');
-});
-
-document.getElementById('driverName').addEventListener('change', function() {
-  updateStaffIdBadge('driverName', 'staffIdBadge');
-  if (this.value) {
-    localStorage.setItem(STORAGE_KEY, this.value);
-    document.getElementById('rememberedBadge').style.display = 'inline-flex';
-  }
-});
+// (old <select> change-listeners removed — driver picking is handled by wireDriverPicker)
 
 // Multi-photo state (max 10)
 const MAX_PHOTOS = 10;
@@ -561,13 +581,13 @@ function validate() {
   let valid = true;
   const fields = [
     { id: 'deliveryDate', err: 'err-date' },
-    { id: 'driverName', err: 'err-driver' },
+    { id: 'driverName', err: 'err-driver', focusId: 'driverSearch' },
     { id: 'vehicleNo', err: 'err-vehicle' },
   ];
   fields.forEach(f => {
     const el = document.getElementById(f.id);
     const err = document.getElementById(f.err);
-    if (!el.value) { err.classList.add('show'); if (valid) el.focus(); valid = false; }
+    if (!el.value) { err.classList.add('show'); if (valid) { var fe = document.getElementById(f.focusId || f.id); if (fe) fe.focus(); } valid = false; }
     else { err.classList.remove('show'); }
   });
   if (!collectedPhotos.length) {
@@ -581,7 +601,7 @@ function validate() {
   const sd = document.getElementById('secondDriver').value;
   if (dr && sd && dr === sd) {
     alert('Driver and Second Driver cannot be the same person.\nPemandu dan Pemandu Kedua tidak boleh sama.');
-    document.getElementById('secondDriver').focus();
+    var _ss = document.getElementById('secondSearch'); if (_ss) _ss.focus();
     valid = false;
   }
   return valid;
@@ -646,10 +666,14 @@ function resetForm() {
   // Kuala Lumpur timezone
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
   document.getElementById('deliveryDate').value = today;
+  // reset driver pickers, then restore the remembered primary driver
+  ['staffIdBadge','staffIdBadge2'].forEach(function(id){ var b=document.getElementById(id); if(b) b.style.display='none'; });
+  var dsearch = document.getElementById('driverSearch'); if (dsearch) dsearch.value = '';
+  var ssearch = document.getElementById('secondSearch'); if (ssearch) ssearch.value = '';
   const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) {
-    document.getElementById('driverName').value = saved;
-    updateStaffIdBadge('driverName', 'staffIdBadge');
+  if (saved && dsearch && dsearch._pick) {
+    dsearch._pick(saved);
+    document.getElementById('rememberedBadge').style.display = 'inline-flex';
   }
 }
 
@@ -682,6 +706,7 @@ async function checkShipmentForVehicle(keepListOnFail){
     var data = await res.json();
     if (data && data.status==='ok' && data.shipments && data.shipments.length && data.items && data.items.length){
       _shipKey = data.shipments[0].shipmentNo;
+      _autoFillAssignedDrivers(data.shipments[0]);
       _buildGroups(data.items);
       sec.style.display='block'; man.style.display='none';   // has a list → use it (manual reachable via walk-in link)
       renderShipmentList();
@@ -690,6 +715,26 @@ async function checkShipmentForVehicle(keepListOnFail){
     }
   }catch(e){
     fallManual();     // error → manual fallback (read-back keeps current view)
+  }
+}
+
+// bug #7: auto-fill the driver picker(s) with the shipment's assigned crew.
+// GUARD: only fill when the driver hasn't already picked / restored someone (hidden value empty).
+// Skips gracefully if the assigned name isn't in ROSTER.
+function _autoFillAssignedDrivers(shipment){
+  if (!shipment) return;
+  function inRoster(name){ return ROSTER.some(function(d){ return d.name === name; }); }
+  var primary = String(shipment.assignedPrimary || '').trim();
+  var hidden  = document.getElementById('driverName');
+  var picker  = document.getElementById('driverSearch');
+  if (primary && hidden && !hidden.value && picker && picker._pick && inRoster(primary)){
+    picker._pick(primary, true);
+  }
+  var secondary = String(shipment.assignedSecondary || '').trim();
+  var sHidden = document.getElementById('secondDriver');
+  var sPicker = document.getElementById('secondSearch');
+  if (secondary && secondary !== primary && sHidden && !sHidden.value && sPicker && sPicker._pick && inRoster(secondary)){
+    sPicker._pick(secondary, true);
   }
 }
 
@@ -725,11 +770,21 @@ function renderShipmentList(){
       + '<div style="font-size:12px;color:#854F0B;margin:3px 0 6px;">'+_esc(g.area)+' · '+g.invs.length+' invoice(s)</div>'
       + '<div style="font-size:11px;color:#6b5836;margin-bottom:'+(gDone?'0':'10px')+';word-break:break-all;">'+ g.invs.map(function(x){ return _esc(x.invoiceNo); }).join(' · ') +'</div>';
     if (!gDone){
+      var photos = g.photos || [];
+      if (photos.length){
+        html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">'
+          + photos.map(function(p){ return '<img src="'+p.dataUrl+'" style="width:54px;height:54px;object-fit:cover;border-radius:6px;border:1px solid #E0C68A;">'; }).join('')
+          + '<span style="align-self:center;font-size:12px;color:#2E7D32;font-weight:600;">'+photos.length+' photo'+(photos.length>1?'s':'')+' ready &#10003;</span>'
+          + '</div>';
+      }
       html += '<div style="display:flex;gap:8px;">'
-        + '<button type="button" class="ship-deliver" data-i="'+i+'" style="flex:1;background:#2E7D32;color:#fff;border:none;border-radius:8px;padding:11px;font-weight:700;font-size:13px;cursor:pointer;">&#128247; Photo + Delivered</button>'
+        + '<button type="button" class="ship-photo" data-i="'+i+'" style="flex:1;background:#fff;color:#2E7D32;border:1.5px solid #2E7D32;border-radius:8px;padding:11px;font-weight:700;font-size:13px;cursor:pointer;">&#128247; '+(photos.length? ('Add photo · Tambah') : 'Take photo · Ambil foto')+'</button>'
         + '<button type="button" class="ship-fail" data-i="'+i+'" style="background:#fff;color:#854F0B;border:1px solid #E0C68A;border-radius:8px;padding:11px 12px;font-weight:600;font-size:13px;cursor:pointer;">Problem</button>'
-        + '</div>'
-        + '<div class="ship-reasons" data-i="'+i+'" style="display:none;gap:6px;flex-wrap:wrap;margin-top:8px;">'
+        + '</div>';
+      if (photos.length){
+        html += '<button type="button" class="ship-save" data-i="'+i+'" style="width:100%;margin-top:8px;background:#2E7D32;color:#fff;border:none;border-radius:8px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;">&#10003; Save — Delivered &middot; Dihantar</button>';
+      }
+      html += '<div class="ship-reasons" data-i="'+i+'" style="display:none;gap:6px;flex-wrap:wrap;margin-top:8px;">'
         + ['Shop closed','Rejected','Partial','Reschedule'].map(function(r){ return '<button type="button" class="ship-reason" data-i="'+i+'" data-r="'+_esc(r)+'" style="background:#FFF3CD;color:#854F0B;border:1px solid #E0C68A;border-radius:6px;padding:7px 10px;font-size:12px;cursor:pointer;">'+_esc(r)+'</button>'; }).join('')
         + '</div>';
     }
@@ -741,8 +796,10 @@ function renderShipmentList(){
 
 // click delegation on the shipment section
 document.getElementById('shipmentSection').addEventListener('click', function(e){
-  var del = e.target.closest('.ship-deliver');
-  if (del){ _deliverIdx = parseInt(del.getAttribute('data-i'),10); document.getElementById('shipPhoto').click(); return; }
+  var ph = e.target.closest('.ship-photo');
+  if (ph){ _deliverIdx = parseInt(ph.getAttribute('data-i'),10); document.getElementById('shipPhoto').click(); return; }
+  var sv = e.target.closest('.ship-save');
+  if (sv){ saveDelivery(parseInt(sv.getAttribute('data-i'),10)); return; }
   var fb = e.target.closest('.ship-fail');
   if (fb){ var i = fb.getAttribute('data-i'); var box = document.querySelector('.ship-reasons[data-i="'+i+'"]'); if (box) box.style.display = (box.style.display==='none'?'flex':'none'); return; }
   var rb = e.target.closest('.ship-reason');
@@ -751,24 +808,36 @@ document.getElementById('shipmentSection').addEventListener('click', function(e)
 });
 
 // photo taken for a customer → submit delivery for that customer's pending invoices
+// STEP 1: take photo(s) for a customer → buffer + show thumbnails (does NOT submit yet)
 async function onShipPhoto(input){
   if (_deliverIdx < 0 || !input.files || !input.files.length){ input.value=''; return; }
   var g = _shipGroups[_deliverIdx];
   if (!g){ input.value=''; return; }
+  if (!g.photos) g.photos = [];
+  for (var f=0; f<input.files.length; f++){
+    if (g.photos.length >= 10) break;
+    var entry;
+    try { entry = await compressImage(input.files[f]); } catch(err){ entry = await readFileAsDataUrl(input.files[f]); }
+    g.photos.push({ dataUrl: entry.dataUrl, name: entry.name, type: entry.type });
+  }
+  input.value=''; _deliverIdx=-1;
+  renderShipmentList();   // shows thumbnails + the green "Save — Delivered" button
+}
+
+// STEP 2: Save → submit the buffered photos → mark this customer's invoices delivered
+async function saveDelivery(i){
+  var g = _shipGroups[i];
+  if (!g) return;
+  if (!g.photos || !g.photos.length){ alert('Take a photo first · Sila ambil foto dulu'); return; }
   var overlay = document.getElementById('loadingOverlay');
-  document.querySelector('.loading-text').textContent = 'Uploading… · Memuat naik…';
+  document.querySelector('.loading-text').textContent = 'Saving… · Menyimpan…';
   overlay.classList.add('show');
   try{
-    var photos = [];
-    for (var f=0; f<input.files.length && f<10; f++){
-      var entry;
-      try { entry = await compressImage(input.files[f]); } catch(err){ entry = await readFileAsDataUrl(input.files[f]); }
-      photos.push({ base64: entry.dataUrl.split(',')[1], name: entry.name, type: entry.type });
-    }
+    var photos = g.photos.map(function(p){ return { base64: p.dataUrl.split(',')[1], name: p.name, type: p.type }; });
     var pendingInvs = g.invs.filter(function(x){ return String(x.status).toLowerCase()!=='delivered'; }).map(function(x){ return x.invoiceNo; });
     var _drv = document.getElementById('driverName').value;
     var _sd  = document.getElementById('secondDriver').value || '';
-    if (_sd === _drv) _sd = '';   // same name twice → drop helper (avoid double KPI count; mirrors manual validate)
+    if (_sd === _drv) _sd = '';   // same name twice → drop helper (avoid double KPI count)
     var now = new Date();
     var payload = { formType:'SUBMIT_POD_FOR_INVOICE', shipmentKey:_shipKey, invoiceNos:pendingInvs,
       driverName: _drv, secondDriver: _sd,
@@ -777,12 +846,13 @@ async function onShipPhoto(input){
     var fd = new FormData(); fd.append('data', JSON.stringify(payload));
     await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body: fd });
     g.invs.forEach(function(x){ x.status='delivered'; });   // optimistic
+    g.photos = [];
     renderShipmentList();
   }catch(err){
-    alert('Upload failed, please retry · Muat naik gagal, sila cuba lagi');
+    alert('Save failed, please retry · Simpan gagal, sila cuba lagi');
   }finally{
-    overlay.classList.remove('show'); input.value=''; _deliverIdx=-1;
-    setTimeout(function(){ checkShipmentForVehicle(true); }, 2500);   // read-back to confirm (no-cors can't read the POST); keep list if read-back fails
+    overlay.classList.remove('show');
+    setTimeout(function(){ checkShipmentForVehicle(true); }, 2500);   // read-back to confirm (no-cors); keep list if read-back fails
   }
 }
 

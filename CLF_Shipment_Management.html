@@ -144,6 +144,7 @@ let _date = '';
 
 // ── helpers ──
 function escHtml(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function _normId(s){ return String(s == null ? '' : s).replace(/\s+/g, '').toUpperCase(); }
 function pad(n){ return (n < 10 ? '0' : '') + n; }
 function todayStr(){ const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
 function showToast(msg, type){
@@ -177,18 +178,57 @@ async function loadShipments(){
 }
 
 // ── render ──
-function driverOptions(selected){
-  let html = '<option value="">— Not assigned —</option>';
-  _drivers.forEach(d => {
-    const nm = d.name || '';
-    const sel = (nm === selected) ? ' selected' : '';
-    html += '<option value="'+escHtml(nm)+'"'+sel+'>'+escHtml(nm)+(d.staffId ? ' ('+escHtml(d.staffId)+')' : '')+'</option>';
-  });
-  // keep an unknown stored value visible even if not in roster
-  if(selected && !_drivers.some(d => d.name === selected)){
-    html += '<option value="'+escHtml(selected)+'" selected>'+escHtml(selected)+' (?)</option>';
+// Staff-ID search picker for a crew slot. Hidden input (class sel-<role>) keeps the NAME
+// — exactly what saveCrew() reads. Search by Staff ID or name; tidy short list, no name-wall.
+function crewPicker(roleClass, selected){
+  var d = _drivers.find(function(x){ return x.name === selected; });
+  var display = selected ? ((d && d.staffId ? d.staffId + ' · ' : '') + selected) : '';
+  return '<input type="text" class="crew-search select" autocomplete="off" placeholder="Staff ID atau nama" value="'+escHtml(display)+'">'
+    + '<input type="hidden" class="sel-'+roleClass+'" value="'+escHtml(selected||'')+'">'
+    + '<div class="crew-panel" style="display:none;position:absolute;left:0;right:0;z-index:30;border:1px solid #D1D5DB;border-top:none;border-radius:0 0 8px 8px;max-height:220px;overflow-y:auto;background:#fff;box-shadow:0 8px 20px rgba(17,24,39,.12);"></div>';
+}
+
+// Wire all crew search boxes (scoped per .crew-field). One shared document-click closer
+// (bound once) so re-rendering the list never stacks listeners.
+function wireCrewPickers(){
+  if(!wireCrewPickers._docBound){
+    document.addEventListener('click', function(e){
+      document.querySelectorAll('.crew-panel').forEach(function(panel){
+        var field = panel.closest('.crew-field');
+        var search = field ? field.querySelector('.crew-search') : null;
+        if(e.target !== search && !panel.contains(e.target)) panel.style.display = 'none';
+      });
+    });
+    wireCrewPickers._docBound = true;
   }
-  return html;
+  document.querySelectorAll('.crew-search').forEach(function(search){
+    if(search._wired) return; search._wired = true;
+    var field  = search.closest('.crew-field');
+    var hidden = field.querySelector('input[type=hidden]');
+    var panel  = field.querySelector('.crew-panel');
+    function render(q){
+      var nq = _normId(q), nameq = String(q||'').trim().toLowerCase();
+      if(!q || !q.trim()){ panel.style.display = 'none'; return; }
+      var matches = _drivers.filter(function(d){
+        return (d.staffId && _normId(d.staffId).indexOf(nq) >= 0) ||
+               (d.name && d.name.toLowerCase().indexOf(nameq) >= 0);
+      }).slice(0, 8);
+      panel.innerHTML = matches.length
+        ? matches.map(function(d){ return '<div class="dp-row" data-name="'+escHtml(d.name)+'" style="padding:10px 12px;border-bottom:1px solid #F3F4F6;cursor:pointer;font-size:13px;color:#111827;"><b>'+escHtml(d.staffId||'')+'</b> · '+escHtml(d.name)+'</div>'; }).join('')
+        : '<div style="padding:10px 12px;color:#9CA3AF;font-size:13px;">No match · Tiada padanan</div>';
+      panel.style.display = 'block';
+    }
+    search.addEventListener('input', function(){ hidden.value = ''; render(search.value); });
+    search.addEventListener('focus', function(){ search.select(); if(search.value.trim() && !hidden.value) render(search.value); });
+    panel.addEventListener('click', function(e){
+      var row = e.target.closest('.dp-row'); if(!row) return;
+      var name = row.getAttribute('data-name');
+      var d = _drivers.find(function(x){ return x.name === name; });
+      hidden.value = name;
+      search.value = (d && d.staffId ? d.staffId + ' · ' : '') + name;
+      panel.style.display = 'none';
+    });
+  });
 }
 
 function renderShipments(ships){
@@ -220,15 +260,16 @@ function renderShipments(ships){
       + (pending > 0 && !allDone ? ' <span class="prog-sub" style="font-size:11px">'+pending+' pending</span>' : '')
       + '</div>'
       + '<div class="crew"><div class="crew-row">'
-      + '<div class="crew-field"><label class="field-label">Primary driver</label>'
-      + '<select class="select sel-primary">'+driverOptions(s.assignedPrimary || '')+'</select></div>'
-      + '<div class="crew-field"><label class="field-label">Helper (optional)</label>'
-      + '<select class="select sel-secondary">'+driverOptions(s.assignedSecondary || '')+'</select></div>'
+      + '<div class="crew-field" style="position:relative;"><label class="field-label">Primary driver</label>'
+      + crewPicker('primary', s.assignedPrimary || '')+'</div>'
+      + '<div class="crew-field" style="position:relative;"><label class="field-label">Helper (optional)</label>'
+      + crewPicker('secondary', s.assignedSecondary || '')+'</div>'
       + '</div><div class="crew-actions"><button class="btn btn-primary btn-sm save-crew">Save assignment</button></div></div>'
       + '</div>';
   });
   html += '</div>';
   list.innerHTML = html;
+  wireCrewPickers();
 
   // attach save handlers
   list.querySelectorAll('.save-crew').forEach(btn => {

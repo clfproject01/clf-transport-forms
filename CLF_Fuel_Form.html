@@ -49,22 +49,14 @@
     position: relative;
     overflow: hidden;
   }
-  .header::before {
-    content: '';
-    position: absolute;
-    top: -40px; right: -40px;
-    width: 140px; height: 140px;
-    border-radius: 50%;
-    border: 1px solid rgba(201,168,76,0.12);
+  /* form identity — big icon + name so drivers instantly know which app this is */
+  .form-identity { display: flex; align-items: center; gap: 14px; position: relative; z-index: 1; margin-top: 4px; }
+  .form-icon {
+    width: 54px; height: 54px; flex-shrink: 0;
+    background: rgba(201,168,76,0.16); border: 1.5px solid rgba(201,168,76,0.6);
+    border-radius: 14px; display: flex; align-items: center; justify-content: center;
   }
-  .header::after {
-    content: '';
-    position: absolute;
-    bottom: -60px; left: -30px;
-    width: 160px; height: 160px;
-    border-radius: 50%;
-    border: 1px solid rgba(201,168,76,0.08);
-  }
+  .form-icon svg { width: 30px; height: 30px; stroke: var(--gold-light); fill: none; }
 
   .logo-row {
     display: flex;
@@ -121,9 +113,10 @@
   .form-badge-text { font-size: 12px; font-weight: 500; color: var(--gold-light); }
 
   .form-title {
-    font-size: 22px; font-weight: 600;
+    font-size: 30px; font-weight: 600;
     color: var(--white);
-    margin: 10px 0 4px;
+    letter-spacing: 1px; line-height: 1;
+    margin: 0;
     position: relative; z-index: 1;
   }
   .form-subtitle {
@@ -379,25 +372,29 @@
   <div class="header">
     <div class="logo-row">
       <div class="logo-box">
-        <div class="logo-text-clf">CLF<span>利發貿易</span></div>
+        <div class="logo-text-clf">CLF<span>Trading</span></div>
       </div>
       <div>
         <div class="company-name">CLF Trading Sdn. Bhd.</div>
         <div class="company-reg">557522-A · Mentakab, Pahang</div>
       </div>
     </div>
-    <div class="form-badge">
-      <div class="form-badge-dot"></div>
-      <div class="form-badge-text">FUEL SUBMISSION · PENGHANTARAN BAHAN API</div>
+    <div class="form-identity">
+      <div class="form-icon">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="22" x2="15" y2="22"/><line x1="4" y1="9" x2="14" y2="9"/><path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18"/><path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2 2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 5"/></svg>
+      </div>
+      <div>
+        <div class="form-title">FUEL</div>
+        <div class="form-subtitle">Daily Fuel Receipt · Resit Bahan Api</div>
+      </div>
     </div>
-    <div class="form-title">Daily Fuel Receipt</div>
-    <div class="form-subtitle">Submit on the same day as fueling · Hantar pada hari yang sama</div>
   </div>
 
   <!-- FORM BODY -->
   <div class="form-body">
     <div class="notice">
-      <b>Important / Penting:</b> All fields are required. Late submissions will affect your performance score. Semua ruang mesti diisi. Penghantaran lewat akan mempengaruhi markah prestasi anda.
+      <b>Important · Penting:</b> Fill all fields. Late = lower score.<br>
+      <span style="opacity:.75;">Isi semua ruang. Lewat = markah rendah.</span>
     </div>
 
     <!-- NO FUEL TODAY shortcut -->
@@ -426,27 +423,27 @@
       </div>
 
       <!-- DRIVER -->
-      <div class="field">
+      <div class="field" style="position:relative;">
         <label>
-          Driver Name · Nama Pemandu <span class="req">*</span>
+          Driver · Pemandu <span class="req">*</span>
           <span id="rememberedBadge" class="remembered-badge" style="display:none;">✓ Remembered</span>
         </label>
-        <select id="driverName" required>
-          <option value="">Loading drivers... · Memuatkan...</option>
-        </select>
-        <div class="error-msg" id="err-driver">Please select your name · Sila pilih nama anda</div>
+        <input type="text" id="driverSearch" autocomplete="off" placeholder="Staff ID (e.g. 448) atau nama" style="width:100%;box-sizing:border-box;padding:13px 16px;font-size:16px;border:1.5px solid #D8E4F0;border-radius:8px;background:#fff;color:#0B1F3A;">
+        <input type="hidden" id="driverName" required>
+        <div id="driverPanel" style="display:none;position:absolute;left:0;right:0;z-index:20;border:1.5px solid #D8E4F0;border-top:none;border-radius:0 0 8px 8px;max-height:240px;overflow-y:auto;background:#fff;box-shadow:0 6px 18px rgba(11,31,58,.15);"></div>
+        <div class="error-msg" id="err-driver">Please select your name · Sila pilih nama</div>
         <div id="staffIdBadge" style="display:none;margin-top:8px;padding:6px 12px;background:#F5E6B8;color:#412402;border-radius:6px;font-size:13px;font-weight:600;"></div>
       </div>
 
       <!-- SECOND DRIVER (optional) -->
-      <div class="field">
+      <div class="field" style="position:relative;">
         <label>
           Second Driver · Pemandu Kedua
-          <span class="bm">If two drivers share this lorry today · Jika dua pemandu berkongsi lori hari ini (optional)</span>
+          <span class="bm">If two drivers share this lorry · optional</span>
         </label>
-        <select id="secondDriver">
-          <option value="">— None / Tiada —</option>
-        </select>
+        <input type="text" id="secondSearch" autocomplete="off" placeholder="Staff ID atau nama (optional)" style="width:100%;box-sizing:border-box;padding:13px 16px;font-size:16px;border:1.5px solid #D8E4F0;border-radius:8px;background:#fff;color:#0B1F3A;">
+        <input type="hidden" id="secondDriver">
+        <div id="secondPanel" style="display:none;position:absolute;left:0;right:0;z-index:20;border:1.5px solid #D8E4F0;border-top:none;border-radius:0 0 8px 8px;max-height:240px;overflow-y:auto;background:#fff;box-shadow:0 6px 18px rgba(11,31,58,.15);"></div>
         <div id="staffIdBadge2" style="display:none;margin-top:8px;padding:6px 12px;background:#F5E6B8;color:#412402;border-radius:6px;font-size:13px;font-weight:600;"></div>
       </div>
 
@@ -488,8 +485,8 @@
       </div>
 
       <div class="notice" style="border-left-color:#C9A84C;margin-bottom:4px;">
-        <b>Photo only · Foto sahaja:</b> Just photograph the receipt — amount, litres and station will be read from the photo automatically.<br>
-        Hanya ambil foto resit — jumlah, liter dan nama stesen akan dibaca dari foto secara automatik.
+        <b>Photo only · Foto sahaja:</b> Just snap the receipt — amount, litres & station are read automatically.<br>
+        <span style="opacity:.75;">Ambil foto resit sahaja — jumlah, liter & stesen dibaca automatik.</span>
       </div>
 
       <div class="section-label">Receipt Photo · Foto Resit</div>
@@ -513,8 +510,8 @@
       <label class="confirm-row" for="confirmCheck">
         <input type="checkbox" id="confirmCheck">
         <div class="confirm-text">
-          <b>I confirm / Saya mengesahkan</b> that all information submitted is accurate and matches the actual fuel receipt. I understand that false submissions will affect my performance score.<br><br>
-          Semua maklumat yang dihantar adalah tepat dan sepadan dengan resit bahan api sebenar. Saya faham bahawa penghantaran palsu akan mempengaruhi markah prestasi saya.
+          <b>I confirm · Saya sahkan</b> all info is accurate and matches the actual receipt. <b>False submissions lower your score.</b><br>
+          <span style="opacity:.75;">Semua maklumat tepat dan sepadan dengan resit sebenar.</span>
         </div>
       </label>
       <div class="error-msg" id="err-confirm">Please confirm the declaration · Sila sahkan perisytiharan</div>
@@ -572,6 +569,48 @@ const STORAGE_KEY = 'clf_driver_name';
 
 // V17: Dynamically loaded from backend /getDrivers — empty until fetchDrivers() resolves
 let STAFF_IDS = {};
+let ROSTER = [];   // [{name, staffId}] — drives the searchable Staff-ID picker
+
+function _esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function _normId(s){ return String(s == null ? '' : s).replace(/\s+/g, '').toUpperCase(); }
+
+// "Type Staff ID or name -> filtered list -> tap -> name confirmed" picker.
+// The hidden input keeps the NAME (what validate/submit/KPI read).
+function wireDriverPicker(searchId, hiddenId, panelId, badgeId, onPick){
+  var search = document.getElementById(searchId),
+      hidden = document.getElementById(hiddenId),
+      panel  = document.getElementById(panelId),
+      badge  = document.getElementById(badgeId);
+  if (!search || !hidden || !panel) return;
+  function render(q){
+    var nq = _normId(q), nameq = String(q || '').trim().toLowerCase();
+    if (!q || !q.trim()){ panel.style.display = 'none'; return; }
+    var matches = ROSTER.filter(function(d){
+      return (d.staffId && _normId(d.staffId).indexOf(nq) >= 0) ||
+             (d.name && d.name.toLowerCase().indexOf(nameq) >= 0);
+    }).slice(0, 8);
+    panel.innerHTML = matches.length
+      ? matches.map(function(d){
+          return '<div class="dp-row" data-name="' + _esc(d.name) + '" style="padding:13px 14px;border-bottom:1px solid #EEF2F7;cursor:pointer;font-size:15px;color:#0B1F3A;">' +
+                 '<b>' + _esc(d.staffId || '') + '</b> &middot; ' + _esc(d.name) + '</div>';
+        }).join('')
+      : '<div style="padding:13px 14px;color:#8A9BB0;font-size:13px;">No match &middot; Tiada padanan</div>';
+    panel.style.display = 'block';
+  }
+  function pick(name){
+    var d = ROSTER.filter(function(x){ return x.name === name; })[0];
+    hidden.value = name;
+    search.value = (d && d.staffId ? d.staffId + ' · ' : '') + name;
+    if (badge){ badge.textContent = '✓ ' + name; badge.style.display = 'block'; }
+    panel.style.display = 'none';
+    if (onPick) onPick(name);
+  }
+  search.addEventListener('input', function(){ hidden.value = ''; if (badge) badge.style.display = 'none'; render(search.value); });
+  search.addEventListener('focus', function(){ search.select(); if (search.value.trim() && !hidden.value) render(search.value); });
+  panel.addEventListener('click', function(e){ var row = e.target.closest('.dp-row'); if (row) pick(row.getAttribute('data-name')); });
+  document.addEventListener('click', function(e){ if (e.target !== search && !panel.contains(e.target)) panel.style.display = 'none'; });
+  search._pick = pick;
+}
 
 // Fetch driver roster from Apps Script (so adding/removing in Drivers/Master_Control sheet auto-syncs)
 async function fetchAndPopulateDrivers() {
@@ -582,42 +621,30 @@ async function fetchAndPopulateDrivers() {
       throw new Error('Empty driver roster from server');
     }
     // Build STAFF_IDS map
-    STAFF_IDS = {};
+    STAFF_IDS = {}; ROSTER = data.drivers.slice();
     data.drivers.forEach(d => { STAFF_IDS[d.name] = d.staffId || ''; });
 
-    // Populate both dropdowns
-    const primary = document.getElementById('driverName');
-    const second  = document.getElementById('secondDriver');
-    primary.innerHTML = '<option value="">— Select your name · Pilih nama anda —</option>' +
-      data.drivers.map(d => '<option>' + d.name + '</option>').join('');
-    second.innerHTML = '<option value="">— None / Tiada —</option>' +
-      data.drivers.map(d => '<option>' + d.name + '</option>').join('');
-
-    // Restore remembered driver after dropdown populated
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved && STAFF_IDS[saved]) {
-      primary.value = saved;
+    // Wire the Staff-ID search pickers (hidden inputs keep the NAME)
+    wireDriverPicker('driverSearch', 'driverName', 'driverPanel', 'staffIdBadge', function(name){
+      localStorage.setItem(STORAGE_KEY, name);
       document.getElementById('rememberedBadge').style.display = 'inline-flex';
-      updateStaffIdBadge('driverName', 'staffIdBadge');
+    });
+    wireDriverPicker('secondSearch', 'secondDriver', 'secondPanel', 'staffIdBadge2', null);
+
+    // Restore remembered driver
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved && STAFF_IDS[saved] && document.getElementById('driverSearch')._pick) {
+      document.getElementById('driverSearch')._pick(saved);
+      document.getElementById('rememberedBadge').style.display = 'inline-flex';
     }
   } catch (err) {
     console.error('fetchAndPopulateDrivers failed:', err);
-    document.getElementById('driverName').innerHTML =
-      '<option value="">⚠ Failed to load drivers — refresh the page</option>';
+    var ds = document.getElementById('driverSearch');
+    if (ds) ds.placeholder = '⚠ Failed to load — refresh the page';
   }
 }
 
-function updateStaffIdBadge(selectId, badgeId) {
-  const driver = document.getElementById(selectId).value;
-  const badge = document.getElementById(badgeId);
-  if (!badge) return;
-  if (driver && STAFF_IDS[driver]) {
-    badge.textContent = 'Staff ID: ' + STAFF_IDS[driver];
-    badge.style.display = 'inline-block';
-  } else {
-    badge.style.display = 'none';
-  }
-}
+// (driver Staff-ID confirmation is now handled inside wireDriverPicker)
 
 window.onload = function() {
   // Set today's date as default (Kuala Lumpur timezone — fixes early-morning bug)
@@ -629,17 +656,7 @@ window.onload = function() {
   fetchAndPopulateDrivers();
 };
 
-document.getElementById('driverName').addEventListener('change', function() {
-  if (this.value) {
-    localStorage.setItem(STORAGE_KEY, this.value);
-    document.getElementById('rememberedBadge').style.display = 'inline-flex';
-  }
-  updateStaffIdBadge('driverName', 'staffIdBadge');
-});
-
-document.getElementById('secondDriver').addEventListener('change', function() {
-  updateStaffIdBadge('secondDriver', 'staffIdBadge2');
-});
+// (old <select> change-listeners removed — driver picking is handled by wireDriverPicker)
 
 function handlePhoto(input) {
   if (input.files && input.files[0]) {
@@ -660,7 +677,7 @@ function validate() {
   let valid = true;
   const fields = [
     { id: 'fuelDate', err: 'err-date' },
-    { id: 'driverName', err: 'err-driver' },
+    { id: 'driverName', err: 'err-driver', focusId: 'driverSearch' },
     { id: 'vehicleNo', err: 'err-vehicle' },
     { id: 'mileage', err: 'err-mileage' },
   ];
@@ -670,7 +687,7 @@ function validate() {
     const err = document.getElementById(f.err);
     if (!el.value) {
       err.classList.add('show');
-      if (valid) el.focus();
+      if (valid) { var fe = document.getElementById(f.focusId || f.id); if (fe) fe.focus(); }
       valid = false;
     } else {
       err.classList.remove('show');
@@ -697,7 +714,7 @@ function validate() {
   const sd = sdEl ? sdEl.value : '';
   if (dr && sd && dr === sd) {
     alert('Driver and Second Driver cannot be the same person.\nPemandu dan Pemandu Kedua tidak boleh sama.');
-    if (sdEl) sdEl.focus();
+    var _ss = document.getElementById('secondSearch'); if (_ss) _ss.focus();
     valid = false;
   }
 
@@ -757,7 +774,7 @@ async function submitNoFuel() {
   const vehicle = document.getElementById('vehicleNo').value;
   if (!driver) {
     document.getElementById('err-driver').classList.add('show');
-    document.getElementById('driverName').focus();
+    var _ds = document.getElementById('driverSearch'); if (_ds) _ds.focus();
     return;
   }
   if (!vehicle) {
@@ -819,10 +836,14 @@ function resetForm() {
   // Restore date and driver name (Kuala Lumpur timezone)
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
   document.getElementById('fuelDate').value = today;
+  ['staffIdBadge','staffIdBadge2'].forEach(function(id){ var b=document.getElementById(id); if(b) b.style.display='none'; });
+  var dsearch = document.getElementById('driverSearch'); if (dsearch) dsearch.value = '';
+  var ssearch = document.getElementById('secondSearch'); if (ssearch) ssearch.value = '';
   const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) document.getElementById('driverName').value = saved;
-  updateStaffIdBadge('driverName', 'staffIdBadge');
-  document.getElementById('staffIdBadge2').style.display = 'none';
+  if (saved && dsearch && dsearch._pick) {
+    dsearch._pick(saved);
+    document.getElementById('rememberedBadge').style.display = 'inline-flex';
+  }
 }
 </script>
 </body>
