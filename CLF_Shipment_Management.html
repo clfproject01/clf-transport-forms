@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CLF Trading — Shipment Management</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blue-50:#EFF6FF; --blue-500:#3B82F6; --blue-600:#2563EB; --blue-700:#1D4ED8; --blue-900:#1E3A8A;
+  --gray-50:#F9FAFB; --gray-100:#F3F4F6; --gray-200:#E5E7EB; --gray-300:#D1D5DB;
+  --gray-400:#9CA3AF; --gray-500:#6B7280; --gray-700:#374151; --gray-900:#111827;
+  --success-50:#ECFDF5; --success-500:#10B981; --success-700:#047857;
+  --warning-50:#FFFBEB; --warning-500:#F59E0B; --warning-700:#B45309;
+  --danger-50:#FEF2F2; --danger-500:#EF4444; --danger-700:#B91C1C;
+  --surface-page:#F9FAFB; --surface-card:#FFFFFF;
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:24px; --space-6:32px;
+  --text-h1:26px; --text-h2:20px; --text-h3:16px; --text-body:14px; --text-caption:12px;
+  --radius:12px; --shadow:0 1px 2px rgba(17,24,39,.06),0 1px 3px rgba(17,24,39,.1);
+}
+@media (max-width:767px){ :root{ --text-h1:21px; --text-h2:18px; } }
+*{ box-sizing:border-box; margin:0; padding:0; }
+body{ font-family:'Geist',-apple-system,system-ui,sans-serif; background:var(--surface-page); color:var(--gray-900); font-size:var(--text-body); line-height:1.5; -webkit-font-smoothing:antialiased; }
+.mono{ font-family:'Geist Mono',ui-monospace,monospace; }
+
+/* Header */
+.header{ background:var(--surface-card); border-bottom:1px solid var(--gray-200); position:sticky; top:0; z-index:50; padding:0 var(--space-5); }
+.header-inner{ max-width:1100px; margin:0 auto; height:60px; display:flex; align-items:center; justify-content:space-between; gap:var(--space-4); }
+.header-title{ font-size:var(--text-h2); font-weight:700; letter-spacing:-.01em; }
+.header-title span{ color:var(--blue-600); }
+.header-link{ font-size:var(--text-caption); color:var(--gray-500); text-decoration:none; padding:6px 12px; border:1px solid var(--gray-200); border-radius:8px; }
+.header-link:hover{ background:var(--gray-50); color:var(--gray-700); }
+
+.container{ max-width:1100px; margin:0 auto; padding:var(--space-5); }
+
+/* Toolbar */
+.toolbar{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-3); margin-bottom:var(--space-5); }
+.toolbar .field-label{ font-size:var(--text-caption); color:var(--gray-500); font-weight:500; margin-right:var(--space-1); }
+input[type=date]{ font-family:inherit; font-size:var(--text-body); padding:8px 10px; border:1px solid var(--gray-300); border-radius:8px; background:#fff; color:var(--gray-900); }
+
+/* Buttons */
+.btn{ font-family:inherit; font-size:var(--text-body); font-weight:600; padding:9px 16px; border-radius:8px; border:1px solid transparent; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:.12s; }
+.btn:disabled{ opacity:.55; cursor:not-allowed; }
+.btn-primary{ background:var(--blue-600); color:#fff; }
+.btn-primary:hover:not(:disabled){ background:var(--blue-700); }
+.btn-ghost{ background:#fff; color:var(--gray-700); border-color:var(--gray-300); }
+.btn-ghost:hover:not(:disabled){ background:var(--gray-50); }
+.btn-sm{ padding:7px 13px; font-size:var(--text-caption); }
+
+/* Upload card */
+.upload-card{ background:var(--surface-card); border:1px dashed var(--gray-300); border-radius:var(--radius); padding:var(--space-5); margin-bottom:var(--space-5); display:flex; align-items:center; justify-content:space-between; gap:var(--space-4); flex-wrap:wrap; }
+.upload-card .uc-text{ flex:1; min-width:220px; }
+.upload-card .uc-title{ font-size:var(--text-h3); font-weight:600; }
+.upload-card .uc-sub{ font-size:var(--text-caption); color:var(--gray-500); margin-top:2px; }
+
+/* Section title */
+.section-title{ font-size:var(--text-h3); font-weight:600; color:var(--gray-700); margin-bottom:var(--space-3); display:flex; align-items:center; gap:var(--space-2); }
+.section-title .count{ font-size:var(--text-caption); color:var(--gray-500); font-weight:500; }
+
+/* Shipment cards grid */
+.grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(330px,1fr)); gap:var(--space-4); }
+.card{ background:var(--surface-card); border:1px solid var(--gray-200); border-radius:var(--radius); box-shadow:var(--shadow); padding:var(--space-4); border-top:3px solid var(--blue-600); }
+.card.is-done{ border-top-color:var(--success-500); }
+.card.is-partial{ border-top-color:var(--warning-500); }
+.card-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:var(--space-2); }
+.card-lorry{ font-size:var(--text-h2); font-weight:700; letter-spacing:-.01em; }
+.card-ship{ font-size:var(--text-caption); color:var(--gray-500); margin-top:1px; }
+.badge{ font-size:10.5px; font-weight:600; padding:3px 8px; border-radius:999px; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; }
+.badge-imported{ background:var(--gray-100); color:var(--gray-500); }
+.badge-assigned{ background:var(--blue-50); color:var(--blue-700); }
+.badge-done{ background:var(--success-50); color:var(--success-700); }
+
+/* progress */
+.prog{ margin:var(--space-3) 0; }
+.prog-row{ display:flex; justify-content:space-between; font-size:var(--text-caption); margin-bottom:5px; }
+.prog-num{ font-weight:600; color:var(--gray-900); }
+.prog-sub{ color:var(--gray-500); }
+.prog-bar{ height:8px; background:var(--gray-100); border-radius:99px; overflow:hidden; }
+.prog-fill{ height:100%; background:var(--blue-600); border-radius:99px; transition:width .3s; }
+.card.is-done .prog-fill{ background:var(--success-500); }
+.card.is-partial .prog-fill{ background:var(--warning-500); }
+.pill-warn{ display:inline-block; margin-top:6px; font-size:11px; color:var(--warning-700); background:var(--warning-50); border:1px solid var(--warning-500); border-radius:6px; padding:2px 7px; }
+
+/* crew */
+.crew{ border-top:1px solid var(--gray-100); margin-top:var(--space-3); padding-top:var(--space-3); }
+.crew-row{ display:flex; gap:var(--space-2); margin-bottom:var(--space-2); }
+.crew-field{ flex:1; }
+.field-label{ display:block; font-size:11px; font-weight:500; color:var(--gray-500); margin-bottom:3px; }
+.select{ width:100%; font-family:inherit; font-size:var(--text-body); padding:8px 9px; border:1px solid var(--gray-300); border-radius:8px; background:#fff; color:var(--gray-900); }
+.crew-actions{ display:flex; justify-content:flex-end; }
+
+/* states */
+.empty,.loading{ text-align:center; color:var(--gray-500); padding:var(--space-6) var(--space-4); background:var(--surface-card); border:1px solid var(--gray-200); border-radius:var(--radius); }
+.empty .e-title{ font-size:var(--text-h3); color:var(--gray-700); font-weight:600; margin-bottom:4px; }
+
+/* toast */
+.toast{ position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px); opacity:0; pointer-events:none; min-width:260px; max-width:90vw; padding:12px 16px; border-radius:10px; font-size:var(--text-body); font-weight:500; box-shadow:0 8px 24px rgba(17,24,39,.18); transition:.25s; z-index:100; }
+.toast.is-visible{ opacity:1; transform:translateX(-50%) translateY(0); }
+.toast.is-success{ background:var(--success-50); color:var(--success-700); border:1px solid var(--success-500); }
+.toast.is-warning{ background:var(--warning-50); color:var(--warning-700); border:1px solid var(--warning-500); }
+.toast.is-danger{ background:var(--danger-50); color:var(--danger-700); border:1px solid var(--danger-500); }
+.toast.is-info{ background:var(--blue-50); color:var(--blue-700); border:1px solid var(--blue-500); }
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="header-inner">
+    <div class="header-title">CLF <span>Shipment</span> Management</div>
+    <a class="header-link" href="CLF_Dashboard.html">← Dashboard</a>
+  </div>
+</header>
+
+<div class="container">
+  <!-- Upload -->
+  <div class="upload-card">
+    <div class="uc-text">
+      <div class="uc-title">📥 Upload Delivery Form (CSV)</div>
+      <div class="uc-sub">Export the Shipment CSV from your system, then upload it here. One file per lorry.</div>
+    </div>
+    <input type="file" id="csvFile" accept=".csv" style="display:none">
+    <button class="btn btn-primary" id="uploadBtn">Choose CSV file…</button>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <span class="field-label">Date</span>
+    <input type="date" id="dateInput">
+    <button class="btn btn-ghost btn-sm" id="refreshBtn">↻ Refresh</button>
+  </div>
+
+  <div class="section-title">Lorries / Shipments <span class="count" id="shipCount"></span></div>
+  <div id="list"><div class="loading">Loading…</div></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxabHh2Kd04z7k0zZOOoaJs2i5hgycQsO_AYoRS99xZx2WqMJ6cowumY0e1znehiRM1/exec';
+
+let _drivers = [];     // [{name, staffId}]
+let _date = '';
+
+// ── helpers ──
+function escHtml(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function pad(n){ return (n < 10 ? '0' : '') + n; }
+function todayStr(){ const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
+function showToast(msg, type){
+  const t = document.getElementById('toast');
+  t.className = 'toast is-' + (type || 'info') + ' is-visible';
+  t.textContent = msg;
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => t.classList.remove('is-visible'), 5000);
+}
+
+// ── data loads ──
+async function loadDrivers(){
+  try{
+    const res = await fetch(SCRIPT_URL + '?action=getDrivers');
+    const data = await res.json();
+    _drivers = (data && data.drivers) ? data.drivers : [];
+  }catch(e){ _drivers = []; showToast('Could not load driver list — assignment dropdowns may be empty.', 'warning'); }
+}
+
+async function loadShipments(){
+  const list = document.getElementById('list');
+  list.innerHTML = '<div class="loading">Loading…</div>';
+  try{
+    const res = await fetch(SCRIPT_URL + '?action=getShipmentsForDate&date=' + encodeURIComponent(_date));
+    const data = await res.json();
+    if(!data || data.status !== 'ok'){ list.innerHTML = '<div class="empty"><div class="e-title">Could not load</div>'+escHtml((data&&data.message)||'Unexpected response')+'</div>'; return; }
+    renderShipments(data.shipments || []);
+  }catch(e){
+    list.innerHTML = '<div class="empty"><div class="e-title">Cannot reach server</div>'+escHtml(e.message||'network error')+'</div>';
+  }
+}
+
+// ── render ──
+function driverOptions(selected){
+  let html = '<option value="">— Not assigned —</option>';
+  _drivers.forEach(d => {
+    const nm = d.name || '';
+    const sel = (nm === selected) ? ' selected' : '';
+    html += '<option value="'+escHtml(nm)+'"'+sel+'>'+escHtml(nm)+(d.staffId ? ' ('+escHtml(d.staffId)+')' : '')+'</option>';
+  });
+  // keep an unknown stored value visible even if not in roster
+  if(selected && !_drivers.some(d => d.name === selected)){
+    html += '<option value="'+escHtml(selected)+'" selected>'+escHtml(selected)+' (?)</option>';
+  }
+  return html;
+}
+
+function renderShipments(ships){
+  document.getElementById('shipCount').textContent = ships.length ? ('· ' + ships.length) : '';
+  const list = document.getElementById('list');
+  if(!ships.length){
+    list.innerHTML = '<div class="empty"><div class="e-title">No shipments for ' + escHtml(_date) + '</div>Upload a Delivery Form CSV above to get started.</div>';
+    return;
+  }
+  let html = '<div class="grid">';
+  ships.forEach(s => {
+    const planned = Number(s.planned) || 0;
+    const delivered = Number(s.delivered) || 0;
+    const failed = Number(s.failed) || 0;
+    const pending = Number(s.pending) || 0;
+    const pct = (s.pct == null) ? 0 : Number(s.pct);
+    const allDone = planned > 0 && delivered >= planned;
+    const cls = allDone ? 'is-done' : (delivered > 0 || failed > 0 ? 'is-partial' : '');
+    const badge = allDone ? '<span class="badge badge-done">Done</span>'
+                : (s.status === 'assigned' ? '<span class="badge badge-assigned">Assigned</span>'
+                : '<span class="badge badge-imported">Imported</span>');
+    html += '<div class="card '+cls+'" data-ship="'+escHtml(s.shipmentNo)+'">'
+      + '<div class="card-head"><div><div class="card-lorry">'+escHtml(s.lorryNo || '—')+'</div>'
+      + '<div class="card-ship mono">'+escHtml(s.shipmentNo)+'</div></div>'+badge+'</div>'
+      + '<div class="prog"><div class="prog-row"><span class="prog-num">'+delivered+' / '+planned+' delivered</span>'
+      + '<span class="prog-sub">'+pct+'%</span></div>'
+      + '<div class="prog-bar"><div class="prog-fill" style="width:'+pct+'%"></div></div>'
+      + (failed > 0 ? '<span class="pill-warn">'+failed+' failed</span>' : '')
+      + (pending > 0 && !allDone ? ' <span class="prog-sub" style="font-size:11px">'+pending+' pending</span>' : '')
+      + '</div>'
+      + '<div class="crew"><div class="crew-row">'
+      + '<div class="crew-field"><label class="field-label">Primary driver</label>'
+      + '<select class="select sel-primary">'+driverOptions(s.assignedPrimary || '')+'</select></div>'
+      + '<div class="crew-field"><label class="field-label">Helper (optional)</label>'
+      + '<select class="select sel-secondary">'+driverOptions(s.assignedSecondary || '')+'</select></div>'
+      + '</div><div class="crew-actions"><button class="btn btn-primary btn-sm save-crew">Save assignment</button></div></div>'
+      + '</div>';
+  });
+  html += '</div>';
+  list.innerHTML = html;
+
+  // attach save handlers
+  list.querySelectorAll('.save-crew').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const card = btn.closest('.card');
+      const shipmentNo = card.getAttribute('data-ship');
+      const primary = card.querySelector('.sel-primary').value;
+      const secondary = card.querySelector('.sel-secondary').value;
+      saveCrew(shipmentNo, primary, secondary, btn);
+    });
+  });
+}
+
+// ── writes ──
+async function saveCrew(shipmentNo, primary, secondary, btn){
+  if(!primary){ showToast('Pick a primary driver first.', 'warning'); return; }
+  btn.disabled = true; const old = btn.textContent; btn.textContent = 'Saving…';
+  try{
+    const url = SCRIPT_URL + '?action=ASSIGN_SHIPMENT_CREW'
+      + '&shipmentNo=' + encodeURIComponent(shipmentNo)
+      + '&primary='    + encodeURIComponent(primary)
+      + '&secondary='  + encodeURIComponent(secondary || '');
+    const res = await fetch(url);
+    const data = await res.json();
+    if(data && data.status === 'success'){
+      showToast('Assigned ' + shipmentNo + ' → ' + primary + (secondary ? ' + ' + secondary : ''), 'success');
+      loadShipments();
+    }else{
+      showToast('Save failed: ' + ((data && data.message) || 'unknown'), 'danger');
+      btn.disabled = false; btn.textContent = old;
+    }
+  }catch(e){
+    showToast('Network error: ' + (e.message || 'unknown'), 'danger');
+    btn.disabled = false; btn.textContent = old;
+  }
+}
+
+// Import is a POST (CSV can be large). no-cors = blind, so we read back the list to confirm.
+async function uploadCsv(file){
+  let text;
+  try{ text = await file.text(); }catch(e){ showToast('Could not read file.', 'danger'); return; }
+  if(!text || text.indexOf(',') < 0){ showToast('That does not look like a CSV.', 'warning'); return; }
+  showToast('Uploading "' + file.name + '"… verifying…', 'info');
+  try{
+    await fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ formType: 'IMPORT_SHIPMENT', csvText: text, fileName: file.name, importedBy: 'SUPERVISOR' })
+    });
+  }catch(e){ showToast('Upload error: ' + (e.message || 'unknown'), 'danger'); return; }
+  // Import response is unreadable (no-cors) → read back the list to confirm.
+  // Apps Script can be slow, so refresh twice (the row may not exist on the first pass).
+  setTimeout(loadShipments, 2000);
+  setTimeout(() => {
+    loadShipments();
+    showToast('Upload sent. If your lorry / invoice count is not shown below yet, tap ↻ Refresh in a moment.', 'info');
+  }, 4500);
+}
+
+// ── init ──
+document.getElementById('uploadBtn').addEventListener('click', () => document.getElementById('csvFile').click());
+document.getElementById('csvFile').addEventListener('change', e => {
+  const f = e.target.files && e.target.files[0];
+  if(f) uploadCsv(f);
+  e.target.value = '';   // allow re-selecting the same file
+});
+document.getElementById('refreshBtn').addEventListener('click', loadShipments);
+document.getElementById('dateInput').addEventListener('change', e => { _date = e.target.value || todayStr(); loadShipments(); });
+
+(async function init(){
+  _date = todayStr();
+  document.getElementById('dateInput').value = _date;
+  await loadDrivers();
+  await loadShipments();
+})();
+</script>
+</body>
+</html>
