@@ -297,6 +297,11 @@
         <div class="error-msg" id="err-vehicle">Please select a vehicle · Sila pilih kenderaan</div>
       </div>
 
+      <!-- B4: shipment-aware delivery checklist (auto-shows when this lorry has a shipment today) -->
+      <div id="shipmentSection" style="display:none;"></div>
+      <input type="file" id="shipPhoto" accept="image/*" capture="environment" multiple style="display:none;" onchange="onShipPhoto(this)">
+
+      <div id="manualPodSection">
       <div class="section-label">Signed Invoice Photo · Foto Invois Ditandatangani</div>
 
       <div class="notice">
@@ -335,6 +340,7 @@
         </button>
         <div class="teal-bar"></div>
       </div>
+      </div><!-- /manualPodSection -->
 
     </form>
   </div>
@@ -636,6 +642,7 @@ function resetForm() {
   document.getElementById('podForm').reset();
   collectedPhotos = [];
   renderPhotoGrid();
+  if (typeof resetShipmentView === 'function') resetShipmentView();
   // Kuala Lumpur timezone
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
   document.getElementById('deliveryDate').value = today;
@@ -645,6 +652,157 @@ function resetForm() {
     updateStaffIdBadge('driverName', 'staffIdBadge');
   }
 }
+
+// ===================== B4: Shipment-aware delivery checklist =====================
+function _esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+var _shipKey = '';
+var _shipGroups = [];   // [{name, code, area, invs:[item]}]
+var _deliverIdx = -1;   // group index awaiting photos
+
+function resetShipmentView(){
+  var sec = document.getElementById('shipmentSection');
+  var man = document.getElementById('manualPodSection');
+  if (sec) { sec.style.display='none'; sec.innerHTML=''; }
+  if (man) man.style.display='';
+  _shipKey=''; _shipGroups=[]; _deliverIdx=-1;
+}
+
+// When vehicle + date are set, check if this lorry has a shipment today.
+async function checkShipmentForVehicle(keepListOnFail){
+  var vehicle = document.getElementById('vehicleNo').value;
+  var date = document.getElementById('deliveryDate').value;
+  var sec = document.getElementById('shipmentSection');
+  var man = document.getElementById('manualPodSection');
+  if (!sec || !man) return;
+  function fallManual(){ if (keepListOnFail) return; sec.style.display='none'; man.style.display=''; }  // on read-back, keep the list visible
+  if (!vehicle || !date){ fallManual(); return; }
+  if (!keepListOnFail){ sec.style.display='block'; sec.innerHTML = '<div style="padding:14px;text-align:center;color:#854F0B;">Checking delivery list… · Menyemak…</div>'; }
+  try{
+    var res = await fetch(SCRIPT_URL + '?action=getShipmentForLorry&vehicleNo=' + encodeURIComponent(vehicle) + '&date=' + encodeURIComponent(date));
+    var data = await res.json();
+    if (data && data.status==='ok' && data.shipments && data.shipments.length && data.items && data.items.length){
+      _shipKey = data.shipments[0].shipmentNo;
+      _buildGroups(data.items);
+      sec.style.display='block'; man.style.display='none';   // has a list → use it (manual reachable via walk-in link)
+      renderShipmentList();
+    } else {
+      fallManual();   // no list → manual flow (read-back keeps current view)
+    }
+  }catch(e){
+    fallManual();     // error → manual fallback (read-back keeps current view)
+  }
+}
+
+function _buildGroups(items){
+  var map = {}; _shipGroups = [];
+  items.forEach(function(it){
+    var k = it.custCode || it.customerName || it.invoiceNo;
+    if (!map[k]){ map[k] = { name: it.customerName||k, area: it.area||'', invs: [] }; _shipGroups.push(map[k]); }
+    map[k].invs.push(it);
+  });
+}
+
+function renderShipmentList(){
+  var sec = document.getElementById('shipmentSection');
+  var all = []; _shipGroups.forEach(function(g){ g.invs.forEach(function(i){ all.push(i); }); });
+  var total = all.length;
+  var done = all.filter(function(i){ return String(i.status).toLowerCase()==='delivered'; }).length;
+  var failed = all.filter(function(i){ return String(i.status).toLowerCase()==='failed'; }).length;
+  var pct = total ? Math.round(done/total*100) : 0;
+  var vehicle = document.getElementById('vehicleNo').value;
+  var html = '<div class="section-label">📋 Today\'s Delivery List · Senarai Penghantaran</div>'
+    + '<div style="background:#FFF8E1;border:1px solid #F0D9A8;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:#412402;">'
+    + '<b>'+_esc(vehicle)+'</b> · '+done+' / '+total+' delivered'+(failed?' · '+failed+' problem':'')
+    + '<div style="height:8px;background:#F0D9A8;border-radius:99px;margin-top:7px;overflow:hidden;"><div style="height:100%;width:'+pct+'%;background:#2E7D32;border-radius:99px;transition:width .3s;"></div></div></div>';
+  _shipGroups.forEach(function(g, i){
+    var gDone = g.invs.every(function(x){ return String(x.status).toLowerCase()==='delivered'; });
+    var gFail = !gDone && g.invs.some(function(x){ return String(x.status).toLowerCase()==='failed'; });
+    var color = gDone ? '#2E7D32' : (gFail ? '#C62828' : '#C9A227');
+    var badge = gDone ? '<span style="color:#2E7D32;font-weight:700;font-size:13px;">&#10003; Delivered</span>'
+              : (gFail ? '<span style="color:#C62828;font-weight:700;font-size:13px;">&#10007; Problem</span>' : '');
+    html += '<div style="border:1px solid #E0C68A;border-left:5px solid '+color+';border-radius:8px;padding:12px;margin-bottom:10px;'+(gDone?'opacity:.55;':'')+'">'
+      + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;"><div style="font-weight:700;font-size:15px;color:#412402;">'+_esc(g.name)+'</div>'+badge+'</div>'
+      + '<div style="font-size:12px;color:#854F0B;margin:3px 0 6px;">'+_esc(g.area)+' · '+g.invs.length+' invoice(s)</div>'
+      + '<div style="font-size:11px;color:#6b5836;margin-bottom:'+(gDone?'0':'10px')+';word-break:break-all;">'+ g.invs.map(function(x){ return _esc(x.invoiceNo); }).join(' · ') +'</div>';
+    if (!gDone){
+      html += '<div style="display:flex;gap:8px;">'
+        + '<button type="button" class="ship-deliver" data-i="'+i+'" style="flex:1;background:#2E7D32;color:#fff;border:none;border-radius:8px;padding:11px;font-weight:700;font-size:13px;cursor:pointer;">&#128247; Photo + Delivered</button>'
+        + '<button type="button" class="ship-fail" data-i="'+i+'" style="background:#fff;color:#854F0B;border:1px solid #E0C68A;border-radius:8px;padding:11px 12px;font-weight:600;font-size:13px;cursor:pointer;">Problem</button>'
+        + '</div>'
+        + '<div class="ship-reasons" data-i="'+i+'" style="display:none;gap:6px;flex-wrap:wrap;margin-top:8px;">'
+        + ['Shop closed','Rejected','Partial','Reschedule'].map(function(r){ return '<button type="button" class="ship-reason" data-i="'+i+'" data-r="'+_esc(r)+'" style="background:#FFF3CD;color:#854F0B;border:1px solid #E0C68A;border-radius:6px;padding:7px 10px;font-size:12px;cursor:pointer;">'+_esc(r)+'</button>'; }).join('')
+        + '</div>';
+    }
+    html += '</div>';
+  });
+  html += '<button type="button" id="showManualBtn" style="width:100%;margin-top:4px;background:none;border:1px dashed #C9A227;color:#854F0B;border-radius:8px;padding:10px;font-size:12px;cursor:pointer;">&#128694; Walk-in / not in list — submit manually &#8595;</button>';
+  sec.innerHTML = html;
+}
+
+// click delegation on the shipment section
+document.getElementById('shipmentSection').addEventListener('click', function(e){
+  var del = e.target.closest('.ship-deliver');
+  if (del){ _deliverIdx = parseInt(del.getAttribute('data-i'),10); document.getElementById('shipPhoto').click(); return; }
+  var fb = e.target.closest('.ship-fail');
+  if (fb){ var i = fb.getAttribute('data-i'); var box = document.querySelector('.ship-reasons[data-i="'+i+'"]'); if (box) box.style.display = (box.style.display==='none'?'flex':'none'); return; }
+  var rb = e.target.closest('.ship-reason');
+  if (rb){ failGroup(parseInt(rb.getAttribute('data-i'),10), rb.getAttribute('data-r')); return; }
+  if (e.target.closest('#showManualBtn')){ var man=document.getElementById('manualPodSection'); if(man) man.style.display=''; e.target.closest('#showManualBtn').style.display='none'; return; }
+});
+
+// photo taken for a customer → submit delivery for that customer's pending invoices
+async function onShipPhoto(input){
+  if (_deliverIdx < 0 || !input.files || !input.files.length){ input.value=''; return; }
+  var g = _shipGroups[_deliverIdx];
+  if (!g){ input.value=''; return; }
+  var overlay = document.getElementById('loadingOverlay');
+  document.querySelector('.loading-text').textContent = 'Uploading… · Memuat naik…';
+  overlay.classList.add('show');
+  try{
+    var photos = [];
+    for (var f=0; f<input.files.length && f<10; f++){
+      var entry;
+      try { entry = await compressImage(input.files[f]); } catch(err){ entry = await readFileAsDataUrl(input.files[f]); }
+      photos.push({ base64: entry.dataUrl.split(',')[1], name: entry.name, type: entry.type });
+    }
+    var pendingInvs = g.invs.filter(function(x){ return String(x.status).toLowerCase()!=='delivered'; }).map(function(x){ return x.invoiceNo; });
+    var _drv = document.getElementById('driverName').value;
+    var _sd  = document.getElementById('secondDriver').value || '';
+    if (_sd === _drv) _sd = '';   // same name twice → drop helper (avoid double KPI count; mirrors manual validate)
+    var now = new Date();
+    var payload = { formType:'SUBMIT_POD_FOR_INVOICE', shipmentKey:_shipKey, invoiceNos:pendingInvs,
+      driverName: _drv, secondDriver: _sd,
+      vehicleNo: document.getElementById('vehicleNo').value, deliveryDate: document.getElementById('deliveryDate').value,
+      timestamp: now.toISOString(), photos: photos };
+    var fd = new FormData(); fd.append('data', JSON.stringify(payload));
+    await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body: fd });
+    g.invs.forEach(function(x){ x.status='delivered'; });   // optimistic
+    renderShipmentList();
+  }catch(err){
+    alert('Upload failed, please retry · Muat naik gagal, sila cuba lagi');
+  }finally{
+    overlay.classList.remove('show'); input.value=''; _deliverIdx=-1;
+    setTimeout(function(){ checkShipmentForVehicle(true); }, 2500);   // read-back to confirm (no-cors can't read the POST); keep list if read-back fails
+  }
+}
+
+// mark all of a customer's pending invoices as not-delivered, with a reason
+async function failGroup(i, reason){
+  var g = _shipGroups[i]; if (!g) return;
+  var pending = g.invs.filter(function(x){ return String(x.status).toLowerCase()!=='delivered'; });
+  try{
+    for (var k=0; k<pending.length; k++){
+      await fetch(SCRIPT_URL + '?action=MARK_INVOICE_FAILED&shipmentKey=' + encodeURIComponent(_shipKey)
+        + '&invoiceNo=' + encodeURIComponent(pending[k].invoiceNo) + '&reason=' + encodeURIComponent(reason));
+      pending[k].status = 'failed';
+    }
+  }catch(e){ alert('Could not save · Gagal simpan'); }
+  finally{ renderShipmentList(); }
+}
+
+// wire vehicle + date selection to the shipment check (wrappers so the change-event isn't passed as keepListOnFail)
+document.getElementById('vehicleNo').addEventListener('change', function(){ checkShipmentForVehicle(); });
+document.getElementById('deliveryDate').addEventListener('change', function(){ checkShipmentForVehicle(); });
 </script>
 </body>
 </html>
