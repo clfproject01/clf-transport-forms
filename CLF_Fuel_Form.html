@@ -484,9 +484,28 @@
         <div class="error-msg" id="err-mileage">Please enter mileage · Sila masukkan bacaan odometer</div>
       </div>
 
+      <!-- AMOUNT (RM) — driver-entered (decision 2026-06-05) -->
+      <div class="field">
+        <label>
+          Fuel Amount (RM) · Jumlah Bahan Api (RM) <span class="req">*</span>
+          <span class="bm">Total RM on the receipt · Jumlah RM pada resit</span>
+        </label>
+        <input type="number" id="amount" placeholder="e.g. 180.00" min="0" step="0.01" required>
+        <div class="error-msg" id="err-amount">Please enter the fuel amount · Sila masukkan jumlah</div>
+      </div>
+
+      <!-- LITRES (optional) -->
+      <div class="field">
+        <label>
+          Litres · Liter
+          <span class="bm">Optional · Pilihan</span>
+        </label>
+        <input type="number" id="litres" placeholder="e.g. 120.5" min="0" step="0.01">
+      </div>
+
       <div class="notice" style="border-left-color:#C9A84C;margin-bottom:4px;">
-        <b>Photo only · Foto sahaja:</b> Just snap the receipt — amount, litres & station are read automatically.<br>
-        <span style="opacity:.75;">Ambil foto resit sahaja — jumlah, liter & stesen dibaca automatik.</span>
+        <b>Snap the receipt too · Ambil foto resit juga:</b> we read it to double-check your amount.<br>
+        <span style="opacity:.75;">Kami baca resit untuk semak semula jumlah &amp; liter anda.</span>
       </div>
 
       <div class="section-label">Receipt Photo · Foto Resit</div>
@@ -708,6 +727,15 @@ function validate() {
     document.getElementById('err-confirm').classList.remove('show');
   }
 
+  // Amount required — driver-entered fuel cost (decision 2026-06-05)
+  const _amt = document.getElementById('amount');
+  if (!_amt || _amt.value === '' || isNaN(parseFloat(_amt.value)) || parseFloat(_amt.value) <= 0) {
+    document.getElementById('err-amount').classList.add('show');
+    valid = false;
+  } else {
+    document.getElementById('err-amount').classList.remove('show');
+  }
+
   // B18 fix: driver and secondDriver must not be the same person (would double-count credit)
   const dr = document.getElementById('driverName').value;
   const sdEl = document.getElementById('secondDriver');
@@ -739,6 +767,8 @@ async function submitForm() {
       secondDriver: document.getElementById('secondDriver').value || '',
       vehicleNo: document.getElementById('vehicleNo').value,
       mileage: document.getElementById('mileage').value,
+      amount: document.getElementById('amount').value,
+      litres: document.getElementById('litres').value || '',
       photoBase64: base64,
       photoName: photoFile.name,
       photoType: photoFile.type,
