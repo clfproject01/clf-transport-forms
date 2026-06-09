@@ -263,7 +263,8 @@
   }
 
   function renderTop(ship, fuel){
-    var n = (ship && ship.shipments) ? ship.shipments.length : 0;
+    var routes = (ship && ship.shipments) ? ship.shipments : [];
+    var n = routes.length + routes.filter(function(s){ return s.lorry2; }).length;  // +1 per shared route's 2nd lorry
     $('dashMeta').textContent = selectedDate + ' · ' + n + ' lorries dispatched';
     $('podScope').textContent = '— for ' + selectedDate;
     $('fuelScope').textContent = (fuel && fuel.periodLabel) ? ('— ' + fuel.periodLabel) : '';
@@ -292,8 +293,8 @@
 
     // Haven't submitted POD
     var ns = (ship.notStarted||[]);
-    $('podNotSubmitted').innerHTML = ns.length ? ns.map(function(x){ return '<span class="chip red">'+idName(x.driver)+' <span class="mono" style="opacity:.65;">· '+esc(x.lorryNo)+'</span></span>'; }).join('') : '<span class="chip green">All assigned lorries have started ✓</span>';
-    $('podNotSubmittedNote').textContent = ns.length ? (ns.length+' of '+((ship.shipments||[]).length)+' lorries haven\'t begun.') : '';
+    $('podNotSubmitted').innerHTML = ns.length ? ns.map(function(x){ return '<span class="chip red">'+idName(x.driver)+' <span class="mono" style="opacity:.65;">· '+esc(x.lorryNo)+'</span></span>'; }).join('') : '<span class="chip green">All routes have started ✓</span>';
+    $('podNotSubmittedNote').textContent = ns.length ? (ns.length+' of '+((ship.shipments||[]).length)+' routes haven\'t started POD.') : '';
 
     // Per-lorry success (started only, worst at top)
     var started = (ship.shipments||[]).filter(function(s){ return (s.delivered||0) > 0 && (s.planned||0) > 0; });
@@ -323,7 +324,7 @@
       var pct = s.planned>0 ? Math.round(((s.delivered||0)/s.planned)*100) : 0;
       var notStarted = (s.delivered||0)===0;
       var fracHtml = '<span class="prog-mini"><i style="width:'+pct+'%;'+(notStarted?'background:var(--red-500);':'')+'"></i></span><span class="prog-frac"'+(notStarted?' style="color:var(--red-700);font-weight:600;"':'')+'>'+(s.delivered||0)+' / '+(s.planned||0)+'</span>';
-      return '<tr'+(notStarted?' class="pend"':'')+'><td>'+esc(s.lorryNo)+'</td><td>'+idName(s.assignedPrimary)+'</td><td>'+(s.assignedSecondary?idName(s.assignedSecondary):'—')+'</td><td>'+fracHtml+'</td></tr>';
+      return '<tr'+(notStarted?' class="pend"':'')+'><td>'+esc(s.lorryNo)+(s.lorry2?' <span style="color:#1A56DB;font-weight:600">+ '+esc(s.lorry2)+'</span>':'')+'</td><td>'+idName(s.assignedPrimary)+'</td><td>'+(s.assignedSecondary?idName(s.assignedSecondary):'—')+'</td><td>'+fracHtml+'</td></tr>';
     }).join('') : '<tr><td colspan="4" class="empty">No shipments imported for this date.</td></tr>';
 
     // Route picker + stops

@@ -254,7 +254,8 @@ function renderShipments(ships){
                 : (s.status === 'assigned' ? '<span class="badge badge-assigned">Assigned</span>'
                 : '<span class="badge badge-imported">Imported</span>');
     html += '<div class="card '+cls+'" data-ship="'+escHtml(s.shipmentNo)+'">'
-      + '<div class="card-head"><div><div class="card-lorry">'+escHtml(s.lorryNo || '—')+'</div>'
+      + '<div class="card-head"><div><div class="card-lorry">'+escHtml(s.lorryNo || '—')
+      + (s.lorry2 ? ' <span style="font-size:13px;font-weight:600;color:#1A56DB">+ '+escHtml(s.lorry2)+' (2nd lorry)</span>' : '')+'</div>'
       + '<div class="card-ship mono">'+escHtml(s.shipmentNo)+'</div></div>'+badge+'</div>'
       + '<div class="prog"><div class="prog-row"><span class="prog-num">'+delivered+' / '+planned+' delivered</span>'
       + '<span class="prog-sub">'+pct+'%</span></div>'
@@ -394,6 +395,27 @@ async function uploadCsv(file, mode){
   }
 
   if(result.status === 'needs_decision'){
+    // SAME route (DL#) already assigned to another lorry → the office wants 2 lorries on one route.
+    if(result.decision === 'second_lorry'){
+      const addSecond = confirm('⚠ Route ' + (result.shipmentNo || '') + ' is already assigned to '
+        + result.existingLorry + ' (' + result.existingStops + ' stops, ' + result.existingDelivered + ' delivered).\n\n'
+        + 'This new form is for ' + result.newLorry + '.\n\n'
+        + 'OK = Add ' + result.newLorry + ' as a 2nd lorry on the SAME route '
+        + '(both lorries share this delivery list — counted once, no double-count).\n'
+        + 'Cancel = other options.');
+      if(addSecond){ uploadCsv(file, 'lorry2'); return; }
+      const repMsg2 = (result.existingDelivered > 0)
+        ? ('⚠ DANGER — Replace will REMOVE ' + result.existingLorry + ' from this route, INCLUDING its '
+           + result.existingDelivered + ' DELIVERED stop(s).\n\nOnly do this if ' + result.existingLorry
+           + ' was assigned by mistake.\n\nOK = Replace with ' + result.newLorry + '.\nCancel = do nothing.')
+        : ('Replace ' + result.existingLorry + ' with ' + result.newLorry + ' on this route?\n\n'
+           + 'OK = Replace.\nCancel = do nothing.');
+      if(confirm(repMsg2)){ uploadCsv(file, 'replace'); return; }
+      showToast('Import cancelled — nothing changed.', 'info');
+      loadShipments();
+      return;
+    }
+    // Otherwise: SAME lorry already has a DIFFERENT shipment today (2nd trip).
     const isSecond = confirm('⚠ ' + result.lorryNo + ' already has a shipment today ('
       + result.existingStops + ' stops, ' + result.existingDelivered + ' delivered).\n\n'
       + 'This NEW file has ' + result.newStops + ' stops.\n\n'
@@ -416,6 +438,10 @@ async function uploadCsv(file, mode){
     if(result.mode === 'append'){
       showToast('✅ Added ' + result.added + ' stop(s) to ' + (result.lorryNo || '') +
                 ' as a 2nd trip — now ' + result.itemCount + ' total.', 'success');
+    }else if(result.mode === 'lorry2'){
+      showToast('✅ ' + (result.lorry2 || '') + ' added as a 2nd lorry on route ' +
+                (result.shipmentNo || result.shipmentKey || '') + ' (shared with ' + (result.lorryNo || '') +
+                ' — counted once).', 'success');
     }else{
       const via = result.parserUsed === 'gemini' ? ' (auto-recovered)' : '';
       showToast('✅ Imported ' + (result.lorryNo || result.shipmentNo || '') + ' — ' +

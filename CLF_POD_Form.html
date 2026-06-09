@@ -732,6 +732,11 @@ async function checkShipmentForVehicle(keepListOnFail){
 // Skips gracefully if the assigned name isn't in ROSTER.
 function _autoFillAssignedDrivers(shipment){
   if (!shipment) return;
+  // 2-lorries-one-route: the assigned crew belongs to the PRIMARY lorry. If the driver picked the
+  // 2nd lorry, do NOT auto-fill (it would show the wrong driver) — let them pick themselves.
+  var _veh = String(document.getElementById('vehicleNo').value || '').replace(/\s+/g,'').toUpperCase();
+  var _prim = String(shipment.lorryNo || '').replace(/\s+/g,'').toUpperCase();
+  if (_veh && _prim && _veh !== _prim) return;
   function inRoster(name){ return ROSTER.some(function(d){ return d.name === name; }); }
   var primary = String(shipment.assignedPrimary || '').trim();
   var hidden  = document.getElementById('driverName');
