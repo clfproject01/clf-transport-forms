@@ -356,7 +356,7 @@ async function deleteShipment(shipmentNo, btn, force){
 
 // Import is a POST (CSV can be large, must ride in the body). no-cors = the POST response is
 // unreadable, so we send a clientToken and poll a readable GET for the structured result.
-async function uploadCsv(file){
+async function uploadCsv(file, mode){
   let text;
   try{ text = await file.text(); }catch(e){ showToast('❌ Could not read this file — NOT imported.', 'danger'); return; }
   if(!text || !text.trim()){ showToast('❌ This file is empty — NOT imported.', 'danger'); return; }
@@ -364,14 +364,15 @@ async function uploadCsv(file){
   // The server-side arithmetic gate (sum == TOTAL) is the real guard against a wrong/garbage file.
 
   const token = 'imp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
-  showToast('Uploading "' + file.name + '"… verifying…', 'info');
+  showToast(mode ? ('Importing as ' + (mode === 'append' ? '2nd trip' : 'replacement') + '…')
+                 : ('Uploading "' + file.name + '"… verifying…'), 'info');
   try{
     await fetch(SCRIPT_URL, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ formType: 'IMPORT_SHIPMENT', csvText: text, fileName: file.name,
-                             importedBy: 'SUPERVISOR', clientToken: token })
+                             importedBy: 'SUPERVISOR', clientToken: token, mode: mode || '' })
     });
   }catch(e){ showToast('Upload error: ' + (e.message || 'unknown'), 'danger'); return; }
 
@@ -392,10 +393,34 @@ async function uploadCsv(file){
     return;
   }
 
+  if(result.status === 'needs_decision'){
+    const isSecond = confirm('⚠ ' + result.lorryNo + ' already has a shipment today ('
+      + result.existingStops + ' stops, ' + result.existingDelivered + ' delivered).\n\n'
+      + 'This NEW file has ' + result.newStops + ' stops.\n\n'
+      + 'OK = ADD these as a 2nd trip (keep the first — already-done stops stay done).\n'
+      + 'Cancel = other options.');
+    if(isSecond){ uploadCsv(file, 'append'); return; }
+    const replaceMsg = (result.existingDelivered > 0)
+      ? ('⚠ DANGER — Replace will DELETE the first trip, INCLUDING its ' + result.existingDelivered
+         + ' DELIVERED stop(s) (they disappear from the dashboard).\n\n'
+         + 'Only do this if the first import was a mistake.\n\n'
+         + 'OK = DELETE first & replace.\nCancel = do nothing.')
+      : ('Replace / overwrite the first shipment with THIS file?\n\n'
+         + 'OK = REPLACE (the first one is removed).\nCancel = do nothing.');
+    if(confirm(replaceMsg)){ uploadCsv(file, 'replace'); return; }
+    showToast('Import cancelled — nothing changed.', 'info');
+    loadShipments();
+    return;
+  }
   if(result.status === 'success'){
-    const via = result.parserUsed === 'gemini' ? ' (auto-recovered)' : '';
-    showToast('✅ Imported ' + (result.lorryNo || result.shipmentNo || '') + ' — ' +
-              result.itemCount + ' invoices.' + via, 'success');
+    if(result.mode === 'append'){
+      showToast('✅ Added ' + result.added + ' stop(s) to ' + (result.lorryNo || '') +
+                ' as a 2nd trip — now ' + result.itemCount + ' total.', 'success');
+    }else{
+      const via = result.parserUsed === 'gemini' ? ' (auto-recovered)' : '';
+      showToast('✅ Imported ' + (result.lorryNo || result.shipmentNo || '') + ' — ' +
+                result.itemCount + ' invoices.' + via, 'success');
+    }
   }else if(result.status === 'failed' && result.formTotal != null){
     showToast('❌ TOTAL ERROR — invoices add up to RM ' + fmtNum(result.parsedSum) +
               ' but the form TOTAL is RM ' + fmtNum(result.formTotal) +

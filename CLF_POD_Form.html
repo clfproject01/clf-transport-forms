@@ -302,7 +302,7 @@
       <div id="shipmentSection" style="display:none;"></div>
       <input type="file" id="shipPhoto" accept="image/*" capture="environment" multiple style="display:none;" onchange="onShipPhoto(this)">
 
-      <div id="manualPodSection">
+      <div id="manualPodSection" style="display:none;">
       <div class="section-label">Signed Invoice Photo · Foto Invois Ditandatangani</div>
 
       <div class="notice">
@@ -687,7 +687,7 @@ function resetShipmentView(){
   var sec = document.getElementById('shipmentSection');
   var man = document.getElementById('manualPodSection');
   if (sec) { sec.style.display='none'; sec.innerHTML=''; }
-  if (man) man.style.display='';
+  if (man) man.style.display='none';   // manual POD disabled — every delivery goes through the office-issued shipment checklist
   _shipKey=''; _shipGroups=[]; _deliverIdx=-1;
 }
 
@@ -698,7 +698,16 @@ async function checkShipmentForVehicle(keepListOnFail){
   var sec = document.getElementById('shipmentSection');
   var man = document.getElementById('manualPodSection');
   if (!sec || !man) return;
-  function fallManual(){ if (keepListOnFail) return; sec.style.display='none'; man.style.display=''; }  // on read-back, keep the list visible
+  // Office always issues the delivery order first, so "no list" = not imported yet / wrong lorry or date.
+  // Manual POD is disabled (it wouldn't count on the dashboard), so we tell the driver to contact the office.
+  function fallManual(){ if (keepListOnFail) return; man.style.display='none'; sec.style.display='block';
+    sec.innerHTML = '<div style="padding:18px 14px;text-align:center;color:#9A3412;font-size:14px;line-height:1.6;border:1.5px solid #F0C9A8;background:#FFF7ED;border-radius:10px;">'
+      + '<div style="font-size:30px;margin-bottom:6px;">&#9888;&#65039;</div>'
+      + '<b>No delivery order matches this lorry' + (vehicle ? ' (' + _esc(vehicle) + ')' : '') + '.</b>'
+      + '<br><span style="font-size:12.5px;color:#6b5836;">Tiada senarai penghantaran sepadan untuk lori ini.</span>'
+      + '<br><br>Check the <b>lorry number</b> &amp; <b>date</b> are correct. If they are, the order may be under a <b>different / mis-typed lorry number</b> — ask the <b>office</b> to check &amp; re-import.'
+      + '<br><span style="font-size:12.5px;color:#6b5836;">Semak nombor lori &amp; tarikh. Jika betul, pesanan mungkin guna nombor lori salah taip — hubungi pejabat.</span>'
+      + '</div>'; }
   if (!vehicle || !date){ fallManual(); return; }
   if (!keepListOnFail){ sec.style.display='block'; sec.innerHTML = '<div style="padding:14px;text-align:center;color:#854F0B;">Checking delivery list… · Menyemak…</div>'; }
   try{
@@ -790,7 +799,7 @@ function renderShipmentList(){
     }
     html += '</div>';
   });
-  html += '<button type="button" id="showManualBtn" style="width:100%;margin-top:4px;background:none;border:1px dashed #C9A227;color:#854F0B;border-radius:8px;padding:10px;font-size:12px;cursor:pointer;">&#128694; Walk-in / not in list — submit manually &#8595;</button>';
+  html += '<div style="text-align:center;color:#9a8050;font-size:11.5px;margin-top:6px;">Not on the list? Ask the office to add it. · Tiada dalam senarai? Hubungi pejabat.</div>';
   sec.innerHTML = html;
 }
 
@@ -804,7 +813,6 @@ document.getElementById('shipmentSection').addEventListener('click', function(e)
   if (fb){ var i = fb.getAttribute('data-i'); var box = document.querySelector('.ship-reasons[data-i="'+i+'"]'); if (box) box.style.display = (box.style.display==='none'?'flex':'none'); return; }
   var rb = e.target.closest('.ship-reason');
   if (rb){ failGroup(parseInt(rb.getAttribute('data-i'),10), rb.getAttribute('data-r')); return; }
-  if (e.target.closest('#showManualBtn')){ var man=document.getElementById('manualPodSection'); if(man) man.style.display=''; e.target.closest('#showManualBtn').style.display='none'; return; }
 });
 
 // photo taken for a customer → submit delivery for that customer's pending invoices
@@ -871,7 +879,14 @@ async function failGroup(i, reason){
 }
 
 // wire vehicle + date selection to the shipment check (wrappers so the change-event isn't passed as keepListOnFail)
-document.getElementById('vehicleNo').addEventListener('change', function(){ checkShipmentForVehicle(); });
+document.getElementById('vehicleNo').addEventListener('change', function(){
+  // Clear any auto-filled crew first, so it can't keep showing the PREVIOUS lorry's drivers.
+  // The newly-selected lorry's assigned crew re-fills from its own shipment (or stays blank if none matches).
+  ['driverName','secondDriver'].forEach(function(id){ var h=document.getElementById(id); if(h) h.value=''; });
+  ['driverSearch','secondSearch'].forEach(function(id){ var s=document.getElementById(id); if(s) s.value=''; });
+  ['staffIdBadge','staffIdBadge2'].forEach(function(id){ var b=document.getElementById(id); if(b){ b.style.display='none'; b.textContent=''; } });
+  checkShipmentForVehicle();
+});
 document.getElementById('deliveryDate').addEventListener('change', function(){ checkShipmentForVehicle(); });
 </script>
 </body>
