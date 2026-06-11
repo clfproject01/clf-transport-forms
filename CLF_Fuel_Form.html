@@ -464,7 +464,7 @@
           <option>SMB 7633</option>
           <option>VFE 9633</option>
           <option>VHT 4642</option>
-          <option>VDQ 6864</option>
+          <option>VQD 6864</option>
           <option>CCY 9233</option>
           <option>VJX 5786</option>
           <option>SYS 4642</option>
@@ -618,13 +618,15 @@ function wireDriverPicker(searchId, hiddenId, panelId, badgeId, onPick){
       : '<div style="padding:13px 14px;color:#8A9BB0;font-size:13px;">No match &middot; Tiada padanan</div>';
     panel.style.display = 'block';
   }
-  function pick(name){
+  function pick(name, silent){
     var d = ROSTER.filter(function(x){ return x.name === name; })[0];
     hidden.value = name;
     search.value = (d && d.staffId ? d.staffId + ' · ' : '') + name;
     if (badge){ badge.textContent = '✓ ' + name; badge.style.display = 'block'; }
     panel.style.display = 'none';
-    if (onPick) onPick(name);
+    // silent = programmatic fill (crew auto-fill) — must NOT run onPick, or the auto-filled name
+    // would be saved to localStorage as the "remembered driver" on a shared phone.
+    if (!silent && onPick) onPick(name);
   }
   search.addEventListener('input', function(){ hidden.value = ''; if (badge) badge.style.display = 'none'; render(search.value); });
   search.addEventListener('focus', function(){ search.select(); if (search.value.trim() && !hidden.value) render(search.value); });
@@ -697,12 +699,21 @@ function handlePhoto(input) {
 // A4: fetch the lorry's last odometer reading when a vehicle is picked — shown as guidance,
 // and used in validate() to catch typos (a wrong odometer poisons ALL km / fuel analytics).
 var _lastOdo = null, _lastOdoVeh = '';
+var _autoCrew = { d: false, s: false };   // which crew fields were AUTO-filled (vs picked by a human)
 (function(){
   var vSel = document.getElementById('vehicleNo');
   if (!vSel) return;
+  function _clearCrewField(hidId, searchId, badgeId){
+    var h = document.getElementById(hidId), s = document.getElementById(searchId), b = document.getElementById(badgeId);
+    if (h) h.value = ''; if (s) s.value = ''; if (b){ b.style.display = 'none'; b.textContent = ''; }
+  }
   vSel.addEventListener('change', function(){
     var veh = vSel.value;
     _lastOdo = null; _lastOdoVeh = veh;
+    // Switching lorries: clear crew that was AUTO-filled for the PREVIOUS lorry (it belongs to
+    // that lorry, not this one). Manually-picked / remembered names are left alone.
+    if (_autoCrew.d){ _clearCrewField('driverName','driverSearch','staffIdBadge'); _autoCrew.d = false; }
+    if (_autoCrew.s){ _clearCrewField('secondDriver','secondSearch','staffIdBadge2'); _autoCrew.s = false; }
     var hint = document.getElementById('lastOdoHint');
     if (hint){ hint.style.display = 'none'; hint.textContent = ''; }
     if (!veh) return;
@@ -718,7 +729,33 @@ var _lastOdo = null, _lastOdoVeh = '';
           }
         }
       }).catch(function(){ /* hint is best-effort */ });
+
+    // Crew auto-fill: pull TODAY's shipment assignment for this lorry and pre-fill driver + helper
+    // (only when still empty — never overwrites what the driver picked). Mirrors the POD form,
+    // so the fuel entry's crew lines up with the dashboard tally.
+    var today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
+    fetch(SCRIPT_URL + '?action=getShipmentForLorry&vehicleNo=' + encodeURIComponent(veh) + '&date=' + encodeURIComponent(today))
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (vSel.value !== veh) return;                   // switched vehicle while fetching
+        if (!d || d.status !== 'ok' || !d.shipments || !d.shipments.length) return;
+        var s = d.shipments[0];
+        function _n(x){ return String(x || '').replace(/\s+/g,'').toUpperCase(); }
+        var primary, secondary;
+        if (_n(s.lorry2) && _n(veh) === _n(s.lorry2)) { primary = s.lorry2Primary; secondary = s.lorry2Secondary; }
+        else { primary = s.assignedPrimary; secondary = s.assignedSecondary; }
+        function inRoster(name){ return ROSTER.some(function(x){ return x.name === name; }); }
+        primary = String(primary || '').trim(); secondary = String(secondary || '').trim();
+        var dHid = document.getElementById('driverName'), dSearch = document.getElementById('driverSearch');
+        if (primary && dHid && !dHid.value && dSearch && dSearch._pick && inRoster(primary)){ dSearch._pick(primary, true); _autoCrew.d = true; }
+        var sHid = document.getElementById('secondDriver'), sSearch = document.getElementById('secondSearch');
+        if (secondary && secondary !== primary && sHid && !sHid.value && sSearch && sSearch._pick && inRoster(secondary)){ sSearch._pick(secondary, true); _autoCrew.s = true; }
+      }).catch(function(){ /* best-effort — backend auto-credit is the safety net */ });
   });
+  // A human typing in a crew field takes ownership — stop treating it as auto-filled
+  var _ds = document.getElementById('driverSearch'), _ss2 = document.getElementById('secondSearch');
+  if (_ds) _ds.addEventListener('input', function(){ _autoCrew.d = false; });
+  if (_ss2) _ss2.addEventListener('input', function(){ _autoCrew.s = false; });
 })();
 
 function validate() {

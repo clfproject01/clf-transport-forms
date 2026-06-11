@@ -97,6 +97,19 @@
   /* 2nd-lorry sub-row */
   tr.sub-lorry td{color:var(--gray-600);background:#F5F8FF;}
   .unavail{font-size:13px;color:var(--amber-700);background:var(--amber-50);border:1px solid var(--amber-500);border-radius:8px;padding:8px 12px;display:inline-block;}
+  /* numeric table headers must right-align WITH their numbers (specificity fix) */
+  table.act th.rm{text-align:right;}
+  .plate{white-space:nowrap;font-weight:600;}
+  .tag2{font-size:10.5px;font-weight:700;letter-spacing:.03em;color:#1A56DB;border:1px solid #1A56DB;border-radius:4px;padding:1px 6px;margin-left:7px;vertical-align:1px;}
+  /* Driver board (professional, no emoji) */
+  .b-row{display:flex;gap:10px;padding:7px 0;border-top:1px solid var(--gray-100);font-size:12.5px;align-items:baseline;}
+  .b-row:first-child{border-top:none;}
+  .b-label{flex:0 0 96px;font-weight:600;color:var(--gray-700);white-space:nowrap;}
+  .b-label .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;}
+  .b-label .cnt{color:var(--gray-400);font-weight:600;margin-left:4px;}
+  .b-names{color:var(--gray-600);line-height:1.6;}
+  .b-names b{color:var(--gray-900);font-weight:600;}
+  .b-names .meta{color:var(--gray-400);font-size:11.5px;}
 </style>
 </head>
 <body>
@@ -124,12 +137,19 @@
   <div class="zone-head zone-pod">📦 DELIVERIES (POD) <span class="sub" id="podScope">— the business</span></div>
 
   <div class="grid">
-    <!-- KPI row: short cards only, long tables live below (so nothing stretches them) -->
-    <div class="card c4 hero pod">
-      <div class="card-title">Delivery success</div>
-      <div class="big" id="podPct">—</div>
-      <div class="frac" id="podFrac">—</div>
-      <div class="chips" id="podChips"></div>
+    <!-- KPI row: left column stacks hero + driver board, so it matches the right card's height -->
+    <div class="c4" style="display:flex;flex-direction:column;gap:14px;">
+      <div class="card hero pod">
+        <div class="card-title">Delivery success</div>
+        <div class="big" id="podPct">—</div>
+        <div class="frac" id="podFrac">—</div>
+        <div class="chips" id="podChips"></div>
+      </div>
+      <div class="card" style="flex:1;">
+        <div class="card-title">Drivers now</div>
+        <div class="card-sub">Standby = route finished, free for a 2nd trip</div>
+        <div id="driverBoard"></div>
+      </div>
     </div>
 
     <!-- Haven't submitted POD -->
@@ -165,6 +185,15 @@
       <div id="crewBody" style="display:none;">
         <div class="card-sub">Primary + helper assigned to each lorry (from the Shipment assignment)</div>
         <table class="act"><thead><tr><th>Lorry</th><th>Primary driver</th><th>Helper</th><th style="width:175px;">Progress</th></tr></thead><tbody id="crewRows"></tbody></table>
+      </div>
+    </div>
+
+    <!-- Driver summary: routes / 2nd trips / leave (collapsible, follows Daily-Weekly-Monthly) -->
+    <div class="card c12">
+      <div class="card-title collapser" id="dsumToggle"><span id="dsumCaret">▸</span> Driver summary — routes, 2nd trips &amp; leave <span style="font-weight:400;color:var(--gray-400);font-size:12px;">(click to show / hide)</span></div>
+      <div id="dsumBody" style="display:none;">
+        <div class="card-sub">Follows the Daily / Weekly / Monthly selector · Routes done = every stop processed · 2nd trips = extra trips beyond the first</div>
+        <table class="act"><thead><tr><th>Driver</th><th class="rm">Routes done</th><th class="rm">2nd trips</th><th class="rm">Leave days</th><th class="rm">Deliveries</th></tr></thead><tbody id="dsumRows"></tbody></table>
       </div>
     </div>
 
@@ -262,6 +291,9 @@
   function fmtRM(n){ n=num(n); return n==null ? '—' : 'RM '+n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
   function fmtInt(n){ n=num(n); return n==null ? '—' : Math.round(n).toLocaleString(); }
   function idName(name){ if(!name) return '—'; var sid=STAFF[name]; return sid ? (esc(sid)+' · '+esc(name)) : esc(name); }
+  // Short name: cut at BIN / BINTI / A/L / A/P — fits one line; the staff ID disambiguates
+  function shortName(name){ var n=String(name||'').trim(); if(!n) return ''; return n.split(/\s+(?:BIN|BINTI|A\/L|A\/P)\s+/i)[0].trim()||n; }
+  function idShort(name){ if(!name) return '—'; var sid=STAFF[name]; var sn=shortName(name); return sid ? (esc(sid)+' · '+esc(sn)) : esc(sn); }
 
   function chart(id, opt){ var el=$(id); if(!el) return; opt.chart=opt.chart||{}; opt.chart.animations={enabled:false}; if(CHARTS[id]){ try{CHARTS[id].destroy();}catch(e){} } CHARTS[id]=new ApexCharts(el, opt); CHARTS[id].render(); }
 
@@ -313,13 +345,14 @@
     Promise.all([
       api(['action=getDashboardData','view='+selectedView + periodParam]).catch(function(){return null;}),
       api(['action=getShipmentsForDate','date='+encodeURIComponent(selectedDate)]).catch(function(){return null;}),
-      api(['action=getFuelOps','view='+selectedView + periodParam]).catch(function(){return null;})
+      api(['action=getFuelOps','view='+selectedView + periodParam]).catch(function(){return null;}),
+      api(['action=getLeaveToday']).catch(function(){return null;})
     ]).then(function(res){
       if(seq !== LOAD_SEQ) return;   // a newer load started — drop this stale response
       // A1: a backend {status:'error'} (HTTP 200) must NOT render as a green "all good" day —
       // treat anything that isn't status:'ok' as missing, and show "unavailable" per zone.
       function ok(r){ return (r && r.status==='ok') ? r : null; }
-      var dash=ok(res[0]), ship=ok(res[1]), fuel=ok(res[2]);
+      var dash=ok(res[0]), ship=ok(res[1]), fuel=ok(res[2]), leave=ok(res[3]);
       if(!ship && !fuel){ showErr('Cannot reach server. Please check connection and Refresh.'); $('dashMeta').textContent=''; }
       else if(!ship || !fuel || !dash){ showErr('Some data failed to load — sections marked "unavailable" are NOT empty, just not loaded. Refresh to retry.'); }
       // build staff-id map from driver list
@@ -327,6 +360,8 @@
       if(dash && dash.drivers){ dash.drivers.forEach(function(d){ if(d && d.name) STAFF[d.name]=d.staffId||''; }); }
       renderTop(ship, fuel);
       renderPod(ship);
+      renderBoard(ship, dash, leave);
+      renderDriverSummary(dash);
       renderFuel(fuel, dash);
       if(ship || fuel) LAST_UPDATED = Date.now();   // only a load with real data counts as "updated"
       paintUpdated();
@@ -347,6 +382,85 @@
     if(selectedView==='daily'){ podScope.textContent = '— for ' + selectedDate; podScope.style.color=''; }
     else { podScope.textContent = '— ⚠ daily view only: showing ' + selectedDate + ' (fuel below follows the ' + selectedView + ' period)'; podScope.style.color='var(--amber-700)'; }
     $('fuelScope').textContent = (fuel && fuel.periodLabel) ? ('— ' + fuel.periodLabel) : '';
+  }
+
+  // ---------- Driver board (who is free for a 2nd trip right now) ----------
+  // Standby = route fully processed (delivered+failed >= planned). Names only (no staff IDs),
+  // no emoji — professional dots. Leave list is today-only (backend getLeaveToday).
+  function renderBoard(ship, dash, leave){
+    var el = $('driverBoard'); if(!el) return;
+    if(!ship){ el.innerHTML = '<span class="unavail">⚠ Data unavailable — tap Refresh</span>'; return; }
+    // leave list is valid only for the date the BACKEND says it covers (KL-timezone-exact)
+    var leaveValid = !!(leave && leave.onLeave && leave.date === selectedDate);
+    var groups = { standby:[], route:[], trip2:[], leave:[], none:[] };
+    var assigned = {};
+    (ship.shipments||[]).forEach(function(s){
+      var fin = (s.planned||0) > 0 && ((s.delivered||0)+(s.failed||0)) >= s.planned;
+      var doneTime = '';
+      if(fin){ var ts=(s.arrivals||[]).map(function(a){return a.time||'';}).filter(Boolean).sort(); doneTime = ts.length?ts[ts.length-1]:''; }
+      [{n:s.assignedPrimary},{n:s.lorry2Primary}].forEach(function(c){
+        var nm = String(c.n||'').trim(); if(!nm) return;
+        assigned[nm] = 1;
+        var it = { name:nm, frac:(s.delivered||0)+'/'+(s.planned||0), time:doneTime, trips:(s.trips||1) };
+        if(fin) groups.standby.push(it);
+        else if((s.trips||1) > 1) groups.trip2.push(it);
+        else groups.route.push(it);
+      });
+    });
+    var leaveSet = {};
+    if(leaveValid){
+      leave.onLeave.forEach(function(x){
+        var nm = String(x.driverName||'').trim(); if(!nm) return;
+        leaveSet[nm] = 1;
+        if(!assigned[nm]) groups.leave.push({ name:nm });
+      });
+    }
+    ((dash && dash.drivers) || []).forEach(function(d){
+      if(d && d.name && !assigned[d.name] && !leaveSet[d.name]) groups.none.push({ name:d.name });
+    });
+    // A driver can sit on several shipments (2nd trip rows, shared routes): still BUSY on one
+    // route → not standby; and never list the same name twice within a group.
+    var busy = {};
+    groups.route.concat(groups.trip2).forEach(function(x){ busy[x.name] = 1; });
+    groups.standby = groups.standby.filter(function(x){ return !busy[x.name]; });
+    ['standby','route','trip2','leave','none'].forEach(function(k){
+      var seen = {};
+      groups[k] = groups[k].filter(function(x){ if(seen[x.name]) return false; seen[x.name] = 1; return true; });
+    });
+    groups.standby.sort(function(a,b){ return String(a.time).localeCompare(String(b.time)); });   // earliest finisher first
+
+    function row(color, label, arr, fmt){
+      if(!arr.length) return '';
+      return '<div class="b-row"><span class="b-label"><i class="dot" style="background:'+color+';"></i>'+label+'<span class="cnt">'+arr.length+'</span></span>'
+        + '<span class="b-names">'+arr.map(fmt).join(', ')+'</span></div>';
+    }
+    var html =
+      row(GREEN,    'Standby',  groups.standby, function(x){ return '<b>'+esc(shortName(x.name))+'</b> <span class="meta">'+(x.time?('done '+esc(x.time)):'done')+(x.trips>1?' · '+x.trips+' trips':'')+'</span>'; }) +
+      row('#1A56DB','2nd trip', groups.trip2,   function(x){ return '<b>'+esc(shortName(x.name))+'</b> <span class="meta">'+esc(x.frac)+'</span>'; }) +
+      row(AMBER,    'On route', groups.route,   function(x){ return esc(shortName(x.name))+' <span class="meta">'+esc(x.frac)+'</span>'; }) +
+      row('#9CA3AF','On leave', groups.leave,   function(x){ return esc(shortName(x.name)); }) +
+      row('#D1D5DB','No route', groups.none,    function(x){ return esc(shortName(x.name)); });
+    el.innerHTML = html || '<div class="empty">No shipments imported for this date.</div>';
+  }
+
+  // ---------- Driver summary (routes / 2nd trips / leave — follows the period selector) ----------
+  function renderDriverSummary(dash){
+    var body = $('dsumRows'); if(!body) return;
+    if(!dash || !dash.drivers || !dash.drivers.length){
+      body.innerHTML = '<tr><td colspan="5">'+(dash?'<span class="empty">No driver data for this period.</span>':'<span class="unavail">⚠ Data unavailable — tap Refresh</span>')+'</td></tr>';
+      return;
+    }
+    var rows = dash.drivers.slice().sort(function(a,b){
+      return (b.secondTrips||0)-(a.secondTrips||0) || (b.routesDone||0)-(a.routesDone||0) || (b.podTrips||0)-(a.podTrips||0);
+    });
+    body.innerHTML = rows.map(function(d){
+      var hard = (d.secondTrips||0) > 0;
+      return '<tr><td>'+idShort(d.name)+(hard?'<span class="tag2">2ND TRIP</span>':'')+'</td>'
+        + '<td class="rm">'+(d.routesDone||0)+'</td>'
+        + '<td class="rm">'+(hard?'<b style="color:#1A56DB">'+d.secondTrips+'</b>':'0')+'</td>'
+        + '<td class="rm">'+(d.leaveDays||0)+'</td>'
+        + '<td class="rm">'+(d.podTrips||0)+'</td></tr>';
+    }).join('');
   }
 
   // ---------- POD ----------
@@ -434,11 +548,11 @@
     if(!ns.length){
       $('podNotSubmitted').innerHTML = '<span class="chip green">All routes have started ✓</span>';
     } else {
-      var nsHtml = '<table class="act"><thead><tr><th>Lorry</th><th>Driver</th><th>Helper</th></tr></thead><tbody>';
+      var nsHtml = '<table class="act"><thead><tr><th style="width:90px;">Lorry</th><th>Driver</th><th>Helper</th></tr></thead><tbody>';
       ns.forEach(function(x){
-        nsHtml += '<tr class="fail"><td style="font-weight:600;">'+esc(x.lorryNo)+'</td><td>'+idName(x.driver)+'</td><td>'+(x.secondary?idName(x.secondary):'—')+'</td></tr>';
+        nsHtml += '<tr class="fail"><td class="plate">'+esc(x.lorryNo)+'</td><td>'+idShort(x.driver)+'</td><td>'+(x.secondary?idShort(x.secondary):'—')+'</td></tr>';
         if(x.lorry2){
-          nsHtml += '<tr class="sub-lorry"><td style="padding-left:18px;">↳ '+esc(x.lorry2)+' <span class="route-area">(2nd lorry)</span></td><td>'+(x.lorry2Primary?idName(x.lorry2Primary):'—')+'</td><td>'+(x.lorry2Secondary?idName(x.lorry2Secondary):'—')+'</td></tr>';
+          nsHtml += '<tr class="sub-lorry"><td class="plate" style="padding-left:18px;font-weight:400;">↳ '+esc(x.lorry2)+'</td><td>'+(x.lorry2Primary?idShort(x.lorry2Primary):'—')+'</td><td>'+(x.lorry2Secondary?idShort(x.lorry2Secondary):'—')+'</td></tr>';
         }
       });
       $('podNotSubmitted').innerHTML = nsHtml + '</tbody></table>';
@@ -474,11 +588,11 @@
       var pct = s.planned>0 ? Math.round(((s.delivered||0)/s.planned)*100) : 0;
       var notStarted = (s.delivered||0)===0;
       var fracHtml = '<span class="prog-mini"><i style="width:'+pct+'%;'+(notStarted?'background:var(--red-500);':'')+'"></i></span><span class="prog-frac"'+(notStarted?' style="color:var(--red-700);font-weight:600;"':'')+'>'+(s.delivered||0)+' / '+(s.planned||0)+'</span>';
-      var rows = '<tr'+(notStarted?' class="pend"':'')+'><td>'+esc(s.lorryNo)+'</td><td>'+idName(s.assignedPrimary)+'</td><td>'+(s.assignedSecondary?idName(s.assignedSecondary):'—')+'</td><td>'+fracHtml+'</td></tr>';
+      var rows = '<tr'+(notStarted?' class="pend"':'')+'><td class="plate">'+esc(s.lorryNo)+((s.trips||1)>1?'<span class="tag2">2ND TRIP</span>':'')+'</td><td>'+idShort(s.assignedPrimary)+'</td><td>'+(s.assignedSecondary?idShort(s.assignedSecondary):'—')+'</td><td>'+fracHtml+'</td></tr>';
       if(s.lorry2){
-        rows += '<tr class="sub-lorry"><td style="padding-left:18px;">↳ '+esc(s.lorry2)+' <span class="route-area">(2nd lorry · same route)</span></td>'
-          + '<td>'+(s.lorry2Primary?idName(s.lorry2Primary):'<span class="route-area">not assigned yet</span>')+'</td>'
-          + '<td>'+(s.lorry2Secondary?idName(s.lorry2Secondary):'—')+'</td>'
+        rows += '<tr class="sub-lorry"><td class="plate" style="padding-left:18px;font-weight:400;">↳ '+esc(s.lorry2)+' <span class="route-area">(same route)</span></td>'
+          + '<td>'+(s.lorry2Primary?idShort(s.lorry2Primary):'<span class="route-area">not assigned yet</span>')+'</td>'
+          + '<td>'+(s.lorry2Secondary?idShort(s.lorry2Secondary):'—')+'</td>'
           + '<td><span class="route-area">shared ↑</span></td></tr>';
       }
       return rows;
@@ -605,7 +719,7 @@
     else if(!flagged.length){ ccHtml = '<div class="chip green">All lorries within normal range ✓ — fleet avg '+t.avgKmPerStop+' km / stop (weighted, 3+ stop lorries)</div>'; }
     else {
       ccHtml = '<table class="act" style="table-layout:fixed;"><thead><tr><th>Lorry</th><th class="rm">km</th><th class="rm">stops</th><th class="rm">km / stop</th><th class="rm">vs avg ('+t.avgKmPerStop+')</th></tr></thead><tbody>' +
-        flagged.map(function(l){ var x=(l.kmPerStop/t.avgKmPerStop).toFixed(1); return '<tr class="fail"><td>'+esc(l.lorry)+'</td><td class="rm">'+fmtInt(l.km)+'</td><td class="rm">'+fmtInt(l.stops)+'</td><td class="rm st-fail">'+l.kmPerStop+'</td><td class="rm st-fail">'+x+'×</td></tr>'; }).join('') +
+        flagged.map(function(l){ var x=(l.kmPerStop/t.avgKmPerStop).toFixed(1); return '<tr class="fail"><td class="plate">'+esc(l.lorry)+'</td><td class="rm">'+fmtInt(l.km)+'</td><td class="rm">'+fmtInt(l.stops)+'</td><td class="rm st-fail">'+l.kmPerStop+'</td><td class="rm st-fail">'+x+'×</td></tr>'; }).join('') +
         '</tbody></table>';
     }
     if(lowStops.length){
@@ -622,7 +736,7 @@
       $('tankEmpty').style.display='none';
       $('tankRows').innerHTML = tanks.map(function(l){
         var f = l.lastFill;
-        return '<tr><td style="font-weight:600;">'+esc(l.lorry)+'</td>'
+        return '<tr><td class="plate">'+esc(l.lorry)+'</td>'
           + '<td>'+esc(f.date)+'</td>'
           + '<td class="rm">'+(num(f.rm)==null?'—':num(f.rm).toFixed(2))+'</td>'
           + '<td class="rm">'+(num(f.litres)==null?'—':num(f.litres))+'</td>'
@@ -663,6 +777,7 @@
     wireCollapse('routeToggle','routeBody','routeCaret');
     wireCollapse('fuelToggle','fuelSubBody','fuelCaret');
     wireCollapse('tankToggle','tankBody','tankCaret');
+    wireCollapse('dsumToggle','dsumBody','dsumCaret');
     // Needs-action filter chips (All / Failed only)
     $('naFilterAll').addEventListener('click', function(){ NA_FILTER='all'; $('naFilterAll').classList.add('active'); $('naFilterFailed').classList.remove('active'); renderNeedsAction(); });
     $('naFilterFailed').addEventListener('click', function(){ NA_FILTER='failed'; $('naFilterFailed').classList.add('active'); $('naFilterAll').classList.remove('active'); renderNeedsAction(); });
