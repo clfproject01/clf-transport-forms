@@ -37,7 +37,7 @@
   .zone-fuel{background:var(--amber-50);color:var(--amber-700);border-left:5px solid var(--amber-500);}
   .zone-head .sub{font-weight:400;font-size:12.5px;color:var(--gray-500);}
 
-  .grid{display:grid;gap:14px;grid-template-columns:repeat(12,1fr);}
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(12,1fr);align-items:start;}
   .card{background:var(--card);border:1px solid var(--gray-200);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;}
   .c6{grid-column:span 6;} .c12{grid-column:span 12;} .c4{grid-column:span 4;} .c8{grid-column:span 8;}
   @media(max-width:760px){ .c6,.c4,.c8{grid-column:span 12;} .card{overflow-x:auto;} }
@@ -78,6 +78,25 @@
   .note-line{font-size:12px;color:var(--gray-500);margin-top:8px;}
   .empty{font-size:13px;color:var(--gray-400);padding:10px 2px;}
   .collapser{cursor:pointer;user-select:none;}
+  /* Needs-action accordion */
+  tr.na-sum{cursor:pointer;user-select:none;}
+  tr.na-sum td{font-weight:600;}
+  tr.na-sum .caret{display:inline-block;width:14px;color:var(--gray-400);}
+  tr.na-det{display:none;}
+  tr.na-det.open{display:table-row;}
+  tr.na-det td{background:#fff;font-size:12px;color:var(--gray-600);}
+  .pill-mini{font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;margin-left:6px;}
+  .pill-fail{background:var(--red-50);color:var(--red-700);border:1px solid var(--red-500);}
+  .pill-pend{background:var(--amber-50);color:var(--amber-700);border:1px solid var(--amber-500);}
+  .filter-chip{font-size:12px;font-weight:600;padding:4px 12px;border:1px solid var(--gray-200);border-radius:99px;background:#fff;color:var(--gray-600);cursor:pointer;}
+  .filter-chip.active{background:var(--gray-900);color:#fff;border-color:var(--gray-900);}
+  /* Route gap between stops */
+  .route-gap{font-size:11.5px;color:var(--gray-400);padding:2px 0 2px 55px;font-variant-numeric:tabular-nums;}
+  .route-gap.slow{color:var(--amber-700);font-weight:600;}
+  .route-inv{font-size:11px;color:var(--gray-400);font-weight:400;margin-left:6px;}
+  /* 2nd-lorry sub-row */
+  tr.sub-lorry td{color:var(--gray-600);background:#F5F8FF;}
+  .unavail{font-size:13px;color:var(--amber-700);background:var(--amber-50);border:1px solid var(--amber-500);border-radius:8px;padding:8px 12px;display:inline-block;}
 </style>
 </head>
 <body>
@@ -105,7 +124,7 @@
   <div class="zone-head zone-pod">📦 DELIVERIES (POD) <span class="sub" id="podScope">— the business</span></div>
 
   <div class="grid">
-    <!-- Hero -->
+    <!-- KPI row: short cards only, long tables live below (so nothing stretches them) -->
     <div class="card c4 hero pod">
       <div class="card-title">Delivery success</div>
       <div class="big" id="podPct">—</div>
@@ -113,23 +132,27 @@
       <div class="chips" id="podChips"></div>
     </div>
 
-    <!-- Needs action -->
-    <div class="card c8">
-      <div class="card-title">⚠ Needs action — failed &amp; pending</div>
-      <div class="card-sub">Sorted by RM at risk · red = failed, amber = pending</div>
-      <div id="needsActionWrap"><table class="act"><thead><tr><th>Lorry</th><th>Driver</th><th>Customer</th><th>Area</th><th class="rm">RM</th><th>Status</th></tr></thead><tbody id="needsActionBody"></tbody></table></div>
-    </div>
-
     <!-- Haven't submitted POD -->
-    <div class="card c4">
+    <div class="card c8">
       <div class="card-title">🚩 Haven't submitted POD</div>
-      <div class="card-sub">Assigned a lorry but 0 deliveries confirmed (driver · lorry)</div>
-      <div class="chips" id="podNotSubmitted"></div>
+      <div class="card-sub">Assigned a lorry but 0 deliveries confirmed yet</div>
+      <div id="podNotSubmitted"></div>
       <div class="note-line" id="podNotSubmittedNote"></div>
     </div>
 
+    <!-- Needs action (collapsible accordion, grouped per lorry) -->
+    <div class="card c12">
+      <div class="card-title">⚠ Needs action — failed &amp; pending</div>
+      <div class="card-sub">One line per lorry — tap a lorry to see its invoices · lorries with failed stops float to the top</div>
+      <div style="display:flex;gap:8px;margin:4px 0 10px;">
+        <span class="filter-chip active" id="naFilterAll">All</span>
+        <span class="filter-chip" id="naFilterFailed">Failed only</span>
+      </div>
+      <div id="needsActionWrap"><table class="act"><thead><tr><th style="width:18px;"></th><th>Lorry</th><th>Driver</th><th class="rm">Failed</th><th class="rm">Pending</th><th class="rm">RM at risk</th></tr></thead><tbody id="needsActionBody"></tbody></table></div>
+    </div>
+
     <!-- Per-lorry success -->
-    <div class="card c8">
+    <div class="card c12">
       <div class="card-title">Delivery success by lorry — worst at top</div>
       <div class="card-sub">Green ≥95% · amber 90–94% · red &lt;90% · number = delivered / planned · started lorries only</div>
       <div id="lorrySuccess"></div>
@@ -199,6 +222,16 @@
       <div id="crossCheckWrap"></div>
     </div>
 
+    <!-- Per-tank: fill-to-fill (collapsible) -->
+    <div class="card c12">
+      <div class="card-title collapser" id="tankToggle"><span id="tankCaret">▸</span> Last fill-up by lorry — what one tank covered <span style="font-weight:400;color:var(--gray-400);font-size:12px;">(click to show / hide)</span></div>
+      <div id="tankBody" style="display:none;">
+        <div class="card-sub">Latest fuel entry per lorry · km &amp; stops = what the lorry did since its PREVIOUS fill · the truest per-tank efficiency</div>
+        <table class="act"><thead><tr><th>Lorry</th><th>Last fill</th><th class="rm">RM</th><th class="rm">Litres</th><th>Since previous fill</th><th class="rm">RM / km</th><th class="rm">km / L</th></tr></thead><tbody id="tankRows"></tbody></table>
+        <div class="empty" id="tankEmpty" style="display:none;">Needs at least 2 fills with odometer per lorry — fills in as drivers keep submitting.</div>
+      </div>
+    </div>
+
     <!-- Fuel submissions (collapsible) -->
     <div class="card c12">
       <div class="card-title collapser" id="fuelToggle"><span id="fuelCaret">▸</span> Fuel submissions today <span style="font-weight:400;color:var(--gray-400);font-size:12px;">(click to show / hide)</span></div>
@@ -241,59 +274,175 @@
     return fetch(url, { method:'GET' }).then(function(r){ return r.json(); });
   }
 
+  // ISO week key for a yyyy-mm-dd string — same algorithm as the backend's formatWeekKey_,
+  // so Weekly/Monthly follow the PICKED date instead of silently showing the current period (B1).
+  function isoWeekKey(ymd){
+    var p = String(ymd).split('-').map(Number);
+    var d = new Date(Date.UTC(p[0], p[1]-1, p[2]));
+    var dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    var year = d.getUTCFullYear();
+    var ys = new Date(Date.UTC(year, 0, 1));
+    var week = Math.ceil((((d - ys) / 86400000) + 1) / 7);
+    return year + '-W' + (week < 10 ? '0' + week : week);
+  }
+
+  var LOAD_SEQ = 0;        // discard out-of-order responses (fast Daily→Weekly clicks can cross)
+  var LAST_UPDATED = null; // ms timestamp of the last successful render — drives the staleness label
+
+  function fmtUpdated(){
+    if(!LAST_UPDATED){ return ''; }
+    var d = new Date(LAST_UPDATED);
+    var hm = ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+    var ageMin = Math.floor((Date.now()-LAST_UPDATED)/60000);
+    return 'Updated '+hm+(ageMin>=2 ? ' ('+(ageMin>=60 ? Math.floor(ageMin/60)+'h '+(ageMin%60)+'m' : ageMin+'m')+' ago)' : '');
+  }
+  function paintUpdated(){
+    var el = $('lastRefresh'); if(!el) return;
+    el.textContent = fmtUpdated();
+    el.style.color = (LAST_UPDATED && Date.now()-LAST_UPDATED > 15*60000) ? 'var(--amber-700)' : '';
+  }
+
   function load(){
     hideErr();
     $('dashMeta').textContent = 'Loading…';
-    var periodParam = selectedView==='daily' ? ('&date='+encodeURIComponent(selectedDate)) : '';
+    var seq = ++LOAD_SEQ;
+    var periodParam = selectedView==='daily'  ? ('&date='+encodeURIComponent(selectedDate))
+                    : selectedView==='weekly' ? ('&period='+encodeURIComponent(isoWeekKey(selectedDate)))
+                    :                            ('&period='+encodeURIComponent(selectedDate.slice(0,7)));
     Promise.all([
       api(['action=getDashboardData','view='+selectedView + periodParam]).catch(function(){return null;}),
       api(['action=getShipmentsForDate','date='+encodeURIComponent(selectedDate)]).catch(function(){return null;}),
       api(['action=getFuelOps','view='+selectedView + periodParam]).catch(function(){return null;})
     ]).then(function(res){
-      var dash=res[0], ship=res[1], fuel=res[2];
-      if(!ship && !fuel){ showErr('Cannot reach server. Please check connection and Refresh.'); $('dashMeta').textContent=''; return; }
+      if(seq !== LOAD_SEQ) return;   // a newer load started — drop this stale response
+      // A1: a backend {status:'error'} (HTTP 200) must NOT render as a green "all good" day —
+      // treat anything that isn't status:'ok' as missing, and show "unavailable" per zone.
+      function ok(r){ return (r && r.status==='ok') ? r : null; }
+      var dash=ok(res[0]), ship=ok(res[1]), fuel=ok(res[2]);
+      if(!ship && !fuel){ showErr('Cannot reach server. Please check connection and Refresh.'); $('dashMeta').textContent=''; }
+      else if(!ship || !fuel || !dash){ showErr('Some data failed to load — sections marked "unavailable" are NOT empty, just not loaded. Refresh to retry.'); }
       // build staff-id map from driver list
       STAFF = {};
       if(dash && dash.drivers){ dash.drivers.forEach(function(d){ if(d && d.name) STAFF[d.name]=d.staffId||''; }); }
       renderTop(ship, fuel);
-      renderPod(ship||{});
-      renderFuel(fuel||{}, dash||{});
-      var t=new Date(); $('lastRefresh').textContent='Updated '+('0'+t.getHours()).slice(-2)+':'+('0'+t.getMinutes()).slice(-2);
-    }).catch(function(e){ showErr('Something went wrong loading the dashboard. Please Refresh.'); $('dashMeta').textContent=''; });
+      renderPod(ship);
+      renderFuel(fuel, dash);
+      if(ship || fuel) LAST_UPDATED = Date.now();   // only a load with real data counts as "updated"
+      paintUpdated();
+    }).catch(function(e){ if(seq !== LOAD_SEQ) return; showErr('Something went wrong loading the dashboard. Please Refresh.'); $('dashMeta').textContent=''; });
   }
 
   function renderTop(ship, fuel){
-    var routes = (ship && ship.shipments) ? ship.shipments : [];
-    var n = routes.length + routes.filter(function(s){ return s.lorry2; }).length;  // +1 per shared route's 2nd lorry
-    $('dashMeta').textContent = selectedDate + ' · ' + n + ' lorries dispatched';
-    $('podScope').textContent = '— for ' + selectedDate;
+    if(ship){
+      var routes = ship.shipments || [];
+      var n = routes.length + routes.filter(function(s){ return s.lorry2; }).length;  // +1 per shared route's 2nd lorry
+      $('dashMeta').textContent = selectedDate + ' · ' + n + ' lorries dispatched';
+    } else {
+      $('dashMeta').textContent = selectedDate + ' · data unavailable';   // NOT "0 lorries" — that reads as a real zero
+    }
+    // B2: the POD half is daily-only — flag it loudly in Weekly/Monthly so the boss doesn't
+    // read a single day's delivery % as the weekly/monthly number.
+    var podScope = $('podScope');
+    if(selectedView==='daily'){ podScope.textContent = '— for ' + selectedDate; podScope.style.color=''; }
+    else { podScope.textContent = '— ⚠ daily view only: showing ' + selectedDate + ' (fuel below follows the ' + selectedView + ' period)'; podScope.style.color='var(--amber-700)'; }
     $('fuelScope').textContent = (fuel && fuel.periodLabel) ? ('— ' + fuel.periodLabel) : '';
   }
 
   // ---------- POD ----------
+  var NA_GROUPS = [];                 // needs-action groups (per lorry), kept for the filter chips
+  var NA_FILTER = 'all';
+  var POD_OK = false;                 // last load had usable POD data (guards the filter chips re-render)
+
+  function renderNeedsAction(){
+    var body = $('needsActionBody');
+    if(!POD_OK){ body.innerHTML = '<tr><td colspan="6"><span class="unavail">⚠ POD data unavailable — tap Refresh</span></td></tr>'; return; }
+    var groups = (NA_FILTER==='failed') ? NA_GROUPS.filter(function(g){ return g.failed>0; }) : NA_GROUPS;
+    if(!groups.length){
+      body.innerHTML = '<tr><td colspan="6" class="empty">'+(NA_FILTER==='failed'
+        ? 'No failed deliveries ✓'+(NA_GROUPS.length?(' — '+NA_GROUPS.length+' lorr'+(NA_GROUPS.length>1?'ies':'y')+' still have pending stops (tap All)'):'')
+        : 'Nothing failed or pending — all good ✓')+'</td></tr>';
+      return;
+    }
+    var html = '';
+    groups.forEach(function(g, gi){
+      html += '<tr class="na-sum'+(g.failed>0?' fail':'')+'" data-g="'+gi+'"><td><span class="caret">▸</span></td>'
+        + '<td>'+esc(g.lorryNo)+'</td><td>'+idName(g.driver)+'</td>'
+        + '<td class="rm">'+(g.failed>0?('<span class="st-fail">'+g.failed+'</span>'):'0')+'</td>'
+        + '<td class="rm">'+g.pending+'</td>'
+        + '<td class="rm">'+(g.rm>0?g.rm.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}):'—')+'</td></tr>';
+      g.items.forEach(function(f){
+        var st = f.status==='failed' ? ('<span class="st-fail">Failed'+(f.reason?(' · '+esc(f.reason)):'')+'</span>') : '<span class="st-pend">Pending</span>';
+        html += '<tr class="na-det g'+gi+(f.status==='failed'?' fail':'')+'"><td></td>'
+          + '<td colspan="2" style="padding-left:22px;">'+esc(f.customer)+' <span class="route-area">· '+esc(f.area||'')+'</span></td>'
+          + '<td colspan="2">'+st+'</td>'
+          + '<td class="rm">'+(num(f.amount)==null?'—':num(f.amount).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}))+'</td></tr>';
+      });
+    });
+    body.innerHTML = html;
+    body.querySelectorAll('tr.na-sum').forEach(function(row){
+      row.addEventListener('click', function(){
+        var gi = row.getAttribute('data-g');
+        var open = !row.classList.contains('open');
+        row.classList.toggle('open', open);
+        row.querySelector('.caret').textContent = open ? '▾' : '▸';
+        body.querySelectorAll('tr.na-det.g'+gi).forEach(function(d){ d.classList.toggle('open', open); });
+      });
+    });
+  }
+
   function renderPod(ship){
+    POD_OK = !!ship;
+    if(!ship){
+      $('podPct').textContent='—'; $('podFrac').textContent='data unavailable'; $('podChips').innerHTML='';
+      $('needsActionBody').innerHTML = '<tr><td colspan="6"><span class="unavail">⚠ POD data unavailable — tap Refresh</span></td></tr>';
+      $('podNotSubmitted').innerHTML = '<span class="unavail">⚠ Data unavailable — tap Refresh</span>';
+      $('podNotSubmittedNote').textContent='';
+      $('lorrySuccess').innerHTML=''; $('lorrySuccessEmpty').style.display='block';
+      $('crewRows').innerHTML = '<tr><td colspan="4"><span class="unavail">⚠ Data unavailable</span></td></tr>';
+      $('routePicker').innerHTML='<span class="empty">Data unavailable.</span>'; $('routeStops').innerHTML='';
+      NA_GROUPS=[];
+      return;
+    }
     var t = ship.totals || {planned:0,delivered:0,failed:0,pending:0,successPct:null};
     $('podPct').textContent = (t.successPct==null?'—':t.successPct+'%');
     $('podFrac').textContent = fmtInt(t.delivered)+' / '+fmtInt(t.planned)+' delivered';
     $('podChips').innerHTML =
       '<span class="chip green">'+fmtInt(t.delivered)+' delivered</span>' +
       '<span class="chip red">'+fmtInt(t.failed)+' failed</span>' +
-      '<span class="chip amber">'+fmtInt(t.pending)+' pending</span>';
+      '<span class="chip amber">'+fmtInt(t.pending)+' pending</span>' +
+      // B3: the money number the boss actually asks for — total RM stuck in failed+pending stops
+      (num(t.rmAtRisk)>0 ? '<span class="chip red mono">RM '+Number(t.rmAtRisk).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+' at risk</span>' : '');
 
-    // Needs action
+    // Needs action — group per lorry (accordion): failed lorries first, then by RM at risk
     var fl = (ship.failedList||[]);
-    var body = $('needsActionBody');
-    if(!fl.length){ body.innerHTML = '<tr><td colspan="6" class="empty">Nothing failed or pending — all good ✓</td></tr>'; }
-    else {
-      body.innerHTML = fl.map(function(f){
-        var st = f.status==='failed' ? ('<span class="st-fail">Failed'+(f.reason?(' · '+esc(f.reason)):'')+'</span>') : '<span class="st-pend">Pending</span>';
-        return '<tr class="'+(f.status==='failed'?'fail':'pend')+'"><td>'+esc(f.lorryNo)+'</td><td>'+esc(STAFF[f.driver]||f.driver||'')+'</td><td>'+esc(f.customer)+'</td><td>'+esc(f.area)+'</td><td class="rm">'+(num(f.amount)==null?'—':num(f.amount).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}))+'</td><td>'+st+'</td></tr>';
-      }).join('');
-    }
+    var gmap = {}; NA_GROUPS = [];
+    fl.forEach(function(f){
+      var k = String(f.lorryNo||'');
+      if(!gmap[k]){ gmap[k] = { lorryNo:f.lorryNo, driver:f.driver, failed:0, pending:0, rm:0, items:[] }; NA_GROUPS.push(gmap[k]); }
+      var g = gmap[k];
+      if(f.status==='failed') g.failed++; else g.pending++;
+      var a = num(f.amount); if(a!=null) g.rm += a;
+      g.items.push(f);
+    });
+    NA_GROUPS.forEach(function(g){ g.rm = Math.round(g.rm*100)/100; });
+    NA_GROUPS.sort(function(a,b){ return (b.failed>0?1:0)-(a.failed>0?1:0) || b.rm-a.rm; });
+    renderNeedsAction();
 
-    // Haven't submitted POD
+    // Haven't submitted POD — lorry-first table, driver AND helper shown (nobody singled out)
     var ns = (ship.notStarted||[]);
-    $('podNotSubmitted').innerHTML = ns.length ? ns.map(function(x){ return '<span class="chip red">'+idName(x.driver)+' <span class="mono" style="opacity:.65;">· '+esc(x.lorryNo)+'</span></span>'; }).join('') : '<span class="chip green">All routes have started ✓</span>';
+    if(!ns.length){
+      $('podNotSubmitted').innerHTML = '<span class="chip green">All routes have started ✓</span>';
+    } else {
+      var nsHtml = '<table class="act"><thead><tr><th>Lorry</th><th>Driver</th><th>Helper</th></tr></thead><tbody>';
+      ns.forEach(function(x){
+        nsHtml += '<tr class="fail"><td style="font-weight:600;">'+esc(x.lorryNo)+'</td><td>'+idName(x.driver)+'</td><td>'+(x.secondary?idName(x.secondary):'—')+'</td></tr>';
+        if(x.lorry2){
+          nsHtml += '<tr class="sub-lorry"><td style="padding-left:18px;">↳ '+esc(x.lorry2)+' <span class="route-area">(2nd lorry)</span></td><td>'+(x.lorry2Primary?idName(x.lorry2Primary):'—')+'</td><td>'+(x.lorry2Secondary?idName(x.lorry2Secondary):'—')+'</td></tr>';
+        }
+      });
+      $('podNotSubmitted').innerHTML = nsHtml + '</tbody></table>';
+    }
     $('podNotSubmittedNote').textContent = ns.length ? (ns.length+' of '+((ship.shipments||[]).length)+' routes haven\'t started POD.') : '';
 
     // Per-lorry success (started only, worst at top)
@@ -317,14 +466,22 @@
       });
     }
 
-    // Crew table
+    // Crew table — shared routes show the 2nd lorry as its OWN row with its OWN crew
+    // (progress stays on the main row only, so the route is still counted once)
     var sh = (ship.shipments||[]).slice().sort(function(a,b){ return (a.pct||0)-(b.pct||0); });
     var crew = $('crewRows');
     crew.innerHTML = sh.length ? sh.map(function(s){
       var pct = s.planned>0 ? Math.round(((s.delivered||0)/s.planned)*100) : 0;
       var notStarted = (s.delivered||0)===0;
       var fracHtml = '<span class="prog-mini"><i style="width:'+pct+'%;'+(notStarted?'background:var(--red-500);':'')+'"></i></span><span class="prog-frac"'+(notStarted?' style="color:var(--red-700);font-weight:600;"':'')+'>'+(s.delivered||0)+' / '+(s.planned||0)+'</span>';
-      return '<tr'+(notStarted?' class="pend"':'')+'><td>'+esc(s.lorryNo)+(s.lorry2?' <span style="color:#1A56DB;font-weight:600">+ '+esc(s.lorry2)+'</span>':'')+'</td><td>'+idName(s.assignedPrimary)+'</td><td>'+(s.assignedSecondary?idName(s.assignedSecondary):'—')+'</td><td>'+fracHtml+'</td></tr>';
+      var rows = '<tr'+(notStarted?' class="pend"':'')+'><td>'+esc(s.lorryNo)+'</td><td>'+idName(s.assignedPrimary)+'</td><td>'+(s.assignedSecondary?idName(s.assignedSecondary):'—')+'</td><td>'+fracHtml+'</td></tr>';
+      if(s.lorry2){
+        rows += '<tr class="sub-lorry"><td style="padding-left:18px;">↳ '+esc(s.lorry2)+' <span class="route-area">(2nd lorry · same route)</span></td>'
+          + '<td>'+(s.lorry2Primary?idName(s.lorry2Primary):'<span class="route-area">not assigned yet</span>')+'</td>'
+          + '<td>'+(s.lorry2Secondary?idName(s.lorry2Secondary):'—')+'</td>'
+          + '<td><span class="route-area">shared ↑</span></td></tr>';
+      }
+      return rows;
     }).join('') : '<tr><td colspan="4" class="empty">No shipments imported for this date.</td></tr>';
 
     // Route picker + stops
@@ -341,17 +498,61 @@
   function renderRoute(i){
     var s = ROUTE_SHIPMENTS[i]; if(!s) return;
     var arr = (s.arrivals||[]).slice().sort(function(a,b){ return String(a.time).localeCompare(String(b.time)); });
-    var html = '<div style="font-weight:600;margin:10px 0 12px;color:var(--gray-900);">🚚 '+esc(s.lorryNo)+' &nbsp;·&nbsp; '+idName(s.assignedPrimary)+'</div>';
-    arr.forEach(function(a,idx){
-      html += '<div class="route-stop"><span class="route-time">'+esc(a.time||'—')+'</span><span class="route-dot">'+(idx+1)+'</span><span class="route-name">'+esc(a.customer||a.invoiceNo||'(stop)')+'</span></div>';
+
+    // Merge CONSECUTIVE same-customer confirmations into ONE stop (5 invoices ≠ 5 stops).
+    // A customer visited again later in the day still shows as a separate stop.
+    var stops = [];
+    arr.forEach(function(a){
+      var name = a.customer || a.invoiceNo || '(stop)';
+      var last = stops[stops.length-1];
+      if(last && last.name===name){ last.inv++; if(a.time && (!last.time || a.time<last.time)) last.time=a.time; }
+      else stops.push({ name:name, time:a.time||'', inv:1 });
+    });
+    function mins(t){ var m=String(t||'').match(/^(\d{1,2}):(\d{2})$/); return m ? (Number(m[1])*60+Number(m[2])) : null; }
+
+    var html = '<div style="font-weight:600;margin:10px 0 12px;color:var(--gray-900);">🚚 '+esc(s.lorryNo)+' &nbsp;·&nbsp; '+idName(s.assignedPrimary)
+      + (s.lorry2 ? ' &nbsp;<span class="route-area">+ '+esc(s.lorry2)+' (2nd lorry)</span>' : '')+'</div>';
+    stops.forEach(function(st,idx){
+      if(idx>0){
+        var a=mins(stops[idx-1].time), b=mins(st.time);
+        if(a!=null && b!=null && b>=a){
+          var gap=b-a;
+          html += '<div class="route-gap'+(gap>90?' slow':'')+'">↓ '+(gap>=60?(Math.floor(gap/60)+'h '+(gap%60)+'m'):(gap+' min'))+(gap>90?' — long gap':'')+'</div>';
+        }
+      }
+      html += '<div class="route-stop"><span class="route-time">'+esc(st.time||'—')+'</span><span class="route-dot">'+(idx+1)+'</span><span class="route-name">'+esc(st.name)
+        + (st.inv>1?'<span class="route-inv">('+st.inv+' invoices)</span>':'')+'</span></div>';
     });
     var remaining = (s.planned||0) - arr.length;
-    if(remaining>0) html += '<div class="note-line">… '+remaining+' more stop(s) not yet confirmed ('+(s.delivered||0)+' / '+(s.planned||0)+')</div>';
+    if(remaining>0) html += '<div class="note-line">… '+remaining+' more invoice(s) not yet confirmed ('+(s.delivered||0)+' / '+(s.planned||0)+')</div>';
     $('routeStops').innerHTML = html;
   }
 
   // ---------- FUEL ----------
+  // "Haven't submitted fuel" comes from getDashboardData (dash), NOT getFuelOps — render it from
+  // whichever of the two states we're in, so a fuel-only failure doesn't leave a stale green chip.
+  function renderNoFuel(dash){
+    if(!dash){
+      $('noFuelChips').innerHTML = '<span class="unavail">⚠ Data unavailable — tap Refresh</span>';
+      $('noFuelNote').textContent = '';
+      return;
+    }
+    var ns2 = (dash.notSubmittedToday||[]);
+    $('noFuelChips').innerHTML = ns2.length ? ns2.map(function(name){ var sid=STAFF[name]; return '<span class="chip red mono">'+(sid?esc(sid):esc(name))+'</span>'; }).join('') : '<span class="chip green">Everyone submitted fuel today ✓</span>';
+    $('noFuelNote').textContent = ns2.length ? (ns2.length+' driver(s) not yet submitted.') : '';
+  }
+
   function renderFuel(fuel, dash){
+    if(!fuel){
+      $('fuelPerKmHero').textContent='—'; $('fuelKmPerL').textContent='data unavailable'; $('fuelTotal').textContent='—';
+      $('fuelCostLorry').innerHTML=''; $('fuelCostEmpty').style.display='block';
+      $('fuelPerKm').innerHTML=''; $('fuelPerKmEmpty').style.display='block';
+      $('crossCheckWrap').innerHTML='<span class="unavail">⚠ Fuel data unavailable — tap Refresh</span>';
+      $('tankRows').innerHTML=''; $('tankEmpty').style.display='block';
+      $('fuelRows').innerHTML='<tr><td colspan="7"><span class="unavail">⚠ Fuel data unavailable — tap Refresh</span></td></tr>';
+      renderNoFuel(dash);   // this card's data comes from dash, which may still be fine
+      return;
+    }
     var t = fuel.totals || {rm:0,litres:0,km:0,rmPerKm:null,kmPerLitre:null};
     $('fuelHeroTitle').textContent = 'Fuel cost per km' + (fuel.periodLabel?(' ('+fuel.periodLabel+')'):'');
     var hasRm = num(t.rm)!=null && num(t.rm) > 0;
@@ -394,21 +595,46 @@
       });
     }
 
-    // Cross-check: km vs stops
-    var flagged = lorries.filter(function(l){ return l.kmFlag==='HIGH'; }).sort(function(a,b){return (b.kmPerStop||0)-(a.kmPerStop||0);});
+    // Cross-check: km vs stops — only lorries with ≥3 stops are judged; 1-2 stop lorries
+    // are listed greyed-out as "too few stops to compare" (not flagged, not in the average)
+    var flagged  = lorries.filter(function(l){ return l.kmFlag==='HIGH'; }).sort(function(a,b){return (b.kmPerStop||0)-(a.kmPerStop||0);});
+    var lowStops = lorries.filter(function(l){ return l.kmFlag==='LOW_STOPS'; });
     var cc = $('crossCheckWrap');
-    if(!num(t.avgKmPerStop)){ cc.innerHTML = '<div class="empty">Not enough data yet (needs km + delivered stops). Fills in as drivers enter odometer + deliveries.</div>'; }
-    else if(!flagged.length){ cc.innerHTML = '<div class="chip green">All lorries within normal range ✓ — fleet avg '+t.avgKmPerStop+' km / stop</div>'; }
+    var ccHtml = '';
+    if(!num(t.avgKmPerStop)){ ccHtml = '<div class="empty">Not enough data yet (needs km + delivered stops on lorries with 3+ stops). Fills in as drivers enter odometer + deliveries.</div>'; }
+    else if(!flagged.length){ ccHtml = '<div class="chip green">All lorries within normal range ✓ — fleet avg '+t.avgKmPerStop+' km / stop (weighted, 3+ stop lorries)</div>'; }
     else {
-      cc.innerHTML = '<table class="act"><thead><tr><th>Lorry</th><th class="rm">km</th><th class="rm">stops</th><th class="rm">km / stop</th><th class="rm">vs avg ('+t.avgKmPerStop+')</th></tr></thead><tbody>' +
+      ccHtml = '<table class="act" style="table-layout:fixed;"><thead><tr><th>Lorry</th><th class="rm">km</th><th class="rm">stops</th><th class="rm">km / stop</th><th class="rm">vs avg ('+t.avgKmPerStop+')</th></tr></thead><tbody>' +
         flagged.map(function(l){ var x=(l.kmPerStop/t.avgKmPerStop).toFixed(1); return '<tr class="fail"><td>'+esc(l.lorry)+'</td><td class="rm">'+fmtInt(l.km)+'</td><td class="rm">'+fmtInt(l.stops)+'</td><td class="rm st-fail">'+l.kmPerStop+'</td><td class="rm st-fail">'+x+'×</td></tr>'; }).join('') +
         '</tbody></table>';
     }
+    if(lowStops.length){
+      ccHtml += '<div class="note-line">' + lowStops.map(function(l){
+        return esc(l.lorry)+' — '+fmtInt(l.km)+' km · '+l.stops+' stop'+(l.stops>1?'s':'')+' (too few stops to compare)';
+      }).join(' &nbsp;·&nbsp; ') + '</div>';
+    }
+    cc.innerHTML = ccHtml;
 
-    // Haven't submitted fuel today (from getDashboardData)
-    var ns = (dash.notSubmittedToday||[]);
-    $('noFuelChips').innerHTML = ns.length ? ns.map(function(name){ var sid=STAFF[name]; return '<span class="chip red mono">'+(sid?esc(sid):esc(name))+'</span>'; }).join('') : '<span class="chip green">Everyone submitted fuel today ✓</span>';
-    $('noFuelNote').textContent = ns.length ? (ns.length+' driver(s) not yet submitted.') : '';
+    // Per-tank: last fill-up by lorry (fill-to-fill)
+    var tanks = lorries.filter(function(l){ return l.lastFill; });
+    if(!tanks.length){ $('tankRows').innerHTML=''; $('tankEmpty').style.display='block'; }
+    else {
+      $('tankEmpty').style.display='none';
+      $('tankRows').innerHTML = tanks.map(function(l){
+        var f = l.lastFill;
+        return '<tr><td style="font-weight:600;">'+esc(l.lorry)+'</td>'
+          + '<td>'+esc(f.date)+'</td>'
+          + '<td class="rm">'+(num(f.rm)==null?'—':num(f.rm).toFixed(2))+'</td>'
+          + '<td class="rm">'+(num(f.litres)==null?'—':num(f.litres))+'</td>'
+          + '<td>'+fmtInt(f.kmSince)+' km · '+f.stopsSince+' stop'+(f.stopsSince===1?'':'s')+' <span class="route-area">(since '+esc(f.prevDate)+')</span></td>'
+          + '<td class="rm">'+(f.rmPerKm==null?'—':('RM '+Number(f.rmPerKm).toFixed(2)))+'</td>'
+          + '<td class="rm">'+(f.kmPerLitre==null?'—':f.kmPerLitre)+'</td></tr>';
+      }).join('');
+    }
+
+    // Haven't submitted fuel today (from getDashboardData) — if THAT call failed, say so
+    // instead of showing a green "everyone submitted" (A1).
+    renderNoFuel(dash);
 
     // Fuel submissions today
     var subs = (fuel.submissions||[]);
@@ -436,6 +662,18 @@
     wireCollapse('crewToggle','crewBody','crewCaret');
     wireCollapse('routeToggle','routeBody','routeCaret');
     wireCollapse('fuelToggle','fuelSubBody','fuelCaret');
+    wireCollapse('tankToggle','tankBody','tankCaret');
+    // Needs-action filter chips (All / Failed only)
+    $('naFilterAll').addEventListener('click', function(){ NA_FILTER='all'; $('naFilterAll').classList.add('active'); $('naFilterFailed').classList.remove('active'); renderNeedsAction(); });
+    $('naFilterFailed').addEventListener('click', function(){ NA_FILTER='failed'; $('naFilterFailed').classList.add('active'); $('naFilterAll').classList.remove('active'); renderNeedsAction(); });
+    // Auto-refresh: every 5 min while visible; on return to the tab if >2 min stale; the
+    // "Updated HH:MM (Xm ago)" label re-ages every minute and turns amber past 15 min.
+    setInterval(function(){ if(!document.hidden) load(); }, 5*60000);
+    setInterval(paintUpdated, 60000);
+    document.addEventListener('visibilitychange', function(){
+      if(!document.hidden && LAST_UPDATED && Date.now()-LAST_UPDATED > 2*60000) load();
+      paintUpdated();
+    });
     load();
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();

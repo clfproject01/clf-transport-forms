@@ -264,11 +264,18 @@ function renderShipments(ships){
       + (pending > 0 && !allDone ? ' <span class="prog-sub" style="font-size:11px">'+pending+' pending</span>' : '')
       + '</div>'
       + '<div class="crew"><div class="crew-row">'
-      + '<div class="crew-field" style="position:relative;"><label class="field-label">Primary driver</label>'
+      + '<div class="crew-field" style="position:relative;"><label class="field-label">'+(s.lorry2 ? escHtml(s.lorryNo)+' — driver' : 'Primary driver')+'</label>'
       + crewPicker('primary', s.assignedPrimary || '')+'</div>'
-      + '<div class="crew-field" style="position:relative;"><label class="field-label">Helper (optional)</label>'
+      + '<div class="crew-field" style="position:relative;"><label class="field-label">'+(s.lorry2 ? escHtml(s.lorryNo)+' — helper (optional)' : 'Helper (optional)')+'</label>'
       + crewPicker('secondary', s.assignedSecondary || '')+'</div>'
-      + '</div><div class="crew-actions">'
+      + '</div>'
+      + (s.lorry2 ? ('<div class="crew-row" style="margin-top:8px;">'
+        + '<div class="crew-field" style="position:relative;"><label class="field-label" style="color:#1A56DB;">'+escHtml(s.lorry2)+' (2nd lorry) — driver</label>'
+        + crewPicker('l2primary', s.lorry2Primary || '')+'</div>'
+        + '<div class="crew-field" style="position:relative;"><label class="field-label" style="color:#1A56DB;">'+escHtml(s.lorry2)+' — helper (optional)</label>'
+        + crewPicker('l2secondary', s.lorry2Secondary || '')+'</div>'
+        + '</div>') : '')
+      + '<div class="crew-actions">'
       + '<button class="btn btn-danger btn-sm del-ship">Delete</button>'
       + '<button class="btn btn-primary btn-sm save-crew">Save assignment</button>'
       + '</div></div>'
@@ -285,7 +292,8 @@ function renderShipments(ships){
       const shipmentNo = card.getAttribute('data-ship');
       const primary = card.querySelector('.sel-primary').value;
       const secondary = card.querySelector('.sel-secondary').value;
-      saveCrew(shipmentNo, primary, secondary, btn);
+      const l2pEl = card.querySelector('.sel-l2primary'), l2sEl = card.querySelector('.sel-l2secondary');
+      saveCrew(shipmentNo, primary, secondary, btn, l2pEl ? l2pEl.value : null, l2sEl ? l2sEl.value : null);
     });
   });
 
@@ -300,18 +308,21 @@ function renderShipments(ships){
 }
 
 // ── writes ──
-async function saveCrew(shipmentNo, primary, secondary, btn){
+async function saveCrew(shipmentNo, primary, secondary, btn, l2primary, l2secondary){
   if(!primary){ showToast('Pick a primary driver first.', 'warning'); return; }
   btn.disabled = true; const old = btn.textContent; btn.textContent = 'Saving…';
   try{
+    // l2primary/l2secondary are null when the card has no 2nd lorry — only send them when present
     const url = SCRIPT_URL + '?action=ASSIGN_SHIPMENT_CREW'
       + '&shipmentNo=' + encodeURIComponent(shipmentNo)
       + '&primary='    + encodeURIComponent(primary)
-      + '&secondary='  + encodeURIComponent(secondary || '');
+      + '&secondary='  + encodeURIComponent(secondary || '')
+      + (l2primary !== null ? ('&lorry2Primary=' + encodeURIComponent(l2primary || '') + '&lorry2Secondary=' + encodeURIComponent(l2secondary || '')) : '');
     const res = await fetch(url);
     const data = await res.json();
     if(data && data.status === 'success'){
-      showToast('Assigned ' + shipmentNo + ' → ' + primary + (secondary ? ' + ' + secondary : ''), 'success');
+      showToast('Assigned ' + shipmentNo + ' → ' + primary + (secondary ? ' + ' + secondary : '')
+        + (l2primary ? (' | 2nd lorry: ' + l2primary + (l2secondary ? ' + ' + l2secondary : '')) : ''), 'success');
       loadShipments();
     }else{
       showToast('Save failed: ' + ((data && data.message) || 'unknown'), 'danger');

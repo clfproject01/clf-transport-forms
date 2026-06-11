@@ -481,6 +481,7 @@
           <span class="bm">Enter current odometer reading · Masukkan bacaan odometer semasa</span>
         </label>
         <input type="number" id="mileage" placeholder="e.g. 85420" min="0" required>
+        <div id="lastOdoHint" style="display:none;margin-top:6px;padding:6px 12px;background:#EFF6FF;color:#1E40AF;border-radius:6px;font-size:13px;"></div>
         <div class="error-msg" id="err-mileage">Please enter mileage · Sila masukkan bacaan odometer</div>
       </div>
 
@@ -514,12 +515,13 @@
       <div class="field">
         <label>Upload Receipt Image · Muat Naik Gambar Resit <span class="req">*</span></label>
         <div class="photo-btn" id="photoBtn">
-          <input type="file" id="receiptPhoto" accept="image/*" capture="environment" onchange="handlePhoto(this)">
+          <!-- no `capture` attr: lets the driver pick camera OR gallery (receipt photographed earlier at the pump) -->
+          <input type="file" id="receiptPhoto" accept="image/*" onchange="handlePhoto(this)">
           <div class="photo-icon">
             <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
           </div>
           <div class="photo-label" id="photoLabel">Tap to take photo · Ketik untuk ambil gambar</div>
-          <div class="photo-sublabel" id="photoSub">Camera will open automatically · Kamera akan dibuka secara automatik</div>
+          <div class="photo-sublabel" id="photoSub">Camera or gallery · Kamera atau galeri</div>
           <img class="photo-preview" id="photoPreview" alt="Receipt preview">
         </div>
         <div class="error-msg" id="err-photo">Please take a photo of the receipt · Sila ambil gambar resit</div>
@@ -537,7 +539,7 @@
 
       <!-- SUBMIT -->
       <div class="btn-wrap">
-        <button type="button" class="submit-btn" onclick="submitForm()">
+        <button type="button" class="submit-btn" id="submitBtn" onclick="submitForm()">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 2 11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
           Submit Fuel Record · Hantar Rekod Bahan Api
         </button>
@@ -692,6 +694,33 @@ function handlePhoto(input) {
   }
 }
 
+// A4: fetch the lorry's last odometer reading when a vehicle is picked — shown as guidance,
+// and used in validate() to catch typos (a wrong odometer poisons ALL km / fuel analytics).
+var _lastOdo = null, _lastOdoVeh = '';
+(function(){
+  var vSel = document.getElementById('vehicleNo');
+  if (!vSel) return;
+  vSel.addEventListener('change', function(){
+    var veh = vSel.value;
+    _lastOdo = null; _lastOdoVeh = veh;
+    var hint = document.getElementById('lastOdoHint');
+    if (hint){ hint.style.display = 'none'; hint.textContent = ''; }
+    if (!veh) return;
+    fetch(SCRIPT_URL + '?action=getLastMileage&vehicleNo=' + encodeURIComponent(veh))
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (_lastOdoVeh !== veh) return;                  // user already switched vehicle
+        if (d && d.status === 'ok' && d.found){
+          _lastOdo = d;
+          if (hint){
+            hint.innerHTML = 'Last reading · Bacaan terakhir: <b>' + Number(d.mileage).toLocaleString() + ' km</b> (' + d.date + ')';
+            hint.style.display = 'block';
+          }
+        }
+      }).catch(function(){ /* hint is best-effort */ });
+  });
+})();
+
 function validate() {
   let valid = true;
   const fields = [
@@ -736,6 +765,55 @@ function validate() {
     document.getElementById('err-amount').classList.remove('show');
   }
 
+  // A4: odometer sanity vs the lorry's last known reading (typo protection).
+  // Lower than last, or a jump > 1,500 km, needs the driver to explicitly confirm.
+  const _mv = parseFloat(document.getElementById('mileage').value);
+  if (valid && _lastOdo && _lastOdoVeh === document.getElementById('vehicleNo').value && !isNaN(_mv)) {
+    if (_mv <= _lastOdo.mileage) {
+      if (!confirm('⚠ Odometer ' + _mv.toLocaleString() + ' is LOWER than the last reading '
+            + Number(_lastOdo.mileage).toLocaleString() + ' km (' + _lastOdo.date + ').\n'
+            + 'Bacaan odometer LEBIH RENDAH daripada bacaan terakhir.\n\n'
+            + 'Please check for a typo. Continue anyway?\nSila semak. Teruskan juga?')) {
+        document.getElementById('mileage').focus();
+        valid = false;
+      }
+    } else if (_mv - _lastOdo.mileage > 1500) {
+      if (!confirm('⚠ That is ' + Math.round(_mv - _lastOdo.mileage).toLocaleString() + ' km since the last reading ('
+            + Number(_lastOdo.mileage).toLocaleString() + ' km, ' + _lastOdo.date + ') — very far for one tank.\n'
+            + 'Itu sangat jauh sejak bacaan terakhir.\n\n'
+            + 'Please check for a typo. Continue anyway?\nSila semak. Teruskan juga?')) {
+        document.getElementById('mileage').focus();
+        valid = false;
+      }
+    }
+  }
+
+  // B8: amount plausibility — catches a missing decimal ("180" → "18000") and RM/litres swapped.
+  const _amtV = parseFloat(document.getElementById('amount').value);
+  const _litV = parseFloat(document.getElementById('litres').value);
+  if (valid && !isNaN(_amtV) && _amtV > 0) {
+    if (!isNaN(_litV) && _litV > 0) {
+      const perL = _amtV / _litV;
+      if (perL < 1.2 || perL > 6) {
+        if (!confirm('⚠ RM ' + _amtV.toLocaleString(undefined,{minimumFractionDigits:2}) + ' ÷ ' + _litV + ' L = RM '
+              + perL.toFixed(2) + ' per litre — that does not look like a normal fuel price.\n'
+              + 'Itu tidak nampak seperti harga minyak biasa.\n\n'
+              + 'Check: RM and Litres maybe swapped, or a missing decimal point? Continue anyway?\n'
+              + 'Semak: RM dan Liter mungkin tertukar? Teruskan juga?')) {
+          document.getElementById('amount').focus();
+          valid = false;
+        }
+      }
+    } else if (_amtV > 1500 || _amtV < 10) {
+      if (!confirm('⚠ Fuel amount = RM ' + _amtV.toLocaleString(undefined,{minimumFractionDigits:2}) + ' — is that correct?\n'
+            + 'Jumlah bahan api = RM ' + _amtV.toLocaleString(undefined,{minimumFractionDigits:2}) + ' — betul ke?\n\n'
+            + 'Check for a missing decimal point. Continue anyway?\nSemak titik perpuluhan. Teruskan juga?')) {
+        document.getElementById('amount').focus();
+        valid = false;
+      }
+    }
+  }
+
   // B18 fix: driver and secondDriver must not be the same person (would double-count credit)
   const dr = document.getElementById('driverName').value;
   const sdEl = document.getElementById('secondDriver');
@@ -752,13 +830,32 @@ function validate() {
 async function submitForm() {
   if (!validate()) return;
 
+  // Litres nudge: it's printed on every receipt, and without it km/L for this lorry goes blank.
+  const _litEl = document.getElementById('litres');
+  if (_litEl && (!_litEl.value || !(parseFloat(_litEl.value) > 0))) {
+    if (!confirm('Litres is empty — it is printed on your receipt and helps track the lorry.\n'
+          + 'Liter kosong — ia tercetak pada resit anda.\n\n'
+          + 'OK = submit WITHOUT litres · Hantar TANPA liter\n'
+          + 'Cancel = go back and add it · Kembali dan isi')) {
+      _litEl.focus();
+      return;
+    }
+  }
+
+  // A3: block double-taps — a fast second tap before the overlay paints used to double-submit.
+  const _btn = document.getElementById('submitBtn');
+  if (_btn) { if (_btn.disabled) return; _btn.disabled = true; }
+
   document.getElementById('loadingOverlay').classList.add('show');
 
   try {
     const photoFile = document.getElementById('receiptPhoto').files[0];
-    const base64 = await toBase64(photoFile);
+    const ph = await compressToBase64(photoFile);   // B7: ~10-20× smaller upload
 
     const now = new Date();
+    // A3: clientToken + read-back — the server stashes its REAL result under this token,
+    // so a server-side failure no longer shows a false "Submitted!" screen.
+    const token = 'fuel_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
     const payload = {
       formType: 'FUEL',
       timestamp: now.toISOString(),
@@ -769,9 +866,10 @@ async function submitForm() {
       mileage: document.getElementById('mileage').value,
       amount: document.getElementById('amount').value,
       litres: document.getElementById('litres').value || '',
-      photoBase64: base64,
-      photoName: photoFile.name,
-      photoType: photoFile.type,
+      photoBase64: ph.base64,
+      photoName: ph.name,
+      photoType: ph.type,
+      clientToken: token,
     };
 
     const formData = new FormData();
@@ -782,8 +880,26 @@ async function submitForm() {
       body: formData
     });
 
-    // Show success (no-cors means we can't read response, assume success)
+    // Poll for the real result (OCR can take a few seconds — be patient: ~24s max)
+    let result = null;
+    for (let t = 0; t < 12; t++) {
+      await new Promise(r => setTimeout(r, 2000));
+      try {
+        const rb = await fetch(SCRIPT_URL + '?action=getImportResult&token=' + encodeURIComponent(token));
+        const rd = await rb.json();
+        if (rd && rd.status && rd.status !== 'pending') { result = rd; break; }
+      } catch (e) { /* keep polling */ }
+    }
+
     document.getElementById('loadingOverlay').classList.remove('show');
+    if (_btn) _btn.disabled = false;
+
+    if (result && result.status === 'error') {
+      alert('NOT submitted · TIDAK dihantar!\n' + (result.message || 'Server error') + '\n\nPlease try again. · Sila cuba lagi.');
+      return;   // form stays filled — driver just re-taps Submit
+    }
+    // success confirmed, or no read-back (weak signal → the entry almost certainly went in;
+    // supervisor dashboard remains the final check, as the notice on the form says)
 
     const timeStr = now.toLocaleDateString('en-MY', { day:'2-digit', month:'short', year:'numeric' })
       + ' · ' + now.toLocaleTimeString('en-MY', { hour:'2-digit', minute:'2-digit' });
@@ -794,6 +910,7 @@ async function submitForm() {
 
   } catch (err) {
     document.getElementById('loadingOverlay').classList.remove('show');
+    if (_btn) _btn.disabled = false;
     alert('Submission failed. Please check your connection and try again.\nPenghantaran gagal. Sila semak sambungan anda dan cuba lagi.');
   }
 }
@@ -855,13 +972,46 @@ function toBase64(file) {
   });
 }
 
+// B7: downscale the receipt photo before upload (raw camera files are 3-12 MB → 30s+ on 3G and
+// frequent timeouts; ~1600px JPEG is ~200-400 KB and still plenty for the OCR cross-check).
+// Falls back to the raw file if anything goes wrong.
+function compressToBase64(file) {
+  return new Promise((resolve, reject) => {
+    // raw fallback must settle the promise even if the raw read ALSO fails (file evicted from
+    // storage between selection and submit) — otherwise the await hangs forever behind the overlay
+    const raw = () => toBase64(file).then(b64 => resolve({ base64: b64, name: file.name, type: file.type })).catch(reject);
+    try {
+      const reader = new FileReader();
+      reader.onerror = raw;
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onerror = raw;
+        img.onload = () => {
+          try {
+            let w = img.naturalWidth, h = img.naturalHeight;
+            const MAX = 1600;
+            if (w > MAX || h > MAX) { const s = MAX / Math.max(w, h); w = Math.round(w * s); h = Math.round(h * s); }
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            resolve({ base64: dataUrl.split(',')[1], name: (file.name || 'receipt').replace(/\.\w+$/, '') + '.jpg', type: 'image/jpeg' });
+          } catch (err) { raw(); }
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    } catch (err) { raw(); }
+  });
+}
+
 function resetForm() {
   document.getElementById('successScreen').classList.remove('show');
   document.getElementById('fuelForm').reset();
   document.getElementById('photoPreview').classList.remove('visible');
   document.getElementById('photoBtn').classList.remove('has-photo');
   document.getElementById('photoLabel').textContent = 'Tap to take photo · Ketik untuk ambil gambar';
-  document.getElementById('photoSub').textContent = 'Camera will open automatically · Kamera akan dibuka secara automatik';
+  document.getElementById('photoSub').textContent = 'Camera or gallery · Kamera atau galeri';
 
   // Restore date and driver name (Kuala Lumpur timezone)
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });

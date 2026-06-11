@@ -418,36 +418,54 @@ function wireDriverPicker(searchId, hiddenId, panelId, badgeId, onPick){
   search._pick = pick;
 }
 
-async function fetchAndPopulateDrivers() {
+const ROSTER_CACHE_KEY = 'clf_roster_cache';   // last good roster — picker still works in a dead zone
+
+function _applyRoster(drivers){
+  STAFF_IDS = {}; ROSTER = drivers.slice();
+  drivers.forEach(d => { STAFF_IDS[d.name] = d.staffId || ''; });
+
+  wireDriverPicker('driverSearch', 'driverName', 'driverPanel', 'staffIdBadge', function(name){
+    localStorage.setItem(STORAGE_KEY, name);
+    document.getElementById('rememberedBadge').style.display = 'inline-flex';
+  });
+  wireDriverPicker('secondSearch', 'secondDriver', 'secondPanel', 'staffIdBadge2', null);
+
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved && STAFF_IDS[saved] && document.getElementById('driverSearch')._pick) {
+    document.getElementById('driverSearch')._pick(saved);
+    document.getElementById('rememberedBadge').style.display = 'inline-flex';
+  }
+}
+
+async function fetchAndPopulateDrivers(isRetry) {
   try {
     const res = await fetch(SCRIPT_URL + '?action=getDrivers', { method: 'GET' });
     const data = await res.json();
     if (!data || data.status !== 'ok' || !Array.isArray(data.drivers) || data.drivers.length === 0) {
       throw new Error('Empty driver roster from server');
     }
-    STAFF_IDS = {}; ROSTER = data.drivers.slice();
-    data.drivers.forEach(d => { STAFF_IDS[d.name] = d.staffId || ''; });
-
-    wireDriverPicker('driverSearch', 'driverName', 'driverPanel', 'staffIdBadge', function(name){
-      localStorage.setItem(STORAGE_KEY, name);
-      document.getElementById('rememberedBadge').style.display = 'inline-flex';
-    });
-    wireDriverPicker('secondSearch', 'secondDriver', 'secondPanel', 'staffIdBadge2', null);
-
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved && STAFF_IDS[saved] && document.getElementById('driverSearch')._pick) {
-      document.getElementById('driverSearch')._pick(saved);
-      document.getElementById('rememberedBadge').style.display = 'inline-flex';
-    }
+    _applyRoster(data.drivers);
+    try{ localStorage.setItem(ROSTER_CACHE_KEY, JSON.stringify(data.drivers)); }catch(e){}
   } catch (err) {
     console.error('fetchAndPopulateDrivers failed:', err);
-    var ds = document.getElementById('driverSearch');
-    if (ds) ds.placeholder = '⚠ Failed to load — refresh the page';
+    // Fall back to the cached roster (still lets the driver pick + submit at the depot dead zone)
+    var usedCache = false;
+    try{
+      var cached = JSON.parse(localStorage.getItem(ROSTER_CACHE_KEY) || 'null');
+      if (Array.isArray(cached) && cached.length){ _applyRoster(cached); usedCache = true; }
+    }catch(e){}
+    if (!usedCache){
+      var ds = document.getElementById('driverSearch');
+      if (ds) ds.placeholder = '⚠ Failed to load — tap to retry · Ketik untuk cuba lagi';
+      if (ds && !ds._retryWired){ ds._retryWired = true; ds.addEventListener('focus', function(){ if (!ROSTER.length) fetchAndPopulateDrivers(true); }); }
+    }
+    if (!isRetry) setTimeout(function(){ if (!ROSTER.length) fetchAndPopulateDrivers(true); }, 5000);   // one auto-retry
   }
 }
 
 // (driver Staff-ID confirmation is now handled inside wireDriverPicker)
 const STORAGE_KEY = 'clf_driver_name';
+const VEHICLE_KEY = 'clf_pod_vehicle';   // B5: cheap Androids evict the tab when the camera opens
 
 window.onload = function() {
   // Kuala Lumpur timezone — fixes early-morning bug
@@ -455,9 +473,28 @@ window.onload = function() {
   document.getElementById('deliveryDate').value = today;
   document.getElementById('deliveryDate').max = today;
 
-  // V17: Fetch driver list from backend; this also restores remembered driver
-  fetchAndPopulateDrivers();
+  // V17: Fetch driver list from backend; this also restores remembered driver.
+  // B5: restore the last vehicle AFTER the roster settles — restoring first made the
+  // crew auto-fill a silent no-op (ROSTER empty + pickers not wired yet = race).
+  fetchAndPopulateDrivers().finally(function(){
+    try{
+      var savedVeh = localStorage.getItem(VEHICLE_KEY);
+      if (savedVeh){
+        var vs = document.getElementById('vehicleNo');
+        vs.value = savedVeh;
+        if (vs.value === savedVeh) checkShipmentForVehicle();   // value sticks only if the option exists
+      }
+    }catch(e){ /* localStorage unavailable — fine */ }
+  });
 };
+
+// B6: when the driver comes back to this tab (camera / WhatsApp / pocket), silently re-sync the
+// list — matters on shared routes where the OTHER lorry may have delivered stops meanwhile.
+// GUARD: skip while a photo flow is in progress (_deliverIdx >= 0) — returning FROM THE CAMERA
+// also fires this, and a refresh racing onShipPhoto could drop the just-taken photo.
+document.addEventListener('visibilitychange', function(){
+  if (!document.hidden && _deliverIdx < 0 && document.getElementById('vehicleNo').value) checkShipmentForVehicle(true);
+});
 
 // (old <select> change-listeners removed — driver picking is handled by wireDriverPicker)
 
@@ -732,19 +769,22 @@ async function checkShipmentForVehicle(keepListOnFail){
 // Skips gracefully if the assigned name isn't in ROSTER.
 function _autoFillAssignedDrivers(shipment){
   if (!shipment) return;
-  // 2-lorries-one-route: the assigned crew belongs to the PRIMARY lorry. If the driver picked the
-  // 2nd lorry, do NOT auto-fill (it would show the wrong driver) — let them pick themselves.
-  var _veh = String(document.getElementById('vehicleNo').value || '').replace(/\s+/g,'').toUpperCase();
-  var _prim = String(shipment.lorryNo || '').replace(/\s+/g,'').toUpperCase();
-  if (_veh && _prim && _veh !== _prim) return;
+  // 2-lorries-one-route: each lorry has its OWN crew. Picked the primary lorry → fill its crew;
+  // picked the 2nd lorry → fill the Lorry2 crew (assigned by the office); anything else → don't fill.
+  function _n(s){ return String(s || '').replace(/\s+/g,'').toUpperCase(); }
+  var _veh = _n(document.getElementById('vehicleNo').value), _prim = _n(shipment.lorryNo), _l2 = _n(shipment.lorry2);
+  var primary, secondary;
+  if (_veh && _l2 && _veh === _l2){ primary = shipment.lorry2Primary; secondary = shipment.lorry2Secondary; }
+  else if (_veh && _prim && _veh !== _prim){ return; }
+  else { primary = shipment.assignedPrimary; secondary = shipment.assignedSecondary; }
   function inRoster(name){ return ROSTER.some(function(d){ return d.name === name; }); }
-  var primary = String(shipment.assignedPrimary || '').trim();
+  primary = String(primary || '').trim();
   var hidden  = document.getElementById('driverName');
   var picker  = document.getElementById('driverSearch');
   if (primary && hidden && !hidden.value && picker && picker._pick && inRoster(primary)){
     picker._pick(primary, true);
   }
-  var secondary = String(shipment.assignedSecondary || '').trim();
+  secondary = String(secondary || '').trim();
   var sHidden = document.getElementById('secondDriver');
   var sPicker = document.getElementById('secondSearch');
   if (secondary && secondary !== primary && sHidden && !sHidden.value && sPicker && sPicker._pick && inRoster(secondary)){
@@ -753,13 +793,25 @@ function _autoFillAssignedDrivers(shipment){
 }
 
 function _buildGroups(items){
+  // A2: carry over photos the driver snapped but hasn't successfully saved yet — the post-save
+  // read-back rebuilds this list and used to silently discard them (driver had to re-take).
+  var prevPhotos = {};
+  (_shipGroups || []).forEach(function(g){ if (g.key && g.photos && g.photos.length) prevPhotos[g.key] = g.photos; });
   var map = {}; _shipGroups = [];
   items.forEach(function(it){
     var k = it.custCode || it.customerName || it.invoiceNo;
-    if (!map[k]){ map[k] = { name: it.customerName||k, area: it.area||'', invs: [] }; _shipGroups.push(map[k]); }
+    if (!map[k]){ map[k] = { key: k, name: it.customerName||k, area: it.area||'', invs: [] }; _shipGroups.push(map[k]); }
     map[k].invs.push(it);
   });
+  _shipGroups.forEach(function(g){
+    // re-attach only while the group still has pending invoices; once the server confirms
+    // everything delivered, the buffered photos are no longer needed and are dropped.
+    var hasPending = g.invs.some(function(x){ return String(x.status).toLowerCase() !== 'delivered'; });
+    if (hasPending && prevPhotos[g.key]) g.photos = prevPhotos[g.key];
+  });
 }
+
+var _shipFilter = '';   // B4: live customer search (kept across re-renders)
 
 function renderShipmentList(){
   var sec = document.getElementById('shipmentSection');
@@ -767,13 +819,45 @@ function renderShipmentList(){
   var total = all.length;
   var done = all.filter(function(i){ return String(i.status).toLowerCase()==='delivered'; }).length;
   var failed = all.filter(function(i){ return String(i.status).toLowerCase()==='failed'; }).length;
+  var remaining = total - done - failed;
   var pct = total ? Math.round(done/total*100) : 0;
   var vehicle = document.getElementById('vehicleNo').value;
   var html = '<div class="section-label">📋 Today\'s Delivery List · Senarai Penghantaran</div>'
     + '<div style="background:#FFF8E1;border:1px solid #F0D9A8;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:#412402;">'
     + '<b>'+_esc(vehicle)+'</b> · '+done+' / '+total+' delivered'+(failed?' · '+failed+' problem':'')
-    + '<div style="height:8px;background:#F0D9A8;border-radius:99px;margin-top:7px;overflow:hidden;"><div style="height:100%;width:'+pct+'%;background:#2E7D32;border-radius:99px;transition:width .3s;"></div></div></div>';
-  _shipGroups.forEach(function(g, i){
+    + (remaining>0 ? ' · <b>'+remaining+' to go · lagi</b>' : '')
+    + '<div style="height:8px;background:#F0D9A8;border-radius:99px;margin-top:7px;overflow:hidden;"><div style="height:100%;width:'+pct+'%;background:#2E7D32;border-radius:99px;transition:width .3s;"></div></div></div>'
+    // B4/B6: search + manual refresh (44-stop routes need both)
+    + '<div style="display:flex;gap:8px;margin-bottom:12px;">'
+    + '<input type="text" id="shipFilter" value="'+_esc(_shipFilter)+'" placeholder="🔍 Find customer · Cari pelanggan" autocomplete="off" '
+    +   'style="flex:1;box-sizing:border-box;padding:11px 14px;font-size:15px;border:1.5px solid #E0C68A;border-radius:8px;background:#fff;color:#412402;">'
+    + '<button type="button" id="shipRefresh" style="background:#fff;color:#854F0B;border:1.5px solid #E0C68A;border-radius:8px;padding:0 14px;font-weight:700;font-size:14px;cursor:pointer;">&#8635;</button>'
+    + '</div><div id="shipGroupsWrap"></div>'
+    + '<div style="text-align:center;color:#9a8050;font-size:11.5px;margin-top:6px;">Not on the list? Ask the office to add it. · Tiada dalam senarai? Hubungi pejabat.</div>';
+  sec.innerHTML = html;
+  renderShipGroups();
+}
+
+// B4: groups list only (separate from the header so typing in the search box keeps focus).
+// Pending customers first, delivered sink to the bottom; data-i stays the ORIGINAL index.
+function renderShipGroups(){
+  var wrap = document.getElementById('shipGroupsWrap');
+  if (!wrap) return;
+  var q = String(_shipFilter||'').trim().toLowerCase();
+  var disp = _shipGroups.map(function(g,i){ return { g:g, i:i }; });
+  if (q){
+    disp = disp.filter(function(d){
+      return String(d.g.name||'').toLowerCase().indexOf(q)>=0
+          || String(d.g.area||'').toLowerCase().indexOf(q)>=0
+          || d.g.invs.some(function(x){ return String(x.invoiceNo||'').toLowerCase().indexOf(q)>=0; });
+    });
+  }
+  function rank(g){ return g.invs.every(function(x){ return String(x.status).toLowerCase()==='delivered'; }) ? 1 : 0; }
+  disp.sort(function(a,b){ return rank(a.g)-rank(b.g) || a.i-b.i; });
+  var html = '';
+  if (!disp.length){ html = '<div style="text-align:center;color:#9a8050;font-size:13px;padding:14px;">No match · Tiada padanan</div>'; }
+  disp.forEach(function(d){
+    var g = d.g, i = d.i;
     var gDone = g.invs.every(function(x){ return String(x.status).toLowerCase()==='delivered'; });
     var gFail = !gDone && g.invs.some(function(x){ return String(x.status).toLowerCase()==='failed'; });
     var color = gDone ? '#2E7D32' : (gFail ? '#C62828' : '#C9A227');
@@ -804,12 +888,17 @@ function renderShipmentList(){
     }
     html += '</div>';
   });
-  html += '<div style="text-align:center;color:#9a8050;font-size:11.5px;margin-top:6px;">Not on the list? Ask the office to add it. · Tiada dalam senarai? Hubungi pejabat.</div>';
-  sec.innerHTML = html;
+  wrap.innerHTML = html;
 }
+
+// B4: search box — input delegation; only the groups wrap re-renders so the keyboard stays open
+document.getElementById('shipmentSection').addEventListener('input', function(e){
+  if (e.target && e.target.id === 'shipFilter'){ _shipFilter = e.target.value; renderShipGroups(); }
+});
 
 // click delegation on the shipment section
 document.getElementById('shipmentSection').addEventListener('click', function(e){
+  if (e.target.closest('#shipRefresh')){ checkShipmentForVehicle(true); return; }   // B6: manual re-sync
   var ph = e.target.closest('.ship-photo');
   if (ph){ _deliverIdx = parseInt(ph.getAttribute('data-i'),10); document.getElementById('shipPhoto').click(); return; }
   var sv = e.target.closest('.ship-save');
@@ -823,15 +912,23 @@ document.getElementById('shipmentSection').addEventListener('click', function(e)
 // photo taken for a customer → submit delivery for that customer's pending invoices
 // STEP 1: take photo(s) for a customer → buffer + show thumbnails (does NOT submit yet)
 async function onShipPhoto(input){
-  if (_deliverIdx < 0 || !input.files || !input.files.length){ input.value=''; return; }
+  // Cancelled camera fires this with empty files — MUST reset _deliverIdx or the
+  // visibilitychange re-sync stays suppressed for the rest of the session.
+  if (_deliverIdx < 0 || !input.files || !input.files.length){ input.value=''; _deliverIdx = -1; return; }
   var g = _shipGroups[_deliverIdx];
   if (!g){ input.value=''; return; }
-  if (!g.photos) g.photos = [];
+  var gKey = g.key;   // a background re-sync may REPLACE _shipGroups while we await compression —
+                      // re-resolve by key after every await so the photo lands on the live object
   for (var f=0; f<input.files.length; f++){
-    if (g.photos.length >= 10) break;
     var entry;
     try { entry = await compressImage(input.files[f]); } catch(err){ entry = await readFileAsDataUrl(input.files[f]); }
-    g.photos.push({ dataUrl: entry.dataUrl, name: entry.name, type: entry.type });
+    var cur = null;
+    for (var ci=0; ci<_shipGroups.length; ci++){ if (_shipGroups[ci].key === gKey){ cur = _shipGroups[ci]; break; } }
+    if (!cur) cur = g;
+    if (!cur.photos) cur.photos = [];
+    if (cur.photos.length >= 10) break;
+    cur.photos.push({ dataUrl: entry.dataUrl, name: entry.name, type: entry.type });
+    g = cur;
   }
   input.value=''; _deliverIdx=-1;
   renderShipmentList();   // shows thumbnails + the green "Save — Delivered" button
@@ -841,7 +938,11 @@ async function onShipPhoto(input){
 async function saveDelivery(i){
   var g = _shipGroups[i];
   if (!g) return;
-  if (!g.photos || !g.photos.length){ alert('Take a photo first · Sila ambil foto dulu'); return; }
+  // Double-tap guard: a 2nd tap before the overlay paints used to re-enter and double-submit
+  // (duplicate POD rows + double KPI credit) — same fix as the fuel form's submit button.
+  if (g._saving) return;
+  g._saving = true;
+  if (!g.photos || !g.photos.length){ g._saving = false; alert('Take a photo first · Sila ambil foto dulu'); return; }
   var overlay = document.getElementById('loadingOverlay');
   document.querySelector('.loading-text').textContent = 'Saving… · Menyimpan…';
   overlay.classList.add('show');
@@ -852,39 +953,86 @@ async function saveDelivery(i){
     var _sd  = document.getElementById('secondDriver').value || '';
     if (_sd === _drv) _sd = '';   // same name twice → drop helper (avoid double KPI count)
     var now = new Date();
+    // A3: send a clientToken and poll the read-back endpoint for the REAL result —
+    // no-cors alone can't see server errors, so before this fix a failed save still showed "Delivered".
+    var token = 'pod_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
     var payload = { formType:'SUBMIT_POD_FOR_INVOICE', shipmentKey:_shipKey, invoiceNos:pendingInvs,
       driverName: _drv, secondDriver: _sd,
       vehicleNo: document.getElementById('vehicleNo').value, deliveryDate: document.getElementById('deliveryDate').value,
-      timestamp: now.toISOString(), photos: photos };
+      timestamp: now.toISOString(), photos: photos, clientToken: token };
     var fd = new FormData(); fd.append('data', JSON.stringify(payload));
-    await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body: fd });
-    g.invs.forEach(function(x){ x.status='delivered'; });   // optimistic
-    g.photos = [];
-    renderShipmentList();
+    // 90s upload timeout — on dead signal fetch can hang forever behind the overlay, and drivers
+    // kill the tab (losing buffered photos). Abort → catch → photos kept + clear retry message.
+    var _ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var _tmo = _ctrl ? setTimeout(function(){ _ctrl.abort(); }, 90000) : null;
+    try{
+      await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body: fd, signal: _ctrl ? _ctrl.signal : undefined });
+    } finally { if (_tmo) clearTimeout(_tmo); }
+
+    document.querySelector('.loading-text').textContent = 'Confirming… · Mengesahkan…';
+    var confirmed = null;
+    for (var t = 0; t < 8; t++){
+      await new Promise(function(r){ setTimeout(r, 1500); });
+      try{
+        var rb = await fetch(SCRIPT_URL + '?action=getImportResult&token=' + encodeURIComponent(token));
+        var rd = await rb.json();
+        if (rd && rd.status && rd.status !== 'pending'){ confirmed = rd; break; }
+      }catch(e){ /* keep polling */ }
+    }
+    if (confirmed && confirmed.status === 'error'){
+      // REAL failure — keep the photos so the driver can just hit Save again.
+      alert('NOT saved · TIDAK disimpan!\n' + (confirmed.message || 'Server error') + '\n\nYour photos are kept — please tap Save again. · Foto anda masih ada — sila tekan Simpan semula.');
+    } else if (confirmed){
+      g.invs.forEach(function(x){ x.status='delivered'; });   // confirmed by the server
+      g.photos = [];
+      renderShipmentList();
+    } else {
+      // No confirmation (weak signal) — show as delivered but KEEP the photos; the read-back
+      // below re-syncs with the server and only drops photos once it confirms delivered.
+      g.invs.forEach(function(x){ x.status='delivered'; });
+      renderShipmentList();
+    }
   }catch(err){
-    alert('Save failed, please retry · Simpan gagal, sila cuba lagi');
+    alert('Save failed, please retry · Simpan gagal, sila cuba lagi\n(Your photos are kept · Foto anda masih ada)');
   }finally{
+    g._saving = false;
     overlay.classList.remove('show');
     setTimeout(function(){ checkShipmentForVehicle(true); }, 2500);   // read-back to confirm (no-cors); keep list if read-back fails
   }
 }
 
 // mark all of a customer's pending invoices as not-delivered, with a reason
+// A5: check the server's ACTUAL response per invoice — only paint "Problem" when the sheet
+// really recorded it (before this, a server error still showed red on the phone = wrong data).
 async function failGroup(i, reason){
   var g = _shipGroups[i]; if (!g) return;
+  if (g._saving) return;            // double-tap guard (same as saveDelivery)
+  g._saving = true;
   var pending = g.invs.filter(function(x){ return String(x.status).toLowerCase()!=='delivered'; });
+  var overlay = document.getElementById('loadingOverlay');
+  document.querySelector('.loading-text').textContent = 'Saving… · Menyimpan…';
+  overlay.classList.add('show');
+  var errMsg = '';
   try{
     for (var k=0; k<pending.length; k++){
-      await fetch(SCRIPT_URL + '?action=MARK_INVOICE_FAILED&shipmentKey=' + encodeURIComponent(_shipKey)
+      var res = await fetch(SCRIPT_URL + '?action=MARK_INVOICE_FAILED&shipmentKey=' + encodeURIComponent(_shipKey)
         + '&invoiceNo=' + encodeURIComponent(pending[k].invoiceNo) + '&reason=' + encodeURIComponent(reason));
-      pending[k].status = 'failed';
+      var d = null; try{ d = await res.json(); }catch(je){}
+      if (d && d.status === 'success'){ pending[k].status = 'failed'; }
+      else { errMsg = (d && d.message) ? d.message : 'server error'; }
     }
-  }catch(e){ alert('Could not save · Gagal simpan'); }
-  finally{ renderShipmentList(); }
+  }catch(e){ errMsg = 'no connection'; }
+  finally{
+    g._saving = false;
+    overlay.classList.remove('show');
+    if (errMsg) alert('Some were NOT saved (' + errMsg + ') — please try again.\nSebahagian TIDAK disimpan — sila cuba lagi.');
+    renderShipmentList();
+  }
 }
 
 // wire vehicle + date selection to the shipment check (wrappers so the change-event isn't passed as keepListOnFail)
 document.getElementById('vehicleNo').addEventListener('change', function(){
+  try{ localStorage.setItem(VEHICLE_KEY, this.value || ''); }catch(e){}   // B5: remember across reloads
   // Clear any auto-filled crew first, so it can't keep showing the PREVIOUS lorry's drivers.
   // The newly-selected lorry's assigned crew re-fills from its own shipment (or stays blank if none matches).
   ['driverName','secondDriver'].forEach(function(id){ var h=document.getElementById(id); if(h) h.value=''; });
