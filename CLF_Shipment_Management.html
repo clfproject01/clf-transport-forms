@@ -398,7 +398,7 @@ function _xlsxRowsToDeliveryCsv(rows){
   for(let r=0;r<rows.length;r++){ const inv=cell(r,1), a=_xlsxToAmt(cell(r,7));
     if(!INV_RE.test(inv)||a==null) continue;
     i++;
-    out.push([String(i), cell(r,3), cell(r,2), inv, String(a), '', '', cell(r,10), cell(r,11)]);   // invoice row (old layout)
+    out.push([String(i), cell(r,3), cell(r,2), inv, String(a), '', '', cell(r,10), cell(r,11), cell(r,6), cell(r,9)]); // invoice row (old layout + col9 Term, col10 Salesman)
     out.push(['', cell(r,4), '', '', '', '', '', '', '']);                                          // customer on the "next row"
   }
   out.push(['TOTAL','','','','','','','', total]);
