@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap" rel="stylesheet">
+<!-- SheetJS: lets the office upload the Delivery Form as .xlsx (parsed in the browser into the CSV the backend already reads) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root {
   --blue-50:#EFF6FF; --blue-500:#3B82F6; --blue-600:#2563EB; --blue-700:#1D4ED8; --blue-900:#1E3A8A;
@@ -121,7 +123,7 @@ input[type=date]{ font-family:inherit; font-size:var(--text-body); padding:8px 1
       <div class="uc-title">📥 Upload Delivery Form (CSV)</div>
       <div class="uc-sub">Export the Shipment CSV from your system, then upload it here. One file per lorry.</div>
     </div>
-    <input type="file" id="csvFile" accept=".csv" style="display:none">
+    <input type="file" id="csvFile" accept=".csv,.xlsx,.xls" style="display:none">
     <button class="btn btn-primary" id="uploadBtn">Choose CSV file…</button>
   </div>
 
@@ -366,11 +368,64 @@ async function deleteShipment(shipmentNo, btn, force){
   }
 }
 
+// ── xlsx support ───────────────────────────────────────────────────────────────────
+// The ERP "Delivery Form" can now be uploaded as .xlsx (not just .csv). We parse it IN THE
+// BROWSER with SheetJS and re-emit the SAME comma-CSV shape the backend already understands —
+// so NO backend change is needed. The form's printed TOTAL (not our own sum) is carried through,
+// keeping the backend arithmetic gate (Σ items == TOTAL) a real correctness check.
+// New-xlsx columns: 1=INVOICE 2=DATE 3=CUST CODE 4=CUSTOMER 7=AMOUNT 10=AREA 11=BRAND.
+function _xlsxToAmt(v){ if(v==null) return null; const s=String(v).replace(/,/g,'').trim(); if(!/^-?\d+(\.\d+)?$/.test(s)) return null; return parseFloat(s); }
+function _xlsxCsvCell(v){ v=(v==null)?'':String(v); return /[",\r\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }
+function _xlsxRowsToDeliveryCsv(rows){
+  const INV_RE=/^[A-Z]{2,4}\d{5,6}$/;
+  const cell=(r,c)=> (rows[r]&&rows[r][c]!=null)?String(rows[r][c]).trim():'';
+  function hdr(re){
+    for(let r=0;r<Math.min(rows.length,14);r++){ const row=rows[r]||[];
+      for(let c=0;c<row.length;c++){ if(re.test(String(row[c]||''))){
+        // only look a few cells right so a blank field (e.g. PEMANDU) returns '' instead of
+        // grabbing a different label sharing the row (e.g. "Est Del Date" far to the right).
+        for(let k=c+1;k<row.length&&k<=c+4;k++){ const v=String(row[k]==null?'':row[k]).trim(); if(v&&v!==':') return v; } } } }
+    return '';
+  }
+  const dlNo=hdr(/\bDL\s*NO\b/i), lorry=hdr(/\bNO\s*LORI\b/i), driver=hdr(/\bPEMANDU\b/i);
+  const shipDate=hdr(/EST\s*DEL/i)||hdr(/TARIKH\s*HANTAR/i);   // boss decision: ship date = Est Del Date
+  let total='';
+  for(let r=0;r<rows.length;r++){ const row=rows[r]||[]; let isTot=false;
+    for(const x of row){ if(String(x||'').trim().toUpperCase().replace(/[^A-Z]/g,'')==='TOTAL'){ isTot=true; break; } }
+    if(isTot){ let mx=null; for(const x of row){ const n=_xlsxToAmt(x); if(n!=null&&(mx==null||n>mx)) mx=n; } if(mx!=null) total=String(mx); break; } }
+  const out=[['DL NO',':',dlNo],['NO LORI',':',lorry],['PEMANDU',':',driver],['DATE',':',shipDate]];
+  let i=0;
+  for(let r=0;r<rows.length;r++){ const inv=cell(r,1), a=_xlsxToAmt(cell(r,7));
+    if(!INV_RE.test(inv)||a==null) continue;
+    i++;
+    out.push([String(i), cell(r,3), cell(r,2), inv, String(a), '', '', cell(r,10), cell(r,11)]);   // invoice row (old layout)
+    out.push(['', cell(r,4), '', '', '', '', '', '', '']);                                          // customer on the "next row"
+  }
+  out.push(['TOTAL','','','','','','','', total]);
+  return { csv: out.map(row=>row.map(_xlsxCsvCell).join(',')).join('\r\n'), count: i };
+}
+async function xlsxFileToDeliveryCsv(file){
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, {type:'array'});
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:false, defval:''});
+  const r = _xlsxRowsToDeliveryCsv(rows);
+  if(r.count === 0) throw new Error('no invoice rows recognized in this Excel file');
+  return r.csv;
+}
+
 // Import is a POST (CSV can be large, must ride in the body). no-cors = the POST response is
 // unreadable, so we send a clientToken and poll a readable GET for the structured result.
 async function uploadCsv(file, mode){
   let text;
-  try{ text = await file.text(); }catch(e){ showToast('❌ Could not read this file — NOT imported.', 'danger'); return; }
+  try{
+    if(/\.xlsx?$/i.test(file.name)){
+      if(typeof XLSX === 'undefined'){ showToast('❌ Excel reader not loaded — check the internet and retry, or upload the CSV version.', 'danger'); return; }
+      text = await xlsxFileToDeliveryCsv(file);
+    } else {
+      text = await file.text();
+    }
+  }catch(e){ showToast('❌ Could not read this file — NOT imported.' + (e&&e.message?(' ('+e.message+')'):''), 'danger'); return; }
   if(!text || !text.trim()){ showToast('❌ This file is empty — NOT imported.', 'danger'); return; }
   // NOTE: no comma pre-check — space-aligned fixed-width forms with small amounts have no commas.
   // The server-side arithmetic gate (sum == TOTAL) is the real guard against a wrong/garbage file.
