@@ -825,6 +825,18 @@ function validate() {
     }
   }
 
+  // Hard ceiling: a real fuel fill is at most ~RM 250, so BLOCK anything over RM 300 (almost
+  // always a fat-finger like 2432.34). Unlike the soft confirms below, this cannot be dismissed.
+  // A genuine larger fill is corrected afterwards by the office (manager edit).
+  const _amt300 = parseFloat(document.getElementById('amount').value);
+  if (valid && !isNaN(_amt300) && _amt300 > 300) {
+    alert('⚠ 油费 RM ' + _amt300.toLocaleString(undefined, { minimumFractionDigits: 2 })
+        + ' 超过上限 RM 300 — 请检查金额（通常 ≤ RM 250）。\n'
+        + 'Jumlah minyak RM melebihi had RM 300 — sila semak (biasanya ≤ RM 250).');
+    document.getElementById('amount').focus();
+    valid = false;
+  }
+
   // B8: amount plausibility — catches a missing decimal ("180" → "18000") and RM/litres swapped.
   const _amtV = parseFloat(document.getElementById('amount').value);
   const _litV = parseFloat(document.getElementById('litres').value);
