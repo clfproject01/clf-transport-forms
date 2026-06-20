@@ -700,7 +700,7 @@
     if(na===null) return;
     var na2 = parseFloat(String(na).replace(/[^0-9.]/g,''));
     if(isNaN(na2) || na2<=0){ alert('金额无效 / invalid amount'); return; }
-    if(na2>300 && !confirm('RM '+na2.toFixed(2)+' 超过 300 — 确定? / over 300, sure?')) return;
+    if(na2>500 && !confirm('RM '+na2.toFixed(2)+' 超过 500 — 确定? / over 500, sure?')) return;
     var nl = prompt('改升数 Litres  (留空=不改 / blank = keep)\n现在 / now: '+curLit, curLit);
     if(nl===null) return;
     var res = await postWrite({ formType:'EDIT_FUEL_ENTRY', pin:_FUEL_PIN, rowNum:s.rowNum,
