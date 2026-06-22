@@ -120,11 +120,11 @@ input[type=date]{ font-family:inherit; font-size:var(--text-body); padding:8px 1
   <!-- Upload -->
   <div class="upload-card">
     <div class="uc-text">
-      <div class="uc-title">📥 Upload Delivery Form (CSV)</div>
-      <div class="uc-sub">Export the Shipment CSV from your system, then upload it here. One file per lorry.</div>
+      <div class="uc-title">📥 Upload Delivery Form (CSV / Excel)</div>
+      <div class="uc-sub">Export the Shipment from your system as CSV or Excel (.xlsx), then upload it here. One file per lorry.</div>
     </div>
     <input type="file" id="csvFile" accept=".csv,.xlsx,.xls" style="display:none">
-    <button class="btn btn-primary" id="uploadBtn">Choose CSV file…</button>
+    <button class="btn btn-primary" id="uploadBtn">Choose CSV / Excel file…</button>
   </div>
 
   <!-- Toolbar -->
@@ -242,7 +242,7 @@ function renderShipments(ships){
   document.getElementById('shipCount').textContent = ships.length ? ('· ' + ships.length) : '';
   const list = document.getElementById('list');
   if(!ships.length){
-    list.innerHTML = '<div class="empty"><div class="e-title">No shipments for ' + escHtml(_date) + '</div>Upload a Delivery Form CSV above to get started.</div>';
+    list.innerHTML = '<div class="empty"><div class="e-title">No shipments for ' + escHtml(_date) + '</div>Upload a Delivery Form (CSV / Excel) above to get started.</div>';
     return;
   }
   let html = '<div class="grid">';
