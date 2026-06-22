@@ -169,11 +169,13 @@ async function loadDrivers(){
   }catch(e){ _drivers = []; showToast('Could not load driver list — assignment dropdowns may be empty.', 'warning'); }
 }
 
-async function loadShipments(){
+async function loadShipments(useCache){
   const list = document.getElementById('list');
   list.innerHTML = '<div class="loading">Loading…</div>';
   try{
-    const res = await fetch(SCRIPT_URL + '?action=getShipmentsForDate&date=' + encodeURIComponent(_date));
+    // Default is FRESH (bypass the 90s server cache) so a just-imported / deleted shipment shows
+    // immediately. Only the initial page load + date-flip opt into the cache (useCache=true) for speed.
+    const res = await fetch(SCRIPT_URL + '?action=getShipmentsForDate&date=' + encodeURIComponent(_date) + (useCache ? '' : '&fresh=1'));
     const data = await res.json();
     if(!data || data.status !== 'ok'){ list.innerHTML = '<div class="empty"><div class="e-title">Could not load</div>'+escHtml((data&&data.message)||'Unexpected response')+'</div>'; return; }
     renderShipments(data.shipments || []);
@@ -443,9 +445,10 @@ async function uploadCsv(file, mode){
     });
   }catch(e){ showToast('Upload error: ' + (e.message || 'unknown'), 'danger'); return; }
 
-  // Poll the readable GET for the stashed result (Apps Script can be slow). ~10 tries over ~15s.
+  // Poll the readable GET for the stashed result. Apps Script can be slow — a big file or the
+  // Gemini fallback can take 20s+ — so poll ~24 tries over ~36s; fast imports break out early.
   let result = null;
-  for(let i = 0; i < 10; i++){
+  for(let i = 0; i < 24; i++){
     await new Promise(r => setTimeout(r, 1500));
     try{
       const res = await fetch(SCRIPT_URL + '?action=getImportResult&token=' + encodeURIComponent(token));
@@ -532,14 +535,14 @@ document.getElementById('csvFile').addEventListener('change', e => {
   if(f) uploadCsv(f);
   e.target.value = '';   // allow re-selecting the same file
 });
-document.getElementById('refreshBtn').addEventListener('click', loadShipments);
-document.getElementById('dateInput').addEventListener('change', e => { _date = e.target.value || todayStr(); loadShipments(); });
+document.getElementById('refreshBtn').addEventListener('click', () => loadShipments());          // fresh (no cache)
+document.getElementById('dateInput').addEventListener('change', e => { _date = e.target.value || todayStr(); loadShipments(true); });  // cached: just navigating dates
 
 (async function init(){
   _date = todayStr();
   document.getElementById('dateInput').value = _date;
   await loadDrivers();
-  await loadShipments();
+  await loadShipments(true);   // cached: initial load
 })();
 </script>
 </body>
