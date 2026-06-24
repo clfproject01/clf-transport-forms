@@ -676,7 +676,7 @@
     try{
       await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors',
         headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
-    }catch(e){ return { status:'error', message:'网络错误 / network' }; }
+    }catch(e){ return { status:'error', message:'Network error / Ralat rangkaian' }; }
     for(var i=0;i<8;i++){
       await new Promise(function(r){ setTimeout(r,1200); });
       try{
@@ -685,46 +685,62 @@
         if(data && data.status && data.status !== 'pending') return data;
       }catch(e){}
     }
-    return { status:'error', message:'超时,请刷新查看 / timeout' };
+    return { status:'error', message:'Timeout, please refresh / Tamat masa, sila muat semula' };
   }
 
   async function editFuel(i){
     var s = _FUEL_SUBS[i]; if(!s || !s.rowNum) return;
     if(!_FUEL_PIN){
-      var p = prompt('Manager PIN 修改油费 / to edit fuel:');
+      var p = prompt('Manager PIN to edit fuel / PIN untuk ubah minyak:');
       if(p===null || !String(p).trim()) return;
       _FUEL_PIN = String(p).trim();
     }
     var curRm = (s.rm==null ? '' : s.rm), curLit = (s.litres==null ? '' : s.litres);
-    var na = prompt('改金额 RM  ('+s.lorry+' / '+s.driver+')\n现在 / now: '+curRm, curRm);
+    var na = prompt('Edit amount RM  ('+s.lorry+' / '+s.driver+')\nNow / Sekarang: '+curRm, curRm);
     if(na===null) return;
     var na2 = parseFloat(String(na).replace(/[^0-9.]/g,''));
-    if(isNaN(na2) || na2<=0){ alert('金额无效 / invalid amount'); return; }
-    if(na2>500 && !confirm('RM '+na2.toFixed(2)+' 超过 500 — 确定? / over 500, sure?')) return;
-    var nl = prompt('改升数 Litres  (留空=不改 / blank = keep)\n现在 / now: '+curLit, curLit);
+    if(isNaN(na2) || na2<=0){ alert('Invalid amount / Jumlah tidak sah'); return; }
+    if(na2>500 && !confirm('RM '+na2.toFixed(2)+' over 500 — sure? / melebihi 500 — pasti?')) return;
+    var nl = prompt('Edit Litres  (blank = keep / kosong = kekal)\nNow / Sekarang: '+curLit, curLit);
     if(nl===null) return;
     var res = await postWrite({ formType:'EDIT_FUEL_ENTRY', pin:_FUEL_PIN, rowNum:s.rowNum,
       amount:na2, litres:String(nl).trim(), driver:s.driver, lorry:s.lorry });
-    if(res && res.status==='success'){ alert('✅ 已更新 / updated: RM '+na2.toFixed(2)); load(true); }
-    else if(res && res.error==='pin'){ _FUEL_PIN=''; alert('❌ PIN 错误 / wrong PIN'); }
-    else { alert('❌ '+((res&&res.message)||'更新失败 / failed')); }
+    if(res && res.status==='success'){ alert('✅ Updated / Dikemaskini: RM '+na2.toFixed(2)); load(true); }
+    else if(res && res.error==='pin'){ _FUEL_PIN=''; alert('❌ Wrong PIN / PIN salah'); }
+    else { alert('❌ '+((res&&res.message)||'Update failed / Gagal kemaskini')); }
   }
 
   // One-click: replace the driver amount with the receipt-OCR value (PIN-gated; manager confirms).
   async function useOcr(i){
     var s = _FUEL_SUBS[i]; if(!s || !s.rowNum || s.ocrRm==null) return;
     if(!_FUEL_PIN){
-      var p = prompt('Manager PIN 修改油费 / to edit fuel:');
+      var p = prompt('Manager PIN to edit fuel / PIN untuk ubah minyak:');
       if(p===null || !String(p).trim()) return;
       _FUEL_PIN = String(p).trim();
     }
     var drv = (s.rm==null ? '?' : num(s.rm).toFixed(2)), ocr = num(s.ocrRm).toFixed(2);
-    if(!confirm('把「'+s.driver+' / '+s.lorry+'」的金额\nRM '+drv+'  →  收据 OCR 的 RM '+ocr+' ?')) return;
+    if(!confirm('Replace / Ganti '+s.driver+' / '+s.lorry+' amount\nRM '+drv+'  →  receipt OCR RM '+ocr+' ?')) return;
     var res = await postWrite({ formType:'EDIT_FUEL_ENTRY', pin:_FUEL_PIN, rowNum:s.rowNum,
       amount:num(s.ocrRm), litres:'', driver:s.driver, lorry:s.lorry });
-    if(res && res.status==='success'){ alert('✅ 已用收据值 / used receipt: RM '+ocr); load(true); }
-    else if(res && res.error==='pin'){ _FUEL_PIN=''; alert('❌ PIN 错误 / wrong PIN'); }
-    else { alert('❌ '+((res&&res.message)||'失败 / failed')); }
+    if(res && res.status==='success'){ alert('✅ Used receipt / Guna resit: RM '+ocr); load(true); }
+    else if(res && res.error==='pin'){ _FUEL_PIN=''; alert('❌ Wrong PIN / PIN salah'); }
+    else { alert('❌ '+((res&&res.message)||'Failed / Gagal')); }
+  }
+
+  // Manager delete a fuel / no-fuel row (PIN-gated; double-confirm; server re-checks driver+lorry).
+  async function deleteFuel(i){
+    var s = _FUEL_SUBS[i]; if(!s || !s.rowNum) return;
+    if(!_FUEL_PIN){
+      var p = prompt('Manager PIN to delete / PIN untuk padam:');
+      if(p===null || !String(p).trim()) return;
+      _FUEL_PIN = String(p).trim();
+    }
+    var what = s.noFuel ? '"no fuel today"' : ('RM '+(s.rm==null?'?':num(s.rm).toFixed(2))+(s.litres!=null?(' · '+s.litres+' L'):''));
+    if(!confirm('Delete this entry? / Padam rekod ini?\n\n'+s.lorry+' · '+s.driver+'\n'+(s.time||'—')+'   '+what+'\n\n⚠ Cannot be undone / Tidak boleh batal.')) return;
+    var res = await postWrite({ formType:'DELETE_FUEL_ENTRY', pin:_FUEL_PIN, rowNum:s.rowNum, driver:s.driver, lorry:s.lorry });
+    if(res && res.status==='success'){ alert('🗑 Deleted / Dipadam'+((res.deleted>1)?(' ('+res.deleted+' rows incl. helper)'):'')); load(true); }
+    else if(res && res.error==='pin'){ _FUEL_PIN=''; alert('❌ Wrong PIN / PIN salah'); }
+    else { alert('❌ '+((res&&res.message)||'Delete failed / Gagal padam')); }
   }
 
   function renderFuel(fuel, dash){
@@ -826,12 +842,13 @@
     _FUEL_SUBS = subs;
     var body = $('fuelRows');
     body.innerHTML = subs.length ? subs.map(function(s, i){
-      if(s.noFuel) return '<tr class="pend"><td>—</td><td>'+esc(s.lorry)+'</td><td>'+idName(s.driver)+'</td><td class="rm">—</td><td class="rm">—</td><td class="rm">—</td><td>no fuel today</td></tr>';
+      if(s.noFuel){ var delNo=(s.rowNum)?' <a href="#" onclick="deleteFuel('+i+');return false;" title="Delete this row (manager)" style="text-decoration:none;color:var(--gray-400);">🗑</a>':''; return '<tr class="pend"><td>—</td><td>'+esc(s.lorry)+'</td><td>'+idName(s.driver)+'</td><td class="rm">—</td><td class="rm">—</td><td class="rm">—</td><td>no fuel today'+delNo+'</td></tr>'; }
       var flag = s.check==='CHECK' ? ' <span class="st-fail" title="driver vs OCR differ">⚑</span>' : '';
       var photoCell = /^https?:\/\//i.test(String(s.photo||'')) ? ('<a href="'+esc(s.photo)+'" target="_blank" rel="noopener" style="color:var(--amber-700);">📷 view</a>') : '—';
       var editBtn = (s.rowNum) ? ' <a href="#" onclick="editFuel('+i+');return false;" title="Edit amount/litres (manager)" style="text-decoration:none;color:var(--gray-400);">✏️</a>' : '';
-      var ocrBtn  = (s.rowNum && s.check==='CHECK' && s.ocrRm!=null) ? ' <a href="#" onclick="useOcr('+i+');return false;" title="Replace driver amount with the receipt OCR value" style="text-decoration:none;color:var(--amber-700);font-size:11px;">↹收据 '+num(s.ocrRm).toFixed(2)+'</a>' : '';
-      return '<tr><td>'+esc(s.time)+'</td><td>'+esc(s.lorry)+'</td><td>'+idName(s.driver)+'</td><td class="rm">'+fmtInt(s.mileage)+'</td><td class="rm">'+(num(s.rm)==null?'—':num(s.rm).toFixed(2))+flag+'</td><td class="rm">'+(num(s.litres)==null?'—':num(s.litres))+'</td><td>'+photoCell+editBtn+ocrBtn+'</td></tr>';
+      var ocrBtn  = (s.rowNum && s.check==='CHECK' && s.ocrRm!=null) ? ' <a href="#" onclick="useOcr('+i+');return false;" title="Replace driver amount with the receipt OCR value" style="text-decoration:none;color:var(--amber-700);font-size:11px;">↹Receipt '+num(s.ocrRm).toFixed(2)+'</a>' : '';
+      var delBtn = (s.rowNum) ? ' <a href="#" onclick="deleteFuel('+i+');return false;" title="Delete this entry (manager)" style="text-decoration:none;color:var(--gray-400);">🗑</a>' : '';
+      return '<tr><td>'+esc(s.time)+'</td><td>'+esc(s.lorry)+'</td><td>'+idName(s.driver)+'</td><td class="rm">'+fmtInt(s.mileage)+'</td><td class="rm">'+(num(s.rm)==null?'—':num(s.rm).toFixed(2))+flag+'</td><td class="rm">'+(num(s.litres)==null?'—':num(s.litres))+'</td><td>'+photoCell+editBtn+ocrBtn+delBtn+'</td></tr>';
     }).join('') : '<tr><td colspan="7" class="empty">No fuel submitted today yet.</td></tr>';
   }
 
