@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>CLF Trading — Pallet Store · Stor Pallet</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --navy: #0B1F3A;
+    --navy-mid: #1A3A5C;
+    --navy-light: #1E4976;
+    --orange: #6F4E37;
+    --orange-dark: #4A3426;
+    --orange-light: #A98467;
+    --orange-pale: #F3ECE4;
+    --teal: #0E7490;
+    --teal-light: #22D3EE;
+    --gold: #C9A84C;
+    --gold-light: #E8C97A;
+    --white: #FFFFFF;
+    --off-white: #FAFAFA;
+    --gray: #8A9BB0;
+    --gray-light: #E5E7EB;
+    --success: #22C55E;
+    --error: #EF4444;
+    --warn: #C9A227;
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--off-white);
+    min-height: 100vh;
+    color: var(--navy);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app { max-width: 480px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; background: var(--white); }
+
+  .header {
+    background: linear-gradient(135deg, var(--orange) 0%, var(--orange-dark) 100%);
+    padding: 24px 24px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+    position: relative; overflow: hidden;
+  }
+  .logo-row { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; position: relative; z-index: 1; }
+  .logo-box {
+    width: 48px; height: 48px; background: var(--white);
+    border-radius: 12px; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; overflow: hidden; border: 2px solid rgba(255,255,255,0.5);
+  }
+  .logo-text-clf { font-size: 12px; font-weight: 600; color: var(--orange-dark); line-height: 1; text-align: center; }
+  .logo-text-clf span { display: block; font-size: 8px; color: var(--orange); font-weight: 500; margin-top: 2px; }
+  .company-name { font-size: 15px; font-weight: 600; color: var(--white); line-height: 1.2; }
+  .company-reg { font-size: 10px; color: rgba(255,255,255,0.85); margin-top: 2px; font-weight: 400; }
+
+  .form-identity { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; }
+  .form-icon {
+    width: 50px; height: 50px; flex-shrink: 0;
+    background: rgba(255,255,255,0.16); border: 1.5px solid rgba(255,255,255,0.55);
+    border-radius: 14px; display: flex; align-items: center; justify-content: center;
+  }
+  .form-icon svg { width: 28px; height: 28px; stroke: var(--white); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .form-title { font-size: 26px; font-weight: 600; color: var(--white); letter-spacing: 1px; line-height: 1; margin: 0; }
+  .form-subtitle { font-size: 11px; color: rgba(255,255,255,0.85); line-height: 1.5; margin-top: 3px; }
+
+  /* tabs */
+  .tabs { display: flex; background: var(--white); border-bottom: 1px solid var(--gray-light); position: sticky; top: 0; z-index: 30; }
+  .tab {
+    flex: 1; padding: 13px 4px 11px; background: none; border: none; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; font-size: 11.5px; font-weight: 600; color: var(--gray);
+    border-bottom: 3px solid transparent; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    line-height: 1.2; letter-spacing: 0.2px;
+  }
+  .tab svg { width: 19px; height: 19px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .tab.active { color: var(--orange-dark); border-bottom-color: var(--orange); }
+  .tab .bm { font-size: 9px; font-weight: 400; opacity: .7; }
+
+  .form-body { flex: 1; background: var(--white); padding: 20px 18px 36px; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .notice {
+    background: var(--orange-pale); border: 1px solid rgba(111,78,55,0.2);
+    border-left: 3px solid var(--orange); border-radius: var(--radius-sm);
+    padding: 10px 14px; margin-bottom: 18px;
+    font-size: 12px; color: var(--navy-mid); line-height: 1.5;
+  }
+  .notice b { color: var(--orange-dark); }
+
+  .section-label {
+    font-size: 10px; font-weight: 600; letter-spacing: 1.2px;
+    text-transform: uppercase; color: var(--orange-dark); margin: 18px 0 10px;
+  }
+
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 13px; font-weight: 500; color: var(--navy); margin-bottom: 6px; }
+  .field label .bm { display: block; font-size: 11px; font-weight: 400; color: var(--gray); margin-top: 1px; }
+  .field label .req { color: var(--orange); margin-left: 2px; }
+
+  input[type="text"], input[type="number"], input[type="date"], input[type="password"], select, textarea {
+    width: 100%; padding: 13px 16px;
+    background: var(--white); border: 1.5px solid var(--gray-light);
+    border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif;
+    font-size: 16px; color: var(--navy); outline: none;
+    transition: border-color 0.2s; -webkit-appearance: none; appearance: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(111,78,55,0.15);
+  }
+  input::placeholder { color: var(--gray); font-size: 14px; }
+  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238A9BB0' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; padding-right: 40px; }
+
+  /* state segmented control */
+  .seg { display: flex; gap: 8px; }
+  .seg-btn {
+    flex: 1; padding: 12px 4px; border: 1.5px solid var(--gray-light); border-radius: var(--radius-sm);
+    background: var(--white); cursor: pointer; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 600; color: var(--navy-mid); text-align: center; line-height: 1.3;
+  }
+  .seg-btn .bm { display: block; font-size: 10px; font-weight: 400; color: var(--gray); margin-top: 1px; }
+  .seg-btn.sel { border-color: var(--orange); background: var(--orange-pale); color: var(--orange-dark); }
+  .seg-btn.sel .bm { color: var(--orange); }
+
+  /* live balance readback card */
+  .balcard {
+    background: var(--off-white); border: 1px solid var(--gray-light); border-radius: var(--radius);
+    padding: 14px; margin: 4px 0 16px; display: none;
+  }
+  .balcard.show { display: block; }
+  .balcard-name { font-size: 14px; font-weight: 600; color: var(--navy); margin-bottom: 10px; }
+  .balcard-grid { display: flex; gap: 8px; }
+  .balcard-cell { flex: 1; text-align: center; background: var(--white); border: 1px solid var(--gray-light); border-radius: var(--radius-sm); padding: 9px 4px; }
+  .balcard-cell .lbl { font-size: 10px; font-weight: 600; letter-spacing: .5px; color: var(--gray); text-transform: uppercase; }
+  .balcard-cell .val { font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 500; color: var(--navy); margin-top: 3px; }
+  .balcard-cell.rosak .val { color: var(--error); }
+  .balcard-foot { font-size: 11px; color: var(--gray); margin-top: 9px; text-align: center; }
+
+  /* variance pill on stocktake/reconcile */
+  .var-pill { display: none; margin-top: 8px; padding: 10px 12px; border-radius: var(--radius-sm); font-size: 13px; line-height: 1.45; }
+  .var-pill.show { display: block; }
+  .var-pill.ok { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.3); color: #15803D; }
+  .var-pill.diff { background: rgba(201,162,39,0.12); border: 1px solid rgba(201,162,39,0.4); color: #7A5C00; }
+  .var-pill b { font-weight: 700; }
+
+  .photo-btn {
+    width: 100%; padding: 18px; background: var(--white);
+    border: 2px dashed var(--gray-light); border-radius: var(--radius);
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    cursor: pointer; transition: all 0.2s; position: relative;
+  }
+  .photo-btn:active { transform: scale(0.98); }
+  .photo-btn.has-photo { border-style: solid; border-color: var(--success); background: rgba(34,197,94,0.06); }
+  .photo-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .photo-icon {
+    width: 42px; height: 42px; background: var(--orange);
+    border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  }
+  .photo-icon svg { width: 21px; height: 21px; stroke: var(--white); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .photo-label { font-size: 14px; font-weight: 600; color: var(--navy); text-align: center; }
+  .photo-sublabel { font-size: 12px; color: var(--gray); text-align: center; }
+  .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 6px; margin-top: 10px; }
+  .photo-thumb { position: relative; padding-top: 100%; border-radius: var(--radius-sm); overflow: hidden; background: var(--off-white); border: 1px solid var(--gray-light); }
+  .photo-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .photo-thumb .remove-x { position: absolute; top: 2px; right: 2px; width: 22px; height: 22px; background: rgba(0,0,0,0.7); color: white; border: 0; border-radius: 50%; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; padding: 0; }
+  .photo-counter { font-size: 11px; color: var(--gray); margin-top: 6px; text-align: center; }
+
+  .btn-wrap { position: relative; margin-top: 8px; }
+  .submit-btn {
+    width: 100%; padding: 16px; background: var(--orange);
+    color: var(--white); border: none; border-radius: var(--radius);
+    font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px; letter-spacing: 0.3px;
+    box-shadow: 0 4px 12px rgba(111,78,55,0.25);
+  }
+  .submit-btn:active { transform: scale(0.98); opacity: 0.9; }
+  .submit-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .teal-bar { display: none; }
+
+  .pin-box { background: #FFF8E1; border: 1px solid #F0D9A8; border-radius: var(--radius-sm); padding: 12px 14px; margin: 4px 0 14px; }
+  .pin-box .pin-head { font-size: 12px; font-weight: 600; color: #854F0B; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+
+  .error-msg { font-size: 12px; color: var(--error); margin-top: 4px; display: none; }
+  .error-msg.show { display: block; }
+
+  /* balances list (reconcile picker / overview) */
+  .bal-row { border: 1px solid var(--gray-light); border-radius: var(--radius-sm); padding: 11px 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; cursor: pointer; }
+  .bal-row:active { background: var(--off-white); }
+  .bal-row .nm { font-size: 14px; font-weight: 600; color: var(--navy); }
+  .bal-row .sub { font-size: 11px; color: var(--gray); margin-top: 2px; }
+  .bal-row .nums { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--navy-mid); white-space: nowrap; text-align: right; }
+  .bal-row .nums .r { color: var(--error); }
+
+  .loading-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(74,52,38,0.92);
+    z-index: 99; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+  }
+  .loading-overlay.show { display: flex; }
+  .spinner { width: 44px; height: 44px; border: 3px solid rgba(255,255,255,0.25); border-top-color: var(--white); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { color: var(--white); font-size: 14px; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(120%);
+    max-width: 420px; width: calc(100% - 32px); z-index: 120;
+    background: var(--navy); color: var(--white); border-radius: var(--radius);
+    padding: 14px 16px; font-size: 13.5px; line-height: 1.5; box-shadow: 0 8px 28px rgba(0,0,0,.3);
+    transition: transform .3s cubic-bezier(.2,.8,.2,1); display: flex; gap: 10px; align-items: flex-start;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.ok { background: #16653A; }
+  .toast.err { background: #991B1B; }
+  .toast.warn { background: #7A5C00; }
+  .toast .ico { font-size: 18px; line-height: 1.2; flex-shrink: 0; }
+  .toast b { font-weight: 700; }
+
+  .hint { font-size: 11px; color: var(--gray); margin-top: -8px; margin-bottom: 14px; line-height: 1.5; }
+
+  .empty { text-align: center; color: var(--gray); font-size: 13px; padding: 26px 14px; }
+
+  /* phase-2 placeholder lorry-assign card */
+  .soon-card { border: 1.5px dashed var(--gray-light); border-radius: var(--radius); padding: 18px 16px; text-align: center; color: var(--gray); font-size: 13px; line-height: 1.6; }
+  .soon-tag { display: inline-block; background: var(--gray-light); color: var(--navy-mid); font-size: 10px; font-weight: 700; letter-spacing: .6px; padding: 3px 8px; border-radius: 20px; margin-bottom: 8px; text-transform: uppercase; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <div class="logo-row">
+      <div class="logo-box">
+        <div class="logo-text-clf">CLF<span>Trading</span></div>
+      </div>
+      <div>
+        <div class="company-name">CLF Trading Sdn. Bhd.</div>
+        <div class="company-reg">557522-A · Mentakab, Pahang</div>
+      </div>
+    </div>
+    <div class="form-identity">
+      <div class="form-icon">
+        <svg viewBox="0 0 24 24"><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="8.5" y="3" width="7" height="7"/></svg>
+      </div>
+      <div>
+        <div class="form-title">PALLET STORE</div>
+        <div class="form-subtitle">Pallet In/Out · Stocktake · Stor Pallet</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB BAR -->
+  <div class="tabs">
+    <button class="tab active" data-tab="stocktake" onclick="switchTab('stocktake')">
+      <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Stocktake<span class="bm">Kira Stok</span>
+    </button>
+    <button class="tab" data-tab="reconcile" onclick="switchTab('reconcile')">
+      <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M7 12h10"/><path d="M11 18h2"/></svg>
+      Reconcile<span class="bm">Padan</span>
+    </button>
+    <button class="tab" data-tab="damage" onclick="switchTab('damage')">
+      <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Damage<span class="bm">Rosak</span>
+    </button>
+    <button class="tab" data-tab="lorry" onclick="switchTab('lorry')">
+      <svg viewBox="0 0 24 24"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+      Lorry<span class="bm">Lori</span>
+    </button>
+  </div>
+
+  <div class="form-body">
+
+    <!-- ================= STOCKTAKE PANEL ================= -->
+    <div class="panel active" id="panel-stocktake">
+      <div class="notice">
+        <b>Stocktake · Kira Stok:</b> Count the real pallets and enter the number. The system records the difference automatically — history is never overwritten.<br>
+        <span style="opacity:.75;">Kira pallet sebenar, masukkan jumlah. Sistem rekod perbezaan automatik.</span>
+      </div>
+
+      <div class="section-label">Pallet Type · Jenis Pallet</div>
+      <div class="field">
+        <label>Select pallet · Pilih pallet <span class="req">*</span></label>
+        <select id="st-pallet" onchange="onStPalletChange()">
+          <option value="">— Loading… · Memuatkan… —</option>
+        </select>
+        <div class="error-msg" id="err-st-pallet">Please select a pallet · Sila pilih pallet</div>
+      </div>
+
+      <div class="section-label">State · Keadaan</div>
+      <div class="seg" id="st-state-seg">
+        <button type="button" class="seg-btn sel" data-state="DALAM" onclick="pickStState(this)">DALAM<span class="bm">In store</span></button>
+        <button type="button" class="seg-btn" data-state="LUAR" onclick="pickStState(this)">LUAR<span class="bm">Out</span></button>
+        <button type="button" class="seg-btn" data-state="ROSAK" onclick="pickStState(this)">ROSAK<span class="bm">Damaged</span></button>
+      </div>
+
+      <div class="balcard" id="st-balcard">
+        <div class="balcard-name" id="st-balcard-name"></div>
+        <div class="balcard-grid">
+          <div class="balcard-cell"><div class="lbl">Dalam</div><div class="val" id="st-bd">–</div></div>
+          <div class="balcard-cell"><div class="lbl">Luar</div><div class="val" id="st-bl">–</div></div>
+          <div class="balcard-cell rosak"><div class="lbl">Rosak</div><div class="val" id="st-br">–</div></div>
+        </div>
+        <div class="balcard-foot" id="st-balcard-foot">System balance · Baki sistem</div>
+      </div>
+
+      <div class="section-label">Physical Count · Kiraan Sebenar</div>
+      <div class="field">
+        <label>How many <span id="st-state-lbl">DALAM</span> right now? · Berapa banyak sekarang? <span class="req">*</span></label>
+        <input type="number" id="st-count" inputmode="numeric" min="0" step="1" placeholder="e.g. 120" oninput="onStCountInput()">
+        <div class="error-msg" id="err-st-count">Enter a number ≥ 0 · Masukkan nombor</div>
+        <div class="var-pill" id="st-var"></div>
+      </div>
+
+      <div class="field">
+        <label>Date · Tarikh</label>
+        <input type="date" id="st-date">
+      </div>
+      <div class="field">
+        <label>Your name · Nama anda</label>
+        <input type="text" id="st-operator" autocomplete="off" placeholder="Operator / staff name">
+      </div>
+
+      <div class="btn-wrap">
+        <button type="button" class="submit-btn" onclick="submitStocktake()">
+          <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Save Stocktake · Simpan Kiraan
+        </button>
+        <div class="teal-bar"></div>
+      </div>
+    </div>
+
+    <!-- ================= RECONCILE PANEL ================= -->
+    <div class="panel" id="panel-reconcile">
+      <div class="notice">
+        <b>Reconcile · Padan:</b> Compare system balance vs the real count and record a snapshot. If they differ, a manager can pull it level with a PIN.<br>
+        <span style="opacity:.75;">Banding baki sistem dengan kiraan sebenar. Jika tak sama, pengurus boleh laras dengan PIN.</span>
+      </div>
+
+      <div class="field">
+        <label>Select pallet · Pilih pallet <span class="req">*</span></label>
+        <select id="rc-pallet" onchange="onRcPalletChange()">
+          <option value="">— Loading… · Memuatkan… —</option>
+        </select>
+        <div class="error-msg" id="err-rc-pallet">Please select a pallet · Sila pilih pallet</div>
+      </div>
+
+      <div class="section-label">State · Keadaan</div>
+      <div class="seg" id="rc-state-seg">
+        <button type="button" class="seg-btn sel" data-state="DALAM" onclick="pickRcState(this)">DALAM<span class="bm">In store</span></button>
+        <button type="button" class="seg-btn" data-state="LUAR" onclick="pickRcState(this)">LUAR<span class="bm">Out</span></button>
+        <button type="button" class="seg-btn" data-state="ROSAK" onclick="pickRcState(this)">ROSAK<span class="bm">Damaged</span></button>
+      </div>
+
+      <div class="balcard" id="rc-balcard">
+        <div class="balcard-name" id="rc-balcard-name"></div>
+        <div class="balcard-grid">
+          <div class="balcard-cell"><div class="lbl">Dalam</div><div class="val" id="rc-bd">–</div></div>
+          <div class="balcard-cell"><div class="lbl">Luar</div><div class="val" id="rc-bl">–</div></div>
+          <div class="balcard-cell rosak"><div class="lbl">Rosak</div><div class="val" id="rc-br">–</div></div>
+        </div>
+        <div class="balcard-foot">System balance · Baki sistem</div>
+      </div>
+
+      <div class="section-label">Physical Count · Kiraan Sebenar</div>
+      <div class="field">
+        <label>Real count for <span id="rc-state-lbl">DALAM</span> · Kiraan sebenar <span class="req">*</span></label>
+        <input type="number" id="rc-count" inputmode="numeric" min="0" step="1" placeholder="e.g. 118" oninput="onRcCountInput()">
+        <div class="error-msg" id="err-rc-count">Enter a number ≥ 0 · Masukkan nombor</div>
+        <div class="var-pill" id="rc-var"></div>
+      </div>
+
+      <div class="field">
+        <label>Date · Tarikh</label>
+        <input type="date" id="rc-date">
+      </div>
+      <div class="field">
+        <label>Your name · Nama anda</label>
+        <input type="text" id="rc-operator" autocomplete="off" placeholder="Operator / staff name">
+      </div>
+      <div class="field">
+        <label>Note · Catatan</label>
+        <input type="text" id="rc-note" autocomplete="off" placeholder="optional">
+      </div>
+
+      <div class="btn-wrap">
+        <button type="button" class="submit-btn" onclick="submitReconcile()">
+          <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M7 12h10"/><path d="M11 18h2"/></svg>
+          Record Reconcile · Rekod Padanan
+        </button>
+        <div class="teal-bar"></div>
+      </div>
+
+      <!-- Manager pull-level (ADJUST) — only shown after a non-zero variance reconcile -->
+      <div id="rc-adjust-wrap" style="display:none;margin-top:22px;">
+        <div class="section-label" style="color:#7A5C00;">Manager Adjust · Laras Pengurus</div>
+        <div class="hint">Variance found. A manager can pull the system balance to the real count. This needs a PIN and is recorded with who &amp; why.<br>Perbezaan dijumpai. Pengurus boleh laras baki ke kiraan sebenar — perlu PIN.</div>
+        <div class="pin-box">
+          <div class="pin-head">🔒 Manager PIN · PIN Pengurus required</div>
+          <input type="password" id="adj-pin" inputmode="numeric" autocomplete="off" placeholder="Manager PIN">
+        </div>
+        <div class="field">
+          <label>Reason · Sebab <span class="req">*</span></label>
+          <input type="text" id="adj-reason" autocomplete="off" placeholder="e.g. broken in transit, miscount">
+        </div>
+        <div class="btn-wrap">
+          <button type="button" class="submit-btn" style="background:var(--warn);box-shadow:0 4px 12px rgba(201,162,39,.3);" onclick="submitAdjust()">
+            <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+            Pull System → Real · Laras Baki
+          </button>
+          <div class="teal-bar" style="background:#A07E00;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= DAMAGE PANEL ================= -->
+    <div class="panel" id="panel-damage">
+      <div class="notice">
+        <b>Mark Damaged · Tanda Rosak:</b> Move pallets from DALAM/LUAR to ROSAK. A photo of the broken pallet is required.<br>
+        <span style="opacity:.75;">Pindah pallet dari DALAM/LUAR ke ROSAK. Foto pallet rosak diperlukan.</span>
+      </div>
+
+      <div class="field">
+        <label>Select pallet · Pilih pallet <span class="req">*</span></label>
+        <select id="dm-pallet" onchange="onDmPalletChange()">
+          <option value="">— Loading… · Memuatkan… —</option>
+        </select>
+        <div class="error-msg" id="err-dm-pallet">Please select a pallet · Sila pilih pallet</div>
+      </div>
+
+      <div class="section-label">Move From · Pindah Dari</div>
+      <div class="seg" id="dm-state-seg">
+        <button type="button" class="seg-btn sel" data-state="DALAM" onclick="pickDmState(this)">DALAM<span class="bm">In store</span></button>
+        <button type="button" class="seg-btn" data-state="LUAR" onclick="pickDmState(this)">LUAR<span class="bm">Out</span></button>
+      </div>
+
+      <div class="balcard" id="dm-balcard">
+        <div class="balcard-name" id="dm-balcard-name"></div>
+        <div class="balcard-grid">
+          <div class="balcard-cell"><div class="lbl">Dalam</div><div class="val" id="dm-bd">–</div></div>
+          <div class="balcard-cell"><div class="lbl">Luar</div><div class="val" id="dm-bl">–</div></div>
+          <div class="balcard-cell rosak"><div class="lbl">Rosak</div><div class="val" id="dm-br">–</div></div>
+        </div>
+        <div class="balcard-foot">System balance · Baki sistem</div>
+      </div>
+
+      <div class="section-label">Quantity Damaged · Jumlah Rosak</div>
+      <div class="field">
+        <label>How many broken? · Berapa rosak? <span class="req">*</span></label>
+        <input type="number" id="dm-qty" inputmode="numeric" min="1" step="1" placeholder="e.g. 3">
+        <div class="error-msg" id="err-dm-qty">Enter a number ≥ 1 · Masukkan nombor</div>
+      </div>
+
+      <div class="section-label">Photo of Damage · Foto Rosak</div>
+      <div class="field">
+        <label>Photo(s) of broken pallet · Foto pallet rosak <span class="req">*</span></label>
+        <div class="photo-btn" id="dm-photo-btn">
+          <input type="file" id="dm-photo" accept="image/*" capture="environment" multiple onchange="handleDamagePhoto(this)">
+          <div class="photo-icon">
+            <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          </div>
+          <div class="photo-label" id="dm-photo-label">+ Tap to take photo<br>Ketik untuk ambil foto</div>
+          <div class="photo-sublabel" id="dm-photo-sub">Up to 10 · Show the damage clearly</div>
+        </div>
+        <div class="photo-grid" id="dm-photo-grid"></div>
+        <div class="photo-counter" id="dm-photo-counter"></div>
+        <div class="error-msg" id="err-dm-photo">Please take at least 1 photo · Sila ambil sekurang-kurangnya 1 foto</div>
+      </div>
+
+      <div class="field">
+        <label>Reason · Sebab</label>
+        <input type="text" id="dm-reason" autocomplete="off" placeholder="optional — e.g. forklift, broken board">
+      </div>
+      <div class="field">
+        <label>Date · Tarikh</label>
+        <input type="date" id="dm-date">
+      </div>
+      <div class="field">
+        <label>Your name · Nama anda</label>
+        <input type="text" id="dm-operator" autocomplete="off" placeholder="Operator / staff name">
+      </div>
+
+      <div class="btn-wrap">
+        <button type="button" class="submit-btn" onclick="submitDamage()">
+          <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Mark Damaged · Tanda Rosak
+        </button>
+        <div class="teal-bar"></div>
+      </div>
+      <div class="hint" style="margin-top:14px;">Photos upload in the background. After saving, please verify the entry shows in the dashboard within 1 minute. · Foto dimuat naik di latar. Sila sahkan dalam papan pemuka dalam 1 minit.</div>
+
+      <!-- ===== Repaired → back to store (ROSAK → DALAM) · R7 ===== -->
+      <div style="margin-top:26px;border-top:1px solid var(--gray-light);padding-top:22px;">
+        <div class="section-label" style="color:var(--success);">Repaired → Back to Store · Dibaiki → Masuk Stor</div>
+        <div class="notice" style="background:rgba(34,197,94,0.06);border-color:rgba(34,197,94,0.25);border-left-color:var(--success);">
+          <b>Fixed a broken pallet? · Pallet rosak dah dibaiki?</b> Move it back from ROSAK to DALAM. No photo needed.<br>
+          <span style="opacity:.75;">Pindah balik dari ROSAK ke DALAM. Tiada foto diperlukan.</span>
+        </div>
+
+        <div class="field">
+          <label>Select pallet · Pilih pallet <span class="req">*</span></label>
+          <select id="rp-pallet" onchange="onRpPalletChange()">
+            <option value="">— Loading… · Memuatkan… —</option>
+          </select>
+          <div class="error-msg" id="err-rp-pallet">Please select a pallet · Sila pilih pallet</div>
+        </div>
+
+        <div class="balcard" id="rp-balcard">
+          <div class="balcard-name" id="rp-balcard-name"></div>
+          <div class="balcard-grid">
+            <div class="balcard-cell"><div class="lbl">Dalam</div><div class="val" id="rp-bd">–</div></div>
+            <div class="balcard-cell"><div class="lbl">Luar</div><div class="val" id="rp-bl">–</div></div>
+            <div class="balcard-cell rosak"><div class="lbl">Rosak</div><div class="val" id="rp-br">–</div></div>
+          </div>
+          <div class="balcard-foot">System balance · Baki sistem</div>
+        </div>
+
+        <div class="section-label">Quantity Repaired · Jumlah Dibaiki</div>
+        <div class="field">
+          <label>How many fixed? · Berapa dah dibaiki? <span class="req">*</span></label>
+          <input type="number" id="rp-qty" inputmode="numeric" min="1" step="1" placeholder="e.g. 2" oninput="onRpQtyInput()">
+          <div class="error-msg" id="err-rp-qty">Enter a number ≥ 1 · Masukkan nombor</div>
+          <div class="var-pill" id="rp-var"></div>
+        </div>
+
+        <div class="field">
+          <label>Reason · Sebab</label>
+          <input type="text" id="rp-reason" autocomplete="off" placeholder="optional — e.g. new board, repaired leg">
+        </div>
+        <div class="field">
+          <label>Date · Tarikh</label>
+          <input type="date" id="rp-date">
+        </div>
+        <div class="field">
+          <label>Your name · Nama anda</label>
+          <input type="text" id="rp-operator" autocomplete="off" placeholder="Operator / staff name">
+        </div>
+
+        <div class="btn-wrap">
+          <button type="button" class="submit-btn" style="background:var(--success);box-shadow:0 4px 12px rgba(34,197,94,.25);" onclick="submitRepair()">
+            <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            Repaired → Store · Masuk Balik
+          </button>
+          <div class="teal-bar"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= LORRY PANEL (Phase 2 placeholder) ================= -->
+    <div class="panel" id="panel-lorry">
+      <div class="section-label">Assign to Lorry · Tugas ke Lori</div>
+      <div class="soon-card">
+        <div class="soon-tag">Phase 2 · Fasa 2</div>
+        <b>Hang pallets on a shipment</b><br>
+        Pick a lorry / ShipmentKey and assign pallets out (DALAM → LUAR) with the delivery.<br>
+        <span style="opacity:.75;">Pilih lori / ShipmentKey dan tugaskan pallet keluar bersama penghantaran.</span><br><br>
+        <span style="font-size:11.5px;color:var(--gray);">Backend endpoints (<code>PALLET_ASSIGN / ACCEPT / RETURN</code>) are already written but not yet wired live. This tab activates in Phase 2.<br>Endpoint sudah siap, akan diaktifkan dalam Fasa 2.</span>
+      </div>
+
+      <!-- Phase-2 wiring is stubbed below (disabled) so the assign UI is ready to switch on. -->
+      <div style="opacity:.45;pointer-events:none;margin-top:18px;">
+        <div class="field">
+          <label>Lorry · Lori</label>
+          <select id="lr-lorry" disabled>
+            <option>— Phase 2 —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>ShipmentKey</label>
+          <input type="text" id="lr-shipment" disabled placeholder="auto from selected shipment">
+        </div>
+        <div class="field">
+          <label>Pallet · Pallet</label>
+          <select id="lr-pallet" disabled><option>— Phase 2 —</option></select>
+        </div>
+        <div class="field">
+          <label>Qty out (DALAM → LUAR)</label>
+          <input type="number" id="lr-qty" disabled placeholder="0">
+        </div>
+        <div class="btn-wrap">
+          <button type="button" class="submit-btn" disabled style="background:var(--gray);box-shadow:none;">Assign · Tugas (Phase 2)</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">Saving… · Menyimpan…</div>
+</div>
+
+<div class="toast" id="toast"><span class="ico" id="toastIco">✓</span><div id="toastMsg"></div></div>
+
+<script>
+// ============================================================
+// CLF Pallet Store — Phase 1 MVP frontend
+// Same Apps Script deployment as the POD / Fuel forms.
+// Reuses the existing patterns: GET-write (no-cors-proof, reads JSON),
+// POST + no-cors + clientToken polling of getImportResult (photo writes),
+// client-side image compression, bilingual EN · BM, mobile-first.
+// ============================================================
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxabHh2Kd04z7k0zZOOoaJs2i5hgycQsO_AYoRS99xZx2WqMJ6cowumY0e1znehiRM1/exec';
+
+const OPERATOR_KEY = 'clf_pallet_operator';   // remember the storekeeper's name across reloads
+
+// ---- small helpers ----------------------------------------------------------
+function _esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function _today(){ return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' }); }
+function _newToken(p){ return (p||'plt') + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10); }
+function _posInt(v){ var n = parseInt(v, 10); return (isNaN(n) || n < 0) ? null : n; }
+
+function showLoading(txt){ document.getElementById('loadingText').textContent = txt || 'Saving… · Menyimpan…'; document.getElementById('loadingOverlay').classList.add('show'); }
+function hideLoading(){ document.getElementById('loadingOverlay').classList.remove('show'); }
+
+var _toastTmr = null;
+function toast(kind, html){
+  var t = document.getElementById('toast');
+  document.getElementById('toastIco').textContent = kind === 'ok' ? '✓' : (kind === 'err' ? '✕' : '!');
+  document.getElementById('toastMsg').innerHTML = html;
+  t.className = 'toast show ' + kind;
+  if (_toastTmr) clearTimeout(_toastTmr);
+  _toastTmr = setTimeout(function(){ t.classList.remove('show'); }, kind === 'err' ? 7000 : 4500);
+}
+
+// ---- tab switching ----------------------------------------------------------
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-tab') === name); });
+  document.querySelectorAll('.panel').forEach(function(p){ p.classList.toggle('active', p.id === 'panel-' + name); });
+  // freshen balances whenever the user lands on a write tab
+  if (name === 'stocktake' || name === 'reconcile' || name === 'damage') refreshBalances();
+}
+
+// ============================================================
+// MASTER (dropdowns) + BALANCES (live readback) — shared cache
+// ============================================================
+var MASTER = [];                  // [{palletKey, displayName, ...}]
+var BALANCES = {};                // palletKey -> {dalam, luar, rosak, totalHeld}
+var _balancesAt = 0;
+
+// getPalletMaster — fills every pallet <select>. active=1 → only active rows.
+async function fetchMaster(){
+  try{
+    var res = await fetch(SCRIPT_URL + '?action=getPalletMaster&active=1', { method: 'GET' });
+    var data = await res.json();
+    if (data && data.status === 'ok' && Array.isArray(data.master)){
+      MASTER = data.master;
+      fillPalletSelects();
+    } else {
+      throw new Error('bad master payload');
+    }
+  }catch(err){
+    console.error('fetchMaster failed', err);
+    ['st-pallet','rc-pallet','dm-pallet','rp-pallet'].forEach(function(id){
+      var s = document.getElementById(id); if (s) s.innerHTML = '<option value="">⚠ Load failed — pull to retry · Gagal</option>';
+    });
+    toast('err', '<b>Could not load pallet list.</b><br>Check connection · Semak sambungan.');
+  }
+}
+
+function fillPalletSelects(){
+  var opts = '<option value="">— Select pallet · Pilih pallet —</option>' +
+    MASTER.map(function(m){ return '<option value="' + _esc(m.palletKey) + '">' + _esc(m.displayName || m.palletKey) + '</option>'; }).join('');
+  ['st-pallet','rc-pallet','dm-pallet','rp-pallet'].forEach(function(id){
+    var s = document.getElementById(id); if (!s) return;
+    var keep = s.value; s.innerHTML = opts; if (keep) s.value = keep;
+  });
+}
+
+// getPalletBalances — computed live balances; cached ~20s so the readback cards are instant.
+async function refreshBalances(force){
+  if (!force && Date.now() - _balancesAt < 20000 && Object.keys(BALANCES).length) { paintAllBalcards(); return; }
+  try{
+    var res = await fetch(SCRIPT_URL + '?action=getPalletBalances', { method: 'GET' });
+    var data = await res.json();
+    if (data && data.status === 'ok' && Array.isArray(data.balances)){
+      BALANCES = {};
+      data.balances.forEach(function(b){ BALANCES[b.palletKey] = { dalam: b.dalam, luar: b.luar, rosak: b.rosak, totalHeld: b.totalHeld }; });
+      _balancesAt = Date.now();
+      paintAllBalcards();
+    }
+  }catch(err){ console.warn('refreshBalances failed', err); }
+}
+
+function balOf(key){ return BALANCES[key] || { dalam: 0, luar: 0, rosak: 0, totalHeld: 0 }; }
+function nameOf(key){ var m = MASTER.filter(function(x){ return x.palletKey === key; })[0]; return m ? (m.displayName || key) : key; }
+
+function paintBalcard(prefix, key){
+  var card = document.getElementById(prefix + '-balcard');
+  if (!key){ card.classList.remove('show'); return; }
+  var b = balOf(key);
+  document.getElementById(prefix + '-balcard-name').textContent = nameOf(key);
+  document.getElementById(prefix + '-bd').textContent = b.dalam;
+  document.getElementById(prefix + '-bl').textContent = b.luar;
+  document.getElementById(prefix + '-br').textContent = b.rosak;
+  card.classList.add('show');
+}
+function paintAllBalcards(){
+  paintBalcard('st', document.getElementById('st-pallet').value);
+  paintBalcard('rc', document.getElementById('rc-pallet').value);
+  paintBalcard('dm', document.getElementById('dm-pallet').value);
+  paintBalcard('rp', document.getElementById('rp-pallet').value);
+  // refresh variance pills if a count is already typed
+  onStCountInput(); onRcCountInput(); onRpQtyInput();
+}
+
+// system balance for the currently-selected state in a panel
+function sysBalForState(prefix){
+  var key = document.getElementById(prefix + '-pallet').value;
+  var st = (prefix === 'st' ? ST_STATE : prefix === 'rc' ? RC_STATE : 'DALAM');
+  if (!key) return null;
+  var b = balOf(key);
+  return st === 'DALAM' ? b.dalam : st === 'LUAR' ? b.luar : b.rosak;
+}
+
+// ============================================================
+// STOCKTAKE  →  GET-write  PALLET_STOCKTAKE
+// ============================================================
+var ST_STATE = 'DALAM';
+function pickStState(btn){
+  document.querySelectorAll('#st-state-seg .seg-btn').forEach(function(b){ b.classList.remove('sel'); });
+  btn.classList.add('sel'); ST_STATE = btn.getAttribute('data-state');
+  document.getElementById('st-state-lbl').textContent = ST_STATE;
+  onStCountInput();
+}
+function onStPalletChange(){ paintBalcard('st', document.getElementById('st-pallet').value); onStCountInput(); }
+function onStCountInput(){
+  var pill = document.getElementById('st-var');
+  var n = _posInt(document.getElementById('st-count').value);
+  var sys = sysBalForState('st');
+  if (n === null || sys === null){ pill.classList.remove('show'); return; }
+  var delta = n - sys;
+  if (delta === 0){ pill.className = 'var-pill show ok'; pill.innerHTML = '✓ Matches system balance (' + sys + ') · Sama dengan baki sistem'; }
+  else { pill.className = 'var-pill show diff'; pill.innerHTML = 'System has <b>' + sys + '</b>, you counted <b>' + n + '</b> → adjust <b>' + (delta > 0 ? '+' : '') + delta + '</b><br>Sistem ada ' + sys + ', anda kira ' + n; }
+}
+
+async function submitStocktake(){
+  var key = document.getElementById('st-pallet').value;
+  var n = _posInt(document.getElementById('st-count').value);
+  var ok = true;
+  document.getElementById('err-st-pallet').classList.toggle('show', !key); if (!key) ok = false;
+  document.getElementById('err-st-count').classList.toggle('show', n === null); if (n === null) ok = false;
+  if (!ok) return;
+  var operator = document.getElementById('st-operator').value.trim();
+  if (operator) localStorage.setItem(OPERATOR_KEY, operator);
+  var params = {
+    palletKey: key, state: ST_STATE, physicalCount: n,
+    entryDate: document.getElementById('st-date').value || _today(),
+    operator: operator, clientToken: _newToken('stk')
+  };
+  showLoading('Saving count… · Menyimpan kiraan…');
+  var data = await getWrite('PALLET_STOCKTAKE', params);
+  hideLoading();
+  if (data && data.status === 'success'){
+    var msg = data.dedup ? 'Already saved · Sudah disimpan' :
+      ('New balance · Baki baru: <b>' + data.newBalance + '</b> ' + _esc(data.state) +
+       (data.delta ? ' (' + (data.delta > 0 ? '+' : '') + data.delta + ')' : ' — matched'));
+    toast('ok', '<b>Stocktake saved · Kiraan disimpan</b><br>' + msg);
+    document.getElementById('st-count').value = '';
+    document.getElementById('st-var').classList.remove('show');
+    refreshBalances(true);
+  } else {
+    toast('err', '<b>NOT saved · TIDAK disimpan</b><br>' + _esc((data && data.message) || 'Server error · Ralat'));
+  }
+}
+
+// ============================================================
+// RECONCILE  →  GET-write  PALLET_RECONCILE   (ADJUST → POST, PIN-gated · R2)
+// ============================================================
+var RC_STATE = 'DALAM';
+var _lastReconcileId = '';       // pass into ADJUST so it links + marks resolved
+function pickRcState(btn){
+  document.querySelectorAll('#rc-state-seg .seg-btn').forEach(function(b){ b.classList.remove('sel'); });
+  btn.classList.add('sel'); RC_STATE = btn.getAttribute('data-state');
+  document.getElementById('rc-state-lbl').textContent = RC_STATE;
+  hideAdjust(); onRcCountInput();
+}
+function onRcPalletChange(){ paintBalcard('rc', document.getElementById('rc-pallet').value); hideAdjust(); onRcCountInput(); }
+function hideAdjust(){ document.getElementById('rc-adjust-wrap').style.display = 'none'; }
+function onRcCountInput(){
+  var pill = document.getElementById('rc-var');
+  var n = _posInt(document.getElementById('rc-count').value);
+  var sys = sysBalForState('rc');
+  if (n === null || sys === null){ pill.classList.remove('show'); return; }
+  var v = n - sys;
+  if (v === 0){ pill.className = 'var-pill show ok'; pill.innerHTML = '✓ Balanced — system & physical both ' + sys + ' · Padan'; }
+  else { pill.className = 'var-pill show diff'; pill.innerHTML = 'Variance <b>' + (v > 0 ? '+' : '') + v + '</b> · system <b>' + sys + '</b> vs physical <b>' + n + '</b><br>Perbezaan ' + (v > 0 ? '+' : '') + v; }
+}
+
+async function submitReconcile(){
+  var key = document.getElementById('rc-pallet').value;
+  var n = _posInt(document.getElementById('rc-count').value);
+  var ok = true;
+  document.getElementById('err-rc-pallet').classList.toggle('show', !key); if (!key) ok = false;
+  document.getElementById('err-rc-count').classList.toggle('show', n === null); if (n === null) ok = false;
+  if (!ok) return;
+  var operator = document.getElementById('rc-operator').value.trim();
+  if (operator) localStorage.setItem(OPERATOR_KEY, operator);
+  var params = {
+    palletKey: key, state: RC_STATE, physicalCount: n,
+    reconcileDate: document.getElementById('rc-date').value || _today(),
+    operator: operator, note: document.getElementById('rc-note').value.trim()
+  };
+  showLoading('Recording… · Merekod…');
+  var data = await getWrite('PALLET_RECONCILE', params);
+  hideLoading();
+  if (data && data.status === 'success'){
+    _lastReconcileId = data.reconcileId || '';
+    if (data.balanced){
+      toast('ok', '<b>Balanced ✓ · Padan</b><br>System & physical both <b>' + data.physicalCount + '</b> ' + _esc(RC_STATE));
+      hideAdjust();
+    } else {
+      toast('warn', '<b>Variance recorded · Perbezaan direkod</b><br>System <b>' + data.computedBalance + '</b> vs physical <b>' + data.physicalCount + '</b> (' + (data.variance > 0 ? '+' : '') + data.variance + ')');
+      // reveal the manager ADJUST block prefilled to pull system → physical
+      document.getElementById('rc-adjust-wrap').style.display = 'block';
+      document.getElementById('rc-adjust-wrap').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    refreshBalances(true);
+  } else {
+    toast('err', '<b>NOT saved · TIDAK disimpan</b><br>' + _esc((data && data.message) || 'Server error · Ralat'));
+  }
+}
+
+// ADJUST — manager pulls system balance to the physical count. Needs PALLET_MANAGER_PIN + reason.
+async function submitAdjust(){
+  var key = document.getElementById('rc-pallet').value;
+  var target = _posInt(document.getElementById('rc-count').value);   // pull TO the physical count just entered
+  var pin = document.getElementById('adj-pin').value.trim();
+  var reason = document.getElementById('adj-reason').value.trim();
+  var operator = document.getElementById('rc-operator').value.trim();
+  if (!key || target === null){ toast('err', 'Select a pallet and enter the real count first · Pilih pallet & kiraan dulu'); return; }
+  if (!pin){ toast('err', 'Manager PIN required · PIN Pengurus diperlukan'); return; }
+  if (!reason){ toast('err', 'Reason is required · Sebab diperlukan'); return; }
+  if (!operator){ toast('err', 'Your name is required for adjust · Nama diperlukan'); return; }
+  // R2: PIN-gated → POST so the manager PIN travels in the request body, never in the URL / access log.
+  var token = _newToken('adj');
+  var payload = {
+    formType: 'PALLET_ADJUST',
+    palletKey: key, state: RC_STATE, targetBalance: target,
+    reason: reason, operator: operator, pin: pin,
+    reconcileId: _lastReconcileId, clientToken: token
+  };
+  showLoading('Adjusting… · Melaras…');
+  var data = await postWithToken(payload, token);
+  hideLoading();
+  if (data && data.status === 'success'){
+    toast('ok', '<b>Pulled level ✓ · Dilaras</b><br>' + _esc(RC_STATE) + ': ' + data.previous + ' → <b>' + data.newBalance + '</b>');
+    document.getElementById('adj-pin').value = '';
+    document.getElementById('adj-reason').value = '';
+    hideAdjust();
+    refreshBalances(true);
+  } else if (data && data.needsPin){
+    toast('err', '<b>Wrong / missing PIN · PIN salah</b>');
+  } else if (data && data.status === 'error'){
+    toast('err', '<b>Adjust failed · Gagal</b><br>' + _esc(data.message || 'Server error · Ralat'));
+  } else {
+    // POST landed (no-cors) but no confirmation in time — may have applied; tell user to verify before retrying.
+    toast('warn', '<b>Sent — please verify · Sila sahkan</b><br>Could not confirm. Check the balance in 1 min before re-sending.<br>Tak dapat sahkan — semak baki dulu.');
+  }
+}
+
+// ============================================================
+// DAMAGE  →  POST + no-cors + clientToken polling  PALLET_DAMAGE
+// ============================================================
+var DM_STATE = 'DALAM';
+const MAX_PHOTOS = 10;
+const COMPRESS_MAX_DIM = 1600;
+const COMPRESS_QUALITY = 0.8;
+let dmPhotos = [];   // [{dataUrl, name, type}]
+
+function pickDmState(btn){
+  document.querySelectorAll('#dm-state-seg .seg-btn').forEach(function(b){ b.classList.remove('sel'); });
+  btn.classList.add('sel'); DM_STATE = btn.getAttribute('data-state');
+}
+function onDmPalletChange(){ paintBalcard('dm', document.getElementById('dm-pallet').value); }
+
+function compressImage(file){
+  return new Promise(function(resolve, reject){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var img = new Image();
+      img.onload = function(){
+        var w = img.naturalWidth, h = img.naturalHeight;
+        if (w > COMPRESS_MAX_DIM || h > COMPRESS_MAX_DIM){
+          if (w >= h){ h = Math.round(h * (COMPRESS_MAX_DIM / w)); w = COMPRESS_MAX_DIM; }
+          else { w = Math.round(w * (COMPRESS_MAX_DIM / h)); h = COMPRESS_MAX_DIM; }
+        }
+        try{
+          var canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          var dataUrl = canvas.toDataURL('image/jpeg', COMPRESS_QUALITY);
+          var name = (file.name || 'pallet.jpg').replace(/\.[^.]+$/, '') + '.jpg';
+          resolve({ dataUrl: dataUrl, name: name, type: 'image/jpeg' });
+        }catch(err){ reject(err); }
+      };
+      img.onerror = function(){ reject(new Error('decode failed')); };
+      img.src = e.target.result;
+    };
+    reader.onerror = function(){ reject(new Error('read failed')); };
+    reader.readAsDataURL(file);
+  });
+}
+function readFileAsDataUrl(file){
+  return new Promise(function(resolve, reject){
+    var reader = new FileReader();
+    reader.onload = function(){ resolve({ dataUrl: reader.result, name: file.name || 'pallet.jpg', type: file.type || 'image/jpeg' }); };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+async function handleDamagePhoto(input){
+  if (!input.files || !input.files.length) return;
+  input.disabled = true;
+  for (var i = 0; i < input.files.length; i++){
+    if (dmPhotos.length >= MAX_PHOTOS) break;
+    var entry;
+    try { entry = await compressImage(input.files[i]); }
+    catch(err){ try { entry = await readFileAsDataUrl(input.files[i]); } catch(e2){ continue; } }
+    dmPhotos.push(entry);
+    renderDamageGrid();
+  }
+  input.value = '';
+  input.disabled = dmPhotos.length >= MAX_PHOTOS;
+}
+function removeDamagePhoto(idx){ dmPhotos.splice(idx, 1); renderDamageGrid(); }
+function renderDamageGrid(){
+  var grid = document.getElementById('dm-photo-grid');
+  var counter = document.getElementById('dm-photo-counter');
+  grid.innerHTML = dmPhotos.map(function(p, i){
+    return '<div class="photo-thumb"><img src="' + p.dataUrl + '" alt="Damage ' + (i+1) + '">' +
+           '<button type="button" class="remove-x" onclick="removeDamagePhoto(' + i + ')" aria-label="Remove">×</button></div>';
+  }).join('');
+  counter.textContent = dmPhotos.length ? (dmPhotos.length + ' / ' + MAX_PHOTOS + ' photos') : '';
+  var btn = document.getElementById('dm-photo-btn');
+  if (dmPhotos.length > 0){
+    btn.classList.add('has-photo');
+    document.getElementById('dm-photo-label').textContent = '+ Add another (' + dmPhotos.length + '/' + MAX_PHOTOS + ')';
+    document.getElementById('dm-photo-sub').textContent = 'Tap to take another photo';
+  } else {
+    btn.classList.remove('has-photo');
+    document.getElementById('dm-photo-label').innerHTML = '+ Tap to take photo<br>Ketik untuk ambil foto';
+    document.getElementById('dm-photo-sub').textContent = 'Up to 10 · Show the damage clearly';
+  }
+  document.getElementById('dm-photo').disabled = dmPhotos.length >= MAX_PHOTOS;
+}
+
+async function submitDamage(){
+  var key = document.getElementById('dm-pallet').value;
+  var qty = _posInt(document.getElementById('dm-qty').value);
+  var ok = true;
+  document.getElementById('err-dm-pallet').classList.toggle('show', !key); if (!key) ok = false;
+  document.getElementById('err-dm-qty').classList.toggle('show', !qty || qty < 1); if (!qty || qty < 1) ok = false;
+  document.getElementById('err-dm-photo').classList.toggle('show', !dmPhotos.length); if (!dmPhotos.length) ok = false;
+  if (!ok) return;
+  var operator = document.getElementById('dm-operator').value.trim();
+  if (operator) localStorage.setItem(OPERATOR_KEY, operator);
+  var photos = dmPhotos.map(function(p){ return { base64: p.dataUrl.split(',')[1], name: p.name, type: p.type }; });
+  var token = _newToken('dmg');
+  var payload = {
+    formType: 'PALLET_DAMAGE',
+    palletKey: key, fromState: DM_STATE, qty: qty,
+    photos: photos,
+    entryDate: document.getElementById('dm-date').value || _today(),
+    reason: document.getElementById('dm-reason').value.trim(),
+    operator: operator, clientToken: token
+  };
+  showLoading('Uploading ' + photos.length + ' photo(s)… · Memuat naik…');
+  var confirmed = await postWithToken(payload, token);
+  hideLoading();
+  if (confirmed && confirmed.status === 'success'){
+    toast('ok', '<b>Marked damaged ✓ · Ditanda rosak</b><br><b>' + qty + '</b> moved ' + _esc(DM_STATE) + ' → ROSAK · ' + (confirmed.photoCount || photos.length) + ' photo(s)');
+    dmPhotos = []; renderDamageGrid();
+    document.getElementById('dm-qty').value = '';
+    document.getElementById('dm-reason').value = '';
+    refreshBalances(true);
+  } else if (confirmed && confirmed.status === 'error'){
+    toast('err', '<b>NOT saved · TIDAK disimpan</b><br>' + _esc(confirmed.message || 'Server error') + '<br>Photos kept — tap again · Foto kekal, cuba lagi');
+  } else {
+    // weak signal: POST likely landed (no-cors), but we could not confirm — keep photos, tell user to verify.
+    toast('warn', '<b>Sent — please verify · Sila sahkan</b><br>Could not confirm. Check the dashboard in 1 min before re-sending.<br>Tak dapat sahkan — semak papan pemuka dulu.');
+  }
+}
+
+// ============================================================
+// REPAIR  →  GET-write  PALLET_REPAIR  (ROSAK → DALAM, no PIN, no photo)  · R7
+// ============================================================
+function onRpPalletChange(){ paintBalcard('rp', document.getElementById('rp-pallet').value); onRpQtyInput(); }
+function onRpQtyInput(){
+  var pill = document.getElementById('rp-var');
+  var key = document.getElementById('rp-pallet').value;
+  var qty = _posInt(document.getElementById('rp-qty').value);
+  if (!key || qty === null || qty < 1){ pill.classList.remove('show'); return; }
+  var rosak = balOf(key).rosak;
+  if (qty > rosak){
+    pill.className = 'var-pill show diff';
+    pill.innerHTML = 'Only <b>' + rosak + '</b> ROSAK available, you entered <b>' + qty + '</b><br>Hanya ' + rosak + ' rosak ada — tak boleh baiki lebih';
+  } else {
+    pill.className = 'var-pill show ok';
+    pill.innerHTML = '✓ ' + qty + ' ROSAK → DALAM · ' + rosak + ' broken → ' + (rosak - qty) + ' left after<br>' + qty + ' rosak akan masuk balik ke stor';
+  }
+}
+
+async function submitRepair(){
+  var key = document.getElementById('rp-pallet').value;
+  var qty = _posInt(document.getElementById('rp-qty').value);
+  var ok = true;
+  document.getElementById('err-rp-pallet').classList.toggle('show', !key); if (!key) ok = false;
+  document.getElementById('err-rp-qty').classList.toggle('show', !qty || qty < 1); if (!qty || qty < 1) ok = false;
+  if (!ok) return;
+  // client-side guard mirrors backend ROSAK check (backend is source of truth)
+  var rosak = balOf(key).rosak;
+  if (qty > rosak){
+    toast('err', '<b>Not enough broken pallets · Tak cukup rosak</b><br>Only ' + rosak + ' ROSAK available · Hanya ' + rosak + ' ada');
+    return;
+  }
+  var operator = document.getElementById('rp-operator').value.trim();
+  if (operator) localStorage.setItem(OPERATOR_KEY, operator);
+  var params = {
+    palletKey: key, qty: qty,
+    entryDate: document.getElementById('rp-date').value || _today(),
+    reason: document.getElementById('rp-reason').value.trim(),
+    operator: operator, clientToken: _newToken('rpr')
+  };
+  showLoading('Returning to store… · Memasukkan balik…');
+  var data = await getWrite('PALLET_REPAIR', params);
+  hideLoading();
+  if (data && data.status === 'success'){
+    var msg = data.dedup ? 'Already saved · Sudah disimpan' :
+      ('<b>' + qty + '</b> moved ROSAK → DALAM · ' + _esc(nameOf(key)));
+    toast('ok', '<b>Repaired ✓ · Dibaiki</b><br>' + msg);
+    document.getElementById('rp-qty').value = '';
+    document.getElementById('rp-reason').value = '';
+    document.getElementById('rp-var').classList.remove('show');
+    refreshBalances(true);
+  } else {
+    toast('err', '<b>NOT saved · TIDAK disimpan</b><br>' + _esc((data && data.message) || 'Server error · Ralat'));
+  }
+}
+
+// ============================================================
+// TRANSPORT — shared request helpers (mirror the POD/Fuel patterns)
+// ============================================================
+// GET-write: no-photo writes. Survives no-cors because GET returns readable JSON.
+// Backend maps formType -> handleWriteAction_ via WRITE_ACTIONS_GET_ALLOWED_ whitelist.
+async function getWrite(action, params){
+  try{
+    var qs = '?action=' + encodeURIComponent(action);
+    Object.keys(params).forEach(function(k){
+      var v = params[k];
+      if (v === undefined || v === null || v === '') return;
+      qs += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(v);
+    });
+    var res = await fetch(SCRIPT_URL + qs, { method: 'GET' });
+    return await res.json();
+  }catch(err){
+    console.error('getWrite ' + action + ' failed', err);
+    return { status: 'error', message: 'No connection · Tiada sambungan' };
+  }
+}
+
+// POST + no-cors + poll getImportResult by clientToken — the only safe way to read the
+// real result of a photo write (no-cors hides the response). Backend caches result ~10 min.
+async function postWithToken(payload, token){
+  var fd = new FormData();
+  fd.append('data', JSON.stringify(payload));
+  var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  var tmo = ctrl ? setTimeout(function(){ ctrl.abort(); }, 90000) : null;
+  try{
+    await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: fd, signal: ctrl ? ctrl.signal : undefined });
+  }catch(err){
+    if (tmo) clearTimeout(tmo);
+    console.warn('post aborted/failed', err);
+    return null;   // weak signal — caller tells user to verify
+  }
+  if (tmo) clearTimeout(tmo);
+  document.getElementById('loadingText').textContent = 'Confirming… · Mengesahkan…';
+  for (var t = 0; t < 8; t++){
+    await new Promise(function(r){ setTimeout(r, 1500); });
+    try{
+      var rb = await fetch(SCRIPT_URL + '?action=getImportResult&token=' + encodeURIComponent(token));
+      var rd = await rb.json();
+      if (rd && rd.status && rd.status !== 'pending') return rd;
+    }catch(e){ /* keep polling */ }
+  }
+  return null;   // no confirmation within timeout
+}
+
+// ============================================================
+// BOOT
+// ============================================================
+window.onload = function(){
+  var today = _today();
+  ['st-date','rc-date','dm-date','rp-date'].forEach(function(id){
+    var d = document.getElementById(id); if (d){ d.value = today; d.max = today; }
+  });
+  // restore remembered operator name across the forms
+  var savedOp = localStorage.getItem(OPERATOR_KEY) || '';
+  if (savedOp) ['st-operator','rc-operator','dm-operator','rp-operator'].forEach(function(id){ var o = document.getElementById(id); if (o) o.value = savedOp; });
+
+  fetchMaster().finally(function(){ refreshBalances(true); });
+};
+
+// Returning to the tab (camera / pocket) — silently re-sync balances so readbacks stay honest.
+document.addEventListener('visibilitychange', function(){
+  if (!document.hidden) refreshBalances(true);
+});
+</script>
+</body>
+</html>

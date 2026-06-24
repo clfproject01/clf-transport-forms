@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CLF Pallet Dashboard</title>
+<style>
+  /* Mirrors CLF_Dashboard.html design language (same palette / cards / chips / tables / unavail discipline). Read-only viewer. */
+  :root{
+    --green-50:#ECFDF5; --green-500:#16A34A; --green-700:#15803D;
+    --amber-50:#FFFBEB; --amber-500:#D97706; --amber-700:#B45309;
+    --red-50:#FEF2F2; --red-500:#EF4444; --red-700:#B91C1C;
+    --blue-50:#EFF6FF; --blue-500:#3B82F6; --blue-700:#1D4ED8;
+    --purple-50:#F5F3FF; --purple-700:#6D28D9;
+    --gray-50:#F9FAFB; --gray-100:#F3F4F6; --gray-200:#E5E7EB; --gray-400:#9CA3AF;
+    --gray-500:#6B7280; --gray-600:#4B5563; --gray-700:#374151; --gray-900:#111827;
+    --card:#fff; --radius:14px; --shadow:0 1px 2px rgba(17,24,39,.06),0 1px 3px rgba(17,24,39,.08);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--gray-50);color:var(--gray-900);line-height:1.5;-webkit-font-smoothing:antialiased;padding-bottom:60px;}
+  .wrap{max-width:1080px;margin:0 auto;padding:18px 16px;}
+  .topbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;}
+  .topbar h1{font-size:19px;font-weight:700;letter-spacing:-.01em;}
+  .topbar .meta{font-size:13px;color:var(--gray-500);}
+  .controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px;}
+  .controls label{font-size:13px;color:var(--gray-700);font-weight:500;}
+  .controls input[type=search]{font-family:inherit;font-size:13px;padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;background:#fff;color:var(--gray-900);min-width:180px;}
+  .refresh-btn{font-family:inherit;font-size:13px;font-weight:600;padding:6px 14px;border:1px solid var(--gray-200);border-radius:8px;background:#fff;color:var(--gray-700);cursor:pointer;}
+  .filter-chip{font-size:12px;font-weight:600;padding:4px 12px;border:1px solid var(--gray-200);border-radius:99px;background:#fff;color:var(--gray-600);cursor:pointer;}
+  .filter-chip.active{background:var(--gray-900);color:#fff;border-color:var(--gray-900);}
+
+  .banner{display:none;background:var(--red-50);border:1px solid var(--red-500);color:var(--red-700);font-size:13px;padding:9px 13px;border-radius:8px;margin-bottom:14px;}
+  .banner.show{display:block;}
+  .banner.warn{background:var(--amber-50);border-color:var(--amber-500);color:var(--amber-700);}
+
+  .zone-head{display:flex;align-items:center;gap:10px;margin:28px 0 12px;padding:9px 14px;border-radius:10px;font-weight:700;font-size:16px;}
+  .zone-bal{background:var(--green-50);color:var(--green-700);border-left:5px solid var(--green-500);}
+  .zone-rec{background:var(--amber-50);color:var(--amber-700);border-left:5px solid var(--amber-500);}
+  .zone-out{background:var(--blue-50);color:var(--blue-700);border-left:5px solid var(--blue-500);}
+  .zone-aud{background:var(--gray-100);color:var(--gray-700);border-left:5px solid var(--gray-400);}
+  .zone-head .sub{font-weight:400;font-size:12.5px;color:var(--gray-500);}
+
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(12,1fr);align-items:start;}
+  .card{background:var(--card);border:1px solid var(--gray-200);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;}
+  .c3{grid-column:span 3;} .c4{grid-column:span 4;} .c6{grid-column:span 6;} .c8{grid-column:span 8;} .c12{grid-column:span 12;}
+  @media(max-width:760px){ .c3,.c4,.c6,.c8{grid-column:span 12;} .card{overflow-x:auto;} }
+
+  .card-title{font-size:14px;font-weight:600;color:var(--gray-700);margin-bottom:2px;}
+  .card-sub{font-size:12px;color:var(--gray-500);margin-bottom:10px;}
+
+  /* KPI strip (fleet totals) */
+  .kpi{display:flex;flex-direction:column;}
+  .kpi .big{font-size:38px;font-weight:800;line-height:1;letter-spacing:-.02em;}
+  .kpi.dalam .big{color:var(--green-700);} .kpi.luar .big{color:var(--blue-700);} .kpi.rosak .big{color:var(--red-700);} .kpi.total .big{color:var(--gray-900);}
+  .kpi .lbl{font-size:12.5px;color:var(--gray-500);margin-top:7px;}
+
+  .chips{display:flex;gap:7px;margin-top:10px;flex-wrap:wrap;}
+  .chip{font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid var(--gray-200);color:var(--gray-700);}
+  .chip.green{background:var(--green-50);color:var(--green-700);border-color:var(--green-500);}
+  .chip.red{background:var(--red-50);color:var(--red-700);border-color:var(--red-500);}
+  .chip.amber{background:var(--amber-50);color:var(--amber-700);border-color:var(--amber-500);}
+  .chip.blue{background:var(--blue-50);color:var(--blue-700);border-color:var(--blue-500);}
+  .chip.mono{font-variant-numeric:tabular-nums;}
+
+  table.act{width:100%;border-collapse:collapse;font-size:12.5px;}
+  table.act th{text-align:left;color:var(--gray-500);font-weight:600;padding:5px 8px;border-bottom:1px solid var(--gray-200);white-space:nowrap;}
+  table.act td{padding:6px 8px;border-bottom:1px solid var(--gray-100);}
+  table.act tr.fail{background:var(--red-50);}
+  table.act tr.warn{background:var(--amber-50);}
+  table.act th.rm{text-align:right;}
+  .rm{font-variant-numeric:tabular-nums;text-align:right;}
+  .st-fail{color:var(--red-700);font-weight:600;} .st-ok{color:var(--green-700);font-weight:600;}
+  .st-warn{color:var(--amber-700);font-weight:600;}
+  .pkey{font-weight:600;color:var(--gray-900);}
+  .psub{color:var(--gray-400);font-size:11px;font-weight:400;}
+  .empty{font-size:13px;color:var(--gray-400);padding:10px 2px;}
+  .unavail{font-size:13px;color:var(--amber-700);background:var(--amber-50);border:1px solid var(--amber-500);border-radius:8px;padding:8px 12px;display:inline-block;}
+  .note-line{font-size:12px;color:var(--gray-500);margin-top:8px;}
+  .collapser{cursor:pointer;user-select:none;}
+  .badge{font-size:10.5px;font-weight:700;letter-spacing:.03em;border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:1px;}
+  .badge.pin{color:var(--purple-700);border:1px solid var(--purple-700);}
+  .badge.bal{color:var(--green-700);border:1px solid var(--green-500);}
+  .badge.unbal{color:var(--red-700);border:1px solid var(--red-500);}
+
+  /* 6-number per-pallet grid */
+  .six{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--gray-200);border-radius:8px;overflow:hidden;margin-top:4px;}
+  @media(max-width:560px){ .six{grid-template-columns:repeat(3,1fr);} }
+  .six .cell{background:#fff;padding:8px 6px;text-align:center;}
+  .six .cell .n{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;}
+  .six .cell .k{font-size:10.5px;color:var(--gray-500);margin-top:4px;line-height:1.25;}
+  .six .cell.out .n{color:var(--gray-700);}
+  .six .cell.luar .n{color:var(--blue-700);}
+  .six .cell.ret .n{color:var(--green-700);}
+  .six .cell.dmg .n{color:var(--red-700);}
+  .six .cell.fix .n{color:var(--purple-700);}
+  .six .cell.bal .n{color:var(--gray-900);}
+  .pcard-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:4px;}
+  .pcard-head .name{font-size:13.5px;font-weight:700;}
+  .pcard-head .key{font-size:11px;color:var(--gray-400);font-variant-numeric:tabular-nums;}
+  .derived-note{font-size:11px;color:var(--gray-400);margin-top:6px;}
+  .legend{font-size:11.5px;color:var(--gray-500);display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;}
+  .legend b{color:var(--gray-700);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <h1>CLF Pallet Dashboard</h1>
+    <div class="meta" id="dashMeta">Loading…</div>
+  </div>
+
+  <div class="banner" id="errBanner"></div>
+
+  <div class="controls">
+    <input type="search" id="searchInput" placeholder="Search principal / type / colour…">
+    <span class="filter-chip active" id="fAll">All</span>
+    <span class="filter-chip" id="fHeld">Held &gt; 0</span>
+    <button class="refresh-btn" id="refreshBtn">↻ Refresh</button>
+    <span class="meta" id="lastRefresh"></span>
+  </div>
+
+  <!-- ===================== RECONCILE STATUS (top — boss looks here first) ===================== -->
+  <div class="zone-head zone-rec">⚖️ Reconcile <span class="sub" id="recScope">— balanced vs unbalanced</span></div>
+
+  <div class="grid">
+    <div class="card c12" id="recBalanceCard">
+      <div class="card-title">Open variances</div>
+      <div class="card-sub">Variance = physical − computed</div>
+      <div id="recBody"></div>
+    </div>
+  </div>
+
+  <!-- ===================== FLEET TOTALS ===================== -->
+  <div class="zone-head zone-bal">📦 Holdings <span class="sub">— company-wide</span></div>
+
+  <div class="grid">
+    <div class="card c3 kpi dalam">
+      <div class="big" id="kpiDalam">—</div>
+      <div class="lbl">In store (DALAM)</div>
+    </div>
+    <div class="card c3 kpi luar">
+      <div class="big" id="kpiLuar">—</div>
+      <div class="lbl">Out / outstanding (LUAR)</div>
+    </div>
+    <div class="card c3 kpi rosak">
+      <div class="big" id="kpiRosak">—</div>
+      <div class="lbl">Damaged (ROSAK)</div>
+    </div>
+    <div class="card c3 kpi total">
+      <div class="big" id="kpiTotal">—</div>
+      <div class="lbl">Total held</div>
+    </div>
+  </div>
+
+  <!-- ===================== PER-PALLET 6 NUMBERS ===================== -->
+  <div class="zone-head zone-bal">🧮 Per pallet <span class="sub" id="perScope">— principal × type × colour</span></div>
+
+  <div class="grid">
+    <div class="card c12">
+      <div class="card-sub">
+        Each pallet = <b>principal × type × colour</b>. The 6 numbers:
+        <span class="legend">
+          <span><b>Out</b> EXT→ cumulative</span>
+          <span><b>Luar</b> live LUAR</span>
+          <span><b>Return</b> LUAR→DALAM</span>
+          <span><b>Damaged</b> live ROSAK</span>
+          <span><b>Fixed</b> ROSAK→DALAM</span>
+          <span><b>Balance</b> total held</span>
+        </span>
+      </div>
+      <div id="perPalletWrap"></div>
+      <div class="derived-note">Luar / Damaged / Balance = live balance (getPalletBalances). Out / Return / Fixed = rolled from the ledger flows (getPalletLedger). Pallets the ledger hasn't loaded show "—" for the 3 flow numbers, not zero.</div>
+    </div>
+  </div>
+
+  <!-- ===================== OUTSTANDING BY CUSTOMER ===================== -->
+  <div class="zone-head zone-out">🚚 Outstanding by customer <span class="sub">— who hasn't returned, how many</span></div>
+
+  <div class="grid">
+    <div class="card c12">
+      <div class="card-title">In customers' hands</div>
+      <div class="card-sub">Sum of LUAR qty tagged to each customer · highest first — unassigned = LUAR with no customer code</div>
+      <div id="outBody"></div>
+      <div class="note-line" id="outNote"></div>
+    </div>
+  </div>
+
+  <!-- ===================== ADJUSTMENT / AUDIT LEDGER ===================== -->
+  <div class="zone-head zone-aud">📝 Adjustment audit <span class="sub">— ADJUST / REVERSE / OPENING / RECONCILE · who, when, why</span></div>
+
+  <div class="grid">
+    <div class="card c12">
+      <div class="card-title collapser" id="auditToggle"><span id="auditCaret">▾</span> Manager / office actions <span style="font-weight:400;color:var(--gray-400);font-size:12px;">(click to show / hide)</span></div>
+      <div id="auditBody">
+        <div class="card-sub">PIN-verified entries float to the top with a PIN badge · reason &amp; operator shown · append-only — nothing here was ever overwritten</div>
+        <div style="display:flex;gap:8px;margin:4px 0 10px;flex-wrap:wrap;">
+          <span class="filter-chip active" id="aAll">All</span>
+          <span class="filter-chip" id="aAdjust">ADJUST</span>
+          <span class="filter-chip" id="aReverse">REVERSE</span>
+          <span class="filter-chip" id="aOpening">OPENING</span>
+          <span class="filter-chip" id="aReconcile">RECONCILE</span>
+        </div>
+        <div id="auditWrap"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  // Same Apps Script web app as the POD form / fleet dashboard (single deployment).
+  var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxabHh2Kd04z7k0zZOOoaJs2i5hgycQsO_AYoRS99xZx2WqMJ6cowumY0e1znehiRM1/exec';
+
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function num(v){ return (v==null||v==='') ? null : (isNaN(Number(v))?null:Number(v)); }
+  function fmtInt(n){ n=num(n); return n==null ? '—' : Math.round(n).toLocaleString(); }
+  function intOr0(n){ n=num(n); return n==null?0:Math.round(n); }
+
+  function showErr(msg,warn){ var b=$('errBanner'); if(b){ b.textContent=msg; b.classList.toggle('warn',!!warn); b.classList.add('show'); } }
+  function hideErr(){ var b=$('errBanner'); if(b) b.classList.remove('show'); }
+
+  // ---------- read-only fetch (GET → JSON), mirrors fleet dashboard ----------
+  function api(action, extra){
+    var url = SCRIPT_URL + '?action=' + encodeURIComponent(action) + (extra?('&'+extra):'');
+    return fetch(url, { method:'GET' }).then(function(r){ return r.json(); });
+  }
+
+  // ---------- state ----------
+  var DASH = null;            // getPalletDashboard
+  var BALANCES = [];          // getPalletBalances .balances
+  var LEDGER = [];            // getPalletLedger (recent, for flow-rollup + audit)
+  var OUTSTANDING = [];       // getPalletOutstandingByCustomer .outstanding
+  var FLOWS = {};             // palletKey -> {out, returned, fixed} rolled from ledger
+  var LEDGER_LOADED = false;  // guards "—" vs 0 on the 3 derived numbers
+
+  var SEARCH = '';
+  var HELD_ONLY = false;
+  var AUDIT_FILTER = 'all';
+
+  var LOAD_SEQ = 0;
+  var LAST_UPDATED = null;
+
+  function fmtUpdated(){
+    if(!LAST_UPDATED) return '';
+    var d = new Date(LAST_UPDATED);
+    var hm = ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+    var ageMin = Math.floor((Date.now()-LAST_UPDATED)/60000);
+    return 'Updated '+hm+(ageMin>=2 ? ' ('+(ageMin>=60 ? Math.floor(ageMin/60)+'h '+(ageMin%60)+'m' : ageMin+'m')+' ago)' : '');
+  }
+  function paintUpdated(){
+    var el = $('lastRefresh'); if(!el) return;
+    el.textContent = fmtUpdated();
+    el.style.color = (LAST_UPDATED && Date.now()-LAST_UPDATED > 15*60000) ? 'var(--amber-700)' : '';
+  }
+
+  function ok(r){ return (r && (r.status==='ok' || r.status==='success')) ? r : null; }
+
+  function load(){
+    hideErr();
+    $('dashMeta').textContent = 'Loading…';
+    var seq = ++LOAD_SEQ;
+    Promise.all([
+      api('getPalletDashboard').catch(function(){return null;}),
+      api('getPalletBalances').catch(function(){return null;}),
+      api('getPalletOutstandingByCustomer').catch(function(){return null;}),
+      // limit=400 keeps the audit + flow rollup recent-but-deep; newest→oldest per contract
+      api('getPalletLedger','limit=400').catch(function(){return null;})
+    ]).then(function(res){
+      if(seq !== LOAD_SEQ) return;
+      var dash=ok(res[0]), bal=ok(res[1]), out=ok(res[2]), led=ok(res[3]);
+
+      if(!dash && !bal){ showErr('Cannot reach server — please Refresh.'); $('dashMeta').textContent=''; }
+      else if(!dash || !bal || !out || !led){ showErr('Some data failed to load — sections marked "unavailable" are not empty, just not loaded. Refresh to retry.', true); }
+
+      DASH = dash;
+      BALANCES = (bal && bal.balances) ? bal.balances : ((dash && dash.balances) ? dash.balances : []);
+      OUTSTANDING = (out && out.outstanding) ? out.outstanding : [];
+      LEDGER = (led && led.ledger) ? led.ledger : [];
+      LEDGER_LOADED = !!led;
+      rollFlows();
+
+      renderTop(dash, bal);
+      renderReconcile(dash);
+      renderTotals(dash, bal);
+      renderPerPallet();
+      renderOutstanding(out);
+      renderAudit();
+
+      if(dash || bal) LAST_UPDATED = Date.now();
+      paintUpdated();
+    }).catch(function(){ if(seq !== LOAD_SEQ) return; showErr('Something went wrong loading the dashboard — please Refresh.'); $('dashMeta').textContent=''; });
+  }
+
+  // Roll the 3 cumulative flow numbers from the ledger (out / returned / fixed) per palletKey.
+  // Out      = Σ qty where fromState=EXT & toState=LUAR  (sent to the field)
+  // Return   = Σ qty where fromState=LUAR & toState=DALAM (came back good)
+  // Fixed    = Σ qty where fromState=ROSAK & toState=DALAM (repaired)
+  // (REVERSE rows write the mirror move, so they net out here automatically — no special-case.)
+  function rollFlows(){
+    FLOWS = {};
+    LEDGER.forEach(function(r){
+      var k = r.palletKey; if(!k) return;
+      var f=String(r.fromState||'').toUpperCase(), t=String(r.toState||'').toUpperCase(), q=intOr0(r.qty);
+      if(q<=0) return;
+      var o = FLOWS[k] || (FLOWS[k]={out:0,returned:0,fixed:0});
+      if(f==='EXT'  && t==='LUAR')  o.out += q;
+      if(f==='LUAR' && t==='DALAM') o.returned += q;
+      if(f==='ROSAK'&& t==='DALAM') o.fixed += q;
+    });
+  }
+
+  function renderTop(dash, bal){
+    var b = (bal && bal.balances) ? bal.balances : (dash && dash.balances) ? dash.balances : null;
+    if(b){
+      var held = b.filter(function(x){ return intOr0(x.totalHeld)>0; }).length;
+      $('dashMeta').textContent = b.length + ' pallet types · ' + held + ' currently held';
+    } else {
+      $('dashMeta').textContent = 'data unavailable';
+    }
+    var gen = (dash && dash.generatedAt) || (bal && bal.generatedAt) || '';
+    if(gen) $('perScope').textContent = '— principal × type × colour · as of ' + esc(String(gen).replace('T',' ').slice(0,16));
+  }
+
+  // ---------- Reconcile (top of page) ----------
+  function renderReconcile(dash){
+    var body = $('recBody');
+    if(!dash){ body.innerHTML = '<span class="unavail">⚠ Reconcile data unavailable — tap Refresh</span>'; $('recScope').textContent='— unavailable'; return; }
+    var vars = (dash.openVariances||[]);
+    if(!vars.length){
+      body.innerHTML = '<div class="chip green">✓ All reconciled — no open variance</div>';
+      $('recScope').textContent = '— ✓ balanced';
+      $('recScope').style.color = 'var(--green-700)';
+      return;
+    }
+    $('recScope').textContent = '— ⚠ ' + vars.length + ' unbalanced';
+    $('recScope').style.color = 'var(--red-700)';
+    var rows = vars.slice().sort(function(a,b){ return Math.abs(intOr0(b.variance))-Math.abs(intOr0(a.variance)); });
+    var html = '<table class="act"><thead><tr><th>Pallet</th><th>State</th><th class="rm">Computed</th><th class="rm">Physical</th><th class="rm">Variance</th><th>Date</th></tr></thead><tbody>';
+    rows.forEach(function(v){
+      var d = intOr0(v.variance);
+      // Shortage (variance<0) = real loss → red. Overage (variance>0) = neutral/amber, not alarming.
+      var loss = d < 0;
+      var rowCls = loss ? 'fail' : 'warn';
+      var stCls  = loss ? 'st-fail' : 'st-warn';
+      html += '<tr class="'+rowCls+'">'
+        + '<td class="pkey">'+esc(v.displayName||v.palletKey)+'<div class="psub">'+esc(v.palletKey)+'</div></td>'
+        + '<td><span class="'+stCls+'">'+esc(v.state)+'</span></td>'
+        + '<td class="rm">'+fmtInt(v.computedBalance)+'</td>'
+        + '<td class="rm">'+fmtInt(v.physicalCount)+'</td>'
+        + '<td class="rm '+stCls+'">'+(d>0?'+':'')+d+'</td>'
+        + '<td>'+esc(fmtDate(v.reconcileDate))+'</td></tr>';
+    });
+    body.innerHTML = html + '</tbody></table>';
+  }
+
+  // ---------- Fleet totals ----------
+  function renderTotals(dash, bal){
+    var t = (bal && bal.totals) || (dash && dash.totals) || null;
+    if(!t){ ['kpiDalam','kpiLuar','kpiRosak','kpiTotal'].forEach(function(id){ $(id).textContent='—'; }); return; }
+    $('kpiDalam').textContent = fmtInt(t.dalam);
+    $('kpiLuar').textContent  = fmtInt(t.luar);
+    $('kpiRosak').textContent = fmtInt(t.rosak);
+    $('kpiTotal').textContent = fmtInt(t.total!=null ? t.total : (intOr0(t.dalam)+intOr0(t.luar)+intOr0(t.rosak)));
+  }
+
+  // ---------- Per-pallet 6 numbers ----------
+  function passFilter(b){
+    if(HELD_ONLY && intOr0(b.totalHeld)<=0) return false;
+    if(SEARCH){
+      var hay = (String(b.displayName||'')+' '+String(b.palletKey||'')+' '+String(b.principal||'')+' '+String(b.type||'')+' '+String(b.colour||'')).toLowerCase();
+      if(hay.indexOf(SEARCH)<0) return false;
+    }
+    return true;
+  }
+  function renderPerPallet(){
+    var wrap = $('perPalletWrap');
+    if(!BALANCES || !BALANCES.length){
+      wrap.innerHTML = '<span class="unavail">⚠ Balance data unavailable — tap Refresh</span>';
+      return;
+    }
+    var list = BALANCES.filter(passFilter).slice().sort(function(a,b){
+      return (intOr0(a.sortOrder)-intOr0(b.sortOrder)) || (intOr0(b.totalHeld)-intOr0(a.totalHeld)) || String(a.palletKey).localeCompare(String(b.palletKey));
+    });
+    if(!list.length){ wrap.innerHTML = '<div class="empty">No pallets match'+(HELD_ONLY?' (try All)':'')+'.</div>'; return; }
+
+    wrap.innerHTML = '<div class="grid" style="margin-top:6px;">' + list.map(function(b){
+      var f = FLOWS[b.palletKey] || null;
+      var luar = fmtInt(b.luar), rosak = fmtInt(b.rosak), bal = fmtInt(b.totalHeld!=null?b.totalHeld:(intOr0(b.dalam)+intOr0(b.luar)+intOr0(b.rosak)));
+      // derived (flow) numbers — show "—" when the ledger isn't loaded so 0 never lies
+      var out    = (LEDGER_LOADED && f) ? fmtInt(f.out)      : (LEDGER_LOADED ? '0' : '—');
+      var ret    = (LEDGER_LOADED && f) ? fmtInt(f.returned) : (LEDGER_LOADED ? '0' : '—');
+      var fix    = (LEDGER_LOADED && f) ? fmtInt(f.fixed)    : (LEDGER_LOADED ? '0' : '—');
+      return '<div class="card c4">'
+        + '<div class="pcard-head"><span class="name">'+esc(b.displayName||b.palletKey)+'</span><span class="key">'+esc(b.palletKey)+'</span></div>'
+        + '<div class="six">'
+        +   '<div class="cell out"><div class="n">'+out+'</div><div class="k">Out</div></div>'
+        +   '<div class="cell luar"><div class="n">'+luar+'</div><div class="k">Luar</div></div>'
+        +   '<div class="cell ret"><div class="n">'+ret+'</div><div class="k">Return</div></div>'
+        +   '<div class="cell dmg"><div class="n">'+rosak+'</div><div class="k">Damaged</div></div>'
+        +   '<div class="cell fix"><div class="n">'+fix+'</div><div class="k">Fixed</div></div>'
+        +   '<div class="cell bal"><div class="n">'+bal+'</div><div class="k">Balance</div></div>'
+        + '</div>'
+        + '<div class="derived-note">In store (DALAM): <b>'+fmtInt(b.dalam)+'</b></div>'
+        + '</div>';
+    }).join('') + '</div>';
+  }
+
+  // ---------- Outstanding by customer ----------
+  function renderOutstanding(out){
+    var body = $('outBody');
+    if(!out){ body.innerHTML = '<span class="unavail">⚠ Outstanding data unavailable — tap Refresh</span>'; $('outNote').textContent=''; return; }
+    var rows = (out.outstanding||[]).filter(function(o){ return intOr0(o.qtyOutstanding)>0; });
+    if(!rows.length){
+      body.innerHTML = '<div class="chip green">✓ Nothing outstanding by customer — or not yet tracked per customer (MVP)</div>';
+      $('outNote').textContent='';
+      return;
+    }
+    // name lookup for display (balances carries displayName per palletKey)
+    var nameOf = {};
+    BALANCES.forEach(function(b){ nameOf[b.palletKey] = b.displayName || b.palletKey; });
+    rows.sort(function(a,b){ return intOr0(b.qtyOutstanding)-intOr0(a.qtyOutstanding); });
+    var total = rows.reduce(function(s,o){ return s+intOr0(o.qtyOutstanding); },0);
+    var html = '<table class="act"><thead><tr><th>Customer</th><th>Pallet</th><th class="rm">Outstanding</th></tr></thead><tbody>';
+    rows.forEach(function(o){
+      var cust = o.custCode ? esc(o.custCode) : '<span class="psub">unassigned LUAR</span>';
+      html += '<tr><td>'+cust+'</td>'
+        + '<td class="pkey">'+esc(nameOf[o.palletKey]||o.palletKey)+'<div class="psub">'+esc(o.palletKey)+'</div></td>'
+        + '<td class="rm"><span class="chip blue mono">'+fmtInt(o.qtyOutstanding)+'</span></td></tr>';
+    });
+    body.innerHTML = html + '</tbody></table>';
+    $('outNote').textContent = rows.length + ' line(s) · ' + fmtInt(total) + ' pallets in customers\' hands.';
+  }
+
+  // ---------- Audit ledger ----------
+  var AUDIT_ACTIONS = ['ADJUST','REVERSE','OPENING','RECONCILE'];  // manager/office actions only
+  function renderAudit(){
+    var wrap = $('auditWrap');
+    if(!LEDGER_LOADED){ wrap.innerHTML = '<span class="unavail">⚠ Ledger unavailable — tap Refresh</span>'; return; }
+    var rows = LEDGER.filter(function(r){
+      var a = String(r.action||'').toUpperCase();
+      if(AUDIT_FILTER==='all') return AUDIT_ACTIONS.indexOf(a)>=0;
+      return a === AUDIT_FILTER;
+    });
+    // PIN-verified float to top, then newest first (ledger already newest→oldest)
+    rows = rows.slice().sort(function(a,b){
+      var pa = (a.pinVerified===true||a.pinVerified==='TRUE')?1:0, pb=(b.pinVerified===true||b.pinVerified==='TRUE')?1:0;
+      if(pa!==pb) return pb-pa;
+      return 0;
+    });
+    if(!rows.length){ wrap.innerHTML = '<div class="empty">No '+(AUDIT_FILTER==='all'?'manager/office':esc(AUDIT_FILTER))+' actions recorded.</div>'; return; }
+    var html = '<table class="act"><thead><tr><th>Date</th><th>Action</th><th>Pallet</th><th>Move</th><th class="rm">Qty</th><th>Operator</th><th>Reason</th></tr></thead><tbody>';
+    rows.forEach(function(r){
+      var a = String(r.action||'').toUpperCase();
+      var pin = (r.pinVerified===true||r.pinVerified==='TRUE') ? '<span class="badge pin">PIN</span>' : '';
+      var move = (r.fromState||r.toState) ? (esc(r.fromState||'·')+' → '+esc(r.toState||'·')) : '<span class="psub">—</span>';
+      var link = r.linkedEntryId ? '<div class="psub">↳ '+esc(r.linkedEntryId)+'</div>' : '';
+      html += '<tr>'
+        + '<td>'+esc(fmtDate(r.entryDate))+'</td>'
+        + '<td><b>'+esc(a)+'</b>'+pin+'</td>'
+        + '<td class="pkey">'+esc(r.principal||'')+' '+esc(r.type||'')+' '+esc(r.colour||'')+'<div class="psub">'+esc(r.palletKey||'')+'</div></td>'
+        + '<td>'+move+link+'</td>'
+        + '<td class="rm">'+fmtInt(r.qty)+'</td>'
+        + '<td>'+esc(r.operator||'—')+'</td>'
+        + '<td>'+esc(r.reason||'—')+'</td></tr>';
+    });
+    wrap.innerHTML = html + '</tbody></table>';
+  }
+
+  // ---------- helpers ----------
+  function fmtDate(v){
+    if(v==null||v==='') return '—';
+    var s = String(v);
+    // ISO date or datetime → yyyy-mm-dd
+    var m = s.match(/^(\d{4}-\d{2}-\d{2})/);
+    if(m) return m[1];
+    var d = new Date(s);
+    if(!isNaN(d.getTime())){ return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+    return s;
+  }
+
+  // ---------- init ----------
+  function init(){
+    $('refreshBtn').addEventListener('click', load);
+    $('searchInput').addEventListener('input', function(){ SEARCH = String(this.value||'').trim().toLowerCase(); renderPerPallet(); });
+    function setHeld(v){ HELD_ONLY=v; $('fAll').classList.toggle('active',!v); $('fHeld').classList.toggle('active',v); renderPerPallet(); }
+    $('fAll').addEventListener('click', function(){ setHeld(false); });
+    $('fHeld').addEventListener('click', function(){ setHeld(true); });
+
+    // audit filter chips
+    function setAudit(f, btn){
+      AUDIT_FILTER=f;
+      ['aAll','aAdjust','aReverse','aOpening','aReconcile'].forEach(function(id){ $(id).classList.remove('active'); });
+      btn.classList.add('active');
+      renderAudit();
+    }
+    $('aAll').addEventListener('click', function(){ setAudit('all', this); });
+    $('aAdjust').addEventListener('click', function(){ setAudit('ADJUST', this); });
+    $('aReverse').addEventListener('click', function(){ setAudit('REVERSE', this); });
+    $('aOpening').addEventListener('click', function(){ setAudit('OPENING', this); });
+    $('aReconcile').addEventListener('click', function(){ setAudit('RECONCILE', this); });
+
+    // audit collapse
+    $('auditToggle').addEventListener('click', function(){
+      var b=$('auditBody'), c=$('auditCaret'); var open=(b.style.display==='none');
+      b.style.display = open?'block':'none'; c.textContent = open?'▾':'▸';
+    });
+
+    // auto-refresh: every 5 min while visible; on tab return if >2 min stale; label re-ages each minute
+    setInterval(function(){ if(!document.hidden) load(); }, 5*60000);
+    setInterval(paintUpdated, 60000);
+    document.addEventListener('visibilitychange', function(){
+      if(!document.hidden && LAST_UPDATED && Date.now()-LAST_UPDATED > 2*60000) load();
+      paintUpdated();
+    });
+    load();
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+</script>
+</body>
+</html>
