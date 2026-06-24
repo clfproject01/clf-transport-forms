@@ -112,10 +112,10 @@
   .b-names .meta{color:var(--gray-400);font-size:11.5px;}
   /* one driver per line — Staff ID column + Name column */
   .b-list{flex:1;color:var(--gray-600);}
-  .b-item{padding:2px 0;line-height:1.45;white-space:nowrap;}
-  .b-item .meta{color:var(--gray-400);font-size:11.5px;}
-  .b-sid{display:inline-block;min-width:62px;color:var(--gray-500);font-variant-numeric:tabular-nums;}
-  .b-nm{color:var(--gray-900);font-weight:600;}
+  .b-item{display:flex;align-items:baseline;gap:8px;padding:2.5px 0;line-height:1.4;}
+  .b-item .meta{flex:0 0 auto;color:var(--gray-400);font-size:11.5px;white-space:nowrap;}
+  .b-sid{flex:0 0 54px;color:var(--gray-500);font-variant-numeric:tabular-nums;}
+  .b-nm{flex:1 1 auto;min-width:0;color:var(--gray-900);font-weight:600;overflow-wrap:anywhere;}
 </style>
 </head>
 <body>
