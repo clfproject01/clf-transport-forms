@@ -830,8 +830,8 @@ function validate() {
   // A genuine larger fill is corrected afterwards by the office (manager edit).
   const _amtCap = parseFloat(document.getElementById('amount').value);
   if (valid && !isNaN(_amtCap) && _amtCap > 500) {
-    alert('⚠ 油费 RM ' + _amtCap.toLocaleString(undefined, { minimumFractionDigits: 2 })
-        + ' 超过上限 RM 500 — 请检查金额（通常 ≤ RM 250）。\n'
+    alert('⚠ Fuel RM ' + _amtCap.toLocaleString(undefined, { minimumFractionDigits: 2 })
+        + ' over limit RM 500 — please check amount (usually <= RM 250).\n'
         + 'Jumlah minyak RM melebihi had RM 500 — sila semak (biasanya ≤ RM 250).');
     document.getElementById('amount').focus();
     valid = false;
