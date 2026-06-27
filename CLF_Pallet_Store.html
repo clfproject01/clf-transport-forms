@@ -228,6 +228,28 @@
   /* phase-2 placeholder lorry-assign card */
   .soon-card { border: 1.5px dashed var(--gray-light); border-radius: var(--radius); padding: 18px 16px; text-align: center; color: var(--gray); font-size: 13px; line-height: 1.6; }
   .soon-tag { display: inline-block; background: var(--gray-light); color: var(--navy-mid); font-size: 10px; font-weight: 700; letter-spacing: .6px; padding: 3px 8px; border-radius: 20px; margin-bottom: 8px; text-transform: uppercase; }
+  /* assign/accept per-pallet rows + qty stepper (phase 2/3) */
+  .plt-row { border: 1px solid var(--gray-light); border-radius: var(--radius-sm); padding: 11px 12px; margin-bottom: 8px; }
+  .plt-row-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .plt-row .nm { font-size: 14px; font-weight: 600; color: var(--navy); }
+  .plt-row .sub { font-size: 11px; color: var(--gray); margin-top: 2px; }
+  .plt-row .sub .r { color: var(--error); }
+  .stepper { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .step-btn { width: 38px; height: 38px; border: 1.5px solid var(--gray-light); border-radius: var(--radius-sm); background: var(--white); font-size: 22px; font-weight: 600; color: var(--orange-dark); cursor: pointer; line-height: 1; display: flex; align-items: center; justify-content: center; }
+  .step-btn:active { background: var(--orange-pale); }
+  .step-btn:disabled { opacity: .4; cursor: not-allowed; }
+  .step-qty { width: 56px; text-align: center; font-family: 'DM Mono', monospace; font-size: 18px; padding: 9px 4px; border: 1.5px solid var(--gray-light); border-radius: var(--radius-sm); color: var(--navy); }
+  .plt-row.corrected { border-color: var(--success); background: rgba(34,197,94,0.05); }
+  .mini-btn { padding: 8px 14px; border-radius: var(--radius-sm); border: 1.5px solid var(--success); background: var(--white); color: #15803D; font-family: 'DM Sans', sans-serif; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+  .mini-btn.sel { background: var(--success); color: var(--white); }
+  .mini-btn.accept { border-color: var(--orange); color: var(--orange-dark); }
+  .rt-expand { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--gray-light); display: none; }
+  .rt-expand.show { display: block; }
+  .rt-gd { display: flex; gap: 8px; }
+  .rt-gd .field { flex: 1; margin-bottom: 8px; }
+  .staff-name { font-size: 12px; margin-top: 5px; min-height: 15px; line-height: 1.3; }
+  .staff-name.ok { color: #15803D; font-weight: 600; }
+  .staff-name.bad { color: var(--error); }
 </style>
 </head>
 <body>
@@ -268,9 +290,21 @@
       <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       Damage<span class="bm">Rosak</span>
     </button>
-    <button class="tab" data-tab="lorry" onclick="switchTab('lorry')">
+    <button class="tab" data-tab="assign" onclick="switchTab('assign')">
       <svg viewBox="0 0 24 24"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-      Lorry<span class="bm">Lori</span>
+      Assign<span class="bm">Naik Lori</span>
+    </button>
+    <button class="tab" data-tab="accept" onclick="switchTab('accept')">
+      <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+      Accept<span class="bm">Driver Sah</span>
+    </button>
+    <button class="tab" data-tab="returns" onclick="switchTab('returns')">
+      <svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
+      Returns<span class="bm">Pulang</span>
+    </button>
+    <button class="tab" data-tab="principal" onclick="switchTab('principal')">
+      <svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+      Principal<span class="bm">Balik Prinsipal</span>
     </button>
   </div>
 
@@ -322,8 +356,10 @@
         <input type="date" id="st-date">
       </div>
       <div class="field">
-        <label>Your name · Nama anda</label>
-        <input type="text" id="st-operator" autocomplete="off" placeholder="Operator / staff name">
+        <label>Staff ID &middot; ID Staf <span class="req">*</span></label>
+        <input type="text" id="st-staffid" autocomplete="off" placeholder="e.g. TER028" oninput="onStaffId('st')">
+        <div class="staff-name" id="st-operator-name"></div>
+        <input type="hidden" id="st-operator">
       </div>
 
       <div class="btn-wrap">
@@ -380,8 +416,10 @@
         <input type="date" id="rc-date">
       </div>
       <div class="field">
-        <label>Your name · Nama anda</label>
-        <input type="text" id="rc-operator" autocomplete="off" placeholder="Operator / staff name">
+        <label>Staff ID &middot; ID Staf <span class="req">*</span></label>
+        <input type="text" id="rc-staffid" autocomplete="off" placeholder="e.g. TER028" oninput="onStaffId('rc')">
+        <div class="staff-name" id="rc-operator-name"></div>
+        <input type="hidden" id="rc-operator">
       </div>
       <div class="field">
         <label>Note · Catatan</label>
@@ -481,8 +519,10 @@
         <input type="date" id="dm-date">
       </div>
       <div class="field">
-        <label>Your name · Nama anda</label>
-        <input type="text" id="dm-operator" autocomplete="off" placeholder="Operator / staff name">
+        <label>Staff ID &middot; ID Staf <span class="req">*</span></label>
+        <input type="text" id="dm-staffid" autocomplete="off" placeholder="e.g. TER028" oninput="onStaffId('dm')">
+        <div class="staff-name" id="dm-operator-name"></div>
+        <input type="hidden" id="dm-operator">
       </div>
 
       <div class="btn-wrap">
@@ -537,8 +577,10 @@
           <input type="date" id="rp-date">
         </div>
         <div class="field">
-          <label>Your name · Nama anda</label>
-          <input type="text" id="rp-operator" autocomplete="off" placeholder="Operator / staff name">
+          <label>Staff ID &middot; ID Staf <span class="req">*</span></label>
+          <input type="text" id="rp-staffid" autocomplete="off" placeholder="e.g. TER028" oninput="onStaffId('rp')">
+        <div class="staff-name" id="rp-operator-name"></div>
+        <input type="hidden" id="rp-operator">
         </div>
 
         <div class="btn-wrap">
@@ -551,40 +593,180 @@
       </div>
     </div>
 
-    <!-- ================= LORRY PANEL (Phase 2 placeholder) ================= -->
-    <div class="panel" id="panel-lorry">
-      <div class="section-label">Assign to Lorry · Tugas ke Lori</div>
-      <div class="soon-card">
-        <div class="soon-tag">Phase 2 · Fasa 2</div>
-        <b>Hang pallets on a shipment</b><br>
-        Pick a lorry / ShipmentKey and assign pallets out (DALAM → LUAR) with the delivery.<br>
-        <span style="opacity:.75;">Pilih lori / ShipmentKey dan tugaskan pallet keluar bersama penghantaran.</span><br><br>
-        <span style="font-size:11.5px;color:var(--gray);">Backend endpoints (<code>PALLET_ASSIGN / ACCEPT / RETURN</code>) are already written but not yet wired live. This tab activates in Phase 2.<br>Endpoint sudah siap, akan diaktifkan dalam Fasa 2.</span>
+    <!-- ================= ASSIGN PANEL (DALAM → on lorry / LUAR) ================= -->
+    <div class="panel" id="panel-assign">
+      <div class="notice">
+        <b>Assign to Lorry · Naik Lori:</b> Pick the date, shipment & lorry, then set how many of each pallet go out. Saves DALAM → on-lorry per pallet type.<br>
+        <span style="opacity:.75;">Pilih tarikh, shipment & lori, set bilangan setiap pallet keluar. DALAM → atas lori.</span>
       </div>
 
-      <!-- Phase-2 wiring is stubbed below (disabled) so the assign UI is ready to switch on. -->
-      <div style="opacity:.45;pointer-events:none;margin-top:18px;">
-        <div class="field">
-          <label>Lorry · Lori</label>
-          <select id="lr-lorry" disabled>
-            <option>— Phase 2 —</option>
-          </select>
+      <div class="field">
+        <label>Date · Tarikh <span class="req">*</span></label>
+        <input type="date" id="as-date" onchange="loadAssign()">
+      </div>
+      <div class="field">
+        <label>ShipmentKey <span class="req">*</span></label>
+        <input type="text" id="as-shipment" autocomplete="off" placeholder="e.g. SHP-20260625-01" oninput="onAssignKeyInput()">
+        <div class="error-msg" id="err-as-shipment">Enter a ShipmentKey · Masukkan ShipmentKey</div>
+      </div>
+      <div class="field">
+        <label>Lorry No · No. Lori <span class="req">*</span></label>
+        <input type="text" id="as-lorry" autocomplete="off" placeholder="e.g. WTA 1234">
+        <div class="error-msg" id="err-as-lorry">Enter the lorry no · Masukkan no lori</div>
+      </div>
+
+      <div class="btn-wrap" style="margin-bottom:10px;">
+        <button type="button" class="submit-btn" style="background:var(--navy-mid);box-shadow:0 4px 12px rgba(26,58,92,.25);" onclick="loadAssign()">
+          <svg viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35"/><circle cx="11" cy="11" r="7"/></svg>
+          Load Shipment · Muat Shipment
+        </button>
+      </div>
+
+      <div id="as-existing" class="hint" style="margin-top:-2px;"></div>
+
+      <div class="section-label">Pallets Out · Pallet Keluar</div>
+      <div id="as-rows"><div class="empty">Load a shipment to set quantities · Muat shipment dahulu</div></div>
+
+      <div class="field" style="margin-top:14px;">
+        <label>Staff ID &middot; ID Staf <span class="req">*</span></label>
+        <input type="text" id="as-staffid" autocomplete="off" placeholder="e.g. TER028" oninput="onStaffId('as')">
+        <div class="staff-name" id="as-operator-name"></div>
+        <input type="hidden" id="as-operator">
+      </div>
+
+      <div class="btn-wrap">
+        <button type="button" class="submit-btn" onclick="submitAssign()">
+          <svg viewBox="0 0 24 24"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          Assign Pallets · Tugas Pallet
+        </button>
+        <div class="teal-bar"></div>
+      </div>
+      <div class="hint" style="margin-top:14px;">One save per pallet type with a quantity. Quantities are capped at current DALAM stock. · Satu simpanan bagi setiap jenis pallet. Had pada baki DALAM.</div>
+    </div>
+
+    <!-- ================= ACCEPT PANEL (driver confirms handover) ================= -->
+    <div class="panel" id="panel-accept">
+      <div class="notice">
+        <b>Driver Confirm · Sahkan Driver:</b> Enter the ShipmentKey, check the assigned pallets, then tap <b>Correct</b> or edit the number you actually received.<br>
+        <span style="opacity:.75;">Masukkan ShipmentKey, semak pallet, tekan Betul atau ubah jumlah sebenar diterima. (Boleh juga di halaman driver.)</span>
+      </div>
+
+      <div class="field">
+        <label>ShipmentKey <span class="req">*</span></label>
+        <input type="text" id="ac-shipment" autocomplete="off" placeholder="e.g. SHP-20260625-01">
+        <div class="error-msg" id="err-ac-shipment">Enter a ShipmentKey · Masukkan ShipmentKey</div>
+      </div>
+      <div class="btn-wrap" style="margin-bottom:10px;">
+        <button type="button" class="submit-btn" style="background:var(--navy-mid);box-shadow:0 4px 12px rgba(26,58,92,.25);" onclick="loadAccept()">
+          <svg viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35"/><circle cx="11" cy="11" r="7"/></svg>
+          Load Shipment · Muat Shipment
+        </button>
+      </div>
+
+      <div id="ac-head" class="hint" style="margin-top:-2px;"></div>
+
+      <div class="section-label">Assigned Pallets · Pallet Ditugas</div>
+      <div id="ac-rows"><div class="empty">Load a shipment to confirm · Muat shipment dahulu</div></div>
+
+      <div class="field" style="margin-top:14px;">
+        <label>Driver name · Nama driver <span class="req">*</span></label>
+        <input type="text" id="ac-driver" autocomplete="off" placeholder="Driver name">
+        <div class="error-msg" id="err-ac-driver">Enter driver name · Masukkan nama driver</div>
+      </div>
+
+      <div class="btn-wrap">
+        <button type="button" class="submit-btn" style="background:var(--success);box-shadow:0 4px 12px rgba(34,197,94,.25);" onclick="submitAccept()">
+          <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+          Confirm Received · Sahkan Terima
+        </button>
+        <div class="teal-bar"></div>
+      </div>
+    </div>
+
+    <!-- ================= RETURNS PANEL (store accepts pending returns) ================= -->
+    <div class="panel" id="panel-returns">
+      <div class="notice">
+        <b>Accept Returns · Terima Pulangan:</b> Drivers raise return requests. Open each one, enter good vs damaged, then accept. A photo is optional — if added it uploads in the background.<br>
+        <span style="opacity:.75;">Driver minta pulang. Buka, masukkan elok vs rosak, terima. Foto pilihan.</span>
+      </div>
+
+      <div class="field">
+        <label>Date filter · Tapis Tarikh</label>
+        <input type="date" id="rt-date" onchange="loadReturns()">
+        <div class="hint" style="margin-top:6px;">Leave today or pick a day · Biar hari ini atau pilih tarikh</div>
+      </div>
+      <div class="btn-wrap" style="margin-bottom:10px;">
+        <button type="button" class="submit-btn" style="background:var(--navy-mid);box-shadow:0 4px 12px rgba(26,58,92,.25);" onclick="loadReturns()">
+          <svg viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Refresh Pending · Muat Semula
+        </button>
+      </div>
+
+      <div class="section-label">Pending Returns · Pulangan Menunggu</div>
+      <div id="rt-rows"><div class="empty">Tap refresh to load pending returns · Tekan muat semula</div></div>
+    </div>
+
+    <!-- ================= PRINCIPAL PANEL (return to principal) ================= -->
+    <div class="panel" id="panel-principal">
+      <div class="notice">
+        <b>Return to Principal · Pulang ke Prinsipal:</b> Send pallets back to the owner/principal — out of DALAM (good) or ROSAK (damaged). Records who, when & a reference.<br>
+        <span style="opacity:.75;">Hantar pallet balik ke prinsipal — dari DALAM (elok) atau ROSAK. Rekod rujukan.</span>
+      </div>
+
+      <div class="field">
+        <label>Select pallet · Pilih pallet <span class="req">*</span></label>
+        <select id="pr-pallet" onchange="onPrPalletChange()">
+          <option value="">— Loading… · Memuatkan… —</option>
+        </select>
+        <div class="error-msg" id="err-pr-pallet">Please select a pallet · Sila pilih pallet</div>
+      </div>
+
+      <div class="section-label">Return From · Pulang Dari</div>
+      <div class="seg" id="pr-state-seg">
+        <button type="button" class="seg-btn sel" data-state="DALAM" onclick="pickPrState(this)">DALAM<span class="bm">Good · Elok</span></button>
+        <button type="button" class="seg-btn" data-state="ROSAK" onclick="pickPrState(this)">ROSAK<span class="bm">Damaged</span></button>
+      </div>
+
+      <div class="balcard" id="pr-balcard">
+        <div class="balcard-name" id="pr-balcard-name"></div>
+        <div class="balcard-grid">
+          <div class="balcard-cell"><div class="lbl">Dalam</div><div class="val" id="pr-bd">–</div></div>
+          <div class="balcard-cell"><div class="lbl">Luar</div><div class="val" id="pr-bl">–</div></div>
+          <div class="balcard-cell rosak"><div class="lbl">Rosak</div><div class="val" id="pr-br">–</div></div>
         </div>
-        <div class="field">
-          <label>ShipmentKey</label>
-          <input type="text" id="lr-shipment" disabled placeholder="auto from selected shipment">
-        </div>
-        <div class="field">
-          <label>Pallet · Pallet</label>
-          <select id="lr-pallet" disabled><option>— Phase 2 —</option></select>
-        </div>
-        <div class="field">
-          <label>Qty out (DALAM → LUAR)</label>
-          <input type="number" id="lr-qty" disabled placeholder="0">
-        </div>
-        <div class="btn-wrap">
-          <button type="button" class="submit-btn" disabled style="background:var(--gray);box-shadow:none;">Assign · Tugas (Phase 2)</button>
-        </div>
+        <div class="balcard-foot">System balance · Baki sistem</div>
+      </div>
+
+      <div class="section-label">Quantity · Jumlah</div>
+      <div class="field">
+        <label>How many returned? · Berapa dipulangkan? <span class="req">*</span></label>
+        <input type="number" id="pr-qty" inputmode="numeric" min="1" step="1" placeholder="e.g. 20" oninput="onPrQtyInput()">
+        <div class="error-msg" id="err-pr-qty">Enter a number ≥ 1 · Masukkan nombor</div>
+        <div class="var-pill" id="pr-var"></div>
+      </div>
+
+      <div class="field">
+        <label>Reference · Rujukan <span class="req">*</span></label>
+        <input type="text" id="pr-ref" autocomplete="off" placeholder="e.g. DO / principal note no">
+        <div class="error-msg" id="err-pr-ref">Reference is required · Rujukan diperlukan</div>
+      </div>
+      <div class="field">
+        <label>Date · Tarikh</label>
+        <input type="date" id="pr-date">
+      </div>
+      <div class="field">
+        <label>Staff ID &middot; ID Staf <span class="req">*</span></label>
+        <input type="text" id="pr-staffid" autocomplete="off" placeholder="e.g. TER028" oninput="onStaffId('pr')">
+        <div class="staff-name" id="pr-operator-name"></div>
+        <input type="hidden" id="pr-operator">
+      </div>
+
+      <div class="btn-wrap">
+        <button type="button" class="submit-btn" onclick="submitPrincipal()">
+          <svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+          Return to Principal · Pulang Prinsipal
+        </button>
+        <div class="teal-bar"></div>
       </div>
     </div>
 
@@ -607,6 +789,7 @@
 // client-side image compression, bilingual EN · BM, mobile-first.
 // ============================================================
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxabHh2Kd04z7k0zZOOoaJs2i5hgycQsO_AYoRS99xZx2WqMJ6cowumY0e1znehiRM1/exec';
+var PHASE23_LIVE = false;   // flip true only when Phase 2/3 (assign/accept/returns/principal) backend is wired live
 
 const OPERATOR_KEY = 'clf_pallet_operator';   // remember the storekeeper's name across reloads
 
@@ -657,7 +840,7 @@ async function fetchMaster(){
     }
   }catch(err){
     console.error('fetchMaster failed', err);
-    ['st-pallet','rc-pallet','dm-pallet','rp-pallet'].forEach(function(id){
+    ['st-pallet','rc-pallet','dm-pallet','rp-pallet','pr-pallet'].forEach(function(id){
       var s = document.getElementById(id); if (s) s.innerHTML = '<option value="">⚠ Load failed — pull to retry · Gagal</option>';
     });
     toast('err', '<b>Could not load pallet list.</b><br>Check connection · Semak sambungan.');
@@ -667,7 +850,7 @@ async function fetchMaster(){
 function fillPalletSelects(){
   var opts = '<option value="">— Select pallet · Pilih pallet —</option>' +
     MASTER.map(function(m){ return '<option value="' + _esc(m.palletKey) + '">' + _esc(m.displayName || m.palletKey) + '</option>'; }).join('');
-  ['st-pallet','rc-pallet','dm-pallet','rp-pallet'].forEach(function(id){
+  ['st-pallet','rc-pallet','dm-pallet','rp-pallet','pr-pallet'].forEach(function(id){
     var s = document.getElementById(id); if (!s) return;
     var keep = s.value; s.innerHTML = opts; if (keep) s.value = keep;
   });
@@ -706,8 +889,9 @@ function paintAllBalcards(){
   paintBalcard('rc', document.getElementById('rc-pallet').value);
   paintBalcard('dm', document.getElementById('dm-pallet').value);
   paintBalcard('rp', document.getElementById('rp-pallet').value);
+  paintBalcard('pr', document.getElementById('pr-pallet').value);
   // refresh variance pills if a count is already typed
-  onStCountInput(); onRcCountInput(); onRpQtyInput();
+  onStCountInput(); onRcCountInput(); onRpQtyInput(); onPrQtyInput();
 }
 
 // system balance for the currently-selected state in a panel
@@ -1044,6 +1228,330 @@ async function submitRepair(){
   }
 }
 
+
+// ============================================================
+// ASSIGN  →  GET-write  PALLET_ASSIGN (one call per non-zero palletKey)
+// ============================================================
+var AS_LINES = [];   // [{palletKey, displayName, dalam, qty}]
+function onAssignKeyInput(){ document.getElementById('err-as-shipment').classList.remove('show'); }
+
+async function loadAssign(){
+  var shipKey = document.getElementById('as-shipment').value.trim();
+  var date = document.getElementById('as-date').value || _today();
+  if (!shipKey){ document.getElementById('err-as-shipment').classList.add('show'); return; }
+  document.getElementById('err-as-shipment').classList.remove('show');
+  await refreshBalances(false);   // need fresh DALAM caps
+  var url = SCRIPT_URL + '?action=getPalletAssignForDate&date=' + encodeURIComponent(date) + '&shipmentKey=' + encodeURIComponent(shipKey);
+  var existing = {};
+  try{
+    var res = await fetch(url, { method: 'GET' });
+    var data = await res.json();
+    if (data && data.status === 'ok' && Array.isArray(data.shipments)){
+      var sh = data.shipments.filter(function(s){ return s.shipmentKey === shipKey; })[0] || data.shipments[0];
+      if (sh){
+        if (sh.lorryNo && !document.getElementById('as-lorry').value) document.getElementById('as-lorry').value = sh.lorryNo;
+        (sh.lines || []).forEach(function(l){ existing[l.palletKey] = l.assigned; });
+        document.getElementById('as-existing').innerHTML = (sh.lines && sh.lines.length)
+          ? 'Already assigned on this shipment: ' + sh.lines.map(function(l){ return _esc(l.displayName || l.palletKey) + ' ×' + l.assigned; }).join(', ')
+          : 'No pallets assigned yet · Belum ada';
+      }
+    }
+  }catch(err){ console.warn('loadAssign read failed', err); document.getElementById('as-existing').textContent = ''; }
+  // build one stepper row per master pallet, capped at DALAM
+  AS_LINES = MASTER.map(function(m){ return { palletKey: m.palletKey, displayName: m.displayName || m.palletKey, dalam: balOf(m.palletKey).dalam, qty: 0 }; });
+  renderAssignRows(existing);
+}
+function renderAssignRows(existing){
+  existing = existing || {};
+  var html = AS_LINES.map(function(l, i){
+    var alreadyTxt = existing[l.palletKey] ? (' · already ×' + existing[l.palletKey]) : '';
+    return '<div class="plt-row"><div class="plt-row-top">' +
+      '<div><div class="nm">' + _esc(l.displayName) + '</div><div class="sub">DALAM ' + l.dalam + alreadyTxt + '</div></div>' +
+      '<div class="stepper">' +
+        '<button type="button" class="step-btn" onclick="stepAssign(' + i + ',-1)">−</button>' +
+        '<input type="number" class="step-qty" id="as-q-' + i + '" inputmode="numeric" min="0" value="0" onchange="setAssign(' + i + ',this.value)">' +
+        '<button type="button" class="step-btn" onclick="stepAssign(' + i + ',1)">+</button>' +
+      '</div></div></div>';
+  }).join('');
+  document.getElementById('as-rows').innerHTML = html || '<div class="empty">No pallets in master · Tiada pallet</div>';
+}
+function stepAssign(i, d){ setAssign(i, (AS_LINES[i].qty || 0) + d); }
+function setAssign(i, v){
+  var n = _posInt(v); if (n === null) n = 0;
+  if (n > AS_LINES[i].dalam){ n = AS_LINES[i].dalam; toast('warn', 'Only <b>' + AS_LINES[i].dalam + '</b> DALAM available · Hanya ' + AS_LINES[i].dalam + ' ada'); }
+  AS_LINES[i].qty = n;
+  var inp = document.getElementById('as-q-' + i); if (inp) inp.value = n;
+}
+async function submitAssign(){
+  var shipKey = document.getElementById('as-shipment').value.trim();
+  var lorryNo = document.getElementById('as-lorry').value.trim();
+  var date = document.getElementById('as-date').value || _today();
+  var ok = true;
+  document.getElementById('err-as-shipment').classList.toggle('show', !shipKey); if (!shipKey) ok = false;
+  document.getElementById('err-as-lorry').classList.toggle('show', !lorryNo); if (!lorryNo) ok = false;
+  if (!ok) return;
+  var picked = AS_LINES.filter(function(l){ return l.qty > 0; });
+  if (!picked.length){ toast('err', 'Set at least one quantity · Set sekurang-kurangnya satu'); return; }
+  var operator = document.getElementById('as-operator').value.trim();
+  if (operator) localStorage.setItem(OPERATOR_KEY, operator);
+  showLoading('Assigning ' + picked.length + ' pallet type(s)… · Menugaskan…');
+  var done = 0, failed = [];
+  for (var k = 0; k < picked.length; k++){
+    var l = picked[k];
+    var params = {
+      palletKey: l.palletKey, qty: l.qty, shipmentKey: shipKey, lorryNo: lorryNo,
+      operator: operator, entryDate: date, clientToken: _newToken('asn')
+    };
+    var data = await getWrite('PALLET_ASSIGN', params);     // one call per palletKey
+    if (data && data.status === 'success') done++; else failed.push(l.displayName);
+  }
+  hideLoading();
+  if (!failed.length){
+    toast('ok', '<b>Assigned ✓ · Ditugas</b><br>' + done + ' pallet type(s) on ' + _esc(lorryNo) + ' · ' + _esc(shipKey));
+    AS_LINES.forEach(function(l){ l.qty = 0; }); renderAssignRows();
+    document.getElementById('as-existing').textContent = '';
+    refreshBalances(true);
+  } else {
+    toast('warn', '<b>' + done + ' saved, ' + failed.length + ' not · Sebahagian gagal</b><br>Retry: ' + _esc(failed.join(', ')) + '. Already-saved ones are deduped, safe to resend.');
+  }
+}
+
+// ============================================================
+// ACCEPT  →  GET-write  PALLET_ACCEPT (one call per assign line; needs assign entryId)
+// ============================================================
+var AC_LINES = [];   // [{entryId, palletKey, displayName, assigned, acceptedQty}]
+async function loadAccept(){
+  var shipKey = document.getElementById('ac-shipment').value.trim();
+  if (!shipKey){ document.getElementById('err-ac-shipment').classList.add('show'); return; }
+  document.getElementById('err-ac-shipment').classList.remove('show');
+  showLoading('Loading… · Memuatkan…');
+  var sh = null;
+  try{
+    var res = await fetch(SCRIPT_URL + '?action=getPalletAssignForDate&shipmentKey=' + encodeURIComponent(shipKey), { method: 'GET' });
+    var data = await res.json();
+    if (data && data.status === 'ok' && Array.isArray(data.shipments)){
+      sh = data.shipments.filter(function(s){ return s.shipmentKey === shipKey; })[0] || data.shipments[0];
+    }
+  }catch(err){ console.warn('loadAccept failed', err); }
+  hideLoading();
+  if (!sh || !sh.lines || !sh.lines.length){
+    document.getElementById('ac-head').textContent = '';
+    document.getElementById('ac-rows').innerHTML = '<div class="empty">Nothing assigned for this shipment · Tiada tugasan</div>';
+    AC_LINES = []; return;
+  }
+  document.getElementById('ac-head').innerHTML = 'Lorry · Lori <b>' + _esc(sh.lorryNo || '—') + '</b> · ' + _esc(sh.shipmentKey);
+  // entryId comes from each line (see FLAG below); fall back to '' so we can warn rather than send a bad write
+  AC_LINES = sh.lines.map(function(l){ return { entryId: (l.entryId || l.assignEntryId || ''), palletKey: l.palletKey, displayName: l.displayName || l.palletKey, assigned: l.assigned, acceptedQty: l.assigned }; });
+  renderAcceptRows();
+}
+function renderAcceptRows(){
+  document.getElementById('ac-rows').innerHTML = AC_LINES.map(function(l, i){
+    var miss = l.entryId ? '' : ' · <span style="color:var(--error)">no entryId</span>';
+    return '<div class="plt-row" id="ac-row-' + i + '"><div class="plt-row-top">' +
+      '<div><div class="nm">' + _esc(l.displayName) + '</div><div class="sub">Assigned ' + l.assigned + miss + '</div></div>' +
+      '<button type="button" class="mini-btn sel" id="ac-ok-' + i + '" onclick="acceptCorrect(' + i + ')">Correct · Betul</button>' +
+      '</div><div class="stepper" style="margin-top:8px;justify-content:flex-end;">' +
+        '<span class="sub" style="margin-right:auto;">Received · Terima</span>' +
+        '<button type="button" class="step-btn" onclick="stepAccept(' + i + ',-1)">−</button>' +
+        '<input type="number" class="step-qty" id="ac-q-' + i + '" inputmode="numeric" min="0" value="' + l.acceptedQty + '" onchange="setAccept(' + i + ',this.value)">' +
+        '<button type="button" class="step-btn" onclick="stepAccept(' + i + ',1)">+</button>' +
+      '</div></div>';
+  }).join('');
+}
+function acceptCorrect(i){ AC_LINES[i].acceptedQty = AC_LINES[i].assigned; var inp = document.getElementById('ac-q-' + i); if (inp) inp.value = AC_LINES[i].assigned; markAcceptCorrected(i); }
+function stepAccept(i, d){ setAccept(i, (AC_LINES[i].acceptedQty || 0) + d); }
+function setAccept(i, v){
+  var n = _posInt(v); if (n === null) n = 0;
+  AC_LINES[i].acceptedQty = n;
+  var inp = document.getElementById('ac-q-' + i); if (inp) inp.value = n;
+  markAcceptCorrected(i);
+}
+function markAcceptCorrected(i){
+  var row = document.getElementById('ac-row-' + i);
+  var btn = document.getElementById('ac-ok-' + i);
+  var match = AC_LINES[i].acceptedQty === AC_LINES[i].assigned;
+  if (row) row.classList.toggle('corrected', match);
+  if (btn) btn.classList.toggle('sel', match);
+}
+async function submitAccept(){
+  var driver = document.getElementById('ac-driver').value.trim();
+  document.getElementById('err-ac-driver').classList.toggle('show', !driver); if (!driver) return;
+  if (!AC_LINES.length){ toast('err', 'Load a shipment first · Muat shipment dulu'); return; }
+  var noId = AC_LINES.filter(function(l){ return !l.entryId; });
+  if (noId.length){ toast('err', '<b>Cannot confirm · Tak boleh sah</b><br>Assign lines are missing their entryId. Backend read needs to return it (see note).'); return; }
+  showLoading('Confirming receipt… · Mengesahkan…');
+  var done = 0, failed = [];
+  for (var k = 0; k < AC_LINES.length; k++){
+    var l = AC_LINES[k];
+    var params = { entryId: l.entryId, acceptedQty: l.acceptedQty, driverName: driver, clientToken: _newToken('acc') };
+    var data = await getWrite('PALLET_ACCEPT', params);    // one call per ASSIGN row entryId
+    if (data && data.status === 'success') done++; else failed.push(l.displayName);
+  }
+  hideLoading();
+  if (!failed.length){
+    toast('ok', '<b>Received ✓ · Diterima</b><br>' + done + ' line(s) confirmed by ' + _esc(driver));
+    refreshBalances(true);
+  } else {
+    toast('warn', '<b>' + done + ' confirmed, ' + failed.length + ' not</b><br>Retry: ' + _esc(failed.join(', ')) + '. Safe to resend (deduped).');
+  }
+}
+
+// ============================================================
+// RETURNS  →  POST if photo else GET-write  PALLET_RETURN
+// ============================================================
+var RT_PENDING = [];        // [{requestEntryId, palletKey, displayName, qty, shipmentKey, lorryNo, driverName, entryDate}]
+var rtPhotos = {};          // requestEntryId -> [{dataUrl,name,type}]
+async function loadReturns(){
+  var date = document.getElementById('rt-date').value;   // optional filter
+  showLoading('Loading… · Memuatkan…');
+  RT_PENDING = [];
+  try{
+    var url = SCRIPT_URL + '?action=getPalletReturnsPending' + (date ? ('&date=' + encodeURIComponent(date)) : '');
+    var res = await fetch(url, { method: 'GET' });
+    var data = await res.json();
+    if (data && data.status === 'ok' && Array.isArray(data.pending)) RT_PENDING = data.pending;
+  }catch(err){ console.warn('loadReturns failed', err); toast('err', 'Could not load returns · Gagal muat'); }
+  hideLoading();
+  renderReturns();
+}
+function renderReturns(){
+  if (!RT_PENDING.length){ document.getElementById('rt-rows').innerHTML = '<div class="empty">No pending returns 🎉 · Tiada pulangan menunggu</div>'; return; }
+  document.getElementById('rt-rows').innerHTML = RT_PENDING.map(function(p, i){
+    return '<div class="plt-row" id="rt-row-' + i + '"><div class="plt-row-top">' +
+      '<div><div class="nm">' + _esc(p.displayName || p.palletKey) + ' ×' + p.qty + '</div>' +
+        '<div class="sub">' + _esc(p.driverName || '—') + ' · ' + _esc(p.lorryNo || '—') + ' · ' + _esc(p.shipmentKey || '') + ' · ' + _esc(p.entryDate || '') + '</div></div>' +
+      '<button type="button" class="mini-btn accept" onclick="toggleReturn(' + i + ')">Accept · Terima</button>' +
+      '</div>' +
+      '<div class="rt-expand" id="rt-exp-' + i + '">' +
+        '<div class="rt-gd">' +
+          '<div class="field"><label>Good · Elok</label><input type="number" id="rt-good-' + i + '" inputmode="numeric" min="0" value="' + p.qty + '"></div>' +
+          '<div class="field"><label>Damaged · Rosak</label><input type="number" id="rt-bad-' + i + '" inputmode="numeric" min="0" value="0"></div>' +
+        '</div>' +
+        '<div class="field"><label>Driver · Driver</label><input type="text" id="rt-drv-' + i + '" value="' + _esc(p.driverName || '') + '" placeholder="Driver name"></div>' +
+        '<label class="photo-btn" style="padding:12px;" id="rt-pbtn-' + i + '">' +
+          '<input type="file" accept="image/*" capture="environment" multiple onchange="handleReturnPhoto(' + i + ', this)">' +
+          '<div class="photo-sublabel" id="rt-psub-' + i + '">📷 Photo optional · Foto pilihan</div>' +
+        '</label>' +
+        '<div class="btn-wrap" style="margin-top:10px;"><button type="button" class="submit-btn" onclick="submitReturn(' + i + ')">' +
+          '<svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>Save Return · Simpan Pulangan</button></div>' +
+      '</div></div>';
+  }).join('');
+}
+function toggleReturn(i){ document.getElementById('rt-exp-' + i).classList.toggle('show'); }
+async function handleReturnPhoto(i, input){
+  if (!input.files || !input.files.length) return;
+  var id = RT_PENDING[i].requestEntryId;
+  rtPhotos[id] = rtPhotos[id] || [];
+  for (var k = 0; k < input.files.length && rtPhotos[id].length < MAX_PHOTOS; k++){
+    var entry;
+    try { entry = await compressImage(input.files[k]); }
+    catch(err){ try { entry = await readFileAsDataUrl(input.files[k]); } catch(e2){ continue; } }
+    rtPhotos[id].push(entry);
+  }
+  input.value = '';
+  var sub = document.getElementById('rt-psub-' + i); if (sub) sub.textContent = '✓ ' + rtPhotos[id].length + ' photo(s) · ' + rtPhotos[id].length + ' foto';
+}
+async function submitReturn(i){
+  var p = RT_PENDING[i];
+  var good = _posInt(document.getElementById('rt-good-' + i).value);
+  var bad = _posInt(document.getElementById('rt-bad-' + i).value);
+  var driver = document.getElementById('rt-drv-' + i).value.trim();
+  if (good === null) good = 0; if (bad === null) bad = 0;
+  if (good + bad < 1){ toast('err', 'Enter good or damaged qty · Masukkan jumlah'); return; }
+  var photos = rtPhotos[p.requestEntryId] || [];
+  if (photos.length){
+    // POST: photo write travels in body, confirmed via clientToken poll
+    var token = _newToken('rtn');
+    var payload = {
+      formType: 'PALLET_RETURN',
+      palletKey: p.palletKey, goodQty: good, damagedQty: bad,
+      shipmentKey: p.shipmentKey, custCode: p.custCode || '', driverName: driver,
+      photos: photos.map(function(ph){ return { base64: ph.dataUrl.split(',')[1], name: ph.name, type: ph.type }; }),
+      linkedEntryId: p.requestEntryId, entryDate: p.entryDate || _today(), clientToken: token
+    };
+    showLoading('Uploading ' + photos.length + ' photo(s)… · Memuat naik…');
+    var confirmed = await postWithToken(payload, token);
+    hideLoading();
+    if (confirmed && confirmed.status === 'success'){ returnDone(i, good, bad); }
+    else if (confirmed && confirmed.status === 'error'){ toast('err', '<b>NOT saved · TIDAK disimpan</b><br>' + _esc(confirmed.message || 'Server error') + ' · Photos kept'); }
+    else { toast('warn', '<b>Sent — please verify · Sila sahkan</b><br>Could not confirm. Check dashboard in 1 min before re-sending.'); }
+  } else {
+    // no photo → GET-write
+    var params = {
+      palletKey: p.palletKey, goodQty: good, damagedQty: bad,
+      shipmentKey: p.shipmentKey, custCode: p.custCode || '', driverName: driver,
+      linkedEntryId: p.requestEntryId, entryDate: p.entryDate || _today(), clientToken: _newToken('rtn')
+    };
+    showLoading('Saving return… · Menyimpan…');
+    var data = await getWrite('PALLET_RETURN', params);
+    hideLoading();
+    if (data && data.status === 'success'){ returnDone(i, good, bad); }
+    else { toast('err', '<b>NOT saved · TIDAK disimpan</b><br>' + _esc((data && data.message) || 'Server error · Ralat')); }
+  }
+}
+function returnDone(i, good, bad){
+  toast('ok', '<b>Return saved ✓ · Pulangan disimpan</b><br>' + good + ' good · ' + bad + ' damaged · ' + _esc(RT_PENDING[i].displayName || RT_PENDING[i].palletKey));
+  delete rtPhotos[RT_PENDING[i].requestEntryId];
+  refreshBalances(true);
+  loadReturns();   // re-pull so the accepted request drops off the pending list
+}
+
+// ============================================================
+// PRINCIPAL  →  GET-write  PALLET_RETURN_PRINCIPAL  (DALAM or ROSAK → out to owner)
+// ============================================================
+var PR_STATE = 'DALAM';
+function pickPrState(btn){
+  document.querySelectorAll('#pr-state-seg .seg-btn').forEach(function(b){ b.classList.remove('sel'); });
+  btn.classList.add('sel'); PR_STATE = btn.getAttribute('data-state'); onPrQtyInput();
+}
+function onPrPalletChange(){ paintBalcard('pr', document.getElementById('pr-pallet').value); onPrQtyInput(); }
+function onPrQtyInput(){
+  var pill = document.getElementById('pr-var');
+  var key = document.getElementById('pr-pallet').value;
+  var qty = _posInt(document.getElementById('pr-qty').value);
+  if (!key || qty === null || qty < 1){ pill.classList.remove('show'); return; }
+  var avail = PR_STATE === 'DALAM' ? balOf(key).dalam : balOf(key).rosak;
+  if (qty > avail){
+    pill.className = 'var-pill show diff';
+    pill.innerHTML = 'Only <b>' + avail + '</b> ' + PR_STATE + ' available, you entered <b>' + qty + '</b><br>Hanya ' + avail + ' ' + PR_STATE + ' ada';
+  } else {
+    pill.className = 'var-pill show ok';
+    pill.innerHTML = '✓ ' + qty + ' ' + PR_STATE + ' → principal · ' + avail + ' → ' + (avail - qty) + ' left after<br>' + qty + ' akan dipulangkan ke prinsipal';
+  }
+}
+async function submitPrincipal(){
+  var key = document.getElementById('pr-pallet').value;
+  var qty = _posInt(document.getElementById('pr-qty').value);
+  var ref = document.getElementById('pr-ref').value.trim();
+  var ok = true;
+  document.getElementById('err-pr-pallet').classList.toggle('show', !key); if (!key) ok = false;
+  document.getElementById('err-pr-qty').classList.toggle('show', !qty || qty < 1); if (!qty || qty < 1) ok = false;
+  document.getElementById('err-pr-ref').classList.toggle('show', !ref); if (!ref) ok = false;
+  if (!ok) return;
+  var avail = PR_STATE === 'DALAM' ? balOf(key).dalam : balOf(key).rosak;
+  if (qty > avail){ toast('err', '<b>Not enough · Tak cukup</b><br>Only ' + avail + ' ' + PR_STATE + ' available · Hanya ' + avail + ' ada'); return; }
+  var operator = document.getElementById('pr-operator').value.trim();
+  if (operator) localStorage.setItem(OPERATOR_KEY, operator);
+  var params = {
+    palletKey: key, qty: qty, fromState: PR_STATE, ref: ref,
+    operator: operator, entryDate: document.getElementById('pr-date').value || _today(),
+    clientToken: _newToken('prn')
+  };
+  showLoading('Returning to principal… · Memulangkan…');
+  var data = await getWrite('PALLET_RETURN_PRINCIPAL', params);
+  hideLoading();
+  if (data && data.status === 'success'){
+    var msg = data.dedup ? 'Already saved · Sudah disimpan' : ('<b>' + qty + '</b> ' + PR_STATE + ' → principal · ' + _esc(nameOf(key)));
+    toast('ok', '<b>Returned to principal ✓ · Dipulangkan</b><br>' + msg);
+    document.getElementById('pr-qty').value = '';
+    document.getElementById('pr-ref').value = '';
+    document.getElementById('pr-var').classList.remove('show');
+    refreshBalances(true);
+  } else {
+    toast('err', '<b>NOT saved · TIDAK disimpan</b><br>' + _esc((data && data.message) || 'Server error · Ralat'));
+  }
+}
+
 // ============================================================
 // TRANSPORT — shared request helpers (mirror the POD/Fuel patterns)
 // ============================================================
@@ -1093,17 +1601,50 @@ async function postWithToken(payload, token){
 }
 
 // ============================================================
+// STAFF ID -> name (store staff; fetched from backend, never hardcoded in this public page)
+// ============================================================
+var STAFF = {};
+var STAFFID_KEY = 'clf_pallet_staffid';
+async function fetchStaff(){
+  try{
+    var res = await fetch(SCRIPT_URL + '?action=getPalletStaff', { method: 'GET' });
+    var data = await res.json();
+    if (data && data.status === 'ok' && Array.isArray(data.staff)){
+      STAFF = {}; data.staff.forEach(function(s){ STAFF[String(s.empNo).trim().toUpperCase()] = s.name; });
+    }
+  }catch(err){ console.warn('fetchStaff failed (staff lookup disabled)', err); }
+}
+function onStaffId(prefix){
+  var idEl = document.getElementById(prefix + '-staffid');
+  var nmEl = document.getElementById(prefix + '-operator-name');
+  var opEl = document.getElementById(prefix + '-operator');
+  if (!idEl) return;
+  var id = (idEl.value || '').trim().toUpperCase();
+  if (idEl.value !== id) idEl.value = id;
+  var name = STAFF[id] || '';
+  if (opEl) opEl.value = name ? (name + ' (' + id + ')') : '';
+  if (!id){ nmEl.textContent = ''; nmEl.className = 'staff-name'; }
+  else if (name){ nmEl.textContent = '✓ ' + name; nmEl.className = 'staff-name ok'; localStorage.setItem(STAFFID_KEY, id); }
+  else { nmEl.textContent = 'Unknown Staff ID · ID tak dikenali'; nmEl.className = 'staff-name bad'; }
+}
+function restoreStaffId(){
+  var id = localStorage.getItem(STAFFID_KEY) || '';
+  if (!id) return;
+  ['st','rc','dm','rp','as','pr'].forEach(function(p){ var el = document.getElementById(p + '-staffid'); if (el){ el.value = id; onStaffId(p); } });
+}
+
+// ============================================================
 // BOOT
 // ============================================================
 window.onload = function(){
+  if (!PHASE23_LIVE) ['assign','accept','returns','principal'].forEach(function(t){ var b=document.querySelector('.tab[data-tab="'+t+'"]'); if (b) b.style.display='none'; });
   var today = _today();
-  ['st-date','rc-date','dm-date','rp-date'].forEach(function(id){
+  ['st-date','rc-date','dm-date','rp-date','pr-date'].forEach(function(id){
     var d = document.getElementById(id); if (d){ d.value = today; d.max = today; }
   });
-  // restore remembered operator name across the forms
-  var savedOp = localStorage.getItem(OPERATOR_KEY) || '';
-  if (savedOp) ['st-operator','rc-operator','dm-operator','rp-operator'].forEach(function(id){ var o = document.getElementById(id); if (o) o.value = savedOp; });
+  // staff-id -> name: roster fetch + remembered-id restore happen below
 
+  fetchStaff().then(restoreStaffId);
   fetchMaster().finally(function(){ refreshBalances(true); });
 };
 
