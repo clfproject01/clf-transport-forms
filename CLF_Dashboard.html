@@ -4,7 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CLF Fleet Dashboard</title>
-<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.49.1/dist/apexcharts.min.js"></script>
+<!-- ApexCharts: self-hosted (vendored from cdnjs 3.49.1). Was jsdelivr CDN — moved local so the
+     charts never depend on a third-party CDN being reachable (a jsdelivr outage crashed the dashboard). -->
+<script src="apexcharts.min.js"></script>
 <style>
   :root{
     --green-50:#ECFDF5; --green-500:#16A34A; --green-700:#15803D;
@@ -315,7 +317,13 @@
   // Staff ID column + Name column (for the Drivers-now board — aligned, one per line)
   function idCol(name){ var sid=STAFF[name]; return '<span class="b-sid">'+(sid?esc(sid):'')+'</span><span class="b-nm">'+esc(shortName(name))+'</span>'; }
 
-  function chart(id, opt){ var el=$(id); if(!el) return; opt.chart=opt.chart||{}; opt.chart.animations={enabled:false}; if(CHARTS[id]){ try{CHARTS[id].destroy();}catch(e){} } CHARTS[id]=new ApexCharts(el, opt); CHARTS[id].render(); }
+  function chart(id, opt){ var el=$(id); if(!el) return;
+    // Defensive: if the chart library failed to load (slow/blocked CDN), do NOT throw — a single
+    // chart error must never crash the whole dashboard. Show a note; the numbers/tables stay correct.
+    if(typeof ApexCharts==='undefined'){ el.innerHTML='<div class="unavail" style="padding:8px;line-height:1.5;">⚠ Chart library didn\'t load. The numbers &amp; tables above are still correct.<br><i>Pustaka carta gagal dimuat — nombor &amp; jadual di atas tetap betul.</i></div>'; return; }
+    opt.chart=opt.chart||{}; opt.chart.animations={enabled:false}; if(CHARTS[id]){ try{CHARTS[id].destroy();}catch(e){} }
+    try{ CHARTS[id]=new ApexCharts(el, opt); CHARTS[id].render(); }catch(e){ el.innerHTML='<div class="unavail" style="padding:8px;">⚠ Chart could not render</div>'; }
+  }
 
   function showErr(msg){ var b=$('errBanner'); if(b){ b.textContent=msg; b.classList.add('show'); } }
   function hideErr(){ var b=$('errBanner'); if(b) b.classList.remove('show'); }
@@ -382,11 +390,13 @@
       // build staff-id map from driver list
       STAFF = {};
       if(dash && dash.drivers){ dash.drivers.forEach(function(d){ if(d && d.name) STAFF[d.name]=d.staffId||''; }); }
-      renderTop(ship, fuel);
-      renderPod(ship);
-      renderBoard(ship, dash, leave);
-      renderDriverSummary(dash);
-      renderFuel(fuel, dash);
+      // Each section renders independently — one section throwing (e.g. a chart lib that didn't
+      // load) must NOT blank out the whole dashboard. Errors are logged per-section, not fatal.
+      try{ renderTop(ship, fuel); }catch(e){ if(window.console)console.error('renderTop failed', e); }
+      try{ renderPod(ship); }catch(e){ if(window.console)console.error('renderPod failed', e); }
+      try{ renderBoard(ship, dash, leave); }catch(e){ if(window.console)console.error('renderBoard failed', e); }
+      try{ renderDriverSummary(dash); }catch(e){ if(window.console)console.error('renderDriverSummary failed', e); }
+      try{ renderFuel(fuel, dash); }catch(e){ if(window.console)console.error('renderFuel failed', e); }
       if(ship || fuel) LAST_UPDATED = Date.now();   // only a load with real data counts as "updated"
       paintUpdated();
     }).catch(function(e){ if(seq !== LOAD_SEQ) return; showErr('Something went wrong loading the dashboard. Please Refresh.'); $('dashMeta').textContent=''; });

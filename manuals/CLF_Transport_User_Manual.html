@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CLF Transport — User Manual / Panduan Pengguna</title>
+<style>
+  body { font-family:'Segoe UI', Roboto, -apple-system, Arial, sans-serif; max-width:760px; margin:0 auto;
+    padding:32px 20px 80px; background:#fff; color:#1a1a1a; line-height:1.7; -webkit-font-smoothing:antialiased; }
+  h1 { font-size:27px; font-weight:700; line-height:1.3; margin:0 0 6px; }
+  h2 { font-size:21px; font-weight:700; margin:38px 0 12px; padding-top:10px; border-top:2px solid #e5e5e5; }
+  h3 { font-size:17px; font-weight:600; margin:24px 0 8px; }
+  p { margin:0 0 14px; }
+  ol, ul { margin:0 0 14px; padding-left:24px; } li { margin-bottom:9px; }
+  strong { font-weight:600; }
+  .lead { font-size:16px; color:#444; }
+  .bm { color:#5b6675; font-style:italic; }
+  code { font-family:Consolas, Menlo, monospace; font-size:.9em; background:#f3f3f3; padding:1px 6px; border-radius:4px; }
+  blockquote { margin:14px 0; padding:11px 16px; border-left:4px solid #9aa0a6; background:#f5f5f5; color:#333; border-radius:0 4px 4px 0; }
+  blockquote p { margin:0 0 6px; } blockquote p:last-child { margin-bottom:0; }
+  table { width:100%; border-collapse:collapse; margin:14px 0; font-size:15px; }
+  th, td { border:1px solid #d0d0d0; padding:9px 12px; text-align:left; vertical-align:top; }
+  th { background:#f7f7f7; font-weight:600; }
+  .toc { background:#f6f8fa; border:1px solid #e1e4e8; border-radius:8px; padding:14px 20px; margin:18px 0 8px; }
+  .toc a { color:#2563EB; text-decoration:none; } .toc li { margin-bottom:5px; }
+  .badge { display:inline-block; background:#1A56DB; color:#fff; font-size:.7rem; font-weight:700; letter-spacing:.5px;
+    border-radius:99px; padding:2px 10px; vertical-align:middle; }
+  hr { border:none; border-top:1px solid #e5e5e5; margin:38px 0; }
+</style>
+</head>
+<body>
+
+<h1>CLF Transport — User Manual</h1>
+<p class="lead">Panduan Pengguna · For drivers &amp; supervisors / Untuk pemandu &amp; penyelia. Each step is in <strong>English</strong> and <span class="bm">Bahasa Melayu</span>.</p>
+
+<div class="toc">
+<strong>Contents · Kandungan</strong>
+<ul>
+  <li><a href="#branch">0. Branches &amp; links / Cawangan &amp; pautan (MTK · KTN)</a></li>
+  <li><a href="#driver">A. DRIVER / PEMANDU</a> — Fuel, No-Fuel, POD</li>
+  <li><a href="#sup">B. SUPERVISOR / PENYELIA</a> — Dashboard, POD Plan, Leave, Shipment</li>
+</ul>
+</div>
+
+<h2 id="branch">0. Branches &amp; Links / Cawangan &amp; Pautan</h2>
+<p>The system serves two branches: <strong>MTK (Mentakab)</strong> and <strong>KTN (Kuantan)</strong>. Each form knows its branch from the link / QR you open.<br>
+<span class="bm">Sistem ini untuk dua cawangan: MTK (Mentakab) dan KTN (Kuantan). Setiap borang tahu cawangannya daripada pautan / kod QR yang anda buka.</span></p>
+<ul>
+  <li><strong>KTN</strong> drivers/staff: open the link that ends with <code>?branch=KTN</code> (or scan the <strong>KTN QR</strong> on the lorry). You will only see KTN lorries &amp; drivers.<br>
+  <span class="bm">Pemandu/staf KTN: buka pautan yang berakhir dengan <code>?branch=KTN</code> (atau imbas kod QR KTN pada lori). Anda hanya nampak lori &amp; pemandu KTN.</span></li>
+  <li><strong>MTK</strong> drivers/staff: keep using your current link — it stays MTK automatically. No change needed.<br>
+  <span class="bm">Pemandu/staf MTK: guna pautan sedia ada — ia kekal MTK secara automatik. Tiada perubahan.</span></li>
+</ul>
+
+<!-- ============ DRIVER ============ -->
+<h2 id="driver">A. DRIVER / PEMANDU</h2>
+
+<h3>A1. Open your form / Buka borang anda</h3>
+<p>Scan the <strong>QR on your lorry</strong>, or open your saved link, on your phone. The page header shows your branch (e.g. <strong>Kuantan</strong>).<br>
+<span class="bm">Imbas kod QR pada lori anda, atau buka pautan tersimpan, di telefon. Tajuk halaman menunjukkan cawangan anda (cth. Kuantan).</span></p>
+
+<h3>A2. Submit Fuel / Hantar Minyak</h3>
+<ol>
+  <li>Open the <strong>Fuel</strong> form. Today's date is filled in already.<br><span class="bm">Buka borang Minyak. Tarikh hari ini sudah diisi.</span></li>
+  <li><strong>Driver · Pemandu:</strong> tap and type your Staff ID (e.g. <code>448</code>) or name → tap your name from the list.<br><span class="bm">Ketik dan taip Staff ID (cth. 448) atau nama → ketik nama anda dari senarai.</span></li>
+  <li><strong>Second Driver · Pemandu Kedua:</strong> only if two of you share the lorry; otherwise skip.<br><span class="bm">Hanya jika dua orang berkongsi lori; jika tidak, langkau.</span></li>
+  <li><strong>Vehicle · Kenderaan:</strong> tap and choose your lorry plate (only your branch's lorries appear).<br><span class="bm">Ketik dan pilih nombor lori (hanya lori cawangan anda dipaparkan).</span></li>
+  <li><strong>Current Mileage (KM):</strong> type the odometer reading shown on the lorry now — every time.<br><span class="bm">Taip bacaan odometer pada lori sekarang — setiap kali.</span></li>
+  <li><strong>Fuel Amount (RM):</strong> type the total RM on the receipt (required).<br><span class="bm">Taip jumlah RM pada resit (wajib).</span></li>
+  <li><strong>Litres · Liter:</strong> optional — type if shown on the receipt.<br><span class="bm">Pilihan — taip jika ada pada resit.</span></li>
+  <li><strong>Receipt Photo · Foto Resit:</strong> tap to take a clear photo of the whole receipt.<br><span class="bm">Ketik untuk ambil foto resit yang jelas.</span></li>
+  <li>Tick <strong>I confirm · Saya sahkan</strong>, then tap <strong>Submit Fuel Record · Hantar Rekod Bahan Api</strong>. Wait for the green <strong>Submitted! · Berjaya!</strong>.<br><span class="bm">Tanda "Saya sahkan", ketik "Hantar Rekod Bahan Api", tunggu "Berjaya!".</span></li>
+</ol>
+<blockquote><p>The form remembers your last lorry &amp; name. Submit on the same day you pump — late = lower score.<br><span class="bm">Borang ingat lori &amp; nama terakhir anda. Hantar pada hari yang sama anda isi minyak — lewat = markah rendah.</span></p></blockquote>
+
+<h3>A3. No Fuel Today / Tiada Bahan Api Hari Ini</h3>
+<p>If you did NOT pump fuel today: pick your <strong>Driver</strong> and <strong>Vehicle</strong> only, then tap the yellow <strong>⛽ Declare No Fuel Today · Lapor Tiada Bahan Api Hari Ini</strong> and confirm. No mileage/amount/photo needed.<br>
+<span class="bm">Jika anda TIDAK isi minyak hari ini: pilih Pemandu dan Kenderaan sahaja, ketik butang kuning "Lapor Tiada Bahan Api Hari Ini" dan sahkan. Tiada odometer/RM/foto diperlukan.</span></p>
+
+<h3>A4. Submit POD (Proof of Delivery) / Hantar POD</h3>
+<ol>
+  <li>Open the <strong>POD</strong> form. Pick your <strong>Driver</strong> and <strong>Vehicle</strong> (your branch only).<br><span class="bm">Buka borang POD. Pilih Pemandu dan Kenderaan (cawangan anda sahaja).</span></li>
+  <li>The deliveries assigned to your lorry appear in a list.<br><span class="bm">Penghantaran untuk lori anda akan dipaparkan dalam senarai.</span></li>
+  <li>For each delivery: tap <strong>Take photo · Ambil foto</strong> of the signed delivery order.<br><span class="bm">Untuk setiap penghantaran: ketik "Ambil foto" bagi nota serahan yang ditandatangani.</span></li>
+  <li>If a delivery failed, mark it and choose a reason (Shop closed / Rejected / Partial / Reschedule / Problem).<br><span class="bm">Jika gagal dihantar, tanda dan pilih sebab (Kedai tutup / Ditolak / Sebahagian / Jadual semula / Masalah).</span></li>
+  <li>Tap <strong>Save — Delivered · Dihantar</strong>. Wait for <strong>POD Submitted! · POD Berjaya!</strong>.<br><span class="bm">Ketik "Save — Dihantar", tunggu "POD Berjaya!".</span></li>
+</ol>
+
+<!-- ============ SUPERVISOR ============ -->
+<h2 id="sup">B. SUPERVISOR / PENYELIA</h2>
+<p><span class="badge">KTN = Wayne</span> <span class="badge">MTK = Nich</span> &nbsp; Open your screens with <code>?branch=KTN</code> (Wayne) or <code>?branch=MTK</code> (Nich) — you only see your own branch.<br>
+<span class="bm">Buka skrin anda dengan <code>?branch=KTN</code> (Wayne) atau <code>?branch=MTK</code> (Nich) — anda hanya nampak cawangan sendiri.</span></p>
+
+<h3>B1. Dashboard / Papan Pemuka</h3>
+<p>Open the Dashboard link. At the top, switch <strong>All / MTK / KTN</strong> and the period <strong>Daily / Weekly / Monthly</strong>.<br>
+<span class="bm">Buka pautan Papan Pemuka. Di atas, tukar All / MTK / KTN dan tempoh Harian / Mingguan / Bulanan.</span></p>
+<p>You can see: who submitted fuel/POD today, compliance %, driver ranking, lorry status, and who is on leave.<br>
+<span class="bm">Anda boleh lihat: siapa hantar minyak/POD hari ini, peratus pematuhan, ranking pemandu, status lori, dan siapa bercuti.</span></p>
+
+<h3>B2. Set POD Plan / Tetapkan Pelan POD</h3>
+<p>On the dashboard, set each driver's planned number of deliveries for the day. The system then knows who is short and flags it.<br>
+<span class="bm">Pada papan pemuka, tetapkan bilangan penghantaran dirancang bagi setiap pemandu hari itu. Sistem akan tahu siapa kurang dan menandakannya.</span></p>
+
+<h3>B3. Leave / Cuti</h3>
+<p>Open the <strong>Leave</strong> link (your branch — you only see your branch's drivers). Choose a driver, choose the date(s), and mark the leave (one day or a range). Use the holiday option to mark a public holiday for everyone.<br>
+<span class="bm">Buka pautan Cuti (cawangan anda — anda hanya nampak pemandu cawangan anda). Pilih pemandu, pilih tarikh, dan tanda cuti (satu hari atau julat). Guna pilihan holiday untuk tanda cuti umum bagi semua.</span></p>
+<blockquote><p>A driver on leave is automatically not counted as "missing" in the fuel check.<br><span class="bm">Pemandu yang bercuti tidak dikira "tidak hantar" dalam semakan minyak.</span></p></blockquote>
+
+<h3>B4. Shipment / Assign Crew / Hantaran</h3>
+<p>Open the <strong>Shipment</strong> link (your branch). Import the daily shipment file, and assign the driver (and helper) to each lorry. This pre-fills each driver's POD list.<br>
+<span class="bm">Buka pautan Hantaran (cawangan anda). Import fail hantaran harian, dan tetapkan pemandu (dan pembantu) untuk setiap lori. Ini mengisi senarai POD setiap pemandu.</span></p>
+
+<h3>B5. Daily Alert Email / Amaran Harian</h3>
+<p>Every working day in the afternoon, the system emails a list of drivers who have <strong>not</strong> submitted fuel, plus any POD shortfalls. KTN's alert goes to <strong>Wayne</strong>; MTK's to the existing recipient. Follow up with those drivers.<br>
+<span class="bm">Setiap hari bekerja pada sebelah petang, sistem menghantar e-mel senarai pemandu yang belum hantar minyak, serta kekurangan POD. Amaran KTN ke Wayne; MTK ke penerima sedia ada. Susuli pemandu tersebut.</span></p>
+
+<hr>
+<p style="font-size:13px;color:#777;">CLF Trading Sdn. Bhd. · Transport Control Tower — User Manual (Driver &amp; Supervisor) · English / Bahasa Melayu.<br>
+Detailed per-form guides also available: Fuel, POD, Leave, Shipment. / Panduan terperinci setiap borang juga tersedia.</p>
+
+</body>
+</html>
