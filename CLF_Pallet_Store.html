@@ -1601,18 +1601,57 @@ async function postWithToken(payload, token){
 }
 
 // ============================================================
-// STAFF ID -> name (store staff; fetched from backend, never hardcoded in this public page)
+// STAFF ID -> name (store staff). Privacy: resolve ONE id at a time via the backend
+// (?action=getPalletStaff&id=TERxxx) — never fetch the whole roster. Results are cached,
+// in-flight lookups de-duped, and BOTH backend shapes handled (new {found,name} and the
+// old {staff:[...]} roster) so frontend/backend can deploy in any order with no breakage.
 // ============================================================
-var STAFF = {};
+var STAFF = {};                 // cache: id -> name ('' = confirmed unknown)
+var STAFF_INFLIGHT = {};        // id -> true while a lookup is in flight
+var STAFF_T = {};               // prefix -> debounce timer
 var STAFFID_KEY = 'clf_pallet_staffid';
-async function fetchStaff(){
-  try{
-    var res = await fetch(SCRIPT_URL + '?action=getPalletStaff', { method: 'GET' });
-    var data = await res.json();
-    if (data && data.status === 'ok' && Array.isArray(data.staff)){
-      STAFF = {}; data.staff.forEach(function(s){ STAFF[String(s.empNo).trim().toUpperCase()] = s.name; });
-    }
-  }catch(err){ console.warn('fetchStaff failed (staff lookup disabled)', err); }
+var STAFF_PREFIXES = ['st','rc','dm','rp','as','pr'];
+
+function applyStaffName(prefix, id, name){
+  var nmEl = document.getElementById(prefix + '-operator-name');
+  var opEl = document.getElementById(prefix + '-operator');
+  if (opEl) opEl.value = name ? (name + ' (' + id + ')') : '';
+  if (!nmEl) return;
+  if (name){ nmEl.textContent = '✓ ' + name; nmEl.className = 'staff-name ok'; localStorage.setItem(STAFFID_KEY, id); }
+  else { nmEl.textContent = 'Unknown Staff ID · ID tak dikenali'; nmEl.className = 'staff-name bad'; }
+}
+// apply a resolved id to every field that currently holds it (handles cross-field restore)
+function applyStaffAll(id){
+  STAFF_PREFIXES.forEach(function(p){
+    var el = document.getElementById(p + '-staffid');
+    if (el && (el.value || '').trim().toUpperCase() === id) applyStaffName(p, id, STAFF[id]);
+  });
+}
+function lookupStaff(id){
+  if (Object.prototype.hasOwnProperty.call(STAFF, id)){ applyStaffAll(id); return; }
+  if (STAFF_INFLIGHT[id]) return;                       // already fetching this id
+  STAFF_INFLIGHT[id] = true;
+  fetch(SCRIPT_URL + '?action=getPalletStaff&id=' + encodeURIComponent(id), { method: 'GET' })
+    .then(function(res){ return res.json(); })
+    .then(function(data){
+      var name = '';
+      if (data && data.status === 'ok'){
+        if (data.found && data.name){ name = String(data.name); }
+        else if (Array.isArray(data.staff)){             // fallback: old roster-returning backend
+          for (var i = 0; i < data.staff.length; i++){
+            if (String(data.staff[i].empNo).trim().toUpperCase() === id){ name = String(data.staff[i].name || ''); break; }
+          }
+        }
+      }
+      STAFF[id] = name; delete STAFF_INFLIGHT[id]; applyStaffAll(id);
+    })
+    .catch(function(){
+      delete STAFF_INFLIGHT[id];
+      STAFF_PREFIXES.forEach(function(p){
+        var el = document.getElementById(p + '-staffid'), nm = document.getElementById(p + '-operator-name');
+        if (el && nm && (el.value || '').trim().toUpperCase() === id){ nm.textContent = 'Lookup failed — retype · cuba semula'; nm.className = 'staff-name bad'; }
+      });
+    });
 }
 function onStaffId(prefix){
   var idEl = document.getElementById(prefix + '-staffid');
@@ -1621,16 +1660,18 @@ function onStaffId(prefix){
   if (!idEl) return;
   var id = (idEl.value || '').trim().toUpperCase();
   if (idEl.value !== id) idEl.value = id;
-  var name = STAFF[id] || '';
-  if (opEl) opEl.value = name ? (name + ' (' + id + ')') : '';
-  if (!id){ nmEl.textContent = ''; nmEl.className = 'staff-name'; }
-  else if (name){ nmEl.textContent = '✓ ' + name; nmEl.className = 'staff-name ok'; localStorage.setItem(STAFFID_KEY, id); }
-  else { nmEl.textContent = 'Unknown Staff ID · ID tak dikenali'; nmEl.className = 'staff-name bad'; }
+  if (opEl) opEl.value = '';                             // clear until resolved (no stale submit)
+  if (!id){ if (nmEl){ nmEl.textContent = ''; nmEl.className = 'staff-name'; } if (STAFF_T[prefix]) clearTimeout(STAFF_T[prefix]); return; }
+  if (Object.prototype.hasOwnProperty.call(STAFF, id)){ applyStaffName(prefix, id, STAFF[id]); return; }
+  if (nmEl){ nmEl.textContent = '… checking · menyemak'; nmEl.className = 'staff-name'; }
+  if (STAFF_T[prefix]) clearTimeout(STAFF_T[prefix]);
+  STAFF_T[prefix] = setTimeout(function(){ lookupStaff(id); }, 350);
 }
 function restoreStaffId(){
-  var id = localStorage.getItem(STAFFID_KEY) || '';
+  var id = (localStorage.getItem(STAFFID_KEY) || '').trim().toUpperCase();
   if (!id) return;
-  ['st','rc','dm','rp','as','pr'].forEach(function(p){ var el = document.getElementById(p + '-staffid'); if (el){ el.value = id; onStaffId(p); } });
+  STAFF_PREFIXES.forEach(function(p){ var el = document.getElementById(p + '-staffid'); if (el) el.value = id; });
+  lookupStaff(id);                                       // one fetch, applied to all fields
 }
 
 // ============================================================
@@ -1642,9 +1683,9 @@ window.onload = function(){
   ['st-date','rc-date','dm-date','rp-date','pr-date'].forEach(function(id){
     var d = document.getElementById(id); if (d){ d.value = today; d.max = today; }
   });
-  // staff-id -> name: roster fetch + remembered-id restore happen below
+  // staff-id -> name: restore the remembered id (resolves once via single-id lookup, then cached)
 
-  fetchStaff().then(restoreStaffId);
+  restoreStaffId();
   fetchMaster().finally(function(){ refreshBalances(true); });
 };
 
