@@ -124,6 +124,18 @@
     position: relative; z-index: 1;
     line-height: 1.5;
   }
+  /* branch label — prominent so a driver on the wrong link notices (label, not a control) */
+  .branch-label {
+    display: inline-block;
+    font-size: 14px; font-weight: 600;
+    color: var(--navy);
+    background: var(--gold);
+    border-radius: 8px;
+    padding: 2px 10px;
+    margin-left: 6px;
+    letter-spacing: 0.5px;
+    vertical-align: middle;
+  }
 
   /* BODY */
   .form-body {
@@ -376,7 +388,7 @@
       </div>
       <div>
         <div class="company-name">CLF Trading Sdn. Bhd.</div>
-        <div class="company-reg">557522-A · Mentakab, Pahang</div>
+        <div class="company-reg" id="companyReg">557522-A · Mentakab, Pahang</div>
       </div>
     </div>
     <div class="form-identity">
@@ -384,7 +396,7 @@
         <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="22" x2="15" y2="22"/><line x1="4" y1="9" x2="14" y2="9"/><path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18"/><path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2 2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 5"/></svg>
       </div>
       <div>
-        <div class="form-title">FUEL</div>
+        <div class="form-title">FUEL <span id="branchLabel" class="branch-label">Mentakab</span></div>
         <div class="form-subtitle">Daily Fuel Receipt · Resit Bahan Api</div>
       </div>
     </div>
@@ -451,23 +463,7 @@
       <div class="field">
         <label>Vehicle Number · Nombor Kenderaan <span class="req">*</span></label>
         <select id="vehicleNo" required>
-                    <option value="">— Select vehicle · Pilih kenderaan —</option>
-          <option>KER 9223</option>
-          <option>RY 7233</option>
-          <option>CDQ 9098</option>
-          <option>CDA 3633</option>
-          <option>CDU 2133</option>
-          <option>CDK 8878</option>
-          <option>RX 8733</option>
-          <option>CDX 6233</option>
-          <option>JUM 1033</option>
-          <option>SMB 7633</option>
-          <option>VFE 9633</option>
-          <option>VHT 4642</option>
-          <option>VQD 6864</option>
-          <option>CCY 9233</option>
-          <option>VJX 5786</option>
-          <option>SYS 4642</option>
+          <option value="">— Select vehicle · Pilih kenderaan —</option>
         </select>
         <div class="error-msg" id="err-vehicle">Please select a vehicle · Sila pilih kenderaan</div>
       </div>
@@ -586,7 +582,13 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxabHh2Kd04z7k0zZOOo
 // e.g. https://script.google.com/macros/s/ABC123.../exec
 // ============================================================
 
-const STORAGE_KEY = 'clf_driver_name';
+// Branch — read ONCE from the URL (?branch=KTN). Old MTK bookmarks with no param default to MTK.
+var BRANCH = (new URLSearchParams(location.search).get('branch') || 'MTK').toUpperCase();
+var BRANCH_DISPLAY = { MTK: 'Mentakab', KTN: 'Kuantan' };
+
+// localStorage keys are namespaced per branch so a KTN phone never shows a remembered MTK driver/vehicle.
+const STORAGE_KEY = 'clf_driver_name_' + BRANCH;
+const VEHICLE_KEY = 'clf_fuel_vehicle_' + BRANCH;   // remember-last-vehicle (added for branch rollout)
 
 // V17: Dynamically loaded from backend /getDrivers — empty until fetchDrivers() resolves
 let STAFF_IDS = {};
@@ -638,7 +640,7 @@ function wireDriverPicker(searchId, hiddenId, panelId, badgeId, onPick){
 // Fetch driver roster from Apps Script (so adding/removing in Drivers/Master_Control sheet auto-syncs)
 async function fetchAndPopulateDrivers() {
   try {
-    const res = await fetch(SCRIPT_URL + '?action=getDrivers', { method: 'GET' });
+    const res = await fetch(SCRIPT_URL + '?action=getDrivers&branch=' + encodeURIComponent(BRANCH), { method: 'GET' });
     const data = await res.json();
     if (!data || data.status !== 'ok' || !Array.isArray(data.drivers) || data.drivers.length === 0) {
       throw new Error('Empty driver roster from server');
@@ -667,9 +669,50 @@ async function fetchAndPopulateDrivers() {
   }
 }
 
+// Fetch the branch-scoped lorry list from Apps Script (replaces the old hardcoded <option> plates).
+// Populate the list -> restore the remembered vehicle -> fire `change` so the existing change-handler
+// (last-odometer hint + crew auto-fill) still runs. Mirrors fetchAndPopulateDrivers()'s fetch/error style.
+async function fetchVehicles() {
+  var sel = document.getElementById('vehicleNo');
+  if (!sel) return;
+  try {
+    const res = await fetch(SCRIPT_URL + '?action=getVehicles&branch=' + encodeURIComponent(BRANCH), { method: 'GET' });
+    const data = await res.json();
+    if (!data || data.status !== 'ok' || !Array.isArray(data.vehicles) || data.vehicles.length === 0) {
+      throw new Error('Empty vehicle list from server');
+    }
+    // Keep the placeholder, append the branch's plates.
+    sel.innerHTML = '<option value="">— Select vehicle · Pilih kenderaan —</option>';
+    data.vehicles.forEach(function(plate){
+      var o = document.createElement('option');
+      o.value = plate; o.textContent = plate;
+      sel.appendChild(o);
+    });
+    // Restore remembered vehicle (per-branch key), THEN let change-dependent logic run.
+    try {
+      var savedVeh = localStorage.getItem(VEHICLE_KEY);
+      if (savedVeh) {
+        sel.value = savedVeh;
+        if (sel.value === savedVeh) {   // value sticks only if the plate exists in this branch
+          sel.dispatchEvent(new Event('change'));
+        }
+      }
+    } catch (e) { /* localStorage unavailable — fine */ }
+  } catch (err) {
+    console.error('fetchVehicles failed:', err);
+    // No hardcoded fallback — show a clear refresh state rather than a silently-empty dropdown.
+    sel.innerHTML = '<option value="">⚠ 请刷新 · Sila refresh</option>';
+  }
+}
+
 // (driver Staff-ID confirmation is now handled inside wireDriverPicker)
 
 window.onload = function() {
+  // Branch label in the header — prominent so a driver on the wrong link notices.
+  var branchName = BRANCH_DISPLAY[BRANCH] || BRANCH;
+  var bl = document.getElementById('branchLabel'); if (bl) bl.textContent = branchName;
+  var cr = document.getElementById('companyReg'); if (cr) cr.textContent = '557522-A · ' + branchName + ', Pahang';
+
   // Set today's date as default (Kuala Lumpur timezone — fixes early-morning bug)
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
   document.getElementById('fuelDate').value = today;
@@ -677,6 +720,8 @@ window.onload = function() {
 
   // V17: Fetch driver list from backend; this also restores remembered driver
   fetchAndPopulateDrivers();
+  // Branch-scoped lorry list (replaces the old hardcoded plates); restores remembered vehicle too
+  fetchVehicles();
 };
 
 // (old <select> change-listeners removed — driver picking is handled by wireDriverPicker)
@@ -709,6 +754,7 @@ var _autoCrew = { d: false, s: false };   // which crew fields were AUTO-filled 
   }
   vSel.addEventListener('change', function(){
     var veh = vSel.value;
+    try{ localStorage.setItem(VEHICLE_KEY, veh || ''); }catch(e){}   // remember-last-vehicle (per-branch key)
     _lastOdo = null; _lastOdoVeh = veh;
     // Switching lorries: clear crew that was AUTO-filled for the PREVIOUS lorry (it belongs to
     // that lorry, not this one). Manually-picked / remembered names are left alone.
@@ -907,6 +953,7 @@ async function submitForm() {
     const token = 'fuel_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
     const payload = {
       formType: 'FUEL',
+      branch: BRANCH,
       timestamp: now.toISOString(),
       fuelDate: document.getElementById('fuelDate').value,
       driverName: document.getElementById('driverName').value,
@@ -992,6 +1039,7 @@ async function submitNoFuel() {
       + '&secondDriver=' + encodeURIComponent(secondDriver)
       + '&vehicleNo=' + encodeURIComponent(vehicle)
       + '&fuelDate=' + encodeURIComponent(fuelDate)
+      + '&branch=' + encodeURIComponent(BRANCH)
       + '&timestamp=' + encodeURIComponent(now.toISOString());
     const res = await fetch(url);
     const json = await res.json();
@@ -1073,6 +1121,12 @@ function resetForm() {
     dsearch._pick(saved);
     document.getElementById('rememberedBadge').style.display = 'inline-flex';
   }
+  // Restore the remembered vehicle too (per-branch key), then fire change so the odometer hint re-loads.
+  try {
+    var vs = document.getElementById('vehicleNo');
+    var savedVeh = localStorage.getItem(VEHICLE_KEY);
+    if (vs && savedVeh) { vs.value = savedVeh; if (vs.value === savedVeh) vs.dispatchEvent(new Event('change')); }
+  } catch (e) {}
 }
 </script>
 </body>

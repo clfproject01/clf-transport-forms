@@ -78,6 +78,18 @@
 
   .form-title { font-size: 30px; font-weight: 600; color: var(--white); letter-spacing: 1px; line-height: 1; margin: 0; position: relative; z-index: 1; }
   .form-subtitle { font-size: 12px; color: rgba(255,255,255,0.85); position: relative; z-index: 1; line-height: 1.5; }
+  /* branch label — prominent so a driver on the wrong link notices (label, not a control) */
+  .branch-label {
+    display: inline-block;
+    font-size: 14px; font-weight: 600;
+    color: var(--navy);
+    background: var(--white);
+    border-radius: 8px;
+    padding: 2px 10px;
+    margin-left: 6px;
+    letter-spacing: 0.5px;
+    vertical-align: middle;
+  }
 
   .form-body { flex: 1; background: var(--white); padding: 24px 20px 32px; }
 
@@ -220,7 +232,7 @@
       </div>
       <div>
         <div class="company-name">CLF Trading Sdn. Bhd.</div>
-        <div class="company-reg">557522-A · Mentakab, Pahang</div>
+        <div class="company-reg" id="companyReg">557522-A · Mentakab, Pahang</div>
       </div>
     </div>
     <div class="form-identity">
@@ -228,7 +240,7 @@
         <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
       </div>
       <div>
-        <div class="form-title">POD</div>
+        <div class="form-title">POD <span id="branchLabel" class="branch-label">Mentakab</span></div>
         <div class="form-subtitle">Proof of Delivery · Bukti Penghantaran</div>
       </div>
     </div>
@@ -278,22 +290,6 @@
         <label>Vehicle Number · Nombor Kenderaan <span class="req">*</span></label>
         <select id="vehicleNo" required>
           <option value="">— Select vehicle · Pilih kenderaan —</option>
-          <option>KER 9223</option>
-          <option>RY 7233</option>
-          <option>CDQ 9098</option>
-          <option>CDA 3633</option>
-          <option>CDU 2133</option>
-          <option>CDK 8878</option>
-          <option>RX 8733</option>
-          <option>CDX 6233</option>
-          <option>JUM 1033</option>
-          <option>SMB 7633</option>
-          <option>VFE 9633</option>
-          <option>VHT 4642</option>
-          <option>VQD 6864</option>
-          <option>CCY 9233</option>
-          <option>VJX 5786</option>
-          <option>SYS 4642</option>
         </select>
         <div class="error-msg" id="err-vehicle">Please select a vehicle · Sila pilih kenderaan</div>
       </div>
@@ -374,6 +370,10 @@
 <script>
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxabHh2Kd04z7k0zZOOoaJs2i5hgycQsO_AYoRS99xZx2WqMJ6cowumY0e1znehiRM1/exec';
 
+// Branch — read ONCE from the URL (?branch=KTN). Old MTK bookmarks with no param default to MTK.
+var BRANCH = (new URLSearchParams(location.search).get('branch') || 'MTK').toUpperCase();
+var BRANCH_DISPLAY = { MTK: 'Mentakab', KTN: 'Kuantan' };
+
 // V17: Dynamically loaded from backend /getDrivers — empty until fetchDrivers() resolves
 let STAFF_IDS = {};
 let ROSTER = [];   // [{name, staffId}] — drives the searchable Staff-ID picker
@@ -418,7 +418,7 @@ function wireDriverPicker(searchId, hiddenId, panelId, badgeId, onPick){
   search._pick = pick;
 }
 
-const ROSTER_CACHE_KEY = 'clf_roster_cache';   // last good roster — picker still works in a dead zone
+const ROSTER_CACHE_KEY = 'clf_roster_cache_' + BRANCH;   // last good roster (per-branch) — picker still works in a dead zone
 
 function _applyRoster(drivers){
   STAFF_IDS = {}; ROSTER = drivers.slice();
@@ -439,7 +439,7 @@ function _applyRoster(drivers){
 
 async function fetchAndPopulateDrivers(isRetry) {
   try {
-    const res = await fetch(SCRIPT_URL + '?action=getDrivers', { method: 'GET' });
+    const res = await fetch(SCRIPT_URL + '?action=getDrivers&branch=' + encodeURIComponent(BRANCH), { method: 'GET' });
     const data = await res.json();
     if (!data || data.status !== 'ok' || !Array.isArray(data.drivers) || data.drivers.length === 0) {
       throw new Error('Empty driver roster from server');
@@ -464,19 +464,57 @@ async function fetchAndPopulateDrivers(isRetry) {
 }
 
 // (driver Staff-ID confirmation is now handled inside wireDriverPicker)
-const STORAGE_KEY = 'clf_driver_name';
-const VEHICLE_KEY = 'clf_pod_vehicle';   // B5: cheap Androids evict the tab when the camera opens
+// localStorage keys are namespaced per branch so a KTN phone never shows a remembered MTK driver/vehicle.
+const STORAGE_KEY = 'clf_driver_name_' + BRANCH;
+const VEHICLE_KEY = 'clf_pod_vehicle_' + BRANCH;   // B5: cheap Androids evict the tab when the camera opens (per-branch key)
+
+// Fetch the branch-scoped lorry list from Apps Script (replaces the old hardcoded <option> plates).
+// This ONLY populates the option list — restoring the remembered vehicle (and firing the shipment
+// check + crew auto-fill) is owned by window.onload below, so it runs AFTER the options exist.
+// Mirrors the Fuel form's fetchVehicles() fetch/error style.
+async function fetchVehicles() {
+  var sel = document.getElementById('vehicleNo');
+  if (!sel) return;
+  try {
+    const res = await fetch(SCRIPT_URL + '?action=getVehicles&branch=' + encodeURIComponent(BRANCH), { method: 'GET' });
+    const data = await res.json();
+    if (!data || data.status !== 'ok' || !Array.isArray(data.vehicles) || data.vehicles.length === 0) {
+      throw new Error('Empty vehicle list from server');
+    }
+    // Keep the placeholder, append the branch's plates.
+    sel.innerHTML = '<option value="">— Select vehicle · Pilih kenderaan —</option>';
+    data.vehicles.forEach(function(plate){
+      var o = document.createElement('option');
+      o.value = plate; o.textContent = plate;
+      sel.appendChild(o);
+    });
+  } catch (err) {
+    console.error('fetchVehicles failed:', err);
+    // No hardcoded fallback — show a clear refresh state rather than a silently-empty dropdown.
+    sel.innerHTML = '<option value="">⚠ 请刷新 · Sila refresh</option>';
+  }
+}
 
 window.onload = function() {
+  // Branch label in the header — prominent so a driver on the wrong link notices.
+  var branchName = BRANCH_DISPLAY[BRANCH] || BRANCH;
+  var bl = document.getElementById('branchLabel'); if (bl) bl.textContent = branchName;
+  var cr = document.getElementById('companyReg'); if (cr) cr.textContent = '557522-A · ' + branchName + ', Pahang';
+
   // Kuala Lumpur timezone — fixes early-morning bug
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
   document.getElementById('deliveryDate').value = today;
   document.getElementById('deliveryDate').max = today;
 
   // V17: Fetch driver list from backend; this also restores remembered driver.
-  // B5: restore the last vehicle AFTER the roster settles — restoring first made the
-  // crew auto-fill a silent no-op (ROSTER empty + pickers not wired yet = race).
-  fetchAndPopulateDrivers().finally(function(){
+  // Branch-scoped lorry list (replaces the old hardcoded plates) loads in parallel.
+  // B5: restore the last vehicle AFTER BOTH the roster settles AND the vehicle options exist —
+  // restoring first made the crew auto-fill a silent no-op (ROSTER empty + pickers not wired yet),
+  // and would set vs.value before the <option> existed so it wouldn't stick.
+  Promise.all([
+    fetchAndPopulateDrivers().catch(function(){}),
+    fetchVehicles().catch(function(){})
+  ]).finally(function(){
     try{
       var savedVeh = localStorage.getItem(VEHICLE_KEY);
       if (savedVeh){
@@ -659,6 +697,7 @@ async function submitForm() {
     const now = new Date();
     const payload = {
       formType: 'POD',
+      branch: BRANCH,
       timestamp: now.toISOString(),
       deliveryDate: document.getElementById('deliveryDate').value,
       driverName: document.getElementById('driverName').value,
@@ -956,7 +995,7 @@ async function saveDelivery(i){
     // A3: send a clientToken and poll the read-back endpoint for the REAL result —
     // no-cors alone can't see server errors, so before this fix a failed save still showed "Delivered".
     var token = 'pod_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
-    var payload = { formType:'SUBMIT_POD_FOR_INVOICE', shipmentKey:_shipKey, invoiceNos:pendingInvs,
+    var payload = { formType:'SUBMIT_POD_FOR_INVOICE', branch: BRANCH, shipmentKey:_shipKey, invoiceNos:pendingInvs,
       driverName: _drv, secondDriver: _sd,
       vehicleNo: document.getElementById('vehicleNo').value, deliveryDate: document.getElementById('deliveryDate').value,
       timestamp: now.toISOString(), photos: photos, clientToken: token };

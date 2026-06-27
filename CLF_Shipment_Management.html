@@ -111,7 +111,7 @@ input[type=date]{ font-family:inherit; font-size:var(--text-body); padding:8px 1
 <body>
 <header class="header">
   <div class="header-inner">
-    <div class="header-title">CLF <span>Shipment</span> Management</div>
+    <div class="header-title">CLF <span>Shipment</span> Management <span id="branchBadge" class="badge badge-assigned" style="vertical-align:middle;margin-left:6px;">—</span></div>
     <a class="header-link" href="CLF_Dashboard.html">← Dashboard</a>
   </div>
 </header>
@@ -143,6 +143,11 @@ input[type=date]{ font-family:inherit; font-size:var(--text-body); padding:8px 1
 <script>
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxabHh2Kd04z7k0zZOOoaJs2i5hgycQsO_AYoRS99xZx2WqMJ6cowumY0e1znehiRM1/exec';
 
+// Branch isolation: Wayne opens ?branch=KTN (Kuantan), Nich ?branch=MTK (Mentakab).
+// Read once at load; defaults to MTK. Scopes the crew driver list + stamps crew writes.
+var BRANCH = (new URLSearchParams(location.search).get('branch') || 'MTK').toUpperCase();
+var BRANCH_LABEL = { MTK: 'Mentakab', KTN: 'Kuantan' }[BRANCH] || BRANCH;
+
 let _drivers = [];     // [{name, staffId}]
 let _date = '';
 
@@ -163,7 +168,7 @@ function showToast(msg, type){
 // ── data loads ──
 async function loadDrivers(){
   try{
-    const res = await fetch(SCRIPT_URL + '?action=getDrivers');
+    const res = await fetch(SCRIPT_URL + '?action=getDrivers&branch=' + encodeURIComponent(BRANCH));
     const data = await res.json();
     _drivers = (data && data.drivers) ? data.drivers : [];
   }catch(e){ _drivers = []; showToast('Could not load driver list — assignment dropdowns may be empty.', 'warning'); }
@@ -175,7 +180,7 @@ async function loadShipments(useCache){
   try{
     // Default is FRESH (bypass the 90s server cache) so a just-imported / deleted shipment shows
     // immediately. Only the initial page load + date-flip opt into the cache (useCache=true) for speed.
-    const res = await fetch(SCRIPT_URL + '?action=getShipmentsForDate&date=' + encodeURIComponent(_date) + (useCache ? '' : '&fresh=1'));
+    const res = await fetch(SCRIPT_URL + '?action=getShipmentsForDate&date=' + encodeURIComponent(_date) + '&branch=' + encodeURIComponent(BRANCH) + (useCache ? '' : '&fresh=1'));
     const data = await res.json();
     if(!data || data.status !== 'ok'){ list.innerHTML = '<div class="empty"><div class="e-title">Could not load</div>'+escHtml((data&&data.message)||'Unexpected response')+'</div>'; return; }
     renderShipments(data.shipments || []);
@@ -321,6 +326,7 @@ async function saveCrew(shipmentNo, primary, secondary, btn, l2primary, l2second
       + '&shipmentNo=' + encodeURIComponent(shipmentNo)
       + '&primary='    + encodeURIComponent(primary)
       + '&secondary='  + encodeURIComponent(secondary || '')
+      + '&branch='     + encodeURIComponent(BRANCH)
       + (l2primary !== null ? ('&lorry2Primary=' + encodeURIComponent(l2primary || '') + '&lorry2Secondary=' + encodeURIComponent(l2secondary || '')) : '');
     const res = await fetch(url);
     const data = await res.json();
@@ -539,6 +545,10 @@ document.getElementById('refreshBtn').addEventListener('click', () => loadShipme
 document.getElementById('dateInput').addEventListener('change', e => { _date = e.target.value || todayStr(); loadShipments(true); });  // cached: just navigating dates
 
 (async function init(){
+  // Branch badge so the supervisor sees which branch they're managing
+  const badge = document.getElementById('branchBadge');
+  if (badge) badge.textContent = BRANCH_LABEL + ' · ' + BRANCH;
+
   _date = todayStr();
   document.getElementById('dateInput').value = _date;
   await loadDrivers();

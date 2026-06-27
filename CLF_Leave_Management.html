@@ -403,7 +403,7 @@ body {
     <div class="header-left">
       <div class="header-logo">CLF</div>
       <div>
-        <div class="header-title">Leave Management</div>
+        <div class="header-title">Leave Management <span id="branchBadge" class="badge badge-info" style="vertical-align:middle;margin-left:6px;font-size:11px;">—</span></div>
         <div class="header-sub">Mark driver leave &amp; toggle holidays</div>
       </div>
     </div>
@@ -512,6 +512,11 @@ body {
 // ============================================================
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxabHh2Kd04z7k0zZOOoaJs2i5hgycQsO_AYoRS99xZx2WqMJ6cowumY0e1znehiRM1/exec';
 
+// Branch isolation: Wayne opens ?branch=KTN (Kuantan), Nich ?branch=MTK (Mentakab).
+// Read once at load; defaults to MTK. Scopes the driver list + stamps writes.
+var BRANCH = (new URLSearchParams(location.search).get('branch') || 'MTK').toUpperCase();
+var BRANCH_LABEL = { MTK: 'Mentakab', KTN: 'Kuantan' }[BRANCH] || BRANCH;
+
 // ============================================================
 // HELPERS
 // ============================================================
@@ -558,7 +563,7 @@ async function loadLeaveData() {
   if (_loadInFlight) return;
   _loadInFlight = true;
   try {
-    const url = SCRIPT_URL + '?action=getDashboardData&view=daily';
+    const url = SCRIPT_URL + '?action=getDashboardData&view=daily&branch=' + encodeURIComponent(BRANCH);
     const res = await fetch(url, { method: 'GET' });
     const data = await res.json();
     if (data && data.status === 'ok') {
@@ -707,7 +712,8 @@ async function submitLeaveRange() {
       + '&endDate=' + encodeURIComponent(endDate)
       + '&leaveType=' + encodeURIComponent(leaveType)
       + '&remarks=' + encodeURIComponent(remarks || '')
-      + '&markedBy=LEAVE_MGMT';
+      + '&markedBy=LEAVE_MGMT'
+      + '&branch=' + encodeURIComponent(BRANCH);
     const res = await fetch(url);
     const json = await res.json();
     if (json.status === 'success' || json.status === 'ok' || json.status === 'partial') {
@@ -771,6 +777,10 @@ async function toggleHoliday(date, leaveType, newStatus, btn) {
 // INIT
 // ============================================================
 window.addEventListener('DOMContentLoaded', () => {
+  // Branch badge so the supervisor sees which branch they're managing
+  const badge = document.getElementById('branchBadge');
+  if (badge) badge.textContent = BRANCH_LABEL + ' · ' + BRANCH;
+
   // Default start/end dates to today (Asia/Kuala_Lumpur)
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
   const ds = document.getElementById('mlrStart');

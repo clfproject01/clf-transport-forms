@@ -27,6 +27,8 @@
   .seg-btn{font-family:inherit;font-size:13px;font-weight:600;padding:6px 16px;border:0;background:#fff;color:var(--gray-500);cursor:pointer;}
   .seg-btn+.seg-btn{border-left:1px solid var(--gray-200);}
   .seg-btn.active{background:var(--gray-900);color:#fff;}
+  /* Branch toggle — distinct blue active state so it reads apart from the dark view toggle */
+  .seg.seg-branch .seg-btn.active{background:#1A56DB;color:#fff;}
   .refresh-btn{font-family:inherit;font-size:13px;font-weight:600;padding:6px 14px;border:1px solid var(--gray-200);border-radius:8px;background:#fff;color:var(--gray-700);cursor:pointer;}
 
   .banner{display:none;background:var(--red-50);border:1px solid var(--red-500);color:var(--red-700);font-size:13px;padding:9px 13px;border-radius:8px;margin-bottom:14px;}
@@ -134,6 +136,11 @@
       <button class="seg-btn active" data-view="daily">Daily</button>
       <button class="seg-btn" data-view="weekly">Weekly</button>
       <button class="seg-btn" data-view="monthly">Monthly</button>
+    </div>
+    <div class="seg seg-branch" id="branchSeg">
+      <button class="seg-btn active" data-branch="ALL" title="All branches">All</button>
+      <button class="seg-btn" data-branch="MTK" title="Mentakab (MTK)">MTK</button>
+      <button class="seg-btn" data-branch="KTN" title="Kuantan (KTN)">KTN</button>
     </div>
     <button class="refresh-btn" id="refreshBtn">↻ Refresh</button>
     <span class="meta" id="lastRefresh"></span>
@@ -290,6 +297,11 @@
   var selectedView = 'daily';
   function fmtToday(){ var d=new Date(); var m=('0'+(d.getMonth()+1)).slice(-2), day=('0'+d.getDate()).slice(-2); return d.getFullYear()+'-'+m+'-'+day; }
   var selectedDate = fmtToday();
+  // Branch filter — reads ?branch=MTK|KTN|ALL from the URL (default ALL = all branches combined).
+  // A Wayne-style link ?branch=KTN opens the dashboard pre-filtered to Kuantan.
+  var selectedBranch = (new URLSearchParams(location.search).get('branch')||'ALL').toUpperCase();
+  if(['ALL','MTK','KTN'].indexOf(selectedBranch)<0) selectedBranch = 'ALL';
+  function branchLabel(){ return selectedBranch==='MTK' ? 'Mentakab (MTK)' : selectedBranch==='KTN' ? 'Kuantan (KTN)' : 'All branches'; }
 
   function $(id){ return document.getElementById(id); }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
@@ -345,17 +357,20 @@
 
   function load(forceFresh){
     hideErr();
-    $('dashMeta').textContent = 'Loading…';
+    var _h1 = document.querySelector('.topbar h1');
+    if(_h1) _h1.textContent = 'CLF Fleet Dashboard' + (selectedBranch==='ALL' ? '' : ' · ' + branchLabel());
+    $('dashMeta').textContent = 'Loading… · ' + branchLabel();
     var seq = ++LOAD_SEQ;
     var periodParam = selectedView==='daily'  ? ('&date='+encodeURIComponent(selectedDate))
                     : selectedView==='weekly' ? ('&period='+encodeURIComponent(isoWeekKey(selectedDate)))
                     :                            ('&period='+encodeURIComponent(selectedDate.slice(0,7)));
     var fp = forceFresh ? '&fresh=1' : '';   // ↻ Refresh forces the backend to skip its ~90s cache
+    var bp = '&branch=' + encodeURIComponent(selectedBranch);   // branch filter rides on every read (ALL = combined)
     Promise.all([
-      api(['action=getDashboardData','view='+selectedView + periodParam + fp]).catch(function(){return null;}),
-      api(['action=getShipmentsForDate','date='+encodeURIComponent(selectedDate) + fp]).catch(function(){return null;}),
-      api(['action=getFuelOps','view='+selectedView + periodParam + fp]).catch(function(){return null;}),
-      api(['action=getLeaveToday']).catch(function(){return null;})
+      api(['action=getDashboardData','view='+selectedView + periodParam + bp + fp]).catch(function(){return null;}),
+      api(['action=getShipmentsForDate','date='+encodeURIComponent(selectedDate) + bp + fp]).catch(function(){return null;}),
+      api(['action=getFuelOps','view='+selectedView + periodParam + bp + fp]).catch(function(){return null;}),
+      api(['action=getLeaveToday' + bp]).catch(function(){return null;})
     ]).then(function(res){
       if(seq !== LOAD_SEQ) return;   // a newer load started — drop this stale response
       // A1: a backend {status:'error'} (HTTP 200) must NOT render as a green "all good" day —
@@ -378,12 +393,16 @@
   }
 
   function renderTop(ship, fuel){
+    // Reflect the branch selection in the title and the meta line, keeping the date/lorry-count text.
+    var bSuffix = ' · ' + branchLabel();
+    var h1 = document.querySelector('.topbar h1');
+    if(h1) h1.textContent = 'CLF Fleet Dashboard' + (selectedBranch==='ALL' ? '' : ' · ' + branchLabel());
     if(ship){
       var routes = ship.shipments || [];
       var n = routes.length + routes.filter(function(s){ return s.lorry2; }).length;  // +1 per shared route's 2nd lorry
-      $('dashMeta').textContent = selectedDate + ' · ' + n + ' lorries dispatched';
+      $('dashMeta').textContent = selectedDate + ' · ' + n + ' lorries dispatched' + bSuffix;
     } else {
-      $('dashMeta').textContent = selectedDate + ' · data unavailable';   // NOT "0 lorries" — that reads as a real zero
+      $('dashMeta').textContent = selectedDate + ' · data unavailable' + bSuffix;   // NOT "0 lorries" — that reads as a real zero
     }
     // B2: the POD half is daily-only — flag it loudly in Weekly/Monthly so the boss doesn't
     // read a single day's delivery % as the weekly/monthly number.
@@ -863,6 +882,11 @@
     $('dateInput').value = selectedDate;
     $('dateInput').addEventListener('change', function(){ selectedDate=this.value||fmtToday(); load(); });
     $('viewSeg').querySelectorAll('.seg-btn').forEach(function(b){ b.addEventListener('click', function(){ $('viewSeg').querySelectorAll('.seg-btn').forEach(function(x){x.classList.remove('active');}); b.classList.add('active'); selectedView=b.getAttribute('data-view'); load(); }); });
+    // Branch toggle — init the active button from selectedBranch (URL-driven), then reload on change
+    $('branchSeg').querySelectorAll('.seg-btn').forEach(function(b){
+      b.classList.toggle('active', b.getAttribute('data-branch')===selectedBranch);
+      b.addEventListener('click', function(){ $('branchSeg').querySelectorAll('.seg-btn').forEach(function(x){x.classList.remove('active');}); b.classList.add('active'); selectedBranch=b.getAttribute('data-branch'); load(); });
+    });
     $('refreshBtn').addEventListener('click', function(){ load(true); });
     wireCollapse('crewToggle','crewBody','crewCaret');
     wireCollapse('routeToggle','routeBody','routeCaret');
