@@ -491,7 +491,7 @@ async function fetchVehicles() {
   } catch (err) {
     console.error('fetchVehicles failed:', err);
     // No hardcoded fallback — show a clear refresh state rather than a silently-empty dropdown.
-    sel.innerHTML = '<option value="">⚠ 请刷新 · Sila refresh</option>';
+    sel.innerHTML = '<option value="">⚠ Refresh · Sila muat semula</option>';
   }
 }
 
