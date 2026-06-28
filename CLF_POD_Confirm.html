@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Confirm Delivery · CLF</title>
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;background:#f4f5f7;color:#15233b;font-family:'Segoe UI',Roboto,-apple-system,Arial,sans-serif;font-size:15px;line-height:1.5;}
+  .wrap{max-width:520px;margin:0 auto;padding:16px 14px 48px;}
+  .hd{padding:6px 2px 14px;}
+  .hd .co{font-size:17px;font-weight:700;}
+  .hd .sub{font-size:12px;color:#5b6675;}
+  .card{background:#fff;border:1px solid #e1e4e8;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.05);}
+  .lbl{font-size:11px;color:#7a8694;text-transform:uppercase;letter-spacing:.4px;}
+  .big{font-size:18px;font-weight:700;margin-top:1px;}
+  .meta{font-size:13px;color:#33414f;margin-top:3px;}
+  .inv{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #eef0f3;cursor:pointer;}
+  .inv:last-of-type{border-bottom:none;}
+  .inv input[type=checkbox]{width:22px;height:22px;flex:0 0 auto;}
+  .inv .no{font-weight:600;font-family:Consolas,Menlo,monospace;font-size:14px;}
+  .inv .amt{margin-left:auto;font-weight:600;}
+  .inv.done{opacity:.55;}
+  .donetag{font-size:11px;color:#0f6e56;background:#e1f5ee;border-radius:5px;padding:1px 6px;margin-left:6px;}
+  .total{display:flex;justify-content:space-between;padding-top:12px;margin-top:8px;border-top:2px solid #15233b;font-weight:700;font-size:16px;}
+  .photo{display:block;width:100%;padding:20px;text-align:center;border:2px dashed #c3c9d2;border-radius:12px;background:#fafbfc;color:#5b6675;font-weight:600;cursor:pointer;}
+  .photo.has{border-style:solid;border-color:#1d9e75;color:#0f6e56;}
+  .photo img{max-width:100%;max-height:240px;border-radius:8px;margin-top:10px;display:block;}
+  .btn{display:block;width:100%;padding:16px;border:none;border-radius:12px;background:#1A56DB;color:#fff;font-size:16px;font-weight:700;cursor:pointer;margin-top:4px;}
+  .btn:disabled{opacity:.5;}
+  .note{font-size:12.5px;color:#5b6675;line-height:1.6;}
+  .msg{padding:18px;border-radius:12px;text-align:center;font-size:15px;line-height:1.7;}
+  .msg.ok{background:#e1f5ee;color:#0f6e56;}
+  .msg.err{background:#fcebeb;color:#a32d2d;}
+  .hide{display:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hd"><div class="co">CLF Trading Sdn. Bhd.</div><div class="sub">Confirm delivery · Sahkan penghantaran</div></div>
+  <div id="body"><div class="card msg">Loading… · Memuatkan…</div></div>
+</div>
+<script>
+  var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxabHh2Kd04z7k0zZOOoaJs2i5hgycQsO_AYoRS99xZx2WqMJ6cowumY0e1znehiRM1/exec';
+  var G = null, PHOTO = null;
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function money(n){ n=Number(n)||0; return n.toLocaleString('en-MY',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function show(html){ $('body').innerHTML = html; }
+
+  function start(){
+    var g = new URLSearchParams(location.search).get('g') || '';
+    if(!g){ show('<div class="card msg err">No code · Tiada kod.<br><span class="note">Scan the QR on the combination invoice. · Imbas kod QR pada invois gabungan.</span></div>'); return; }
+    fetch(SCRIPT_URL + '?action=getCombinationGroupByToken&g=' + encodeURIComponent(g))
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if(!d || d.status!=='ok'){ show('<div class="card msg err">⚠ '+esc((d&&d.message)||'Invalid or expired code · Kod tidak sah')+'<br><span class="note">Use the POD form instead. · Guna borang POD.</span></div>'); return; }
+        if(!d.invoices || !d.invoices.length){ show('<div class="card msg err">No invoices for this code · Tiada invois untuk kod ini.</div>'); return; }
+        G = d; renderForm();
+      })
+      .catch(function(){ show('<div class="card msg err">Cannot reach server · Tidak dapat sambung pelayan.<br><span class="note">Check internet, reload. · Semak internet, muat semula.</span></div>'); });
+  }
+
+  function renderForm(){
+    var pending = G.invoices.filter(function(x){ return x.status!=='delivered'; });
+    var rows = G.invoices.map(function(iv){
+      var done = iv.status==='delivered';
+      return '<label class="inv'+(done?' done':'')+'">'
+        + '<input type="checkbox" class="ivchk" data-no="'+esc(iv.invoiceNo)+'" '+(done?'checked disabled':'checked')+'>'
+        + '<span class="no">'+esc(iv.invoiceNo)+(done?'<span class="donetag">delivered</span>':'')+'</span>'
+        + '<span class="amt">RM '+money(iv.amount)+'</span></label>';
+    }).join('');
+    var tot = G.invoices.reduce(function(a,x){ return a+(Number(x.amount)||0); },0);
+    show(
+      '<div class="card">'
+        + '<div class="lbl">Customer · Pelanggan</div><div class="big">'+esc(G.customer||'-')+'</div>'
+        + '<div class="meta">Station · Stesen: '+esc(G.area||'-')+'</div>'
+        + '<div class="meta">Lorry · Lori: '+esc(G.lorryNo||'-')+'  ·  Driver · Pemandu: '+esc(G.driver||'-')+'</div>'
+      + '</div>'
+      + '<div class="card">'
+        + '<div class="lbl" style="margin-bottom:4px;">Invoices received · Invois diterima</div>'
+        + rows
+        + '<div class="total"><span>Total · Jumlah</span><span>RM '+money(tot)+'</span></div>'
+        + '<div class="note" style="margin-top:10px;">Untick any the customer did NOT take. · Buang tanda bagi yang pelanggan tidak ambil.</div>'
+      + '</div>'
+      + '<div class="card">'
+        + '<div class="lbl" style="margin-bottom:10px;">Photo of the signed invoice · Foto invois bertandatangan</div>'
+        + '<label class="photo" id="photoBox"><span id="photoTxt">📷 Tap to take photo · Ketik untuk ambil gambar</span>'
+        + '<input type="file" accept="image/*" capture="environment" id="photoIn" class="hide"></label>'
+      + '</div>'
+      + '<button class="btn" id="submitBtn">✓ Confirm delivery · Sahkan</button>'
+      + '<div class="note" style="text-align:center;margin-top:12px;">'+pending.length+' to confirm · '+pending.length+' untuk disahkan</div>'
+    );
+    $('photoIn').addEventListener('change', onPhoto);
+    $('submitBtn').addEventListener('click', submit);
+  }
+
+  function onPhoto(e){
+    var f = e.target.files && e.target.files[0]; if(!f) return;
+    var rd = new FileReader();
+    rd.onload = function(){
+      PHOTO = { base64: String(rd.result).split(',')[1], name: 'cmb_signed.jpg', type: f.type||'image/jpeg' };
+      $('photoBox').classList.add('has');
+      $('photoTxt').innerHTML = '✓ Photo taken · Gambar diambil<br><img src="'+rd.result+'" alt="signed invoice">';
+    };
+    rd.readAsDataURL(f);
+  }
+
+  async function submit(){
+    var checked = Array.prototype.slice.call(document.querySelectorAll('.ivchk:checked:not(:disabled)')).map(function(c){ return c.getAttribute('data-no'); });
+    if(!checked.length){ alert('Tick at least one invoice. · Tanda sekurang-kurangnya satu invois.'); return; }
+    if(!PHOTO){ alert('Take a photo of the signed invoice first. · Ambil gambar invois bertandatangan dahulu.'); return; }
+    var btn = $('submitBtn'); btn.disabled = true; var old = btn.textContent; btn.textContent = 'Submitting… · Menghantar…';
+    var res = await postWrite({
+      formType: 'SUBMIT_POD_FOR_INVOICE',
+      shipmentKey: G.shipmentKey, invoiceNos: checked,
+      driverName: G.driver, secondDriver: G.secondDriver, vehicleNo: G.lorryNo,
+      deliveryDate: G.shipDate, timestamp: new Date().toISOString(),
+      branch: G.branch, photos: [PHOTO]
+    });
+    if(res && res.status==='success'){
+      show('<div class="card msg ok">✓ Confirmed! · Berjaya!<br><b>'+(res.delivered!=null?res.delivered:checked.length)+'</b> invoice(s) marked delivered.<br><span class="note">'+esc(G.customer||'')+' · '+esc(G.area||'')+'</span></div>');
+    } else {
+      btn.disabled = false; btn.textContent = old;
+      alert('⚠ ' + ((res&&res.message) || 'Failed, try again. · Gagal, cuba lagi.'));
+    }
+  }
+
+  async function postWrite(payload){
+    var ct = 'cmb_' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
+    payload.clientToken = ct;
+    try{
+      await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(payload) });
+    }catch(e){ return { status:'error', message:'Network error · Ralat rangkaian' }; }
+    for(var i=0;i<10;i++){
+      await new Promise(function(r){ setTimeout(r,1500); });
+      try{
+        var res = await fetch(SCRIPT_URL + '?action=getImportResult&token=' + encodeURIComponent(ct));
+        var data = await res.json();
+        if(data && data.status && data.status !== 'pending') return data;
+      }catch(e){}
+    }
+    return { status:'error', message:'Timeout, check the dashboard · Tamat masa, semak dashboard' };
+  }
+
+  start();
+</script>
+</body>
+</html>
