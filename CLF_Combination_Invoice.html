@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CLF Combination Invoice &middot; Print</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; background:#eef0f3; color:#15233b; font-family:'Segoe UI', Roboto, Arial, sans-serif; }
+  .bar { position:sticky; top:0; z-index:10; background:#fff; border-bottom:1px solid #d6dae0; padding:12px 16px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  .bar label { font-size:13px; color:#5b6675; font-weight:600; }
+  .bar input, .bar select { font-family:inherit; font-size:14px; padding:7px 10px; border:1px solid #c3c9d2; border-radius:7px; }
+  .bar button { font-family:inherit; font-size:14px; font-weight:600; padding:8px 16px; border-radius:7px; border:1px solid #1A56DB; background:#1A56DB; color:#fff; cursor:pointer; }
+  .bar button.sec { background:#fff; color:#1A56DB; }
+  .bar button:disabled { opacity:.5; cursor:default; }
+  .count { font-size:13px; color:#5b6675; margin-left:auto; }
+  .msg { max-width:760px; margin:40px auto; padding:18px 22px; background:#fff; border:1px solid #d6dae0; border-radius:10px; color:#5b6675; font-size:15px; line-height:1.6; text-align:center; }
+  .sheets { padding:18px 0 60px; }
+
+  .sheet { width:210mm; min-height:297mm; margin:0 auto 18px; background:#fff; padding:14mm; box-shadow:0 1px 6px rgba(0,0,0,.12); font-size:12.5px; }
+  .lh { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #15233b; padding-bottom:10px; }
+  .lh .co { font-size:19px; font-weight:700; letter-spacing:.3px; }
+  .lh .reg { font-size:11px; color:#5b6675; margin-top:1px; }
+  .lh .addr { font-size:11.5px; color:#33414f; line-height:1.5; margin-top:4px; max-width:118mm; }
+  .lh .doc { text-align:right; white-space:nowrap; }
+  .lh .doc .t { font-size:16px; font-weight:700; color:#1A56DB; }
+  .lh .doc .ts { font-size:11px; color:#5b6675; }
+  .lh .doc .no { font-size:12px; margin-top:8px; }
+  .lh .doc .no b { font-size:13px; }
+
+  .meta { display:flex; justify-content:space-between; gap:20px; padding:10px 0; border-bottom:1px solid #cdd5df; }
+  .meta .lbl { font-size:10.5px; color:#7a8694; text-transform:uppercase; letter-spacing:.4px; }
+  .meta .val { font-size:14px; font-weight:600; }
+  .meta .sub { font-size:12px; color:#33414f; margin-top:2px; }
+  .meta table td { padding:1px 0; font-size:12px; color:#5b6675; }
+  .meta table td.v { padding-left:18px; color:#15233b; font-weight:600; text-align:right; }
+
+  table.inv { width:100%; border-collapse:collapse; margin-top:10px; }
+  table.inv th { text-align:left; font-size:11px; color:#5b6675; font-weight:700; border-bottom:1.5px solid #15233b; padding:7px 6px; }
+  table.inv td { font-size:12.5px; padding:6px 6px; border-bottom:1px solid #e4e8ee; }
+  table.inv th.r, table.inv td.r { text-align:right; }
+  table.inv th.n, table.inv td.n { width:36px; color:#7a8694; }
+  table.inv tfoot td { border-top:2px solid #15233b; border-bottom:none; font-weight:700; font-size:13.5px; padding-top:9px; }
+
+  .decl { margin-top:14px; font-size:11.5px; color:#33414f; line-height:1.5; }
+  .decl i { color:#5b6675; }
+
+  .foot { display:flex; gap:24px; margin-top:32px; }
+  .foot > div { display:flex; flex-direction:column; justify-content:flex-end; }
+  .foot .sig { flex:1; }
+  .foot .sig .box { height:50px; border-bottom:1px solid #15233b; }
+  .foot .qr { flex:0 0 30mm; text-align:center; }
+  .foot .qr img { width:28mm; height:28mm; display:block; margin:0 auto; border:1px solid #e4e8ee; }
+  .foot .cap { font-size:10.5px; color:#5b6675; margin-top:6px; line-height:1.45; min-height:2.9em; }
+
+  @page { size:A4; margin:0; }
+  @media print {
+    body { background:#fff; }
+    .bar, .msg.screen { display:none !important; }
+    .sheets { padding:0; }
+    .sheet { width:auto; min-height:auto; margin:0; padding:14mm; box-shadow:none; page-break-after:always; }
+    .sheet:last-child { page-break-after:auto; }
+  }
+</style>
+</head>
+<body>
+  <div class="bar">
+    <label>Date &middot; Tarikh</label><input type="date" id="date">
+    <label>Branch &middot; Cawangan</label>
+    <select id="branch"><option value="ALL">All &middot; Semua</option><option value="MTK">MTK &middot; Mentakab</option><option value="KTN">KTN &middot; Kuantan</option></select>
+    <label>Lorry &middot; Lori</label><input type="text" id="lorry" placeholder="(optional &middot; pilihan)" style="width:120px;">
+    <button id="load">Load &middot; Muat</button>
+    <button id="print" class="sec" disabled>Print all &middot; Cetak semua</button>
+    <span class="count" id="count"></span>
+  </div>
+  <div id="out" class="sheets"></div>
+
+<script>
+  var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxabHh2Kd04z7k0zZOOoaJs2i5hgycQsO_AYoRS99xZx2WqMJ6cowumY0e1znehiRM1/exec';
+  var CONFIRM_BASE = 'https://clfproject01.github.io/clf-transport-forms/CLF_POD_Confirm.html';
+  var BRANCH = {
+    MTK: { name:'CLF Trading Sdn. Bhd.', addr:'No. 3-5, Jalan Dagang 2/1, Taman Perindustrian Temerloh, 28400 Mentakab, Pahang', tel:'Tel 09-270 1688 / 017-978 6300', email:'clfmentakab@gmail.com' },
+    KTN: { name:'CLF Trading Sdn. Bhd.', addr:'No. 27, Lorong IM 3/1, Kawasan Perindustrian Ringan IM, Bandar Indera Mahkota, 25200 Kuantan, Pahang', tel:'Tel 09-573 2888 / 09-573 6668 &middot; Fax 09-573 2228', email:'clfkuantan@gmail.com' }
+  };
+  var REG = 'Reg. 0557522A (200101021764)';
+
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function money(n){ n = Number(n)||0; return n.toLocaleString('en-MY', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+  function ddmmyyyy(ymd){ var m = String(ymd||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? (m[3]+'/'+m[2]+'/'+m[1]) : String(ymd||''); }
+  function todayYmd(){ var d=new Date(), z=function(x){return ('0'+x).slice(-2);}; return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate()); }
+  function msg(html, screenOnly){ $('out').innerHTML = '<div class="msg'+(screenOnly?' screen':'')+'">'+html+'</div>'; }
+
+  function load(){
+    var date = $('date').value || todayYmd();
+    var branch = $('branch').value || 'ALL';
+    var lorry = $('lorry').value.trim();
+    $('load').disabled = true; $('print').disabled = true; $('count').textContent = '';
+    msg('Loading&hellip; &middot; Memuatkan&hellip;', true);
+    var url = SCRIPT_URL + '?action=getCombinationGroups&date=' + encodeURIComponent(date) + '&branch=' + encodeURIComponent(branch) + (lorry ? '&lorry=' + encodeURIComponent(lorry) : '');
+    fetch(url).then(function(r){ return r.json(); }).then(function(d){
+      $('load').disabled = false;
+      if(!d || d.status !== 'ok'){ msg('&#9888; ' + esc((d && d.message) || 'Could not load &middot; Gagal memuat') + '<br><small>Try again &middot; Cuba lagi</small>', true); return; }
+      render(d);
+    }).catch(function(){
+      $('load').disabled = false;
+      msg('&#9888; Cannot reach server &middot; Tidak dapat menghubungi pelayan.<br><small>Check internet, Load again &middot; Semak internet, muat semula.</small>', true);
+    });
+  }
+
+  function render(d){
+    var sheets = [];
+    (d.lorries||[]).forEach(function(L){ (L.groups||[]).forEach(function(g){ sheets.push({ L:L, g:g }); }); });
+    if(!sheets.length){ msg('No shipments for this date &middot; Tiada penghantaran untuk tarikh ini.<br><small>'+esc(ddmmyyyy(d.date))+'</small>', true); return; }
+    var html = '';
+    sheets.forEach(function(s, idx){ html += sheetHtml(s.L, s.g, idx+1); });
+    $('out').innerHTML = html;
+    $('print').disabled = false;
+    $('count').textContent = sheets.length + ' sheet' + (sheets.length>1?'s':'') + ' · ' + sheets.length + ' helaian';
+  }
+
+  function sheetHtml(L, g, seq){
+    var b = BRANCH[L.branch] || BRANCH.MTK;
+    var ref = 'CMB-' + String(L.shipDate||'').replace(/-/g,'') + '-' + String(L.lorryNo||'').replace(/[^A-Za-z0-9]/g,'') + '-' + ('0'+seq).slice(-2);
+    var rows = '', tot = 0;
+    (g.invoices||[]).forEach(function(iv, i){
+      tot += Number(iv.amount)||0;
+      rows += '<tr><td class="n">'+(i+1)+'</td><td>'+esc(iv.invoiceNo)+'</td><td class="r">'+money(iv.amount)+'</td></tr>';
+    });
+    var confirmUrl = CONFIRM_BASE + '?g=' + encodeURIComponent(g.groupToken||'');
+    var qr = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=6&data=' + encodeURIComponent(confirmUrl);
+    return '<div class="sheet">'
+      + '<div class="lh"><div>'
+        + '<div class="co">'+esc(b.name)+'</div><div class="reg">'+REG+'</div>'
+        + '<div class="addr">'+esc(b.addr)+'<br>'+b.tel+' &middot; '+esc(b.email)+'</div>'
+      + '</div><div class="doc">'
+        + '<div class="t">Combination invoice</div><div class="ts">Invois gabungan (dalaman)</div>'
+        + '<div class="no">No. <b>'+esc(ref)+'</b></div>'
+      + '</div></div>'
+      + '<div class="meta"><div>'
+        + '<div class="lbl">Customer &middot; Pelanggan</div><div class="val">'+esc(g.customer||'-')+'</div>'
+        + '<div class="sub">Station &middot; Stesen: '+esc(g.area||'-')+'</div>'
+      + '</div><div><table>'
+        + '<tr><td>Date &middot; Tarikh</td><td class="v">'+esc(ddmmyyyy(L.shipDate))+'</td></tr>'
+        + '<tr><td>Lorry &middot; Lori</td><td class="v">'+esc(L.lorryNo||'-')+'</td></tr>'
+        + '<tr><td>Driver &middot; Pemandu</td><td class="v">'+esc(L.driver||'-')+'</td></tr>'
+      + '</table></div></div>'
+      + '<table class="inv"><thead><tr><th class="n">No.</th><th>Invoice no. &middot; No. invois</th><th class="r">Amount (RM)</th></tr></thead>'
+        + '<tbody>'+rows+'</tbody>'
+        + '<tfoot><tr><td></td><td class="r">Total &middot; Jumlah ('+(g.count||(g.invoices||[]).length)+')</td><td class="r">RM '+money(tot)+'</td></tr></tfoot>'
+      + '</table>'
+      + '<div class="decl">Received the above goods in good order and condition.<br><i>Barang di atas diterima dalam keadaan baik.</i></div>'
+      + '<div class="foot">'
+        + '<div class="sig"><div class="box"></div><div class="cap">Customer\'s chop &amp; signature<br>Cop &amp; tandatangan pelanggan</div></div>'
+        + '<div class="sig"><div class="box"></div><div class="cap">Date received<br>Tarikh diterima</div></div>'
+        + '<div class="qr"><img src="'+qr+'" alt="QR"><div class="cap">Scan to confirm<br>Imbas untuk sahkan</div></div>'
+      + '</div>'
+    + '</div>';
+  }
+
+  (function(){
+    var q = new URLSearchParams(location.search);
+    var qd = q.get('date'), qb = q.get('branch'), ql = q.get('lorry');
+    $('date').value = qd || todayYmd();
+    if (qb) $('branch').value = String(qb).toUpperCase();
+    if (ql) $('lorry').value = ql;
+    $('load').addEventListener('click', load);
+    $('print').addEventListener('click', function(){ window.print(); });
+    if (qd || qb || ql) { load(); }   // launched from the Shipment page with params -> auto-load
+    else { msg('Pick a date and click <b>Load</b> &middot; Pilih tarikh, klik <b>Muat</b>.', true); }
+  })();
+</script>
+</body>
+</html>

@@ -132,6 +132,7 @@ input[type=date]{ font-family:inherit; font-size:var(--text-body); padding:8px 1
     <span class="field-label">Date</span>
     <input type="date" id="dateInput">
     <button class="btn btn-ghost btn-sm" id="refreshBtn">↻ Refresh</button>
+    <button class="btn btn-ghost btn-sm" id="printAllCmb">🖨 Combination invoices (all)</button>
   </div>
 
   <div class="section-title">Lorries / Shipments <span class="count" id="shipCount"></span></div>
@@ -285,6 +286,7 @@ function renderShipments(ships){
         + crewPicker('l2secondary', s.lorry2Secondary || '')+'</div>'
         + '</div>') : '')
       + '<div class="crew-actions">'
+      + '<button class="btn btn-ghost btn-sm print-cmb" data-lorry="'+escHtml(s.lorryNo || '')+'">🖨 Combination invoice</button>'
       + '<button class="btn btn-danger btn-sm del-ship">Delete</button>'
       + '<button class="btn btn-primary btn-sm save-crew">Save assignment</button>'
       + '</div></div>'
@@ -312,6 +314,14 @@ function renderShipments(ships){
       const card = btn.closest('.card');
       const shipmentNo = card.getAttribute('data-ship');
       deleteShipment(shipmentNo, btn);
+    });
+  });
+
+  // attach combination-invoice print handlers — open the print page for THIS lorry + date + branch
+  list.querySelectorAll('.print-cmb').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const lorry = btn.getAttribute('data-lorry') || '';
+      window.open('CLF_Combination_Invoice.html?date=' + encodeURIComponent(_date) + '&branch=' + encodeURIComponent(BRANCH) + '&lorry=' + encodeURIComponent(lorry), '_blank');
     });
   });
 }
@@ -542,6 +552,7 @@ document.getElementById('csvFile').addEventListener('change', e => {
   e.target.value = '';   // allow re-selecting the same file
 });
 document.getElementById('refreshBtn').addEventListener('click', () => loadShipments());          // fresh (no cache)
+document.getElementById('printAllCmb').addEventListener('click', () => window.open('CLF_Combination_Invoice.html?date=' + encodeURIComponent(_date) + '&branch=' + encodeURIComponent(BRANCH), '_blank'));  // all lorries this date/branch
 document.getElementById('dateInput').addEventListener('change', e => { _date = e.target.value || todayStr(); loadShipments(true); });  // cached: just navigating dates
 
 (async function init(){
