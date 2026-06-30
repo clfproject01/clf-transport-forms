@@ -141,7 +141,7 @@
     </div>
     <div class="card c3 kpi luar">
       <div class="big" id="kpiLuar">—</div>
-      <div class="lbl">Out / outstanding (LUAR)</div>
+      <div class="lbl">Out of store (LUAR)</div>
     </div>
     <div class="card c3 kpi rosak">
       <div class="big" id="kpiRosak">—</div>
@@ -175,12 +175,12 @@
   </div>
 
   <!-- ===================== OUTSTANDING BY CUSTOMER ===================== -->
-  <div class="zone-head zone-out">🚚 Outstanding by customer <span class="sub">— who hasn't returned, how many</span></div>
+  <div class="zone-head zone-out">🚚 Out of store — by customer <span class="sub">— where the LUAR pallets are, when a customer is recorded</span></div>
 
   <div class="grid">
     <div class="card c12">
-      <div class="card-title">In customers' hands</div>
-      <div class="card-sub">Sum of LUAR qty tagged to each customer · highest first — unassigned = LUAR with no customer code</div>
+      <div class="card-title">Out of store — by customer (where recorded)</div>
+      <div class="card-sub">LUAR = out of the warehouse (on lorries / in transit / at customers). Rows with a customer code are confirmed at that customer; "not recorded" = out but no customer logged yet.</div>
       <div id="outBody"></div>
       <div class="note-line" id="outNote"></div>
     </div>
@@ -425,13 +425,14 @@
     var total = rows.reduce(function(s,o){ return s+intOr0(o.qtyOutstanding); },0);
     var html = '<table class="act"><thead><tr><th>Customer</th><th>Pallet</th><th class="rm">Outstanding</th></tr></thead><tbody>';
     rows.forEach(function(o){
-      var cust = o.custCode ? esc(o.custCode) : '<span class="psub">unassigned LUAR</span>';
+      var cust = (o.custCode && o.custCode !== '(unassigned)') ? esc(o.custCode) : '<span class="psub">Out — customer not recorded</span>';
       html += '<tr><td>'+cust+'</td>'
         + '<td class="pkey">'+esc(nameOf[o.palletKey]||o.palletKey)+'<div class="psub">'+esc(o.palletKey)+'</div></td>'
         + '<td class="rm"><span class="chip blue mono">'+fmtInt(o.qtyOutstanding)+'</span></td></tr>';
     });
     body.innerHTML = html + '</tbody></table>';
-    $('outNote').textContent = rows.length + ' line(s) · ' + fmtInt(total) + ' pallets in customers\' hands.';
+    var atCust = rows.reduce(function(s,o){ return s + ((o.custCode && o.custCode !== '(unassigned)') ? intOr0(o.qtyOutstanding) : 0); }, 0);
+    $('outNote').textContent = rows.length + ' line(s) · ' + fmtInt(total) + ' out of store — ' + fmtInt(atCust) + ' at a recorded customer, ' + fmtInt(total - atCust) + ' not yet recorded.';
   }
 
   // ---------- Audit ledger ----------
