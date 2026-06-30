@@ -513,7 +513,8 @@ window.onload = function() {
   // and would set vs.value before the <option> existed so it wouldn't stick.
   Promise.all([
     fetchAndPopulateDrivers().catch(function(){}),
-    fetchVehicles().catch(function(){})
+    fetchVehicles().catch(function(){}),
+    fetchPalletMaster().catch(function(){})
   ]).finally(function(){
     try{
       var savedVeh = localStorage.getItem(VEHICLE_KEY);
@@ -879,6 +880,133 @@ function renderShipmentList(){
 
 // B4: groups list only (separate from the header so typing in the search box keeps focus).
 // Pending customers first, delivered sink to the bottom; data-i stays the ORIGINAL index.
+// ===================== PALLET DROP (additive, independent of POD) =====================
+// Self-contained — POD form has no getWrite/_newToken/toast. Logic copied verbatim from
+// CLF_Pallet_Store.html so the backend sees identical params. PALLET_DROP is GET-write.
+var PALLET_MASTER = [];   // [{palletKey, displayName}] from getPalletMaster?active=1
+
+function _palletNewToken(p){ return (p||'plt') + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10); }
+
+// GET-write, never throws — mirrors CLF_Pallet_Store.html getWrite()
+async function _palletGetWrite(action, params){
+  try{
+    var qs = '?action=' + encodeURIComponent(action);
+    Object.keys(params).forEach(function(k){
+      var v = params[k];
+      if (v === undefined || v === null || v === '') return;
+      qs += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(v);
+    });
+    var res = await fetch(SCRIPT_URL + qs, { method: 'GET' });
+    return await res.json();
+  }catch(err){
+    console.error('PALLET_DROP getWrite ' + action + ' failed', err);
+    return { status: 'error', message: 'No connection · Tiada sambungan' };
+  }
+}
+
+// Lightweight non-blocking toast (POD form uses alert()/none; pallet failures must NOT block the POD result)
+var _palletToastTmr = null;
+function _palletToast(kind, html){
+  var t = document.getElementById('palletToast');
+  if (!t){
+    t = document.createElement('div');
+    t.id = 'palletToast';
+    t.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:120;max-width:90%;padding:12px 16px;border-radius:10px;font-size:13px;line-height:1.4;color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.25);opacity:0;transition:opacity .2s;pointer-events:none;';
+    document.body.appendChild(t);
+  }
+  t.style.background = (kind === 'ok') ? '#2E7D32' : (kind === 'err' ? '#C62828' : '#854F0B');
+  t.innerHTML = html;
+  t.style.opacity = '1';
+  if (_palletToastTmr) clearTimeout(_palletToastTmr);
+  _palletToastTmr = setTimeout(function(){ t.style.opacity = '0'; }, kind === 'err' ? 6000 : 4000);
+}
+
+// Fetch the active pallet master once at load. Never blocks POD — failure just leaves the dropdown empty.
+async function fetchPalletMaster(){
+  try{
+    var res = await fetch(SCRIPT_URL + '?action=getPalletMaster&active=1', { method: 'GET' });
+    var data = await res.json();
+    if (data && data.status === 'ok' && Array.isArray(data.master)){
+      PALLET_MASTER = data.master;
+    }
+  }catch(err){ console.warn('fetchPalletMaster failed (pallet UI stays hidden/empty)', err); }
+}
+
+// Options HTML for a pallet-type <select> (built fresh from PALLET_MASTER each render)
+function _palletOptions(selectedKey){
+  var opts = '<option value="">— Pallet type · Jenis pallet —</option>';
+  PALLET_MASTER.forEach(function(m){
+    var k = _esc(m.palletKey);
+    opts += '<option value="' + k + '"' + (selectedKey === m.palletKey ? ' selected' : '') + '>' + _esc(m.displayName || m.palletKey) + '</option>';
+  });
+  return opts;
+}
+
+// Fire-and-forget PALLET_DROP for one customer group. Own fresh token, own try/catch,
+// NEVER awaited by the POD result path. Toast-only on failure.
+function firePalletDrop(g){
+  try{
+    if (!g || !g._pallet || !g._pallet.palletKey || !g._pallet.qty) return;   // nothing entered → skip
+    var qty = parseInt(g._pallet.qty, 10);
+    if (isNaN(qty) || qty <= 0) return;
+    var params = {
+      palletKey: g._pallet.palletKey,
+      qty: qty,
+      custCode: g.key,                 // customer key (custCode || customerName || invoiceNo)
+      customerName: g.name,
+      shipmentKey: _shipKey,
+      driverName: document.getElementById('driverName').value,
+      entryDate: document.getElementById('deliveryDate').value,
+      clientToken: _palletNewToken('drop')
+    };
+    // intentionally NOT awaited at the call site — settle independently
+    _palletGetWrite('PALLET_DROP', params).then(function(r){
+      if (r && r.status === 'success'){
+        _palletToast('ok', '<b>Pallet recorded · Pallet direkod</b><br>' + _esc(g.name) + ' — ' + qty + ' × ' + _esc(_palletDisplayName(g._pallet.palletKey)));
+        if (g._pallet) g._pallet.qty = '';   // clear only the drop qty (collect is independent) so a re-save doesn't double-fire
+      } else {
+        _palletToast('err', '<b>Pallet NOT recorded · Pallet TIDAK direkod</b><br>' + _esc((r && r.message) || 'Server error') + '<br>POD is saved — tell the office the pallet count.');
+      }
+    });
+  }catch(e){
+    console.warn('firePalletDrop failed (POD unaffected)', e);
+    _palletToast('err', '<b>Pallet not recorded.</b> POD is saved — report the pallet count to the office.');
+  }
+}
+
+// Fire-and-forget PALLET_COLLECT for one customer group — the empties the customer handed back (inverse of DROP).
+// Same independence as firePalletDrop: own token, own try/catch, never awaited, toast-only on failure.
+function firePalletCollect(g){
+  try{
+    if (!g || !g._pallet || !g._pallet.palletKey || !g._pallet.collectQty) return;   // nothing collected → skip
+    var qty = parseInt(g._pallet.collectQty, 10);
+    if (isNaN(qty) || qty <= 0) return;
+    var params = {
+      palletKey: g._pallet.palletKey,
+      qty: qty,
+      custCode: g.key,                 // customer key (custCode || customerName || invoiceNo)
+      customerName: g.name,
+      shipmentKey: _shipKey,
+      driverName: document.getElementById('driverName').value,
+      entryDate: document.getElementById('deliveryDate').value,
+      clientToken: _palletNewToken('collect')
+    };
+    _palletGetWrite('PALLET_COLLECT', params).then(function(r){
+      if (r && r.status === 'success'){
+        _palletToast('ok', '<b>Pallet collected · Pallet diambil</b><br>' + _esc(g.name) + ' — ' + qty + ' × ' + _esc(_palletDisplayName(g._pallet.palletKey)));
+        if (g._pallet) g._pallet.collectQty = '';   // clear only the collect qty
+      } else {
+        _palletToast('err', '<b>Collect NOT recorded · Ambil TIDAK direkod</b><br>' + _esc((r && r.message) || 'Server error') + '<br>POD is saved — tell the office the count.');
+      }
+    });
+  }catch(e){
+    console.warn('firePalletCollect failed (POD unaffected)', e);
+  }
+}
+
+function _palletDisplayName(key){ var m = PALLET_MASTER.filter(function(x){ return x.palletKey === key; })[0]; return m ? (m.displayName || key) : key; }
+
+
 function renderShipGroups(){
   var wrap = document.getElementById('shipGroupsWrap');
   if (!wrap) return;
@@ -924,6 +1052,25 @@ function renderShipGroups(){
       html += '<div class="ship-reasons" data-i="'+i+'" style="display:none;gap:6px;flex-wrap:wrap;margin-top:8px;">'
         + ['Shop closed','Rejected','Partial','Reschedule'].map(function(r){ return '<button type="button" class="ship-reason" data-i="'+i+'" data-r="'+_esc(r)+'" style="background:#FFF3CD;color:#854F0B;border:1px solid #E0C68A;border-radius:6px;padding:7px 10px;font-size:12px;cursor:pointer;">'+_esc(r)+'</button>'; }).join('')
         + '</div>';
+      // Optional pallet drop for THIS customer — hidden until the driver taps "Pallet?".
+      // Only shown if the master loaded; fill only if there are pallets (per boss).
+      if (PALLET_MASTER.length){
+        var pSel = (g._pallet && g._pallet.palletKey) || '';
+        var pQty = (g._pallet && g._pallet.qty) || '';
+        var pCollect = (g._pallet && g._pallet.collectQty) || '';
+        var openPallet = !!(pSel || pQty || pCollect);   // keep open across re-render if partially filled
+        html += '<button type="button" class="pallet-toggle" data-i="'+i+'" style="width:100%;margin-top:8px;background:#fff;color:#854F0B;border:1px dashed #E0C68A;border-radius:8px;padding:10px;font-weight:600;font-size:13px;cursor:pointer;">'
+          + '&#128230; Pallet? &middot; Ada pallet?</button>'
+          + '<div class="pallet-fields" data-i="'+i+'" style="display:'+(openPallet?'flex':'none')+';flex-direction:column;gap:8px;margin-top:8px;">'
+          + '<select class="pallet-type" data-i="'+i+'" style="width:100%;padding:11px 12px;font-size:14px;border:1.5px solid #E0C68A;border-radius:8px;background:#fff;color:#412402;">'+_palletOptions(pSel)+'</select>'
+          + '<div style="display:flex;gap:8px;">'
+          + '<label style="flex:1;font-size:11px;font-weight:600;color:#854F0B;">&#128230;&#10145;&#65039; Drop &middot; Beri'
+          + '<input type="number" class="pallet-qty" data-i="'+i+'" inputmode="numeric" min="0" value="'+_esc(pQty)+'" placeholder="0" style="width:100%;margin-top:3px;padding:11px 12px;font-size:14px;border:1.5px solid #E0C68A;border-radius:8px;background:#fff;color:#412402;box-sizing:border-box;"></label>'
+          + '<label style="flex:1;font-size:11px;font-weight:600;color:#0E7C5A;">&#8617;&#65039;&#128230; Collect &middot; Ambil'
+          + '<input type="number" class="pallet-collect" data-i="'+i+'" inputmode="numeric" min="0" value="'+_esc(pCollect)+'" placeholder="0" style="width:100%;margin-top:3px;padding:11px 12px;font-size:14px;border:1.5px solid #E0C68A;border-radius:8px;background:#fff;color:#412402;box-sizing:border-box;"></label>'
+          + '</div>'
+          + '</div>';
+      }
     }
     html += '</div>';
   });
@@ -931,9 +1078,28 @@ function renderShipGroups(){
 }
 
 // B4: search box — input delegation; only the groups wrap re-renders so the keyboard stays open
-document.getElementById('shipmentSection').addEventListener('input', function(e){
-  if (e.target && e.target.id === 'shipFilter'){ _shipFilter = e.target.value; renderShipGroups(); }
-});
+  document.getElementById('shipmentSection').addEventListener('input', function(e){
+    if (e.target && e.target.id === 'shipFilter'){ _shipFilter = e.target.value; renderShipGroups(); return; }
+    if (e.target && (e.target.classList.contains('pallet-type') || e.target.classList.contains('pallet-qty') || e.target.classList.contains('pallet-collect'))){
+      var gi = parseInt(e.target.getAttribute('data-i'), 10);
+      var grp = _shipGroups[gi];
+      if (grp){
+        if (!grp._pallet) grp._pallet = { palletKey:'', qty:'', collectQty:'' };
+        if (e.target.classList.contains('pallet-type')) grp._pallet.palletKey = e.target.value;
+        else if (e.target.classList.contains('pallet-qty')) grp._pallet.qty = e.target.value;
+        else grp._pallet.collectQty = e.target.value;
+      }
+      return;
+    }
+  });
+  // <select> fires 'change', not 'input', on some Android webviews — capture it too:
+  document.getElementById('shipmentSection').addEventListener('change', function(e){
+    if (e.target && e.target.classList.contains('pallet-type')){
+      var gi = parseInt(e.target.getAttribute('data-i'), 10);
+      var grp = _shipGroups[gi];
+      if (grp){ if (!grp._pallet) grp._pallet = { palletKey:'', qty:'', collectQty:'' }; grp._pallet.palletKey = e.target.value; }
+    }
+  });
 
 // click delegation on the shipment section
 document.getElementById('shipmentSection').addEventListener('click', function(e){
@@ -1024,11 +1190,15 @@ async function saveDelivery(i){
     } else if (confirmed){
       g.invs.forEach(function(x){ x.status='delivered'; });   // confirmed by the server
       g.photos = [];
+      firePalletDrop(g);
+      firePalletCollect(g);
       renderShipmentList();
     } else {
       // No confirmation (weak signal) — show as delivered but KEEP the photos; the read-back
       // below re-syncs with the server and only drops photos once it confirms delivered.
       g.invs.forEach(function(x){ x.status='delivered'; });
+      firePalletDrop(g);
+      firePalletCollect(g);
       renderShipmentList();
     }
   }catch(err){
