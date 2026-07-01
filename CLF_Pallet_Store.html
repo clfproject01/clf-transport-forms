@@ -596,23 +596,20 @@
     <!-- ================= ASSIGN PANEL (DALAM → on lorry / LUAR) ================= -->
     <div class="panel" id="panel-assign">
       <div class="notice">
-        <b>Assign to Lorry · Naik Lori:</b> Pick the date, shipment & lorry, then set how many of each pallet go out. Saves DALAM → on-lorry per pallet type.<br>
-        <span style="opacity:.75;">Pilih tarikh, shipment & lori, set bilangan setiap pallet keluar. DALAM → atas lori.</span>
+        <b>Assign to Lorry · Naik Lori:</b> Pick the date & lorry — the shipment loads automatically. Then set how many of each pallet go out. Saves DALAM → on-lorry per pallet type.<br>
+        <span style="opacity:.75;">Pilih tarikh & lori — shipment keluar sendiri. Set bilangan setiap pallet keluar. DALAM → atas lori.</span>
       </div>
 
       <div class="field">
         <label>Date · Tarikh <span class="req">*</span></label>
-        <input type="date" id="as-date" onchange="loadAssign()">
-      </div>
-      <div class="field">
-        <label>ShipmentKey <span class="req">*</span></label>
-        <input type="text" id="as-shipment" autocomplete="off" placeholder="e.g. SHP-20260625-01" oninput="onAssignKeyInput()">
-        <div class="error-msg" id="err-as-shipment">Enter a ShipmentKey · Masukkan ShipmentKey</div>
+        <input type="date" id="as-date" onchange="if(document.getElementById('as-lorry').value.trim()) loadAssign()">
       </div>
       <div class="field">
         <label>Lorry No · No. Lori <span class="req">*</span></label>
-        <input type="text" id="as-lorry" autocomplete="off" placeholder="e.g. WTA 1234">
+        <input type="text" id="as-lorry" autocomplete="off" placeholder="e.g. WTA 1234" oninput="document.getElementById('err-as-lorry').classList.remove('show')">
         <div class="error-msg" id="err-as-lorry">Enter the lorry no · Masukkan no lori</div>
+        <input type="hidden" id="as-shipment">
+        <div id="as-ship-info" class="hint" style="margin-top:8px;"></div>
       </div>
 
       <div class="btn-wrap" style="margin-bottom:10px;">
@@ -1233,31 +1230,61 @@ async function submitRepair(){
 // ASSIGN  →  GET-write  PALLET_ASSIGN (one call per non-zero palletKey)
 // ============================================================
 var AS_LINES = [];   // [{palletKey, displayName, dalam, qty}]
-function onAssignKeyInput(){ document.getElementById('err-as-shipment').classList.remove('show'); }
+var AS_SHIPMENTS = [];   // shipments found for the entered lorry + date (a lorry may run several trips)
 
+// Load = look up the shipment(s) for the entered LORRY (no more typing a ShipmentKey).
 async function loadAssign(){
-  var shipKey = document.getElementById('as-shipment').value.trim();
+  var lorryNo = document.getElementById('as-lorry').value.trim();
   var date = document.getElementById('as-date').value || _today();
-  if (!shipKey){ document.getElementById('err-as-shipment').classList.add('show'); return; }
-  document.getElementById('err-as-shipment').classList.remove('show');
-  await refreshBalances(false);   // need fresh DALAM caps
-  var url = SCRIPT_URL + '?action=getPalletAssignForDate&date=' + encodeURIComponent(date) + '&shipmentKey=' + encodeURIComponent(shipKey);
+  document.getElementById('err-as-lorry').classList.toggle('show', !lorryNo);
+  if (!lorryNo) return;
+  var info = document.getElementById('as-ship-info');
+  info.innerHTML = 'Finding shipment for this lorry… · Mencari shipment…';
+  document.getElementById('as-shipment').value = '';
+  AS_SHIPMENTS = [];
+  try{
+    var res = await fetch(SCRIPT_URL + '?action=getShipmentForLorry&vehicleNo=' + encodeURIComponent(lorryNo) + '&date=' + encodeURIComponent(date), { method: 'GET' });
+    var data = await res.json();
+    if (data && data.status === 'ok' && Array.isArray(data.shipments)) AS_SHIPMENTS = data.shipments;
+  }catch(err){ console.warn('getShipmentForLorry failed', err); }
+  if (!AS_SHIPMENTS.length){
+    info.innerHTML = '<span style="color:var(--error);">No shipment for ' + _esc(lorryNo) + ' on ' + _esc(date) + ' · Tiada shipment untuk lori ini</span>';
+    document.getElementById('as-existing').textContent = '';
+    AS_LINES = []; renderAssignRows({});
+    return;
+  }
+  await pickAssignShipment(0);
+}
+
+// Resolve the chosen shipment (index into AS_SHIPMENTS), set the hidden shipmentKey, load existing + rows.
+async function pickAssignShipment(idx){
+  idx = parseInt(idx, 10); if (isNaN(idx)) idx = 0;
+  var sh = AS_SHIPMENTS[idx]; if (!sh) return;
+  var shipKey = sh.shipmentKey;
+  document.getElementById('as-shipment').value = shipKey;   // hidden field — submitAssign reads this
+  var picker = '';
+  if (AS_SHIPMENTS.length > 1){
+    picker = 'This lorry runs <b>' + AS_SHIPMENTS.length + '</b> shipments today — pick one · Pilih: '
+      + '<select id="as-ship-pick" onchange="pickAssignShipment(this.value)" style="margin-top:6px;padding:9px;font-size:14px;border:1.5px solid #d8c8a0;border-radius:8px;width:100%;background:#fff;color:#412402;">'
+      + AS_SHIPMENTS.map(function(s, i){ return '<option value="' + i + '"' + (i===idx?' selected':'') + '>' + _esc(s.shipmentKey) + (s.itemCount ? (' · ' + s.itemCount + ' inv') : '') + '</option>'; }).join('')
+      + '</select><br>';
+  }
+  document.getElementById('as-ship-info').innerHTML = picker
+    + '<span style="color:#15803D;font-weight:600;">✓ ' + _esc(shipKey) + '</span>'
+    + (sh.itemCount ? (' · ' + sh.itemCount + ' invoice(s)') : '');
+  await refreshBalances(false);   // fresh DALAM caps
   var existing = {};
   try{
-    var res = await fetch(url, { method: 'GET' });
+    var res = await fetch(SCRIPT_URL + '?action=getPalletAssignForDate&date=' + encodeURIComponent(document.getElementById('as-date').value || _today()) + '&shipmentKey=' + encodeURIComponent(shipKey), { method: 'GET' });
     var data = await res.json();
     if (data && data.status === 'ok' && Array.isArray(data.shipments)){
-      var sh = data.shipments.filter(function(s){ return s.shipmentKey === shipKey; })[0] || data.shipments[0];
-      if (sh){
-        if (sh.lorryNo && !document.getElementById('as-lorry').value) document.getElementById('as-lorry').value = sh.lorryNo;
-        (sh.lines || []).forEach(function(l){ existing[l.palletKey] = l.assigned; });
-        document.getElementById('as-existing').innerHTML = (sh.lines && sh.lines.length)
-          ? 'Already assigned on this shipment: ' + sh.lines.map(function(l){ return _esc(l.displayName || l.palletKey) + ' ×' + l.assigned; }).join(', ')
-          : 'No pallets assigned yet · Belum ada';
-      }
+      var found = data.shipments.filter(function(s){ return s.shipmentKey === shipKey; })[0];
+      if (found && found.lines){ found.lines.forEach(function(l){ existing[l.palletKey] = l.assigned; }); }
+      document.getElementById('as-existing').innerHTML = (found && found.lines && found.lines.length)
+        ? 'Already assigned on this shipment: ' + found.lines.map(function(l){ return _esc(l.displayName || l.palletKey) + ' ×' + l.assigned; }).join(', ')
+        : 'No pallets assigned yet · Belum ada';
     }
   }catch(err){ console.warn('loadAssign read failed', err); document.getElementById('as-existing').textContent = ''; }
-  // build one stepper row per master pallet, capped at DALAM
   AS_LINES = MASTER.map(function(m){ return { palletKey: m.palletKey, displayName: m.displayName || m.palletKey, dalam: balOf(m.palletKey).dalam, qty: 0 }; });
   renderAssignRows(existing);
 }
@@ -1287,8 +1314,8 @@ async function submitAssign(){
   var lorryNo = document.getElementById('as-lorry').value.trim();
   var date = document.getElementById('as-date').value || _today();
   var ok = true;
-  document.getElementById('err-as-shipment').classList.toggle('show', !shipKey); if (!shipKey) ok = false;
   document.getElementById('err-as-lorry').classList.toggle('show', !lorryNo); if (!lorryNo) ok = false;
+  if (!shipKey){ toast('err', 'Load the lorry\'s shipment first · Muat shipment lori dahulu'); ok = false; }
   if (!ok) return;
   var picked = AS_LINES.filter(function(l){ return l.qty > 0; });
   if (!picked.length){ toast('err', 'Set at least one quantity · Set sekurang-kurangnya satu'); return; }
