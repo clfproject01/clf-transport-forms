@@ -247,8 +247,8 @@
     <!-- ================= STEP 1 — FIND SHIPMENT ================= -->
     <div class="panel active" id="panel-find">
       <div class="notice">
-        <b>Returning pallets? · Pulang pallet?</b> Enter your <b>ShipmentKey</b> to see what is still on your lorry, count the real pallets, and send them back to the store.<br>
-        <span style="opacity:.75;">Masukkan ShipmentKey untuk lihat pallet yang masih atas lori. Kira sebenar &amp; hantar balik ke stor.</span>
+        <b>Returning pallets? · Pulang pallet?</b> Enter your <b>lorry no</b> — today's shipment loads automatically. See what is still on your lorry, count the real pallets, and send them back to the store.<br>
+        <span style="opacity:.75;">Masukkan <b>no lori</b> — shipment hari ini keluar sendiri. Lihat pallet yang masih atas lori, kira sebenar &amp; hantar balik ke stor.</span>
       </div>
 
       <div class="field">
@@ -258,10 +258,10 @@
       </div>
 
       <div class="field">
-        <label>ShipmentKey · Kunci Penghantaran <span class="req">*</span></label>
-        <input type="text" id="rt-shipment" autocomplete="off" inputmode="text" placeholder="e.g. SHP-2026-0612-ABC123" oninput="onShipmentInput()">
-        <div class="error-msg" id="err-rt-shipment">Please enter a ShipmentKey · Sila masukkan ShipmentKey</div>
-        <div class="hint" style="margin-top:6px;margin-bottom:0;">Find this on the POD form or your run sheet · Ada di borang POD atau senarai jalan anda.</div>
+        <label>Lorry No · No. Lori <span class="req">*</span></label>
+        <input type="text" id="rt-lorry" autocomplete="off" placeholder="e.g. WTA 1234" oninput="onLorryInput()">
+        <div class="error-msg" id="err-rt-lorry">Please enter your lorry no · Sila masukkan no lori</div>
+        <div id="rt-ship-info" class="hint" style="margin-top:6px;margin-bottom:0;"></div>
       </div>
 
       <div class="btn-wrap" style="margin-top:18px;">
@@ -357,6 +357,7 @@
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxabHh2Kd04z7k0zZOOoaJs2i5hgycQsO_AYoRS99xZx2WqMJ6cowumY0e1znehiRM1/exec';
 
 const DRIVER_KEY = 'clf_pallet_driver';   // remember the driver's name across reloads
+const LORRY_KEY  = 'clf_pallet_rt_lorry'; // remember the lorry no across reloads
 
 // ---- small helpers (verbatim from CLF_Pallet_Store.html) ---------------------
 function _esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
@@ -387,20 +388,52 @@ function showStep(name){
 // SHIPMENT STATE — what's still on the lorry for this shipment
 // ============================================================
 var CURRENT = { shipmentKey: '', lorryNo: '', lines: [] };  // lines: [{palletKey, displayName, onLorry, ...}]
+var RT_SHIPMENTS = [];   // today's shipments for the entered lorry (multi-trip → picker)
 
-function onShipmentInput(){
-  document.getElementById('err-rt-shipment').classList.remove('show');
+function onLorryInput(){
+  document.getElementById('err-rt-lorry').classList.remove('show');
 }
 
-// STEP 1 — getPalletShipmentStatus?shipmentKey=  → list of pallet types on the lorry
+// STEP 1a — lorry no → getShipmentForLorry (today) → shipmentKey(s). No more typing a ShipmentKey.
 async function lookupShipment(){
   var driver = document.getElementById('rt-driver').value.trim();
-  var sk = document.getElementById('rt-shipment').value.trim();
+  var lorry = document.getElementById('rt-lorry').value.trim();
   var ok = true;
   document.getElementById('err-rt-driver').classList.toggle('show', !driver); if (!driver) ok = false;
-  document.getElementById('err-rt-shipment').classList.toggle('show', !sk); if (!sk) ok = false;
+  document.getElementById('err-rt-lorry').classList.toggle('show', !lorry); if (!lorry) ok = false;
   if (!ok) return;
   if (driver) localStorage.setItem(DRIVER_KEY, driver);
+  localStorage.setItem(LORRY_KEY, lorry);
+
+  showLoading('Finding your shipment… · Mencari shipment…');
+  RT_SHIPMENTS = [];
+  try{
+    var res = await fetch(SCRIPT_URL + '?action=getShipmentForLorry&vehicleNo=' + encodeURIComponent(lorry), { method: 'GET' });
+    var data = await res.json();
+    if (data && data.status === 'ok' && Array.isArray(data.shipments)) RT_SHIPMENTS = data.shipments;
+  }catch(err){ console.warn('getShipmentForLorry failed', err); }
+  hideLoading();
+  if (!RT_SHIPMENTS.length){
+    document.getElementById('rt-ship-info').innerHTML = '<span style="color:var(--error);">No shipment today for ' + _esc(lorry) + ' · Tiada shipment hari ini untuk lori ini</span>';
+    toast('err', '<b>No shipment found · Tiada shipment</b><br>Check the lorry no · Semak no lori');
+    return;
+  }
+  await loadShipmentStatus(0);
+}
+
+// STEP 1b — chosen shipment → getPalletShipmentStatus → what's still on the lorry
+async function loadShipmentStatus(idx){
+  idx = parseInt(idx, 10); if (isNaN(idx)) idx = 0;
+  var chosen = RT_SHIPMENTS[idx]; if (!chosen) return;
+  var sk = chosen.shipmentKey;
+  var picker = '';
+  if (RT_SHIPMENTS.length > 1){
+    picker = 'This lorry runs <b>' + RT_SHIPMENTS.length + '</b> shipments today — pick one · Pilih: '
+      + '<select id="rt-ship-pick" onchange="loadShipmentStatus(this.value)" style="margin-top:6px;padding:9px;font-size:14px;border:1.5px solid #d8c8a0;border-radius:8px;width:100%;background:#fff;color:#412402;">'
+      + RT_SHIPMENTS.map(function(s, i){ return '<option value="' + i + '"' + (i===idx?' selected':'') + '>' + _esc(s.shipmentKey) + (s.itemCount ? (' · ' + s.itemCount + ' inv') : '') + '</option>'; }).join('')
+      + '</select><br>';
+  }
+  document.getElementById('rt-ship-info').innerHTML = picker + '<span style="color:#15803D;font-weight:600;">✓ ' + _esc(sk) + '</span>';
 
   showLoading('Finding your pallets… · Mencari pallet…');
   var data;
@@ -416,13 +449,13 @@ async function lookupShipment(){
   hideLoading();
 
   if (!data || data.status !== 'ok'){
-    toast('err', '<b>Not found · Tidak dijumpai</b><br>' + _esc((data && data.message) || 'Check the ShipmentKey · Semak ShipmentKey'));
+    toast('err', '<b>Not found · Tidak dijumpai</b><br>' + _esc((data && data.message) || 'Try again · Cuba lagi'));
     return;
   }
 
   // keep only pallet types still physically on the lorry (onLorry > 0)
   var onLorry = (data.lines || []).filter(function(l){ return (Number(l.onLorry) || 0) > 0; });
-  CURRENT = { shipmentKey: data.shipmentKey || sk, lorryNo: data.lorryNo || '', lines: onLorry };
+  CURRENT = { shipmentKey: data.shipmentKey || sk, lorryNo: data.lorryNo || chosen.lorryNo || '', lines: onLorry };
 
   document.getElementById('rt-card-lorry').textContent = 'Lorry · Lori: ' + (CURRENT.lorryNo || '—');
   document.getElementById('rt-card-sk').textContent = CURRENT.shipmentKey;
@@ -576,11 +609,12 @@ function backToFind(){
   showStep('find');
 }
 function resetAll(){
-  document.getElementById('rt-shipment').value = '';
   CURRENT = { shipmentKey: '', lorryNo: '', lines: [] };
+  RT_SHIPMENTS = [];
+  document.getElementById('rt-ship-info').innerHTML = '';
   document.getElementById('rt-list').innerHTML = '';
   showStep('find');
-  document.getElementById('rt-shipment').focus();
+  document.getElementById('rt-lorry').focus();   // lorry stays remembered — driver usually returns with the same lorry
 }
 
 // ============================================================
@@ -609,6 +643,8 @@ async function getWrite(action, params){
 window.onload = function(){
   var savedDriver = localStorage.getItem(DRIVER_KEY) || '';
   if (savedDriver) document.getElementById('rt-driver').value = savedDriver;
+  var savedLorry = localStorage.getItem(LORRY_KEY) || '';
+  if (savedLorry) document.getElementById('rt-lorry').value = savedLorry;
   showStep('find');
 };
 </script>

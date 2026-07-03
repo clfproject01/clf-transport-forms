@@ -644,14 +644,16 @@
     <!-- ================= ACCEPT PANEL (driver confirms handover) ================= -->
     <div class="panel" id="panel-accept">
       <div class="notice">
-        <b>Driver Confirm · Sahkan Driver:</b> Enter the ShipmentKey, check the assigned pallets, then tap <b>Correct</b> or edit the number you actually received.<br>
-        <span style="opacity:.75;">Masukkan ShipmentKey, semak pallet, tekan Betul atau ubah jumlah sebenar diterima. (Boleh juga di halaman driver.)</span>
+        <b>Driver Confirm · Sahkan Driver:</b> Enter the lorry no — today's shipment loads automatically. Check the assigned pallets, then tap <b>Correct</b> or edit the number you actually received.<br>
+        <span style="opacity:.75;">Masukkan no lori — shipment hari ini keluar sendiri. Semak pallet, tekan Betul atau ubah jumlah sebenar diterima. (Boleh juga di halaman driver.)</span>
       </div>
 
       <div class="field">
-        <label>ShipmentKey <span class="req">*</span></label>
-        <input type="text" id="ac-shipment" autocomplete="off" placeholder="e.g. SHP-20260625-01">
-        <div class="error-msg" id="err-ac-shipment">Enter a ShipmentKey · Masukkan ShipmentKey</div>
+        <label>Lorry No · No. Lori <span class="req">*</span></label>
+        <input type="text" id="ac-lorry" autocomplete="off" placeholder="e.g. WTA 1234" oninput="document.getElementById('err-ac-lorry').classList.remove('show')">
+        <div class="error-msg" id="err-ac-lorry">Enter the lorry no · Masukkan no lori</div>
+        <input type="hidden" id="ac-shipment">
+        <div id="ac-ship-info" class="hint" style="margin-top:8px;"></div>
       </div>
       <div class="btn-wrap" style="margin-bottom:10px;">
         <button type="button" class="submit-btn" style="background:var(--navy-mid);box-shadow:0 4px 12px rgba(26,58,92,.25);" onclick="loadAccept()">
@@ -1346,24 +1348,61 @@ async function submitAssign(){
 // ============================================================
 // ACCEPT  →  GET-write  PALLET_ACCEPT (one call per assign line; needs assign entryId)
 // ============================================================
-var AC_LINES = [];   // [{entryId, palletKey, displayName, assigned, acceptedQty}]
+var AC_LINES = [];      // [{entryId, palletKey, displayName, assigned, acceptedQty}]
+var AC_SHIPMENTS = [];  // today's shipments for the entered lorry (multi-trip → picker)
+
+// Load = look up today's shipment(s) for the entered LORRY (no more typing a ShipmentKey).
 async function loadAccept(){
-  var shipKey = document.getElementById('ac-shipment').value.trim();
-  if (!shipKey){ document.getElementById('err-ac-shipment').classList.add('show'); return; }
-  document.getElementById('err-ac-shipment').classList.remove('show');
+  var lorryNo = document.getElementById('ac-lorry').value.trim();
+  document.getElementById('err-ac-lorry').classList.toggle('show', !lorryNo);
+  if (!lorryNo) return;
+  var info = document.getElementById('ac-ship-info');
+  info.innerHTML = 'Finding shipment for this lorry… · Mencari shipment…';
+  document.getElementById('ac-shipment').value = '';
+  AC_SHIPMENTS = [];
+  try{
+    var res = await fetch(SCRIPT_URL + '?action=getShipmentForLorry&vehicleNo=' + encodeURIComponent(lorryNo), { method: 'GET' });
+    var data = await res.json();
+    if (data && data.status === 'ok' && Array.isArray(data.shipments)) AC_SHIPMENTS = data.shipments;
+  }catch(err){ console.warn('getShipmentForLorry failed', err); }
+  if (!AC_SHIPMENTS.length){
+    info.innerHTML = '<span style="color:var(--error);">No shipment today for ' + _esc(lorryNo) + ' · Tiada shipment hari ini</span>';
+    document.getElementById('ac-head').textContent = '';
+    document.getElementById('ac-rows').innerHTML = '<div class="empty">Load a shipment to confirm · Muat shipment dahulu</div>';
+    AC_LINES = []; return;
+  }
+  await pickAcceptShipment(0);
+}
+
+// Resolve the chosen shipment (index into AC_SHIPMENTS), then load its assigned pallet lines.
+async function pickAcceptShipment(idx){
+  idx = parseInt(idx, 10); if (isNaN(idx)) idx = 0;
+  var chosen = AC_SHIPMENTS[idx]; if (!chosen) return;
+  var shipKey = chosen.shipmentKey;
+  document.getElementById('ac-shipment').value = shipKey;
+  var picker = '';
+  if (AC_SHIPMENTS.length > 1){
+    picker = 'This lorry runs <b>' + AC_SHIPMENTS.length + '</b> shipments today — pick one · Pilih: '
+      + '<select id="ac-ship-pick" onchange="pickAcceptShipment(this.value)" style="margin-top:6px;padding:9px;font-size:14px;border:1.5px solid #d8c8a0;border-radius:8px;width:100%;background:#fff;color:#412402;">'
+      + AC_SHIPMENTS.map(function(s, i){ return '<option value="' + i + '"' + (i===idx?' selected':'') + '>' + _esc(s.shipmentKey) + (s.itemCount ? (' · ' + s.itemCount + ' inv') : '') + '</option>'; }).join('')
+      + '</select><br>';
+  }
+  document.getElementById('ac-ship-info').innerHTML = picker
+    + '<span style="color:#15803D;font-weight:600;">✓ ' + _esc(shipKey) + '</span>'
+    + (chosen.itemCount ? (' · ' + chosen.itemCount + ' invoice(s)') : '');
   showLoading('Loading… · Memuatkan…');
   var sh = null;
   try{
     var res = await fetch(SCRIPT_URL + '?action=getPalletAssignForDate&shipmentKey=' + encodeURIComponent(shipKey), { method: 'GET' });
     var data = await res.json();
     if (data && data.status === 'ok' && Array.isArray(data.shipments)){
-      sh = data.shipments.filter(function(s){ return s.shipmentKey === shipKey; })[0] || data.shipments[0];
+      sh = data.shipments.filter(function(s){ return s.shipmentKey === shipKey; })[0];
     }
   }catch(err){ console.warn('loadAccept failed', err); }
   hideLoading();
   if (!sh || !sh.lines || !sh.lines.length){
     document.getElementById('ac-head').textContent = '';
-    document.getElementById('ac-rows').innerHTML = '<div class="empty">Nothing assigned for this shipment · Tiada tugasan</div>';
+    document.getElementById('ac-rows').innerHTML = '<div class="empty">No pallets assigned on this shipment yet · Belum ada pallet ditugaskan</div>';
     AC_LINES = []; return;
   }
   document.getElementById('ac-head').innerHTML = 'Lorry · Lori <b>' + _esc(sh.lorryNo || '—') + '</b> · ' + _esc(sh.shipmentKey);
