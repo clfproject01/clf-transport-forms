@@ -792,6 +792,7 @@ async function checkShipmentForVehicle(keepListOnFail){
     var data = await res.json();
     if (data && data.status==='ok' && data.shipments && data.shipments.length && data.items && data.items.length){
       _shipKey = data.shipments[0].shipmentNo;
+      fetchPalletOnboard();   // pallets-on-board banner (default-accept; driver only acts on a wrong count)
       _autoFillAssignedDrivers(data.shipments[0]);
       _buildGroups(data.items);
       sec.style.display='block'; man.style.display='none';   // has a list → use it (manual reachable via walk-in link)
@@ -960,10 +961,12 @@ function firePalletDrop(g){
       clientToken: _palletNewToken('drop')
     };
     // intentionally NOT awaited at the call site — settle independently
-    _palletGetWrite('PALLET_DROP', params).then(function(r){
+    var hasPhoto = !!(g._pallet && g._pallet.photo);
+    if (hasPhoto) params.photos = [g._pallet.photo];
+    (hasPhoto ? _palletPostWrite(Object.assign({ formType: 'PALLET_DROP' }, params)) : _palletGetWrite('PALLET_DROP', params)).then(function(r){
       if (r && r.status === 'success'){
         _palletToast('ok', '<b>Pallet recorded · Pallet direkod</b><br>' + _esc(g.name) + ' — ' + qty + ' × ' + _esc(_palletDisplayName(g._pallet.palletKey)));
-        if (g._pallet) g._pallet.qty = '';   // clear only the drop qty (collect is independent) so a re-save doesn't double-fire
+        if (g._pallet){ g._pallet.qty = ''; g._pallet.photo = null; }   // photo consumed by the drop; collect is independent
       } else {
         _palletToast('err', '<b>Pallet NOT recorded · Pallet TIDAK direkod</b><br>' + _esc((r && r.message) || 'Server error') + '<br>POD is saved — tell the office the pallet count.');
       }
@@ -991,10 +994,12 @@ function firePalletCollect(g){
       entryDate: document.getElementById('deliveryDate').value,
       clientToken: _palletNewToken('collect')
     };
-    _palletGetWrite('PALLET_COLLECT', params).then(function(r){
+    var colPhoto = !!(g._pallet && g._pallet.photo) && !(parseInt(g._pallet.qty, 10) > 0);   // drop (if any) takes the photo first
+    if (colPhoto) params.photos = [g._pallet.photo];
+    (colPhoto ? _palletPostWrite(Object.assign({ formType: 'PALLET_COLLECT' }, params)) : _palletGetWrite('PALLET_COLLECT', params)).then(function(r){
       if (r && r.status === 'success'){
         _palletToast('ok', '<b>Pallet collected · Pallet diambil</b><br>' + _esc(g.name) + ' — ' + qty + ' × ' + _esc(_palletDisplayName(g._pallet.palletKey)));
-        if (g._pallet) g._pallet.collectQty = '';   // clear only the collect qty
+        if (g._pallet){ g._pallet.collectQty = ''; if (colPhoto) g._pallet.photo = null; }
       } else {
         _palletToast('err', '<b>Collect NOT recorded · Ambil TIDAK direkod</b><br>' + _esc((r && r.message) || 'Server error') + '<br>POD is saved — tell the office the count.');
       }
@@ -1005,6 +1010,90 @@ function firePalletCollect(g){
 }
 
 function _palletDisplayName(key){ var m = PALLET_MASTER.filter(function(x){ return x.palletKey === key; })[0]; return m ? (m.displayName || key) : key; }
+
+// POST + no-cors + poll getImportResult — used when a pallet drop/collect carries a photo
+// (base64 won't fit a GET URL). Mirrors the POD save's own readback pattern.
+async function _palletPostWrite(payload){
+  var token = payload.clientToken;
+  var fd = new FormData();
+  fd.append('data', JSON.stringify(payload));
+  try{ await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: fd }); }
+  catch(e){ return { status: 'error', message: 'No connection · Tiada sambungan' }; }
+  for (var t = 0; t < 8; t++){
+    await new Promise(function(r){ setTimeout(r, 1500); });
+    try{
+      var rb = await fetch(SCRIPT_URL + '?action=getImportResult&token=' + encodeURIComponent(token));
+      var rd = await rb.json();
+      if (rd && rd.status && rd.status !== 'pending') return rd;
+    }catch(e){ /* keep polling */ }
+  }
+  return { status: 'success', weak: true };   // POST landed; dedup token makes a resend safe
+}
+
+// ===== Pallets-on-board banner (default-accept flow) =====
+// After the shipment loads: show what the store assigned to this lorry. Correct = do nothing
+// (deemed accepted). Wrong = driver taps, edits the actual counts, sends -> PALLET_ACCEPT rows.
+var PALLET_ONBOARD = [];   // [{entryId, palletKey, displayName, assigned}]
+async function fetchPalletOnboard(){
+  try{
+    if (!_shipKey) return;
+    var res = await fetch(SCRIPT_URL + '?action=getPalletAssignForDate&shipmentKey=' + encodeURIComponent(_shipKey), { method: 'GET' });
+    var data = await res.json();
+    var sh = (data && data.status === 'ok' && Array.isArray(data.shipments)) ? data.shipments.filter(function(s){ return s.shipmentKey === _shipKey; })[0] : null;
+    PALLET_ONBOARD = (sh && sh.lines) ? sh.lines.filter(function(l){ return (Number(l.assigned)||0) > 0; }) : [];
+  }catch(e){ PALLET_ONBOARD = []; }
+  renderPalletOnboard();
+}
+function renderPalletOnboard(){
+  var sec = document.getElementById('shipmentSection');
+  if (!sec) return;
+  var box = document.getElementById('palletOnboard');
+  if (!PALLET_ONBOARD.length){ if (box) box.remove(); return; }
+  if (!box){ box = document.createElement('div'); box.id = 'palletOnboard'; sec.insertBefore(box, sec.firstChild); }
+  var summary = PALLET_ONBOARD.map(function(l){ return _esc(l.displayName || l.palletKey) + ' ×' + l.assigned; }).join(' · ');
+  box.innerHTML = '<div style="border:1.5px solid #E0C68A;background:#FFF9EE;border-radius:10px;padding:11px 12px;margin-bottom:10px;">'
+    + '<div style="font-weight:700;font-size:13px;color:#5C3A1E;">&#128230; Pallets on lorry · Pallet atas lori</div>'
+    + '<div style="font-size:13px;color:#412402;margin:4px 0 6px;">' + summary + '</div>'
+    + '<div style="font-size:11.5px;color:#854F0B;">Correct? Do nothing · Betul? Tak perlu buat apa-apa.</div>'
+    + '<button type="button" onclick="togglePalletFix()" style="margin-top:7px;background:#fff;color:#C62828;border:1px solid #E8B4B4;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:700;cursor:pointer;">Wrong count? Fix here · Angka salah? Betulkan</button>'
+    + '<div id="palletFixRows" style="display:none;margin-top:8px;"></div>'
+    + '</div>';
+}
+function togglePalletFix(){
+  var rows = document.getElementById('palletFixRows');
+  if (!rows) return;
+  if (rows.style.display === 'none'){
+    rows.innerHTML = PALLET_ONBOARD.map(function(l, i){
+      return '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;">'
+        + '<div style="flex:1;font-size:12.5px;color:#412402;">' + _esc(l.displayName || l.palletKey) + '<br><span style="color:#854F0B;font-size:11px;">assigned ' + l.assigned + '</span></div>'
+        + '<input type="number" id="palletFix-' + i + '" inputmode="numeric" min="0" value="' + l.assigned + '" style="width:80px;padding:9px;font-size:14px;border:1.5px solid #E0C68A;border-radius:8px;">'
+        + '</div>';
+    }).join('')
+    + '<button type="button" onclick="sendPalletFix()" style="width:100%;margin-top:8px;background:#5C3A1E;color:#fff;border:none;border-radius:8px;padding:11px;font-weight:700;font-size:13px;cursor:pointer;">Send actual received · Hantar jumlah sebenar</button>';
+    rows.style.display = 'block';
+  } else {
+    rows.style.display = 'none';
+  }
+}
+async function sendPalletFix(){
+  var driver = document.getElementById('driverName').value || '';
+  var changed = [];
+  PALLET_ONBOARD.forEach(function(l, i){
+    var el = document.getElementById('palletFix-' + i);
+    if (!el) return;
+    var got = parseInt(el.value, 10);
+    if (!isNaN(got) && got !== Number(l.assigned) && l.entryId) changed.push({ entryId: l.entryId, acceptedQty: got, name: l.displayName || l.palletKey });
+  });
+  if (!changed.length){ _palletToast('ok', 'No change — counts match · Tiada beza'); togglePalletFix(); return; }
+  for (var k = 0; k < changed.length; k++){
+    var c = changed[k];
+    var r = await _palletGetWrite('PALLET_ACCEPT', { entryId: c.entryId, acceptedQty: c.acceptedQty, driverName: driver, clientToken: _palletNewToken('acc') });
+    if (r && r.status === 'success') _palletToast('ok', '<b>Correction sent · Dihantar</b><br>' + _esc(c.name) + ' → ' + c.acceptedQty);
+    else _palletToast('err', '<b>Not sent · Gagal</b><br>' + _esc(c.name) + ' — ' + _esc((r && r.message) || 'try again'));
+  }
+  togglePalletFix();
+  fetchPalletOnboard();   // re-pull so the banner shows the corrected numbers
+}
 
 
 function renderShipGroups(){
@@ -1069,6 +1158,8 @@ function renderShipGroups(){
           + '<label style="flex:1;font-size:11px;font-weight:600;color:#0E7C5A;">&#8617;&#65039;&#128230; Collect &middot; Ambil'
           + '<input type="number" class="pallet-collect" data-i="'+i+'" inputmode="numeric" min="0" value="'+_esc(pCollect)+'" placeholder="0" style="width:100%;margin-top:3px;padding:11px 12px;font-size:14px;border:1.5px solid #E0C68A;border-radius:8px;background:#fff;color:#412402;box-sizing:border-box;"></label>'
           + '</div>'
+          + '<button type="button" class="pallet-photo" data-i="'+i+'" style="width:100%;background:#fff;color:'+(g._pallet && g._pallet.photo ? '#2E7D32' : '#854F0B')+';border:1px '+(g._pallet && g._pallet.photo ? 'solid #2E7D32' : 'dashed #E0C68A')+';border-radius:8px;padding:9px;font-size:12px;font-weight:600;cursor:pointer;">'
+          + (g._pallet && g._pallet.photo ? '&#10003; Photo attached · Foto ada' : '&#128247; Photo evidence · Foto bukti (optional)') + '</button>'
           + '</div>';
       }
     }
@@ -1106,6 +1197,38 @@ document.getElementById('shipmentSection').addEventListener('click', function(e)
   if (e.target.closest('#shipRefresh')){ checkShipmentForVehicle(true); return; }   // B6: manual re-sync
   var ph = e.target.closest('.ship-photo');
   if (ph){ _deliverIdx = parseInt(ph.getAttribute('data-i'),10); document.getElementById('shipPhoto').click(); return; }
+  var pp = e.target.closest('.pallet-photo');
+  if (pp){
+    var pi = parseInt(pp.getAttribute('data-i'), 10);
+    var inp = document.getElementById('palletPhotoInput');
+    if (!inp){
+      inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = 'image/*'; inp.capture = 'environment';
+      inp.id = 'palletPhotoInput'; inp.style.display = 'none';
+      document.body.appendChild(inp);
+      inp.addEventListener('change', function(){
+        var f = inp.files && inp.files[0]; var gi = Number(inp.getAttribute('data-i'));
+        var grp = _shipGroups[gi];
+        if (f && grp){
+          var rd = new FileReader();
+          rd.onload = function(){
+            var durl = String(rd.result || '');
+            var m = durl.match(/^data:([^;]+);base64,(.*)$/);
+            if (m){ if (!grp._pallet) grp._pallet = { palletKey:'', qty:'', collectQty:'' };
+              grp._pallet.photo = { base64: m[2], type: m[1], name: 'pallet_' + Date.now() + '.jpg' };
+              _palletToast('ok', '&#10003; Photo attached · Foto dilampirkan');
+              renderShipGroups();
+            }
+          };
+          rd.readAsDataURL(f);
+        }
+        inp.value = '';
+      });
+    }
+    inp.setAttribute('data-i', pi);
+    inp.click();
+    return;
+  }
   var sv = e.target.closest('.ship-save');
   if (sv){ saveDelivery(parseInt(sv.getAttribute('data-i'),10)); return; }
   var fb = e.target.closest('.ship-fail');

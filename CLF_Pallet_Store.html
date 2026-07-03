@@ -1625,6 +1625,7 @@ async function submitPrincipal(){
 // Backend maps formType -> handleWriteAction_ via WRITE_ACTIONS_GET_ALLOWED_ whitelist.
 async function getWrite(action, params){
   try{
+    if (!params.authToken){ var _a = _authToken(); if (_a) params.authToken = _a; }   // ACCESS LOCK: session rides every write
     var qs = '?action=' + encodeURIComponent(action);
     Object.keys(params).forEach(function(k){
       var v = params[k];
@@ -1632,7 +1633,9 @@ async function getWrite(action, params){
       qs += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(v);
     });
     var res = await fetch(SCRIPT_URL + qs, { method: 'GET' });
-    return await res.json();
+    var j = await res.json();
+    if (j && j.code === 'AUTH') _authFail();   // expired / revoked → relock the page
+    return j;
   }catch(err){
     console.error('getWrite ' + action + ' failed', err);
     return { status: 'error', message: 'No connection · Tiada sambungan' };
@@ -1642,6 +1645,7 @@ async function getWrite(action, params){
 // POST + no-cors + poll getImportResult by clientToken — the only safe way to read the
 // real result of a photo write (no-cors hides the response). Backend caches result ~10 min.
 async function postWithToken(payload, token){
+  if (payload && !payload.authToken){ var _a = _authToken(); if (_a) payload.authToken = _a; }   // ACCESS LOCK
   var fd = new FormData();
   fd.append('data', JSON.stringify(payload));
   var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
@@ -1660,7 +1664,7 @@ async function postWithToken(payload, token){
     try{
       var rb = await fetch(SCRIPT_URL + '?action=getImportResult&token=' + encodeURIComponent(token));
       var rd = await rb.json();
-      if (rd && rd.status && rd.status !== 'pending') return rd;
+      if (rd && rd.status && rd.status !== 'pending'){ if (rd.code === 'AUTH') _authFail(); return rd; }
     }catch(e){ /* keep polling */ }
   }
   return null;   // no confirmation within timeout
@@ -1743,7 +1747,72 @@ function restoreStaffId(){
 // ============================================================
 // BOOT
 // ============================================================
+// ============================================================
+// ACCESS LOCK (frontend) — the page is unusable until unlocked with Staff ID + PIN
+// (Pallet_Access list; TER282 / TER278 for now). Token lives in localStorage ~30 days;
+// getWrite/postWithToken attach it to every write; backend re-verifies each one and
+// stamps the operator from the session (typed names can't impersonate).
+// ============================================================
+var AUTH_KEY = 'clf_pallet_auth';
+function _auth(){ try{ return JSON.parse(localStorage.getItem(AUTH_KEY) || 'null'); }catch(e){ return null; } }
+function _authToken(){ var a = _auth(); return (a && a.token) ? a.token : ''; }
+function _authFail(msg){ localStorage.removeItem(AUTH_KEY); showLock(msg || 'Session expired — unlock again · Sesi tamat, buka semula'); }
+function showLock(msg){
+  var ov = document.getElementById('lockOverlay');
+  if (!ov){
+    ov = document.createElement('div');
+    ov.id = 'lockOverlay';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:200;background:rgba(38,24,8,.96);display:flex;align-items:center;justify-content:center;padding:20px;';
+    ov.innerHTML = '<div style="background:#fff;border-radius:16px;max-width:360px;width:100%;padding:26px 22px;box-shadow:0 20px 60px rgba(0,0,0,.4);">'
+      + '<div style="font-size:34px;text-align:center;">&#128274;</div>'
+      + '<div style="font-weight:800;font-size:17px;text-align:center;margin:6px 0 2px;color:#412402;">Pallet Store is locked</div>'
+      + '<div style="font-size:12.5px;color:#854F0B;text-align:center;margin-bottom:14px;">Authorised staff only &middot; Staf sah sahaja</div>'
+      + '<label style="font-size:12px;font-weight:700;color:#854F0B;">Staff ID &middot; ID Staf</label>'
+      + '<input id="lk-emp" autocomplete="off" placeholder="e.g. TER282" style="width:100%;box-sizing:border-box;margin:4px 0 10px;padding:12px;font-size:15px;border:1.5px solid #d8c8a0;border-radius:9px;">'
+      + '<label style="font-size:12px;font-weight:700;color:#854F0B;">PIN</label>'
+      + '<input id="lk-pin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN" style="width:100%;box-sizing:border-box;margin:4px 0 6px;padding:12px;font-size:15px;border:1.5px solid #d8c8a0;border-radius:9px;">'
+      + '<div id="lk-err" style="min-height:16px;font-size:12px;color:#C62828;font-weight:600;"></div>'
+      + '<button id="lk-btn" style="width:100%;margin-top:8px;background:#5C3A1E;color:#fff;border:none;border-radius:10px;padding:14px;font-weight:800;font-size:15px;cursor:pointer;">Unlock &middot; Buka</button></div>';
+    document.body.appendChild(ov);
+    document.getElementById('lk-btn').onclick = doUnlock;
+    document.getElementById('lk-pin').addEventListener('keydown', function(e){ if (e.key === 'Enter') doUnlock(); });
+  }
+  ov.style.display = 'flex';
+  if (msg) document.getElementById('lk-err').textContent = msg;
+  var a = _auth(); var emp = document.getElementById('lk-emp');
+  if (emp && !emp.value) emp.value = (a && a.empNo) || localStorage.getItem(STAFFID_KEY) || '';
+}
+function hideLock(){ var ov = document.getElementById('lockOverlay'); if (ov) ov.style.display = 'none'; }
+async function doUnlock(){
+  var emp = document.getElementById('lk-emp').value.trim().toUpperCase();
+  var pin = document.getElementById('lk-pin').value.trim();
+  var err = document.getElementById('lk-err');
+  if (!emp || !pin){ err.textContent = 'Enter Staff ID + PIN · Isi ID + PIN'; return; }
+  var btn = document.getElementById('lk-btn');
+  btn.disabled = true; btn.textContent = 'Checking… · Menyemak…';
+  showLoading('Unlocking… · Membuka…');
+  var tok = _newToken('ulk');
+  var rd = await postWithToken({ formType: 'PALLET_UNLOCK', empNo: emp, pin: pin, clientToken: tok }, tok);
+  hideLoading();
+  btn.disabled = false; btn.textContent = 'Unlock · Buka';
+  if (rd && rd.status === 'success' && rd.authToken){
+    localStorage.setItem(AUTH_KEY, JSON.stringify({ token: rd.authToken, empNo: rd.empNo, name: rd.name }));
+    localStorage.setItem(STAFFID_KEY, rd.empNo);
+    document.getElementById('lk-pin').value = '';
+    err.textContent = '';
+    hideLock();
+    toast('ok', '<b>Unlocked ✓ · Dibuka</b><br>' + _esc(rd.name) + ' (' + _esc(rd.empNo) + ')');
+    restoreStaffId();
+  } else {
+    err.textContent = (rd && rd.message) ? rd.message : 'Could not unlock — check connection · Gagal, semak talian';
+  }
+}
+
+// ============================================================
+// BOOT
+// ============================================================
 window.onload = function(){
+  if (!_auth()) showLock();   // ACCESS LOCK: no session on this device → lock screen first
   if (!PHASE23_LIVE) ['assign','accept','returns','principal'].forEach(function(t){ var b=document.querySelector('.tab[data-tab="'+t+'"]'); if (b) b.style.display='none'; });
   var today = _today();
   ['st-date','rc-date','dm-date','rp-date','pr-date'].forEach(function(id){
