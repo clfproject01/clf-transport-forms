@@ -137,11 +137,11 @@
   <div class="grid">
     <div class="card c3 kpi dalam">
       <div class="big" id="kpiDalam">—</div>
-      <div class="lbl">In store (DALAM)</div>
+      <div class="lbl">Inside (DALAM) · in store + yard</div>
     </div>
     <div class="card c3 kpi luar">
       <div class="big" id="kpiLuar">—</div>
-      <div class="lbl">Out of store (LUAR)</div>
+      <div class="lbl">Outgoing (LUAR) · lorry / customer</div>
     </div>
     <div class="card c3 kpi rosak">
       <div class="big" id="kpiRosak">—</div>
@@ -161,26 +161,26 @@
       <div class="card-sub">
         Each pallet = <b>principal × type × colour</b>. The 6 numbers:
         <span class="legend">
-          <span><b>Out</b> EXT→ cumulative</span>
-          <span><b>Luar</b> live LUAR</span>
-          <span><b>Return</b> LUAR→DALAM</span>
-          <span><b>Damaged</b> live ROSAK</span>
-          <span><b>Fixed</b> ROSAK→DALAM</span>
+          <span><b>Out</b> assigned out · cumulative</span>
+          <span><b>Outgoing</b> out right now</span>
+          <span><b>Return</b> came back good</span>
+          <span><b>Damaged</b> damaged right now</span>
+          <span><b>Fixed</b> repaired</span>
           <span><b>Balance</b> total held</span>
         </span>
       </div>
       <div id="perPalletWrap"></div>
-      <div class="derived-note">Luar / Damaged / Balance = live balance (getPalletBalances). Out / Return / Fixed = rolled from the ledger flows (getPalletLedger). Pallets the ledger hasn't loaded show "—" for the 3 flow numbers, not zero.</div>
+      <div class="derived-note">Outgoing / Damaged / Balance = live balance (getPalletBalances). Out / Return / Fixed = rolled from ledger actions (ASSIGN / RETURN / REPAIR — openings &amp; stocktake corrections don't count). Pallets the ledger hasn't loaded show "—" for the 3 flow numbers, not zero.</div>
     </div>
   </div>
 
   <!-- ===================== OUTSTANDING BY CUSTOMER ===================== -->
-  <div class="zone-head zone-out">🚚 Out of store — by customer <span class="sub">— where the LUAR pallets are, when a customer is recorded</span></div>
+  <div class="zone-head zone-out">🚚 Outgoing — by customer <span class="sub">— where the outgoing pallets are, when a customer is recorded</span></div>
 
   <div class="grid">
     <div class="card c12">
-      <div class="card-title">Out of store — by customer (where recorded)</div>
-      <div class="card-sub">LUAR = out of the warehouse (on lorries / in transit / at customers). Rows with a customer code are confirmed at that customer; "not recorded" = out but no customer logged yet.</div>
+      <div class="card-title">Outgoing — by customer (where recorded)</div>
+      <div class="card-sub">Outgoing (LUAR) = genuinely out of our premises (on lorries / at customers). Rows with a customer code are confirmed at that customer; "not recorded" = out on a lorry, no customer logged yet.</div>
       <div id="outBody"></div>
       <div class="note-line" id="outNote"></div>
     </div>
@@ -295,20 +295,28 @@
   }
 
   // Roll the 3 cumulative flow numbers from the ledger (out / returned / fixed) per palletKey.
-  // Out      = Σ qty where fromState=EXT & toState=LUAR  (sent to the field)
-  // Return   = Σ qty where fromState=LUAR & toState=DALAM (came back good)
-  // Fixed    = Σ qty where fromState=ROSAK & toState=DALAM (repaired)
-  // (REVERSE rows write the mirror move, so they net out here automatically — no special-case.)
+  // ACTION-based (2026-07-03 model): Inside = at our premises (store + yard), Outgoing = genuinely out.
+  // Out      = Σ ASSIGN qty            (we sent them out on a lorry)
+  // Return   = Σ RETURN qty LUAR→DALAM (came back good; damaged returns land in live ROSAK)
+  // Fixed    = Σ REPAIR qty            (ROSAK repaired back to DALAM)
+  // Openings / stocktake corrections / the yard-merge ADJUST do NOT count as flows.
+  // REVERSE rows subtract the matching flow so corrections net out.
   function rollFlows(){
     FLOWS = {};
     LEDGER.forEach(function(r){
       var k = r.palletKey; if(!k) return;
+      var a=String(r.action||'').toUpperCase();
       var f=String(r.fromState||'').toUpperCase(), t=String(r.toState||'').toUpperCase(), q=intOr0(r.qty);
       if(q<=0) return;
       var o = FLOWS[k] || (FLOWS[k]={out:0,returned:0,fixed:0});
-      if(f==='EXT'  && t==='LUAR')  o.out += q;
-      if(f==='LUAR' && t==='DALAM') o.returned += q;
-      if(f==='ROSAK'&& t==='DALAM') o.fixed += q;
+      if(a==='ASSIGN')                              o.out += q;
+      if(a==='RETURN' && f==='LUAR' && t==='DALAM') o.returned += q;
+      if(a==='REPAIR')                              o.fixed += q;
+      if(a==='REVERSE'){                            // mirror rows: undo the flow they reversed
+        if(f==='LUAR'  && t==='DALAM') o.out -= q;      // undoing an ASSIGN
+        if(f==='DALAM' && t==='LUAR')  o.returned -= q; // undoing a good RETURN
+        if(f==='DALAM' && t==='ROSAK') o.fixed -= q;    // undoing a REPAIR
+      }
     });
   }
 
@@ -397,13 +405,13 @@
         + '<div class="pcard-head"><span class="name">'+esc(b.displayName||b.palletKey)+'</span><span class="key">'+esc(b.palletKey)+'</span></div>'
         + '<div class="six">'
         +   '<div class="cell out"><div class="n">'+out+'</div><div class="k">Out</div></div>'
-        +   '<div class="cell luar"><div class="n">'+luar+'</div><div class="k">Luar</div></div>'
+        +   '<div class="cell luar"><div class="n">'+luar+'</div><div class="k">Outgoing</div></div>'
         +   '<div class="cell ret"><div class="n">'+ret+'</div><div class="k">Return</div></div>'
         +   '<div class="cell dmg"><div class="n">'+rosak+'</div><div class="k">Damaged</div></div>'
         +   '<div class="cell fix"><div class="n">'+fix+'</div><div class="k">Fixed</div></div>'
         +   '<div class="cell bal"><div class="n">'+bal+'</div><div class="k">Balance</div></div>'
         + '</div>'
-        + '<div class="derived-note">In store (DALAM): <b>'+fmtInt(b.dalam)+'</b></div>'
+        + '<div class="derived-note">Inside (DALAM): <b>'+fmtInt(b.dalam)+'</b></div>'
         + '</div>';
     }).join('') + '</div>';
   }
@@ -425,14 +433,14 @@
     var total = rows.reduce(function(s,o){ return s+intOr0(o.qtyOutstanding); },0);
     var html = '<table class="act"><thead><tr><th>Customer</th><th>Pallet</th><th class="rm">Outstanding</th></tr></thead><tbody>';
     rows.forEach(function(o){
-      var cust = (o.custCode && o.custCode !== '(unassigned)') ? esc(o.custCode) : '<span class="psub">Out — customer not recorded</span>';
+      var cust = (o.custCode && o.custCode !== '(unassigned)') ? esc(o.custCode) : '<span class="psub">Outgoing — on lorries, customer not recorded</span>';
       html += '<tr><td>'+cust+'</td>'
         + '<td class="pkey">'+esc(nameOf[o.palletKey]||o.palletKey)+'<div class="psub">'+esc(o.palletKey)+'</div></td>'
         + '<td class="rm"><span class="chip blue mono">'+fmtInt(o.qtyOutstanding)+'</span></td></tr>';
     });
     body.innerHTML = html + '</tbody></table>';
     var atCust = rows.reduce(function(s,o){ return s + ((o.custCode && o.custCode !== '(unassigned)') ? intOr0(o.qtyOutstanding) : 0); }, 0);
-    $('outNote').textContent = rows.length + ' line(s) · ' + fmtInt(total) + ' out of store — ' + fmtInt(atCust) + ' at a recorded customer, ' + fmtInt(total - atCust) + ' not yet recorded.';
+    $('outNote').textContent = rows.length + ' line(s) · ' + fmtInt(total) + ' outgoing — ' + fmtInt(atCust) + ' at a recorded customer, ' + fmtInt(total - atCust) + ' not yet recorded.';
   }
 
   // ---------- Audit ledger ----------
