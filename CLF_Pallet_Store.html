@@ -719,8 +719,8 @@
     <!-- ================= PRINCIPAL PANEL (return to principal) ================= -->
     <div class="panel" id="panel-principal">
       <div class="notice">
-        <b>Return to Principal · Pulang ke Prinsipal:</b> Send pallets back to the owner/principal — out of DALAM (good) or ROSAK (damaged). Records who, when & a reference.<br>
-        <span style="opacity:.75;">Hantar pallet balik ke prinsipal — dari DALAM (elok) atau ROSAK. Rekod rujukan.</span>
+        <b>Principal · Prinsipal:</b> <b>Return to</b> = send pallets back to the owner (stock drops). <b>Receive from</b> = principal sends pallets in (stock rises). Records who, when & a reference.<br>
+        <span style="opacity:.75;">Pulang ke = hantar balik (stok turun). Terima dari = prinsipal hantar masuk (stok naik). Rekod rujukan.</span>
       </div>
 
       <div class="field">
@@ -731,7 +731,13 @@
         <div class="error-msg" id="err-pr-pallet">Please select a pallet · Sila pilih pallet</div>
       </div>
 
-      <div class="section-label">Return From · Pulang Dari</div>
+      <div class="section-label">Direction · Arah</div>
+      <div class="seg" id="pr-dir-seg">
+        <button type="button" class="seg-btn sel" data-dir="RETURN" onclick="pickPrDir(this)">Return to<span class="bm">Pulang ke</span></button>
+        <button type="button" class="seg-btn" data-dir="RECEIVE" onclick="pickPrDir(this)">Receive from<span class="bm">Terima dari</span></button>
+      </div>
+
+      <div class="section-label" id="pr-from-label">Return From · Pulang Dari</div>
       <div class="seg" id="pr-state-seg">
         <button type="button" class="seg-btn sel" data-state="DALAM" onclick="pickPrState(this)">DALAM<span class="bm">Good · Elok</span></button>
         <button type="button" class="seg-btn" data-state="ROSAK" onclick="pickPrState(this)">ROSAK<span class="bm">Damaged</span></button>
@@ -749,7 +755,7 @@
 
       <div class="section-label">Quantity · Jumlah</div>
       <div class="field">
-        <label>How many returned? · Berapa dipulangkan? <span class="req">*</span></label>
+        <label id="pr-qty-label">How many returned? · Berapa dipulangkan? <span class="req">*</span></label>
         <input type="number" id="pr-qty" inputmode="numeric" min="1" step="1" placeholder="e.g. 20" oninput="onPrQtyInput()">
         <div class="error-msg" id="err-pr-qty">Enter a number ≥ 1 · Masukkan nombor</div>
         <div class="var-pill" id="pr-var"></div>
@@ -774,7 +780,7 @@
       <div class="btn-wrap">
         <button type="button" class="submit-btn" onclick="submitPrincipal()">
           <svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
-          Return to Principal · Pulang Prinsipal
+          <span id="pr-submit-label">Return to Principal · Pulang Prinsipal</span>
         </button>
         <div class="teal-bar"></div>
       </div>
@@ -1637,6 +1643,17 @@ async function submitReceive(){
 // PRINCIPAL  →  GET-write  PALLET_RETURN_PRINCIPAL  (DALAM or ROSAK → out to owner)
 // ============================================================
 var PR_STATE = 'DALAM';
+var PR_DIR = 'RETURN';   // RETURN = to principal (stock drops) | RECEIVE = from principal (stock rises)
+function pickPrDir(btn){
+  document.querySelectorAll('#pr-dir-seg .seg-btn').forEach(function(b){ b.classList.remove('sel'); });
+  btn.classList.add('sel'); PR_DIR = btn.getAttribute('data-dir');
+  var isRet = PR_DIR === 'RETURN';
+  var fromLbl = document.getElementById('pr-from-label'); if (fromLbl) fromLbl.style.display = isRet ? '' : 'none';
+  var seg = document.getElementById('pr-state-seg'); if (seg) seg.style.display = isRet ? '' : 'none';
+  var sub = document.getElementById('pr-submit-label'); if (sub) sub.textContent = isRet ? 'Return to Principal · Pulang Prinsipal' : 'Receive from Principal · Terima dari Prinsipal';
+  var ql = document.getElementById('pr-qty-label'); if (ql) ql.innerHTML = isRet ? 'How many returned? · Berapa dipulangkan? <span class="req">*</span>' : 'How many received? · Berapa diterima? <span class="req">*</span>';
+  onPrQtyInput();
+}
 function pickPrState(btn){
   document.querySelectorAll('#pr-state-seg .seg-btn').forEach(function(b){ b.classList.remove('sel'); });
   btn.classList.add('sel'); PR_STATE = btn.getAttribute('data-state'); onPrQtyInput();
@@ -1647,6 +1664,11 @@ function onPrQtyInput(){
   var key = document.getElementById('pr-pallet').value;
   var qty = _posInt(document.getElementById('pr-qty').value);
   if (!key || qty === null || qty < 1){ pill.classList.remove('show'); return; }
+  if (PR_DIR === 'RECEIVE'){
+    pill.className = 'var-pill show ok';
+    pill.innerHTML = '&#10003; +' + qty + ' into DALAM (Inside) · ' + balOf(key).dalam + ' &rarr; ' + (balOf(key).dalam + qty) + ' after<br>' + qty + ' akan masuk DALAM';
+    return;
+  }
   var avail = PR_STATE === 'DALAM' ? balOf(key).dalam : balOf(key).rosak;
   if (qty > avail){
     pill.className = 'var-pill show diff';
@@ -1665,6 +1687,27 @@ async function submitPrincipal(){
   document.getElementById('err-pr-qty').classList.toggle('show', !qty || qty < 1); if (!qty || qty < 1) ok = false;
   document.getElementById('err-pr-ref').classList.toggle('show', !ref); if (!ref) ok = false;
   if (!ok) return;
+  if (PR_DIR === 'RECEIVE'){
+    var rop = document.getElementById('pr-operator').value.trim();
+    if (rop) localStorage.setItem(OPERATOR_KEY, rop);
+    showLoading('Receiving from principal… · Menerima…');
+    var rdata = await getWrite('PALLET_RECEIVE_PRINCIPAL', {
+      palletKey: key, qty: qty, ref: ref, operator: rop,
+      entryDate: document.getElementById('pr-date').value || _today(), clientToken: _newToken('rcp')
+    });
+    hideLoading();
+    if (rdata && rdata.status === 'success'){
+      var rmsg = rdata.dedup ? 'Already saved · Sudah disimpan' : ('<b>+' + qty + '</b> DALAM · ' + _esc(nameOf(key)));
+      toast('ok', '<b>Received from principal &#10003; · Diterima</b><br>' + rmsg);
+      document.getElementById('pr-qty').value = '';
+      document.getElementById('pr-ref').value = '';
+      document.getElementById('pr-var').classList.remove('show');
+      refreshBalances(true);
+    } else {
+      toast('err', '<b>NOT saved · TIDAK disimpan</b><br>' + _esc((rdata && rdata.message) || 'Server error'));
+    }
+    return;
+  }
   var avail = PR_STATE === 'DALAM' ? balOf(key).dalam : balOf(key).rosak;
   if (qty > avail){ toast('err', '<b>Not enough · Tak cukup</b><br>Only ' + avail + ' ' + PR_STATE + ' available · Hanya ' + avail + ' ada'); return; }
   var operator = document.getElementById('pr-operator').value.trim();
