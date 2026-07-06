@@ -682,27 +682,38 @@
       </div>
     </div>
 
-    <!-- ================= RETURNS PANEL (store accepts pending returns) ================= -->
+    <!-- ================= RETURNS PANEL (receive from lorry) ================= -->
     <div class="panel" id="panel-returns">
       <div class="notice">
-        <b>Accept Returns · Terima Pulangan:</b> Drivers raise return requests. Open each one, enter good vs damaged, then accept. A photo is optional — if added it uploads in the background.<br>
-        <span style="opacity:.75;">Driver minta pulang. Buka, masukkan elok vs rosak, terima. Foto pilihan.</span>
+        <b>Receive from Lorry · Terima dari Lori:</b> Enter the lorry — see what should still be on it, count what actually came back (good vs damaged). A shortfall must be assigned to a customer; extras are customer returns.<br>
+        <span style="opacity:.75;">Masukkan lori — kira apa yang balik (elok / rosak). Kekurangan diberi kepada pelanggan; lebihan = pulangan pelanggan.</span>
       </div>
 
       <div class="field">
-        <label>Date filter · Tapis Tarikh</label>
-        <input type="date" id="rt-date" onchange="loadReturns()">
-        <div class="hint" style="margin-top:6px;">Leave today or pick a day · Biar hari ini atau pilih tarikh</div>
+        <label>Lorry No · No. Lori <span class="req">*</span></label>
+        <input type="text" id="rt-lorry" autocomplete="off" placeholder="e.g. WTA 1234" oninput="document.getElementById('err-rt-lorry').classList.remove('show')">
+        <div class="error-msg" id="err-rt-lorry">Enter the lorry no · Masukkan no lori</div>
+        <input type="hidden" id="rt-shipment">
+        <div id="rt-ship-info" class="hint" style="margin-top:8px;"></div>
       </div>
       <div class="btn-wrap" style="margin-bottom:10px;">
-        <button type="button" class="submit-btn" style="background:var(--navy-mid);box-shadow:0 4px 12px rgba(26,58,92,.25);" onclick="loadReturns()">
-          <svg viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-          Refresh Pending · Muat Semula
+        <button type="button" class="submit-btn" style="background:var(--navy-mid);box-shadow:0 4px 12px rgba(26,58,92,.25);" onclick="loadReceive()">
+          <svg viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35"/><circle cx="11" cy="11" r="7"/></svg>
+          Load Lorry · Muat Lori
         </button>
       </div>
 
-      <div class="section-label">Pending Returns · Pulangan Menunggu</div>
-      <div id="rt-rows"><div class="empty">Tap refresh to load pending returns · Tekan muat semula</div></div>
+      <div class="section-label">Still on this lorry · Masih atas lori</div>
+      <div id="rt-rows"><div class="empty">Load a lorry to receive · Muat lori dahulu</div></div>
+
+      <div class="btn-wrap" style="margin-top:14px;">
+        <button type="button" class="submit-btn" style="background:var(--success);box-shadow:0 4px 12px rgba(34,197,94,.25);" onclick="submitReceive()">
+          <svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
+          Receive All · Terima Semua
+        </button>
+        <div class="teal-bar"></div>
+      </div>
+      <div class="hint" style="margin-top:14px;">Every line must balance: good + damaged + left-at-customer = expected (+ extras collected). Short across two customers? Save, reload, allocate the rest. · Setiap baris mesti seimbang.</div>
     </div>
 
     <!-- ================= PRINCIPAL PANEL (return to principal) ================= -->
@@ -1463,103 +1474,163 @@ async function submitAccept(){
 }
 
 // ============================================================
-// RETURNS  →  POST if photo else GET-write  PALLET_RETURN
+// RECEIVE FROM LORRY — the store receives directly off the lorry (no driver request).
+// Per pallet: expected = live on-lorry; count good/damaged; a shortfall is DROPped to a
+// customer (their outstanding rises), extras are COLLECTed from a customer (theirs falls),
+// then PALLET_RETURN books what physically came back. All three reuse the live ledger fns.
 // ============================================================
-var RT_PENDING = [];        // [{requestEntryId, palletKey, displayName, qty, shipmentKey, lorryNo, driverName, entryDate}]
-var rtPhotos = {};          // requestEntryId -> [{dataUrl,name,type}]
-async function loadReturns(){
-  var date = document.getElementById('rt-date').value;   // optional filter
-  showLoading('Loading… · Memuatkan…');
-  RT_PENDING = [];
+var RC_SHIPMENTS = [];   // today's shipments for the entered lorry
+var RC_CUSTOMERS = [];   // [{custCode, customerName}] on the chosen shipment (allocation pickers)
+var RC_LINES = [];       // [{palletKey, displayName, expected}]
+var RC_DRIVER = '';
+
+async function loadReceive(){
+  var lorryNo = document.getElementById('rt-lorry').value.trim();
+  document.getElementById('err-rt-lorry').classList.toggle('show', !lorryNo);
+  if (!lorryNo) return;
+  var info = document.getElementById('rt-ship-info');
+  info.innerHTML = 'Finding shipment for this lorry… · Mencari shipment…';
+  document.getElementById('rt-shipment').value = '';
+  RC_SHIPMENTS = []; RC_CUSTOMERS = [];
   try{
-    var url = SCRIPT_URL + '?action=getPalletReturnsPending' + (date ? ('&date=' + encodeURIComponent(date)) : '');
-    var res = await fetch(url, { method: 'GET' });
+    var res = await fetch(SCRIPT_URL + '?action=getShipmentForLorry&vehicleNo=' + encodeURIComponent(lorryNo), { method: 'GET' });
     var data = await res.json();
-    if (data && data.status === 'ok' && Array.isArray(data.pending)) RT_PENDING = data.pending;
-  }catch(err){ console.warn('loadReturns failed', err); toast('err', 'Could not load returns · Gagal muat'); }
+    if (data && data.status === 'ok'){
+      RC_SHIPMENTS = Array.isArray(data.shipments) ? data.shipments : [];
+      var seen = {};
+      (Array.isArray(data.items) ? data.items : []).forEach(function(it){
+        var code = String(it.custCode || '').trim();
+        if (code && !seen[code]){ seen[code] = true; RC_CUSTOMERS.push({ custCode: code, customerName: it.customerName || '' }); }
+      });
+    }
+  }catch(err){ console.warn('getShipmentForLorry failed', err); }
+  if (!RC_SHIPMENTS.length){
+    info.innerHTML = '<span style="color:var(--error);">No shipment today for ' + _esc(lorryNo) + ' · Tiada shipment hari ini</span>';
+    RC_LINES = []; document.getElementById('rt-rows').innerHTML = '<div class="empty">Load a lorry to receive · Muat lori dahulu</div>';
+    return;
+  }
+  await pickReceiveShipment(0);
+}
+
+async function pickReceiveShipment(idx){
+  idx = parseInt(idx, 10); if (isNaN(idx)) idx = 0;
+  var chosen = RC_SHIPMENTS[idx]; if (!chosen) return;
+  var shipKey = chosen.shipmentKey;
+  document.getElementById('rt-shipment').value = shipKey;
+  RC_DRIVER = chosen.assignedPrimary || chosen.driverFromForm || '';
+  var picker = '';
+  if (RC_SHIPMENTS.length > 1){
+    picker = 'This lorry runs <b>' + RC_SHIPMENTS.length + '</b> shipments today — pick one · Pilih: '
+      + '<select id="rt-ship-pick" onchange="pickReceiveShipment(this.value)" style="margin-top:6px;padding:9px;font-size:14px;border:1.5px solid #d8c8a0;border-radius:8px;width:100%;background:#fff;color:#412402;">'
+      + RC_SHIPMENTS.map(function(s, i){ return '<option value="' + i + '"' + (i===idx?' selected':'') + '>' + _esc(s.shipmentKey) + (s.itemCount ? (' · ' + s.itemCount + ' inv') : '') + '</option>'; }).join('')
+      + '</select><br>';
+  }
+  document.getElementById('rt-ship-info').innerHTML = picker + '<span style="color:#15803D;font-weight:600;">&#10003; ' + _esc(shipKey) + '</span>' + (RC_DRIVER ? (' · ' + _esc(RC_DRIVER)) : '');
+  showLoading('Loading… · Memuatkan…');
+  RC_LINES = [];
+  try{
+    var res = await fetch(SCRIPT_URL + '?action=getPalletShipmentStatus&shipmentKey=' + encodeURIComponent(shipKey), { method: 'GET' });
+    var data = await res.json();
+    if (data && data.status === 'ok' && Array.isArray(data.lines)){
+      RC_LINES = data.lines.filter(function(l){ return (Number(l.onLorry) || 0) > 0; })
+        .map(function(l){ return { palletKey: l.palletKey, displayName: l.displayName || l.palletKey, expected: Number(l.onLorry) || 0 }; });
+    }
+  }catch(err){ console.warn('getPalletShipmentStatus failed', err); }
   hideLoading();
-  renderReturns();
+  renderReceiveRows();
 }
-function renderReturns(){
-  if (!RT_PENDING.length){ document.getElementById('rt-rows').innerHTML = '<div class="empty">No pending returns 🎉 · Tiada pulangan menunggu</div>'; return; }
-  document.getElementById('rt-rows').innerHTML = RT_PENDING.map(function(p, i){
-    return '<div class="plt-row" id="rt-row-' + i + '"><div class="plt-row-top">' +
-      '<div><div class="nm">' + _esc(p.displayName || p.palletKey) + ' ×' + p.qty + '</div>' +
-        '<div class="sub">' + _esc(p.driverName || '—') + ' · ' + _esc(p.lorryNo || '—') + ' · ' + _esc(p.shipmentKey || '') + ' · ' + _esc(p.entryDate || '') + '</div></div>' +
-      '<button type="button" class="mini-btn accept" onclick="toggleReturn(' + i + ')">Accept · Terima</button>' +
+
+function _rcCustPicker(id){
+  var opts = '<option value="">— customer · pelanggan —</option>';
+  RC_CUSTOMERS.forEach(function(c){ opts += '<option value="' + _esc(c.custCode) + '">' + _esc(c.custCode) + (c.customerName ? (' · ' + _esc(String(c.customerName).slice(0, 22))) : '') + '</option>'; });
+  return '<select id="' + id + '" style="flex:1;min-width:0;padding:10px;font-size:13px;border:1.5px solid #d8c8a0;border-radius:8px;background:#fff;color:#412402;">' + opts + '</select>';
+}
+
+function renderReceiveRows(){
+  if (!RC_LINES.length){
+    document.getElementById('rt-rows').innerHTML = '<div class="empty">Nothing left on this lorry &#127881; · Tiada apa atas lori ini</div>';
+    return;
+  }
+  document.getElementById('rt-rows').innerHTML = RC_LINES.map(function(l, i){
+    return '<div class="plt-row"><div class="plt-row-top">' +
+      '<div><div class="nm">' + _esc(l.displayName) + '</div><div class="sub">Expected on lorry · Dijangka: <b>' + l.expected + '</b></div></div>' +
       '</div>' +
-      '<div class="rt-expand" id="rt-exp-' + i + '">' +
-        '<div class="rt-gd">' +
-          '<div class="field"><label>Good · Elok</label><input type="number" id="rt-good-' + i + '" inputmode="numeric" min="0" value="' + p.qty + '"></div>' +
-          '<div class="field"><label>Damaged · Rosak</label><input type="number" id="rt-bad-' + i + '" inputmode="numeric" min="0" value="0"></div>' +
-        '</div>' +
-        '<div class="field"><label>Driver · Driver</label><input type="text" id="rt-drv-' + i + '" value="' + _esc(p.driverName || '') + '" placeholder="Driver name"></div>' +
-        '<label class="photo-btn" style="padding:12px;" id="rt-pbtn-' + i + '">' +
-          '<input type="file" accept="image/*" capture="environment" multiple onchange="handleReturnPhoto(' + i + ', this)">' +
-          '<div class="photo-sublabel" id="rt-psub-' + i + '">📷 Photo optional · Foto pilihan</div>' +
-        '</label>' +
-        '<div class="btn-wrap" style="margin-top:10px;"><button type="button" class="submit-btn" onclick="submitReturn(' + i + ')">' +
-          '<svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>Save Return · Simpan Pulangan</button></div>' +
-      '</div></div>';
+      '<div style="display:flex;gap:8px;margin-top:8px;">' +
+        '<div class="field" style="flex:1;margin:0;"><label>Good · Elok</label><input type="number" id="rc-good-' + i + '" inputmode="numeric" min="0" value="' + l.expected + '" oninput="recalcReceive(' + i + ')"></div>' +
+        '<div class="field" style="flex:1;margin:0;"><label>Damaged · Rosak</label><input type="number" id="rc-bad-' + i + '" inputmode="numeric" min="0" value="0" oninput="recalcReceive(' + i + ')"></div>' +
+      '</div>' +
+      '<div id="rc-diff-' + i + '" style="margin-top:8px;"></div>' +
+    '</div>';
   }).join('');
+  RC_LINES.forEach(function(_, i){ recalcReceive(i); });
 }
-function toggleReturn(i){ document.getElementById('rt-exp-' + i).classList.toggle('show'); }
-async function handleReturnPhoto(i, input){
-  if (!input.files || !input.files.length) return;
-  var id = RT_PENDING[i].requestEntryId;
-  rtPhotos[id] = rtPhotos[id] || [];
-  for (var k = 0; k < input.files.length && rtPhotos[id].length < MAX_PHOTOS; k++){
-    var entry;
-    try { entry = await compressImage(input.files[k]); }
-    catch(err){ try { entry = await readFileAsDataUrl(input.files[k]); } catch(e2){ continue; } }
-    rtPhotos[id].push(entry);
-  }
-  input.value = '';
-  var sub = document.getElementById('rt-psub-' + i); if (sub) sub.textContent = '✓ ' + rtPhotos[id].length + ' photo(s) · ' + rtPhotos[id].length + ' foto';
-}
-async function submitReturn(i){
-  var p = RT_PENDING[i];
-  var good = _posInt(document.getElementById('rt-good-' + i).value);
-  var bad = _posInt(document.getElementById('rt-bad-' + i).value);
-  var driver = document.getElementById('rt-drv-' + i).value.trim();
-  if (good === null) good = 0; if (bad === null) bad = 0;
-  if (good + bad < 1){ toast('err', 'Enter good or damaged qty · Masukkan jumlah'); return; }
-  var photos = rtPhotos[p.requestEntryId] || [];
-  if (photos.length){
-    // POST: photo write travels in body, confirmed via clientToken poll
-    var token = _newToken('rtn');
-    var payload = {
-      formType: 'PALLET_RETURN',
-      palletKey: p.palletKey, goodQty: good, damagedQty: bad,
-      shipmentKey: p.shipmentKey, custCode: p.custCode || '', driverName: driver,
-      photos: photos.map(function(ph){ return { base64: ph.dataUrl.split(',')[1], name: ph.name, type: ph.type }; }),
-      linkedEntryId: p.requestEntryId, entryDate: p.entryDate || _today(), clientToken: token
-    };
-    showLoading('Uploading ' + photos.length + ' photo(s)… · Memuat naik…');
-    var confirmed = await postWithToken(payload, token);
-    hideLoading();
-    if (confirmed && confirmed.status === 'success'){ returnDone(i, good, bad); }
-    else if (confirmed && confirmed.status === 'error'){ toast('err', '<b>NOT saved · TIDAK disimpan</b><br>' + _esc(confirmed.message || 'Server error') + ' · Photos kept'); }
-    else { toast('warn', '<b>Sent — please verify · Sila sahkan</b><br>Could not confirm. Check dashboard in 1 min before re-sending.'); }
+
+function recalcReceive(i){
+  var l = RC_LINES[i]; if (!l) return;
+  var good = _posInt(document.getElementById('rc-good-' + i).value) || 0;
+  var bad = _posInt(document.getElementById('rc-bad-' + i).value) || 0;
+  var diff = l.expected - good - bad;
+  var box = document.getElementById('rc-diff-' + i);
+  if (diff === 0){
+    box.innerHTML = '<div style="font-size:12px;color:#15803D;font-weight:600;">&#10003; Balanced · Seimbang</div>';
+  } else if (diff > 0){
+    box.innerHTML = '<div style="font-size:12px;color:#C62828;font-weight:700;margin-bottom:5px;">Short ' + diff + ' — left at customer? · Kurang ' + diff + ' — tinggal di pelanggan?</div>'
+      + '<div style="display:flex;gap:8px;">' + _rcCustPicker('rc-scust-' + i)
+      + '<input type="number" id="rc-sqty-' + i + '" inputmode="numeric" min="0" value="' + diff + '" style="width:74px;padding:10px;font-size:13px;border:1.5px solid #d8c8a0;border-radius:8px;"></div>'
+      + '<div style="font-size:11px;color:#854F0B;margin-top:4px;">Driver cannot say where they went? Do not receive — ask first. · Tanya driver dulu.</div>';
   } else {
-    // no photo → GET-write
-    var params = {
-      palletKey: p.palletKey, goodQty: good, damagedQty: bad,
-      shipmentKey: p.shipmentKey, custCode: p.custCode || '', driverName: driver,
-      linkedEntryId: p.requestEntryId, entryDate: p.entryDate || _today(), clientToken: _newToken('rtn')
-    };
-    showLoading('Saving return… · Menyimpan…');
-    var data = await getWrite('PALLET_RETURN', params);
-    hideLoading();
-    if (data && data.status === 'success'){ returnDone(i, good, bad); }
-    else { toast('err', '<b>NOT saved · TIDAK disimpan</b><br>' + _esc((data && data.message) || 'Server error · Ralat')); }
+    var extra = -diff;
+    box.innerHTML = '<div style="font-size:12px;color:#0E7C5A;font-weight:700;margin-bottom:5px;">Extra ' + extra + ' — collected from customer? · Lebih ' + extra + ' — diambil dari pelanggan?</div>'
+      + '<div style="display:flex;gap:8px;">' + _rcCustPicker('rc-ccust-' + i)
+      + '<input type="number" id="rc-cqty-' + i + '" inputmode="numeric" min="0" value="' + extra + '" style="width:74px;padding:10px;font-size:13px;border:1.5px solid #d8c8a0;border-radius:8px;"></div>';
   }
 }
-function returnDone(i, good, bad){
-  toast('ok', '<b>Return saved ✓ · Pulangan disimpan</b><br>' + good + ' good · ' + bad + ' damaged · ' + _esc(RT_PENDING[i].displayName || RT_PENDING[i].palletKey));
-  delete rtPhotos[RT_PENDING[i].requestEntryId];
+
+async function submitReceive(){
+  var shipKey = document.getElementById('rt-shipment').value.trim();
+  if (!shipKey || !RC_LINES.length){ toast('err', 'Load a lorry first · Muat lori dahulu'); return; }
+  var plan = [];
+  for (var i = 0; i < RC_LINES.length; i++){
+    var l = RC_LINES[i];
+    var good = _posInt(document.getElementById('rc-good-' + i).value) || 0;
+    var bad = _posInt(document.getElementById('rc-bad-' + i).value) || 0;
+    var diff = l.expected - good - bad;
+    var p = { line: l, good: good, bad: bad, shortCust: '', shortQty: 0, colCust: '', colQty: 0 };
+    if (diff > 0){
+      var sEl = document.getElementById('rc-scust-' + i), qEl = document.getElementById('rc-sqty-' + i);
+      p.shortCust = sEl ? sEl.value.trim() : ''; p.shortQty = qEl ? (_posInt(qEl.value) || 0) : 0;
+      if (!p.shortCust || p.shortQty !== diff){ toast('err', '<b>' + _esc(l.displayName) + '</b>: allocate the missing ' + diff + ' to a customer · Beri kekurangan kepada pelanggan'); return; }
+    } else if (diff < 0){
+      var cEl = document.getElementById('rc-ccust-' + i), q2El = document.getElementById('rc-cqty-' + i);
+      p.colCust = cEl ? cEl.value.trim() : ''; p.colQty = q2El ? (_posInt(q2El.value) || 0) : 0;
+      if (!p.colCust || p.colQty !== -diff){ toast('err', '<b>' + _esc(l.displayName) + '</b>: record which customer returned the extra ' + (-diff) + ' · Rekod pelanggan mana'); return; }
+    }
+    plan.push(p);
+  }
+  showLoading('Receiving… · Menerima…');
+  var msgs = [], failed = [];
+  for (var k = 0; k < plan.length; k++){
+    var p = plan[k], key = p.line.palletKey, nm = p.line.displayName;
+    if (p.colQty > 0){
+      var rc = await getWrite('PALLET_COLLECT', { palletKey: key, qty: p.colQty, custCode: p.colCust, shipmentKey: shipKey, driverName: RC_DRIVER, entryDate: _today(), clientToken: _newToken('rcv') });
+      if (!(rc && rc.status === 'success')){ failed.push(nm + ' collect: ' + ((rc && rc.message) || 'error')); continue; }
+    }
+    if (p.shortQty > 0){
+      var rd = await getWrite('PALLET_DROP', { palletKey: key, qty: p.shortQty, custCode: p.shortCust, shipmentKey: shipKey, driverName: RC_DRIVER, entryDate: _today(), clientToken: _newToken('rcv') });
+      if (!(rd && rd.status === 'success')){ failed.push(nm + ' drop: ' + ((rd && rd.message) || 'error')); continue; }
+    }
+    if (p.good + p.bad > 0){
+      var rr = await getWrite('PALLET_RETURN', { palletKey: key, goodQty: p.good, damagedQty: p.bad, shipmentKey: shipKey, driverName: RC_DRIVER, entryDate: _today(), clientToken: _newToken('rcv') });
+      if (!(rr && rr.status === 'success')){ failed.push(nm + ' return: ' + ((rr && rr.message) || 'error')); continue; }
+    }
+    msgs.push(nm + ': ' + p.good + ' good' + (p.bad ? (' · ' + p.bad + ' dmg') : '') + (p.shortQty ? (' · ' + p.shortQty + '&rarr;' + _esc(p.shortCust)) : '') + (p.colQty ? (' · +' + p.colQty + ' from ' + _esc(p.colCust)) : ''));
+  }
+  hideLoading();
+  if (failed.length) toast('err', '<b>Some lines failed · Sebahagian gagal</b><br>' + _esc(failed.join(' | ')) + '<br>Fix &amp; resend — saved ones are deduped.');
+  else toast('ok', '<b>Received &#10003; · Diterima</b><br>' + msgs.join('<br>'));
   refreshBalances(true);
-  loadReturns();   // re-pull so the accepted request drops off the pending list
+  var pick = document.getElementById('rt-ship-pick');
+  pickReceiveShipment(pick ? pick.value : 0);   // re-pull: expected should now be zero
 }
 
 // ============================================================
