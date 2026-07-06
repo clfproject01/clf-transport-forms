@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manual Sistem Pallet (Bahasa Melayu) — CLF Trading</title>
+<style>
+  body {
+    font-family: 'Noto Sans TC', -apple-system, sans-serif;
+    background: #ffffff;
+    color: #1a1a1a;
+    line-height: 1.75;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+    -webkit-text-size-adjust: 100%;
+  }
+  h1 { font-size: 1.9em; line-height: 1.3; margin: 0 0 0.2em; font-weight: 700; }
+  h2 { font-size: 1.4em; line-height: 1.3; margin: 1.8em 0 0.6em; font-weight: 700; padding-top: 0.6em; border-top: 1px solid #e5e5e5; }
+  h3 { font-size: 1.12em; margin: 1.4em 0 0.4em; font-weight: 600; }
+  p { margin: 0.7em 0; }
+  ol, ul { margin: 0.7em 0; padding-left: 1.6em; }
+  li { margin: 0.4em 0; }
+  ol ol, ul ul, ol ul, ul ol { margin: 0.3em 0; }
+  code { background: #f4f4f4; border: 1px solid #e5e5e5; border-radius: 4px; padding: 0.1em 0.4em; font-family: 'DM Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 0.88em; }
+  strong { font-weight: 700; }
+  blockquote { margin: 1em 0; padding: 0.6em 1em; border-left: 4px solid #b0b0b0; background: #f6f6f6; color: #333; }
+  blockquote p { margin: 0.4em 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.95em; }
+  th, td { border: 1px solid #d8d8d8; padding: 8px 12px; text-align: left; vertical-align: top; }
+  th { background: #f6f6f6; font-weight: 600; }
+  hr { border: none; border-top: 1px solid #e5e5e5; margin: 2em 0; }
+  .lead { color: #555; font-size: 1.02em; }
+  a { color: #1a1a1a; }
+</style>
+</head>
+<body>
+
+<h1>Manual Sistem Pallet</h1>
+<p class="lead">Panduan lengkap sistem pallet CLF Trading. Sistem ini menjejak setiap pallet: <strong>terima dari principal &rarr; naik lori &rarr; hantar ke pelanggan &rarr; balik ke stor &rarr; pulang ke principal</strong>. Butang pada skrin dalam Bahasa Inggeris/Melayu (contoh <strong>Assign &middot; Naik Lori</strong>). Manual ini memetik butang persis seperti yang anda nampak.</p>
+
+<blockquote>
+<p><strong>Siapa guna apa:</strong> halaman stor (<strong>Pallet Store</strong>) <strong>berkunci</strong> — hanya penyelia yang dibenarkan boleh buka (sekarang KHOO MEY LAN, LIM KOK HENG, dan bos). Pemandu guna <strong>borang POD</strong> — tidak berkunci, guna macam biasa.</p>
+</blockquote>
+
+<h2>1. Fahami 4 nombor dahulu (konsep asas)</h2>
+<p>Sistem membahagi semua pallet kepada 4 keadaan. Bahagian <strong>Holdings</strong> di atas Dashboard menunjukkan 4 nombor ini:</p>
+<table>
+<tr><th>Pada skrin</th><th>Maksud</th></tr>
+<tr><td><strong>Inside (DALAM)</strong><br>in store + yard</td><td><strong>Ada dengan kita</strong> — di dalam stor + di laman luar. Selagi pallet di kawasan syarikat, ia Inside.</td></tr>
+<tr><td><strong>Outgoing (LUAR)</strong><br>lorry / customer</td><td><strong>Sudah keluar</strong> — atas lori, dalam perjalanan, atau di tangan pelanggan.</td></tr>
+<tr><td><strong>Damaged (ROSAK)</strong></td><td><strong>Pallet rosak</strong> — masih dengan kita tetapi pecah, menunggu dibaiki atau dipulangkan ke principal untuk tukar.</td></tr>
+<tr><td><strong>Total held</strong></td><td><strong>Jumlah anda pegang</strong> (Inside + Outgoing + Damaged). Nombor ini ≈ jumlah anda hutang kepada syarikat pool (LOSCAM / CHEP), untuk penyesuaian akaun.</td></tr>
+</table>
+
+<blockquote>
+<p><strong>Penting:</strong> Outgoing (LUAR) = sudah keluar dari syarikat, <strong>bukan</strong> semestinya "di tangan pelanggan". Hanya bila pemandu rekod pallet untuk pelanggan tertentu di POD, barulah Dashboard tunjuk "di pelanggan itu". Yang lain = "atas lori, belum direkod pelanggan".</p>
+</blockquote>
+
+<h3>Kitaran hidup pallet (aliran penuh)</h3>
+<blockquote>
+<p>Principal hantar pallet &rarr; <strong>Receive from principal</strong> (masuk Inside)<br>
+Inside &rarr; <strong>Assign</strong> naik lori (jadi Outgoing) &rarr; pemandu hantar<br>
+Di pelanggan: <strong>Drop</strong> beri pallet / <strong>Collect</strong> ambil balik pallet kosong<br>
+Lori balik: <strong>Receive from lorry</strong> terima (elok masuk Inside, rosak masuk Damaged)<br>
+Bila cukup banyak &rarr; <strong>Return to principal</strong> pulang (keluar syarikat, jumlah turun)</p>
+</blockquote>
+
+<hr>
+
+<h2>2. Penyelia Stor (halaman Pallet Store · berkunci)</h2>
+
+<h3>1. Buka kunci (kali pertama / tukar telefon)</h3>
+<ol>
+  <li>Buka pautan Pallet Store. Anda akan nampak <strong>skrin kunci</strong> (🔒 <strong>Pallet Store is locked</strong>).</li>
+  <li>Masukkan <strong>Staff ID &middot; ID Staf</strong> anda (contoh <code>TER282</code>) dan <strong>PIN</strong> anda.</li>
+  <li>Tekan <strong>Unlock &middot; Buka</strong>. Selepas berjaya, telefon/komputer ini <strong>ingat selama 30 hari</strong> — lepas ini terus boleh guna, tak perlu masuk PIN setiap kali.</li>
+</ol>
+<blockquote>
+<p>Salah PIN <strong>5 kali</strong> akan dikunci 15 minit. Setiap rekod yang anda buat akan dicop dengan <strong>nama anda (ID)</strong> secara automatik — orang lain tak boleh guna nama anda.</p>
+</blockquote>
+
+<h3>2. Naik lori — <strong>Assign &middot; Naik Lori</strong></h3>
+<p>Hantar pallet dari Inside naik ke sebuah lori (ikut satu shipment).</p>
+<ol>
+  <li>Isi <strong>Date &middot; Tarikh</strong> (lalai hari ini) dan <strong>Lorry No &middot; No. Lori</strong> (contoh <code>WTA 1234</code>).</li>
+  <li>Tekan <strong>Load Shipment &middot; Muat Shipment</strong> — sistem <strong>cari sendiri shipment lori itu hari ini</strong> (tak perlu taip nombor shipment). Kalau lori buat banyak trip, akan ada senarai untuk pilih.</li>
+  <li>Di <strong>Pallets Out &middot; Pallet Keluar</strong>, guna + / − untuk set berapa setiap jenis (<strong>tak boleh lebih dari baki Inside</strong>).</li>
+  <li>Masukkan ID Staf anda (nama keluar sendiri), tekan <strong>Assign Pallets &middot; Tugas Pallet</strong>.</li>
+</ol>
+
+<h3>3. Terima balik dari lori — <strong>Returns &middot; Pulang</strong> (Receive from Lorry)</h3>
+<p>Bila lori balik, stor sendiri kira dan terima. Ini titik penyesuaian yang paling penting.</p>
+<ol>
+  <li>Isi no. lori, tekan <strong>Load Lorry &middot; Muat Lori</strong> — setiap jenis pallet tunjuk <strong>"sepatutnya berapa" (Expected on lorry)</strong> = yang dinaikkan − yang sudah diberi kepada pelanggan.</li>
+  <li>Kira betul-betul, isi <strong>Good &middot; Elok</strong> dan <strong>Damaged &middot; Rosak</strong>.</li>
+  <li>Kalau tak padan, sistem <strong>paksa anda jelaskan beza itu</strong>:
+    <ul>
+      <li><strong>Kurang (Short)</strong> &rarr; "Tinggal di pelanggan mana?" Pilih pelanggan, isi jumlah (direkod sebagai Drop; hutang pelanggan itu naik).</li>
+      <li><strong>Lebih (Extra)</strong> &rarr; "Pelanggan mana pulangkan?" Pilih pelanggan, isi jumlah (direkod sebagai Collect; hutang pelanggan itu turun).</li>
+    </ul>
+  </li>
+  <li>Setiap baris mesti "seimbang" (elok + rosak + tinggal pelanggan = sepatutnya) baru boleh tekan <strong>Receive All &middot; Terima Semua</strong>. Elok masuk Inside, rosak masuk Damaged.</li>
+</ol>
+<blockquote>
+<p><strong>Pemandu tak boleh cakap ke mana pallet yang kurang?</strong> Jangan terima dulu — tanya sampai jelas. Langkah ini memang untuk memaksa perbualan itu, supaya pallet tak hilang begitu sahaja.</p>
+</blockquote>
+
+<h3>4. Principal — pulang / terima <strong>Balik Prinsipal</strong></h3>
+<p>Keluar-masuk pallet dengan syarikat pool (LOSCAM, CHEP). Di atas, <strong>Direction &middot; Arah</strong> pilih hala:</p>
+<table>
+<tr><th>Hala</th><th>Bila guna</th><th>Kesan</th></tr>
+<tr><td><strong>Return to &middot; Pulang ke</strong></td><td>Pulang pallet ke principal (elok dari Inside, atau rosak dari Damaged untuk tukar)</td><td>Jumlah <strong>turun</strong> (keluar syarikat)</td></tr>
+<tr><td><strong>Receive from &middot; Terima dari</strong></td><td>Principal hantar pallet baru / tukar masuk</td><td>Jumlah <strong>naik</strong> (masuk Inside)</td></tr>
+</table>
+<p>Pilih jenis pallet &rarr; isi jumlah &rarr; isi <strong>Reference &middot; Rujukan</strong> (no. DO / nota principal — WAJIB, untuk semak kemudian) &rarr; ID Staf &rarr; hantar.</p>
+
+<h3>5. Kira Stok · Padan · Rosak (penyelenggaraan harian)</h3>
+<ul>
+  <li><strong>Stocktake &middot; Kira Stok:</strong> kira fizikal sesuatu jenis pallet sekarang berapa, isi masuk; sistem betulkan beza supaya rekod = fizikal.</li>
+  <li><strong>Reconcile &middot; Padan:</strong> lihat ada beza antara rekod dan fizikal atau tidak; kalau tiada beza tunjuk <strong>✓ balanced</strong>.</li>
+  <li><strong>Damage &middot; Rosak:</strong> tanda pallet elok jadi rosak (masuk Damaged). <strong>WAJIB ambil foto</strong> pallet yang pecah. Bila dibaiki, guna <strong>Fixed</strong> untuk rekod balik ke Inside.</li>
+</ul>
+
+<h3>6. Dashboard — <strong>Pallet Dashboard</strong></h3>
+<p>Lihat jumlah, butiran setiap jenis, dan pelanggan mana masih hutang pallet. <strong>Reconcile ✓ balanced</strong> bermaksud rekod = fizikal. "Outgoing — by customer" akan tunjuk nama pelanggan sebenar bila pemandu mula rekod drop.</p>
+
+<hr>
+
+<h2>3. Pemandu (borang POD)</h2>
+<p>Pemandu <strong>tak berkunci, tak perlu rekod benda rumit</strong>. Kerja pallet ikut sahaja aliran penghantaran.</p>
+
+<h3>1. Terima secara lalai — kalau betul, tak perlu buat apa-apa</h3>
+<ol>
+  <li>Pemandu buka POD, masukkan no. lori. Bila shipment dimuat, akan keluar sepanduk <strong>Pallets on lorry &middot; Pallet atas lori</strong> di atas — senaraikan pallet yang stor naikkan ke lori ini.</li>
+  <li><strong>Betul &rarr; tak perlu buat apa-apa</strong> (sistem anggap pemandu sudah terima). Skrin tulis <strong>Correct? Do nothing &middot; Betul? Tak perlu buat apa-apa</strong>.</li>
+  <li><strong>Angka salah</strong> &rarr; tekan <strong>Wrong count? Fix here &middot; Angka salah? Betulkan</strong>, ubah kepada jumlah sebenar diterima, hantar — stor akan nampak pembetulan.</li>
+</ol>
+
+<h3>2. Drop / Collect ikut pelanggan (+ foto)</h3>
+<p>Pada kad penghantaran setiap pelanggan, tekan <strong>Pallet? &middot; Ada pallet?</strong> untuk buka:</p>
+<ul>
+  <li><strong>Drop &middot; Beri</strong> = tinggalkan berapa pallet untuk pelanggan ini.</li>
+  <li><strong>Collect &middot; Ambil</strong> = ambil balik berapa pallet kosong dari pelanggan ini.</li>
+  <li><strong>Photo evidence &middot; Foto bukti (pilihan):</strong> ambil gambar sebagai bukti — sangat digalakkan, senang jika ada pertikaian nanti. Foto akan dimuat naik automatik bersama rekod.</li>
+</ul>
+<blockquote>
+<p>Ini <strong>tidak sekali-kali menghalang penghantaran</strong> — walaupun pallet ada masalah, POD tetap boleh dihantar; hanya keluar peringatan supaya beritahu pejabat. Penghantaran sentiasa utama.</p>
+</blockquote>
+
+<h3>3. Bawa pallet balik ke stor</h3>
+<p>Pemandu <strong>tak perlu "pulang" pallet dalam sistem</strong> — <strong>bawa balik sahaja</strong> pallet yang tak sempat hantar / yang diambil balik ke stor, penyelia akan guna "Receive from Lorry" untuk terima. (Halaman Return pemandu yang lama sudah ditamatkan.)</p>
+
+<hr>
+
+<h2>4. Beberapa peraturan tegas</h2>
+<ul>
+  <li>Pallet <strong>hilang tanpa sebab</strong> &rarr; masa terima lori, tanya sampai jelas, agih kepada pelanggan atau minta pemandu jawab. Jangan terima buta-buta.</li>
+  <li>Keluar-masuk dengan principal <strong>mesti isi Reference (no. rujukan)</strong> — ini bukti untuk semak dengan syarikat pool nanti.</li>
+  <li>Lapor rosak <strong>mesti ambil foto</strong>.</li>
+  <li>Rekod (ledger) <strong>hanya tambah, tak boleh padam</strong> — kalau tersilap, betulkan melalui Adjust / Reconcile dalam sistem, jangan padam rekod. Semua tinggalkan jejak.</li>
+  <li>PIN adalah <strong>peribadi</strong>, jangan pinjamkan; kalau bocor beritahu bos untuk tukar.</li>
+</ul>
+
+<p class="lead" style="margin-top:2em;">CLF Trading · Sistem Pallet · Manual ini ditulis mengikut butang sebenar sistem · Jika sistem dikemas kini, ikut skrin.</p>
+
+</body>
+</html>

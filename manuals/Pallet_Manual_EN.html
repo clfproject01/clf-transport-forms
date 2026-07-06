@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pallet System Manual (English) — CLF Trading</title>
+<style>
+  body {
+    font-family: 'Noto Sans TC', -apple-system, sans-serif;
+    background: #ffffff;
+    color: #1a1a1a;
+    line-height: 1.75;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+    -webkit-text-size-adjust: 100%;
+  }
+  h1 { font-size: 1.9em; line-height: 1.3; margin: 0 0 0.2em; font-weight: 700; }
+  h2 { font-size: 1.4em; line-height: 1.3; margin: 1.8em 0 0.6em; font-weight: 700; padding-top: 0.6em; border-top: 1px solid #e5e5e5; }
+  h3 { font-size: 1.12em; margin: 1.4em 0 0.4em; font-weight: 600; }
+  p { margin: 0.7em 0; }
+  ol, ul { margin: 0.7em 0; padding-left: 1.6em; }
+  li { margin: 0.4em 0; }
+  ol ol, ul ul, ol ul, ul ol { margin: 0.3em 0; }
+  code { background: #f4f4f4; border: 1px solid #e5e5e5; border-radius: 4px; padding: 0.1em 0.4em; font-family: 'DM Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 0.88em; }
+  strong { font-weight: 700; }
+  blockquote { margin: 1em 0; padding: 0.6em 1em; border-left: 4px solid #b0b0b0; background: #f6f6f6; color: #333; }
+  blockquote p { margin: 0.4em 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.95em; }
+  th, td { border: 1px solid #d8d8d8; padding: 8px 12px; text-align: left; vertical-align: top; }
+  th { background: #f6f6f6; font-weight: 600; }
+  hr { border: none; border-top: 1px solid #e5e5e5; margin: 2em 0; }
+  .lead { color: #555; font-size: 1.02em; }
+  a { color: #1a1a1a; }
+</style>
+</head>
+<body>
+
+<h1>Pallet System Manual</h1>
+<p class="lead">The complete guide to CLF Trading's pallet system. The system tracks every pallet through its life: <strong>receive from principal &rarr; assign to lorry &rarr; deliver to customer &rarr; return to store &rarr; return to principal</strong>. On-screen buttons are in English/Malay (for example <strong>Assign &middot; Naik Lori</strong>). This guide quotes the buttons exactly as you see them.</p>
+
+<blockquote>
+<p><strong>Who uses what:</strong> the store side (<strong>Pallet Store</strong> page) is <strong>locked</strong> — only authorised supervisors can open it (currently KHOO MEY LAN, LIM KOK HENG, and the boss). Drivers use the <strong>POD form</strong> — not locked, used as normal.</p>
+</blockquote>
+
+<h2>1. Understand the 4 numbers first (core idea)</h2>
+<p>The system sorts all your pallets into 4 states. The <strong>Holdings</strong> section at the top of the Dashboard shows these 4 numbers:</p>
+<table>
+<tr><th>On screen</th><th>Meaning</th></tr>
+<tr><td><strong>Inside (DALAM)</strong><br>in store + yard</td><td><strong>With us</strong> — inside the store <em>and</em> the outside yard both count. As long as a pallet is on company ground, it is Inside.</td></tr>
+<tr><td><strong>Outgoing (LUAR)</strong><br>lorry / customer</td><td><strong>Genuinely out</strong> — on a lorry, in transit, or in a customer's hands.</td></tr>
+<tr><td><strong>Damaged (ROSAK)</strong></td><td><strong>Broken pallets</strong> — still with us but damaged, waiting to be repaired or sent back to the principal for exchange.</td></tr>
+<tr><td><strong>Total held</strong></td><td><strong>How many you hold in total</strong> (Inside + Outgoing + Damaged). This number ≈ what you owe the pool companies (LOSCAM / CHEP), used for reconciliation.</td></tr>
+</table>
+
+<blockquote>
+<p><strong>Key point:</strong> Outgoing (LUAR) = out of the company — <strong>not</strong> necessarily "in a customer's hands". Only when a driver records a drop for a specific customer on the POD does the Dashboard show "at that customer". The rest is "on a lorry, customer not yet recorded".</p>
+</blockquote>
+
+<h3>Pallet life cycle (the full flow)</h3>
+<blockquote>
+<p>Principal sends pallets &rarr; <strong>Receive from principal</strong> (into Inside)<br>
+Inside &rarr; <strong>Assign</strong> onto a lorry (becomes Outgoing) &rarr; driver delivers<br>
+At the customer: <strong>Drop</strong> leave pallets / <strong>Collect</strong> take back empty pallets<br>
+Lorry returns: <strong>Receive from lorry</strong> (good into Inside, damaged into Damaged)<br>
+When enough pile up &rarr; <strong>Return to principal</strong> (leaves the company, total drops)</p>
+</blockquote>
+
+<hr>
+
+<h2>2. Store Supervisor (Pallet Store page · locked)</h2>
+
+<h3>1. Unlock (first time / new phone)</h3>
+<ol>
+  <li>Open the Pallet Store link. You will first see a <strong>lock screen</strong> (🔒 <strong>Pallet Store is locked</strong>).</li>
+  <li>Enter your <strong>Staff ID &middot; ID Staf</strong> (e.g. <code>TER282</code>) and your <strong>PIN</strong>.</li>
+  <li>Tap <strong>Unlock &middot; Buka</strong>. Once successful, this phone/computer <strong>remembers for 30 days</strong> — after that it opens straight in, no PIN each time.</li>
+</ol>
+<blockquote>
+<p>5 wrong PINs locks you out for 15 minutes. Every entry you make is <strong>stamped with your name (ID)</strong> automatically — nobody can use your name. <strong>To add / remove a person:</strong> add a row in the <code>Pallet_Access</code> sheet (Staff ID, Name, PIN, Active=TRUE); to deactivate set that row's <code>Active</code> to <code>FALSE</code>.</p>
+</blockquote>
+
+<h3>2. Assign onto a lorry — <strong>Assign &middot; Naik Lori</strong></h3>
+<p>Send pallets from Inside onto a lorry (with a shipment).</p>
+<ol>
+  <li>Fill in <strong>Date &middot; Tarikh</strong> (today by default) and <strong>Lorry No &middot; No. Lori</strong> (e.g. <code>WTA 1234</code>).</li>
+  <li>Tap <strong>Load Shipment &middot; Muat Shipment</strong> — the system <strong>finds that lorry's shipment for today by itself</strong> (no need to type a shipment number). If the lorry runs several trips, a dropdown lets you pick one.</li>
+  <li>In <strong>Pallets Out &middot; Pallet Keluar</strong>, use + / − to set how many of each type (<strong>cannot exceed the current Inside stock</strong>).</li>
+  <li>Enter your Staff ID (your name appears), tap <strong>Assign Pallets &middot; Tugas Pallet</strong>.</li>
+</ol>
+
+<h3>3. Receive from Lorry — <strong>Returns &middot; Pulang</strong></h3>
+<p>When the lorry returns, the store counts and receives. This is the most important reconciliation point.</p>
+<ol>
+  <li>Enter the lorry no, tap <strong>Load Lorry &middot; Muat Lori</strong> — each pallet type shows <strong>"Expected on lorry"</strong> = assigned out − already given to customers.</li>
+  <li>Count for real, fill in <strong>Good &middot; Elok</strong> and <strong>Damaged &middot; Rosak</strong>.</li>
+  <li>If it doesn't match, the system <strong>forces you to explain the difference</strong>:
+    <ul>
+      <li><strong>Short</strong> &rarr; "Left at which customer?" Pick the customer, enter the qty (recorded as a Drop; that customer's outstanding goes up).</li>
+      <li><strong>Extra</strong> &rarr; "Which customer returned them?" Pick the customer, enter the qty (recorded as a Collect; that customer's outstanding goes down).</li>
+    </ul>
+  </li>
+  <li>Each line must "balance" (good + damaged + left-at-customer = expected) before you can tap <strong>Receive All &middot; Terima Semua</strong>. Good goes into Inside, damaged into Damaged.</li>
+</ol>
+<blockquote>
+<p><strong>Driver can't say where the missing pallets went?</strong> Do not receive yet — ask until it's clear. This step exists precisely to force that conversation, so pallets don't just vanish.</p>
+</blockquote>
+
+<h3>4. Principal — return / receive <strong>Balik Prinsipal</strong></h3>
+<p>Pallets in and out with the pool companies (LOSCAM, CHEP). At the top, <strong>Direction &middot; Arah</strong> picks the way:</p>
+<table>
+<tr><th>Direction</th><th>When to use</th><th>Effect</th></tr>
+<tr><td><strong>Return to &middot; Pulang ke</strong></td><td>Send pallets back to the principal (good from Inside, or damaged from Damaged for exchange)</td><td>Total <strong>drops</strong> (leaves the company)</td></tr>
+<tr><td><strong>Receive from &middot; Terima dari</strong></td><td>Principal sends new / replacement pallets in</td><td>Total <strong>rises</strong> (into Inside)</td></tr>
+</table>
+<p>Pick the pallet type &rarr; enter the quantity &rarr; fill in <strong>Reference &middot; Rujukan</strong> (the principal's DO / note no — REQUIRED, so you can check it later) &rarr; Staff ID &rarr; submit.</p>
+
+<h3>5. Stocktake · Reconcile · Damage (daily upkeep)</h3>
+<ul>
+  <li><strong>Stocktake &middot; Kira Stok:</strong> physically count how many of a pallet type there are now, enter it; the system corrects the difference so the record = physical.</li>
+  <li><strong>Reconcile &middot; Padan:</strong> see whether there is a gap between record and physical; if none it shows <strong>✓ balanced</strong>.</li>
+  <li><strong>Damage &middot; Rosak:</strong> mark good pallets as damaged (into Damaged). <strong>A photo of the broken pallet is REQUIRED.</strong> When repaired, use <strong>Fixed</strong> to record them back into Inside.</li>
+</ul>
+
+<h3>6. Dashboard — <strong>Pallet Dashboard</strong></h3>
+<p>See totals, the breakdown per pallet type, and which customer still owes pallets. <strong>Reconcile ✓ balanced</strong> means record = physical. "Outgoing — by customer" fills with real customer names as drivers start recording drops.</p>
+
+<hr>
+
+<h2>3. Driver (POD form)</h2>
+<p>Drivers are <strong>not locked and record nothing complicated</strong>. The pallet actions follow the delivery naturally.</p>
+
+<h3>1. Default-accept — if the count is right, do nothing</h3>
+<ol>
+  <li>The driver opens the POD as usual and enters the lorry no. When the shipment loads, a <strong>Pallets on lorry &middot; Pallet atas lori</strong> banner appears at the top, listing what the store assigned onto this lorry.</li>
+  <li><strong>Count correct &rarr; do nothing</strong> (the system treats it as received). The screen says <strong>Correct? Do nothing &middot; Betul? Tak perlu buat apa-apa</strong>.</li>
+  <li><strong>Count wrong</strong> &rarr; tap <strong>Wrong count? Fix here &middot; Angka salah? Betulkan</strong>, change it to the actual quantity received, send — the store will see the correction.</li>
+</ol>
+
+<h3>2. Drop / Collect per customer (+ photo)</h3>
+<p>On each customer's delivery card, tap <strong>Pallet? &middot; Ada pallet?</strong> to open:</p>
+<ul>
+  <li><strong>Drop &middot; Beri</strong> = how many pallets you leave with this customer.</li>
+  <li><strong>Collect &middot; Ambil</strong> = how many empty pallets you take back from this customer.</li>
+  <li><strong>Photo evidence &middot; Foto bukti (optional):</strong> take a photo as proof — strongly recommended, it settles any dispute later. The photo uploads automatically with the record.</li>
+</ul>
+<blockquote>
+<p>These <strong>never block the delivery</strong> — even if a pallet has a problem, the POD still submits fine; it only shows a reminder to tell the office. The delivery always comes first.</p>
+</blockquote>
+
+<h3>3. Bring the pallets back to the store</h3>
+<p>The driver <strong>does not "return" pallets in the system</strong> — just <strong>bring back</strong> the undelivered / collected pallets to the store, and the supervisor uses "Receive from Lorry" to receive them. (The old driver Return page has been retired.)</p>
+
+<hr>
+
+<h2>4. A few firm rules</h2>
+<ul>
+  <li>Pallets <strong>missing for no reason</strong> &rarr; when receiving the lorry, ask until it's clear, allocate to a customer or make the driver answer. Do not receive blindly.</li>
+  <li>Pallets in/out with a principal <strong>must have a Reference (note no)</strong> — it's your proof when reconciling with the pool company later.</li>
+  <li>Damage reports <strong>must have a photo</strong>.</li>
+  <li>The ledger is <strong>append-only</strong> — if you make a mistake, correct it via Adjust / Reconcile in the system; do not delete records. Everything leaves a trail.</li>
+  <li>Your PIN is <strong>personal</strong> — don't lend it; if it leaks, tell the boss to change it.</li>
+</ul>
+
+<p class="lead" style="margin-top:2em;">CLF Trading · Pallet System · This manual follows the system's actual buttons · If the system is updated, follow the screen.</p>
+
+</body>
+</html>
