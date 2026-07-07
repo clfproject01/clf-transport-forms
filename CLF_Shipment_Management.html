@@ -395,7 +395,7 @@ async function deleteShipment(shipmentNo, btn, force){
 function _xlsxToAmt(v){ if(v==null) return null; const s=String(v).replace(/,/g,'').trim(); if(!/^-?\d+(\.\d+)?$/.test(s)) return null; return parseFloat(s); }
 function _xlsxCsvCell(v){ v=(v==null)?'':String(v); return /[",\r\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }
 function _xlsxRowsToDeliveryCsv(rows){
-  const INV_RE=/^[A-Z]{2,4}\d{5,6}$/;
+  const INV_RE=/^[A-Z]{2,4}[A-Z0-9]*\d{4,6}$/;
   const cell=(r,c)=> (rows[r]&&rows[r][c]!=null)?String(rows[r][c]).trim():'';
   function hdr(re){
     for(let r=0;r<Math.min(rows.length,14);r++){ const row=rows[r]||[];
