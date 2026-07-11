@@ -1235,6 +1235,8 @@ document.getElementById('shipmentSection').addEventListener('click', function(e)
   if (fb){ var i = fb.getAttribute('data-i'); var box = document.querySelector('.ship-reasons[data-i="'+i+'"]'); if (box) box.style.display = (box.style.display==='none'?'flex':'none'); return; }
   var rb = e.target.closest('.ship-reason');
   if (rb){ failGroup(parseInt(rb.getAttribute('data-i'),10), rb.getAttribute('data-r')); return; }
+  var pt = e.target.closest('.pallet-toggle');
+  if (pt){ var pf = document.querySelector('.pallet-fields[data-i="'+pt.getAttribute('data-i')+'"]'); if (pf) pf.style.display = (pf.style.display==='none'?'flex':'none'); return; }   // FIX: this branch was dropped in the KTN merge — the Pallet? button did nothing
 });
 
 // photo taken for a customer → submit delivery for that customer's pending invoices
