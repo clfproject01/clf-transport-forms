@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CLF POD Admin — Barcode Board</title>
+<!--
+  ============================================================================
+  CLF POD Admin Board  (Program B of the POD 数字归档方案)
+  ----------------------------------------------------------------------------
+  Office/admin screen: shows every delivered invoice per lorry, its signed POD
+  photo, and a re-drawn barcode the admin scans straight into EFI — so EFI entry
+  happens the moment the driver saves, before the lorry returns.
+
+  SELF-CONTAINED: no CDN, no external library (barcode is drawn in-page). Deploy
+  to clfproject01/clf-transport-forms (GitHub Pages), same as the other forms.
+
+  BACKEND CONTRACT (implemented by POD_Admin_backend_贴这份.txt — Program A):
+    GET  ?action=getPodAdminBoard&date=YYYY-MM-DD&branch=MTK|KTN
+         -> { status:'ok', date, branch, lorries:[ { vehicleNo, drivers, shipmentKey,
+                invoices:[ { invoiceNo, barcodeRaw, customer, custCode, area, amount,
+                status:'delivered'|'failed'|'pending', deliveredAt, deliveredDate,
+                photoUrls:[], matchSource:'barcode'|'ai'|'none', mismatch:bool,
+                efiScanned:bool, efiBy, failReason } ] } ] }
+    POST data={ formType:'MARK_EFI_SCANNED', shipmentKey, invoiceNo, scanned:1|0,
+                authToken, clientToken }  (no-cors + poll getImportResult)
+         -> { status:'success' } (idempotent). POST (not GET) so the session
+            authToken travels in the body, never in the access log / URL.
+
+  ⚠ PROPOSE-FIRST (do NOT ship the ACL decision without the boss):
+    The unlock reuses the EXISTING, verified PALLET_UNLOCK endpoint + Pallet_Access
+    roster — no NEW auth system is invented here. Open question for the boss only:
+    should office/admin staff be added to Pallet_Access, or does he want a separate
+    POD_Admin_Access roster (a backend change)? Until he decides, unlock accepts
+    anyone already on Pallet_Access. See README_部署清单.md.
+
+  BARCODE: Code 39 (default). A hand-drawn Code 39 encoder ships here so the board
+    works with zero dependencies and is universally readable by handheld/imager
+    scanners. The exact symbology of the *re-drawn* barcode does not need to match
+    EFI's printed symbology — a scanner decodes both to the same characters; EFI
+    only cares that the decoded string equals the invoice number. The barcode MUST
+    still pass the pilot scan-test (aim a real scanner at the screen) before go-live.
+  ============================================================================
+-->
+<style>
+  :root{
+    --blue:#1A56DB; --blue-600:#2563EB; --blue-50:#EFF4FF;
+    --green-50:#ECFDF5; --green-500:#16A34A; --green-700:#15803D;
+    --amber-50:#FFFBEB; --amber-500:#D97706; --amber-700:#B45309;
+    --red-50:#FEF2F2; --red-500:#EF4444; --red-700:#B91C1C;
+    --gray-50:#F9FAFB; --gray-100:#F3F4F6; --gray-200:#E5E7EB; --gray-300:#D1D5DB;
+    --gray-400:#9CA3AF; --gray-500:#6B7280; --gray-600:#4B5563; --gray-700:#374151; --gray-900:#111827;
+    --card:#fff; --radius:14px; --shadow:0 1px 2px rgba(17,24,39,.06),0 1px 3px rgba(17,24,39,.08);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--gray-50);color:var(--gray-900);line-height:1.5;-webkit-font-smoothing:antialiased;padding-bottom:60px;}
+  .wrap{max-width:1120px;margin:0 auto;padding:18px 16px;}
+  .topbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;}
+  .topbar h1{font-size:19px;font-weight:700;letter-spacing:-.01em;display:flex;align-items:center;gap:9px;}
+  .topbar h1 .logo{background:var(--blue);color:#fff;font-size:12px;font-weight:800;border-radius:7px;padding:4px 8px;letter-spacing:.02em;}
+  .topbar .meta{font-size:12.5px;color:var(--gray-500);}
+  .controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .controls label{font-size:13px;color:var(--gray-700);font-weight:500;}
+  .controls input[type=date]{font-family:inherit;font-size:13px;padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;background:#fff;color:var(--gray-900);}
+  .seg{display:inline-flex;border:1px solid var(--gray-200);border-radius:8px;overflow:hidden;}
+  .seg-btn{font-family:inherit;font-size:13px;font-weight:600;padding:6px 15px;border:0;background:#fff;color:var(--gray-500);cursor:pointer;}
+  .seg-btn+.seg-btn{border-left:1px solid var(--gray-200);}
+  .seg-btn.active{background:var(--blue);color:#fff;}
+  .btn{font-family:inherit;font-size:13px;font-weight:600;padding:7px 14px;border:1px solid var(--gray-200);border-radius:8px;background:#fff;color:var(--gray-700);cursor:pointer;}
+  .btn:hover{background:var(--gray-50);}
+  .btn-primary{background:var(--blue);color:#fff;border-color:var(--blue);}
+  .btn-primary:hover{background:#1749b8;}
+
+  .demo-banner{display:none;background:#FEF3C7;border:1px solid var(--amber-500);color:var(--amber-700);font-size:13px;font-weight:600;padding:9px 13px;border-radius:8px;margin-bottom:14px;}
+  .demo-banner.show{display:block;}
+  .err-banner{display:none;background:var(--red-50);border:1px solid var(--red-500);color:var(--red-700);font-size:13px;padding:10px 13px;border-radius:8px;margin-bottom:14px;align-items:center;justify-content:space-between;gap:10px;}
+  .err-banner.show{display:flex;}
+
+  .summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:18px;}
+  .stat{background:var(--card);border:1px solid var(--gray-200);border-radius:12px;box-shadow:var(--shadow);padding:12px 14px;}
+  .stat .n{font-size:26px;font-weight:800;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
+  .stat .l{font-size:11.5px;color:var(--gray-500);font-weight:600;margin-top:5px;text-transform:uppercase;letter-spacing:.03em;}
+  .stat.done .n{color:var(--green-700);} .stat.efi .n{color:var(--blue);}
+  .stat.pend .n{color:var(--amber-700);} .stat.prob .n{color:var(--red-700);}
+  .stat .bar{height:6px;background:var(--gray-100);border-radius:99px;overflow:hidden;margin-top:9px;}
+  .stat .bar i{display:block;height:100%;background:var(--blue);border-radius:99px;transition:width .3s;}
+
+  .lorry{background:var(--card);border:1px solid var(--gray-200);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:16px;overflow:hidden;}
+  .lorry-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:13px 16px;background:var(--blue-50);border-bottom:1px solid var(--gray-200);}
+  .lorry-head .plate{font-size:17px;font-weight:800;color:var(--blue);letter-spacing:.01em;}
+  .lorry-head .crew{font-size:12.5px;color:var(--gray-600);}
+  .lorry-head .mini{font-size:12px;color:var(--gray-500);font-variant-numeric:tabular-nums;}
+
+  table.inv{width:100%;border-collapse:collapse;font-size:13px;}
+  table.inv th{text-align:left;color:var(--gray-500);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;padding:8px 12px;border-bottom:1px solid var(--gray-200);background:var(--gray-50);}
+  table.inv td{padding:10px 12px;border-bottom:1px solid var(--gray-100);vertical-align:middle;}
+  table.inv tr:last-child td{border-bottom:none;}
+  table.inv tr.row-done{background:#fff;}
+  table.inv tr.row-prob{background:var(--red-50);}
+  table.inv tr.row-pend{background:var(--amber-50);}
+  table.inv tr.row-mismatch{background:#FDF2F8;}
+  .inv-no{font-weight:700;font-variant-numeric:tabular-nums;font-family:"SFMono-Regular",Consolas,monospace;}
+  .cust{color:var(--gray-900);font-weight:500;}
+  .cust .area{color:var(--gray-400);font-weight:400;font-size:11.5px;display:block;}
+  .amt{font-variant-numeric:tabular-nums;text-align:right;font-weight:600;white-space:nowrap;}
+  .badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap;}
+  .badge.done{background:var(--green-50);color:var(--green-700);border:1px solid var(--green-500);}
+  .badge.prob{background:var(--red-50);color:var(--red-700);border:1px solid var(--red-500);}
+  .badge.pend{background:var(--amber-50);color:var(--amber-700);border:1px solid var(--amber-500);}
+  .badge.mismatch{background:#FCE7F3;color:#9D174D;border:1px solid #DB2777;}
+  .src{font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;margin-left:5px;vertical-align:1px;}
+  .src.bc{background:#DCFCE7;color:#166534;}    /* 条码 ✓ */
+  .src.ai{background:#FEF9C3;color:#854D0E;}    /* AI ~ */
+  .src.no{background:#F3F4F6;color:#6B7280;}    /* ✗ */
+  .time{font-variant-numeric:tabular-nums;color:var(--gray-500);font-size:12px;white-space:nowrap;}
+  .thumbs{display:flex;gap:4px;flex-wrap:wrap;}
+  .thumb{width:38px;height:38px;border-radius:6px;object-fit:cover;border:1px solid var(--gray-200);cursor:pointer;background:var(--gray-100);}
+  .thumb-link{display:inline-flex;width:38px;height:38px;border-radius:6px;border:1px solid var(--gray-200);align-items:center;justify-content:center;text-decoration:none;font-size:18px;background:var(--gray-50);}
+  .thumb-none{font-size:11px;color:var(--gray-400);}
+  .bc-cell svg{display:block;}
+  .bc-txt{font-family:"SFMono-Regular",Consolas,monospace;font-size:11px;color:var(--gray-600);margin-top:1px;text-align:center;letter-spacing:.04em;}
+  .bc-na{font-size:11px;color:var(--gray-400);font-style:italic;}
+  .efi-wrap{display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;}
+  .efi-wrap input{width:19px;height:19px;accent-color:var(--blue);cursor:pointer;}
+  .efi-wrap .by{font-size:10.5px;color:var(--gray-400);}
+
+  .empty{text-align:center;color:var(--gray-400);font-size:14px;padding:40px 16px;}
+  .empty .big{font-size:32px;margin-bottom:8px;}
+  .loading{text-align:center;color:var(--gray-500);font-size:14px;padding:40px 16px;}
+  .spin{display:inline-block;width:26px;height:26px;border:3px solid var(--gray-200);border-top-color:var(--blue);border-radius:50%;animation:sp .8s linear infinite;}
+  @keyframes sp{to{transform:rotate(360deg);}}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:120;max-width:90%;padding:12px 16px;border-radius:10px;font-size:13px;color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.25);opacity:0;transition:opacity .2s;pointer-events:none;}
+  .toast.ok{background:var(--green-700);} .toast.err{background:var(--red-700);} .toast.show{opacity:1;}
+
+  /* lightbox */
+  #lightbox{display:none;position:fixed;inset:0;z-index:150;background:rgba(0,0,0,.85);align-items:center;justify-content:center;flex-direction:column;padding:24px;}
+  #lightbox.show{display:flex;}
+  #lightbox img{max-width:96vw;max-height:82vh;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,.5);}
+  #lightbox .lb-cap{color:#fff;font-size:13px;margin-top:12px;text-align:center;}
+  #lightbox .lb-nav{position:absolute;top:0;bottom:0;width:80px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:40px;cursor:pointer;user-select:none;opacity:.7;}
+  #lightbox .lb-nav:hover{opacity:1;} #lightbox .lb-prev{left:0;} #lightbox .lb-next{right:0;}
+  #lightbox .lb-close{position:absolute;top:16px;right:22px;color:#fff;font-size:32px;cursor:pointer;line-height:1;}
+
+  /* lock overlay is built in JS (mirrors CLF_Pallet_Store) */
+
+  /* print condar sheet — one lorry per A4 page */
+  #printArea{display:none;}
+  @media print{
+    body *{visibility:hidden;}
+    #printArea, #printArea *{visibility:visible;}
+    #printArea{display:block;position:absolute;left:0;top:0;width:100%;}
+    .p-page{page-break-after:always;padding:14mm 12mm;}
+    .p-page:last-child{page-break-after:auto;}
+    .p-head{font-size:18px;font-weight:800;margin-bottom:2mm;}
+    .p-sub{font-size:11px;color:#555;margin-bottom:6mm;}
+    .p-row{display:flex;align-items:center;gap:6mm;padding:3mm 0;border-bottom:1px solid #ddd;}
+    .p-row .p-bc{flex:0 0 auto;}
+    .p-row .p-meta{font-size:12px;}
+    .p-row .p-inv{font-weight:700;font-family:Consolas,monospace;}
+    .p-row .p-cust{color:#333;}
+    .p-row .p-amt{margin-left:auto;font-weight:700;font-variant-numeric:tabular-nums;}
+    .p-bctxt{font-family:Consolas,monospace;font-size:9px;text-align:center;letter-spacing:.05em;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <h1><span class="logo">CLF</span> POD Admin · Barcode Board</h1>
+    <div class="controls">
+      <label>Date <input type="date" id="date"></label>
+      <span class="seg" id="branchSeg">
+        <button class="seg-btn active" data-branch="MTK">Mentakab</button>
+        <button class="seg-btn" data-branch="KTN">Kuantan</button>
+      </span>
+      <button class="btn" id="refreshBtn">↻ Refresh</button>
+      <button class="btn btn-primary" id="printBtn">🖨 Print barcodes</button>
+    </div>
+  </div>
+  <div class="meta" id="lastUpdated" style="font-size:12px;color:var(--gray-500);margin:-8px 0 12px;"></div>
+
+  <div class="demo-banner" id="demoBanner">⚠ DEMO DATA — not live. Remove <code>?demo=1</code> from the URL to load real deliveries.</div>
+  <div class="err-banner" id="errBanner"><span id="errText"></span><button class="btn" onclick="loadBoard()">Retry</button></div>
+
+  <div class="summary" id="summary" style="display:none;">
+    <div class="stat done"><div class="n" id="s-done">0</div><div class="l">Delivered</div></div>
+    <div class="stat efi"><div class="n" id="s-efi">0</div><div class="l">EFI entered</div><div class="bar"><i id="s-efi-bar" style="width:0%"></i></div></div>
+    <div class="stat pend"><div class="n" id="s-pend">0</div><div class="l">To deliver</div></div>
+    <div class="stat prob"><div class="n" id="s-prob">0</div><div class="l">Problem</div></div>
+  </div>
+
+  <div id="board"><div class="loading"><div class="spin"></div><div style="margin-top:10px;">Loading…</div></div></div>
+</div>
+
+<div id="lightbox">
+  <div class="lb-close" onclick="closeLightbox()">×</div>
+  <div class="lb-nav lb-prev" onclick="lbStep(-1)">‹</div>
+  <div class="lb-nav lb-next" onclick="lbStep(1)">›</div>
+  <img id="lb-img" alt="POD photo">
+  <div class="lb-cap" id="lb-cap"></div>
+</div>
+
+<div id="printArea"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================================
+   CONFIG
+   ============================================================================ */
+// Same Apps Script deployment as the other transport forms.
+var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxabHh2Kd04z7k0zZOOoaJs2i5hgycQsO_AYoRS99xZx2WqMJ6cowumY0e1znehiRM1/exec';
+
+var QP        = new URLSearchParams(location.search);
+var BRANCH    = (QP.get('branch') || 'MTK').toUpperCase();
+var DEMO      = QP.get('demo') === '1';
+var REFRESH_MS= 60000;
+var UNLOCK_ACTION = 'PALLET_UNLOCK';   // reuse the EXISTING verified unlock (see PROPOSE-FIRST note in header)
+var AUTH_KEY  = 'clf_pallet_auth';     // shared with CLF_Pallet_Store so one unlock covers both office tools
+var BARCODE_SYMBOLOGY = 'code39';      // 'code39' (default, shipped) | 'code128b' (also implemented below)
+// 照片显示方式(老板 2026-07-11 批准"内嵌缩略图 vs 点开 Drive"的混合方案):
+//   'thumbnail'(默认) = 内嵌缩略图,加载失败(未授权/未共享)自动降级成"点开 Drive"链接
+//   'link'            = 一律"点开 Drive"链接,不内嵌(最稳;若试点发现缩略图跨域加载不稳,翻这个开关)
+// 两种都**不需要**公开共享 —— 靠 CLF_POD_Scans 文件夹共享给 office 账号,Google 登录挡访问。
+var PHOTO_DISPLAY = 'thumbnail';
+
+var _boardData = null;      // last good board payload
+var _refreshTmr = null;
+var _lbPhotos = [], _lbIdx = 0;
+
+/* ============================================================================
+   UTIL
+   ============================================================================ */
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function money(n){ n=Number(n); if(isNaN(n)) return ''; return n.toLocaleString('en-MY',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function todayKL(){ return new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kuala_Lumpur'}); }
+function _newToken(p){ return (p||'adm')+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,10); }
+function _auth(){ try{ return JSON.parse(localStorage.getItem(AUTH_KEY)||'null'); }catch(e){ return null; } }
+function _authToken(){ var a=_auth(); return (a&&a.token)?a.token:''; }
+function _operator(){ var a=_auth(); return (a&&a.empNo)?a.empNo:''; }
+function fmtTime(dateStr, timeStr){
+  // recent-list rule (lesson #15): show date context, never bare HH:mm
+  if(!dateStr && !timeStr) return '';
+  var t = timeStr || '';
+  if(!dateStr) return t;
+  if(dateStr === todayKL()) return 'Today ' + t;
+  try{ var d=new Date(dateStr+'T00:00:00'); return d.toLocaleDateString('en-MY',{day:'2-digit',month:'short'}) + (t?(' · '+t):''); }
+  catch(e){ return dateStr + (t?(' '+t):''); }
+}
+function toast(kind, html){
+  var t=$('toast'); t.className='toast '+(kind==='ok'?'ok':'err')+' show'; t.innerHTML=html;
+  clearTimeout(toast._tmr); toast._tmr=setTimeout(function(){ t.classList.remove('show'); }, kind==='err'?6000:3500);
+}
+
+/* ============================================================================
+   BARCODE — self-contained Code 39 (default) + Code 128B, drawn as inline SVG.
+   No CDN, no library. Verified against the Code 39 / Code 128 spec tables.
+   Returns an SVG string, or '' if the value can't be encoded (caller shows text).
+   ============================================================================ */
+// Code 39: 9 elements per char (B S B S B S B S B), '1'=narrow '2'=wide.
+var C39 = {
+  '0':'111221211','1':'211211112','2':'112211112','3':'212211111','4':'111221112',
+  '5':'211221111','6':'112221111','7':'111211212','8':'211211211','9':'112211211',
+  'A':'211112112','B':'112112112','C':'212112111','D':'111122112','E':'211122111',
+  'F':'112122111','G':'111112212','H':'211112211','I':'112112211','J':'111122211',
+  'K':'211111122','L':'112111122','M':'212111121','N':'111121122','O':'211121121',
+  'P':'112121121','Q':'111111222','R':'211111221','S':'112111221','T':'111121221',
+  'U':'221111112','V':'122111112','W':'222111111','X':'121121112','Y':'221121111',
+  'Z':'122121111','-':'121111212','.':'221111211',' ':'122111211','$':'121212111',
+  '/':'121211121','+':'121112121','%':'111212121','*':'121121211'
+};
+function code39svg(value, opt){
+  opt = opt || {};
+  var narrow = opt.narrow || 2, ratio = opt.ratio || 2.5, height = opt.height || 42, quiet = 10*narrow;
+  // Use the value EXACTLY as given — do NOT uppercase. The barcode must decode to
+  // the identical string EFI expects; any char outside Code 39 -> '' -> text fallback,
+  // so we never draw a barcode that scans as something different from the source.
+  var v = String(value==null?'':value);
+  var chars = ('*'+v+'*').split('');
+  for(var i=0;i<chars.length;i++){ if(!C39[chars[i]]) return ''; }   // unsupported char -> caller falls back to text
+  var wNarrow = narrow, wWide = Math.round(narrow*ratio);
+  var x = quiet, rects = '';
+  for(var c=0;c<chars.length;c++){
+    var pat = C39[chars[c]];
+    for(var e=0;e<9;e++){
+      var w = (pat[e]==='2') ? wWide : wNarrow;
+      if(e % 2 === 0){ rects += '<rect x="'+x+'" y="0" width="'+w+'" height="'+height+'"/>'; } // even index = bar
+      x += w;
+    }
+    x += wNarrow; // inter-character narrow gap
+  }
+  var total = x - wNarrow + quiet;
+  return '<svg width="'+total+'" height="'+height+'" viewBox="0 0 '+total+' '+height+'" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges"><rect x="0" y="0" width="'+total+'" height="'+height+'" fill="#fff"/><g fill="#000">'+rects+'</g></svg>';
+}
+
+// Code 128B (optional). Values 0..102 -> module-width patterns (6 elements each).
+var C128_PAT = ['212222','222122','222221','121223','121322','131222','122213','122312','132212','221213','221312','231212','112232','122132','122231','113222','123122','123221','223211','221132','221231','213212','223112','312131','311222','321122','321221','312212','322112','322211','212123','212321','232121','111323','131123','131321','112313','132113','132311','211313','231113','231311','112133','112331','132131','113123','113321','133121','313121','211331','231131','213113','213311','213131','311123','311321','331121','312113','312311','332111','314111','221411','431111','111224','111422','121124','121421','141122','141221','112214','112412','122114','122411','142112','142211','241211','221114','413111','241112','134111','111242','121142','121241','114212','124112','124211','411212','421112','421211','212141','214121','412121','111143','111341','131141','114113','114311','411113','411311','113141','114131','311141','411131','211412','211214','211232','2331112'];
+function code128svg(value, opt){
+  opt = opt || {};
+  var mod = opt.module || 2, height = opt.height || 42, quiet = 10*mod;
+  var v = String(value==null?'':value);
+  var codes = [104]; // Start B
+  for(var i=0;i<v.length;i++){ var cc=v.charCodeAt(i); if(cc<32||cc>126) return ''; codes.push(cc-32); }
+  var sum = 104; for(var k=1;k<codes.length;k++){ sum += codes[k]*k; }
+  codes.push(sum % 103);           // checksum
+  codes.push(106);                 // Stop
+  var x = quiet, rects='';
+  for(var c=0;c<codes.length;c++){
+    var pat = C128_PAT[codes[c]];
+    for(var e=0;e<pat.length;e++){
+      var w = parseInt(pat[e],10)*mod;
+      if(e % 2 === 0){ rects += '<rect x="'+x+'" y="0" width="'+w+'" height="'+height+'"/>'; }
+      x += w;
+    }
+  }
+  var total = x + quiet;
+  return '<svg width="'+total+'" height="'+height+'" viewBox="0 0 '+total+' '+height+'" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges"><rect x="0" y="0" width="'+total+'" height="'+height+'" fill="#fff"/><g fill="#000">'+rects+'</g></svg>';
+}
+// Prefer the barcode's decoded RAW string (what the driver's phone read = EFI's printed content).
+// Fall back to the invoice number when no raw string was captured (Gemini-matched rows).
+function barcodeSvg(rawOrInvoice, opt){
+  if(BARCODE_SYMBOLOGY === 'code128b') return code128svg(rawOrInvoice, opt);
+  return code39svg(rawOrInvoice, opt);
+}
+
+/* ============================================================================
+   ACCESS LOCK — reuse the EXISTING PALLET_UNLOCK (no new auth). Shared session
+   with CLF_Pallet_Store via AUTH_KEY. Backend re-verifies the token on writes.
+   ============================================================================ */
+function showLock(msg){
+  var ov=$('lockOverlay');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='lockOverlay';
+    ov.style.cssText='position:fixed;inset:0;z-index:200;background:rgba(17,24,39,.94);display:flex;align-items:center;justify-content:center;padding:20px;';
+    ov.innerHTML='<div style="background:#fff;border-radius:16px;max-width:360px;width:100%;padding:26px 22px;box-shadow:0 20px 60px rgba(0,0,0,.4);">'
+      +'<div style="font-size:34px;text-align:center;">&#128274;</div>'
+      +'<div style="font-weight:800;font-size:17px;text-align:center;margin:6px 0 2px;color:#111827;">POD Admin is locked</div>'
+      +'<div style="font-size:12.5px;color:#6B7280;text-align:center;margin-bottom:14px;">Authorised staff only &middot; Staf sah sahaja</div>'
+      +'<label style="font-size:12px;font-weight:700;color:#374151;">Staff ID &middot; ID Staf</label>'
+      +'<input id="lk-emp" autocomplete="off" placeholder="e.g. TER282" style="width:100%;box-sizing:border-box;margin:4px 0 10px;padding:12px;font-size:15px;border:1.5px solid #D1D5DB;border-radius:9px;">'
+      +'<label style="font-size:12px;font-weight:700;color:#374151;">PIN</label>'
+      +'<input id="lk-pin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN" style="width:100%;box-sizing:border-box;margin:4px 0 6px;padding:12px;font-size:15px;border:1.5px solid #D1D5DB;border-radius:9px;">'
+      +'<div id="lk-err" style="min-height:16px;font-size:12px;color:#B91C1C;font-weight:600;"></div>'
+      +'<button id="lk-btn" style="width:100%;margin-top:8px;background:#1A56DB;color:#fff;border:none;border-radius:10px;padding:14px;font-weight:800;font-size:15px;cursor:pointer;">Unlock &middot; Buka</button></div>';
+    document.body.appendChild(ov);
+    $('lk-btn').onclick=doUnlock;
+    $('lk-pin').addEventListener('keydown',function(e){ if(e.key==='Enter') doUnlock(); });
+  }
+  ov.style.display='flex';
+  if(msg) $('lk-err').textContent=msg;
+  var a=_auth(); var emp=$('lk-emp'); if(emp && !emp.value) emp.value=(a&&a.empNo)||'';
+}
+function hideLock(){ var ov=$('lockOverlay'); if(ov) ov.style.display='none'; }
+async function doUnlock(){
+  var emp=$('lk-emp').value.trim().toUpperCase(), pin=$('lk-pin').value.trim(), err=$('lk-err');
+  if(!emp||!pin){ err.textContent='Enter Staff ID + PIN · Isi ID + PIN'; return; }
+  var btn=$('lk-btn'); btn.disabled=true; btn.textContent='Checking…';
+  var tok=_newToken('ulk');
+  var rd=await postWithToken({ formType:UNLOCK_ACTION, empNo:emp, pin:pin, clientToken:tok }, tok);
+  btn.disabled=false; btn.textContent='Unlock · Buka';
+  if(rd && rd.status==='success' && rd.authToken){
+    localStorage.setItem(AUTH_KEY, JSON.stringify({ token:rd.authToken, empNo:rd.empNo, name:rd.name }));
+    $('lk-pin').value=''; err.textContent=''; hideLock();
+    toast('ok','<b>Unlocked ✓ · Dibuka</b><br>'+esc(rd.name)+' ('+esc(rd.empNo)+')');
+    loadBoard();
+  } else {
+    err.textContent=(rd && rd.message)?rd.message:'Could not unlock — check connection · Gagal, semak talian';
+  }
+}
+// POST + no-cors + poll getImportResult (same readback the forms use, for token-carrying writes)
+async function postWithToken(payload, token){
+  var fd=new FormData(); fd.append('data', JSON.stringify(payload));
+  try{ await fetch(SCRIPT_URL,{ method:'POST', mode:'no-cors', body:fd }); }
+  catch(e){ return { status:'error', message:'No connection · Tiada sambungan' }; }
+  for(var t=0;t<8;t++){
+    await new Promise(function(r){ setTimeout(r,1500); });
+    try{ var rb=await fetch(SCRIPT_URL+'?action=getImportResult&token='+encodeURIComponent(token)); var rd=await rb.json(); if(rd && rd.status && rd.status!=='pending') return rd; }
+    catch(e){}
+  }
+  return { status:'error', message:'No confirmation · Tiada pengesahan' };
+}
+
+/* ============================================================================
+   LOAD + RENDER
+   ============================================================================ */
+async function loadBoard(){
+  if(_writesInFlight>0){ scheduleRefresh(); return; }   // don't re-render mid-write (would detach the checkbox)
+  $('errBanner').classList.remove('show');
+  if(DEMO){ _boardData = demoData(); $('demoBanner').classList.add('show'); render(); scheduleRefresh(); return; }
+  var date=$('date').value, url=SCRIPT_URL+'?action=getPodAdminBoard&date='+encodeURIComponent(date)+'&branch='+encodeURIComponent(BRANCH);
+  try{
+    var res=await fetch(url), data=await res.json();
+    if(!data || data.status!=='ok' || !Array.isArray(data.lorries)) throw new Error((data&&data.message)||'Unexpected response');
+    if(_writesInFlight>0){ scheduleRefresh(); return; }   // a write STARTED while this fetch was in flight — discard this paint so we don't drop a stale row over the active EFI checkbox (self-heals on next refresh)
+    _boardData=data; render();
+  }catch(err){
+    $('errText').textContent='Could not load the board — '+(err&&err.message?err.message:'check connection')+'. (Backend endpoint getPodAdminBoard must be deployed — see Program A.)';
+    $('errBanner').classList.add('show');
+    if(!_boardData) $('board').innerHTML='<div class="empty"><div class="big">⚠</div>Not loaded yet.</div>';
+  }
+  scheduleRefresh();
+}
+function scheduleRefresh(){ clearTimeout(_refreshTmr); _refreshTmr=setTimeout(loadBoard, REFRESH_MS); }
+
+function render(){
+  var d=_boardData; if(!d){ return; }
+  var lorries = d.lorries||[];
+  // summary
+  var done=0,pend=0,prob=0,efi=0,total=0;
+  lorries.forEach(function(L){ (L.invoices||[]).forEach(function(v){
+    total++;
+    var st=String(v.status||'').toLowerCase();
+    if(st==='delivered'){ done++; if(v.efiScanned) efi++; }
+    else if(st==='failed') prob++; else pend++;
+  }); });
+  $('summary').style.display = total?'grid':'none';
+  $('s-done').textContent=done; $('s-pend').textContent=pend; $('s-prob').textContent=prob; $('s-efi').textContent=efi;
+  $('s-efi-bar').style.width = (done? Math.round(efi/done*100):0)+'%';
+  $('lastUpdated').textContent = 'Updated '+new Date().toLocaleTimeString('en-MY',{hour:'2-digit',minute:'2-digit'})+' · auto-refresh 60s · '+(BRANCH==='KTN'?'Kuantan':'Mentakab');
+
+  var board=$('board');
+  if(!lorries.length){ board.innerHTML='<div class="empty"><div class="big">📭</div>No deliveries for this date / branch yet.</div>'; return; }
+
+  var html='';
+  lorries.forEach(function(L){
+    var invs=L.invoices||[];
+    var ld=invs.filter(function(v){return String(v.status).toLowerCase()==='delivered';}).length;
+    html+='<div class="lorry"><div class="lorry-head">'
+      +'<div><span class="plate">'+esc(L.vehicleNo||'?')+'</span>'+(L.drivers?' <span class="crew">· '+esc(L.drivers)+'</span>':'')+'</div>'
+      +'<div class="mini">'+ld+' / '+invs.length+' delivered</div></div>';
+    html+='<div style="overflow-x:auto;"><table class="inv"><thead><tr>'
+      +'<th>Invoice</th><th>Customer</th><th style="text-align:right;">Amount</th><th>Status</th><th>Time</th><th>POD photo</th><th>Barcode</th><th>EFI</th>'
+      +'</tr></thead><tbody>';
+    invs.forEach(function(v, idx){
+      html+=invRow(L, v, idx);
+    });
+    html+='</tbody></table></div></div>';
+  });
+  board.innerHTML=html;
+  wireEfiCheckboxes();
+}
+
+function statusBadge(v){
+  var st=String(v.status||'').toLowerCase();
+  if(v.mismatch) return '<span class="badge mismatch">⚑ Mismatch</span>';
+  if(st==='delivered') return '<span class="badge done">✓ Delivered</span>';
+  if(st==='failed') return '<span class="badge prob">✕ '+esc(v.failReason||'Problem')+'</span>';
+  return '<span class="badge pend">… Pending</span>';
+}
+function srcTag(v){
+  if(v.matchSource==='barcode') return '<span class="src bc" title="Read from the scanned barcode">条码✓</span>';
+  if(v.matchSource==='ai')      return '<span class="src ai" title="Matched by AI (Gemini) — double-check">AI~</span>';
+  if(v.matchSource==='none')    return '<span class="src no" title="Not auto-identified">✗</span>';
+  return '';
+}
+function photoCell(v){
+  var urls=v.photoUrls||[];
+  if(!urls.length) return '<span class="thumb-none">—</span>';
+  // 'link' mode: always render a secure "open in Drive" link, never embed. Guaranteed to work
+  // (Google login gates access); use if inline thumbnails prove flaky cross-origin during the pilot.
+  if(PHOTO_DISPLAY==='link'){
+    return '<div class="thumbs">'+urls.map(function(u,i){
+      return '<a class="thumb-link" href="'+esc(u)+'" target="_blank" rel="noopener" title="POD '+(i+1)+'">📷</a>';
+    }).join('')+'</div>';
+  }
+  // 'thumbnail' mode (default): XSS-safe inline thumbnail — no data injected into a JS string.
+  // Invoice + index go in data-* attrs (HTML-attribute context, esc() is sufficient) and a
+  // delegated click opens the lightbox. onerror: if the Drive thumbnail can't load (viewer not
+  // authorised / not shared / cross-origin blocked), degrade to a secure "open in Drive" link
+  // instead of a broken image — no public sharing needed.
+  var h='<div class="thumbs" data-inv="'+esc(String(v.invoiceNo))+'">';
+  urls.forEach(function(u,i){
+    var su=esc(u);
+    h+='<img class="thumb" src="'+su+'" alt="POD" data-idx="'+i+'" loading="lazy" '
+      +'onerror="this.onerror=null;var a=document.createElement(\'a\');a.href=this.src;a.target=\'_blank\';a.rel=\'noopener\';a.className=\'thumb-link\';a.textContent=\'📷\';this.replaceWith(a);">';
+  });
+  return h+'</div>';
+}
+function barcodeCell(v){
+  var st=String(v.status||'').toLowerCase();
+  if(st!=='delivered') return '<span class="bc-na">—</span>';   // only scan delivered invoices into EFI
+  var raw = v.barcodeRaw || v.invoiceNo || '';
+  var svg = barcodeSvg(raw, {height:40});
+  // fallback must show `raw` (the exact string EFI expects), NOT invoiceNo — they can differ
+  if(!svg) return '<span class="bc-na">no barcode<br>type manually:<br><b>'+esc(raw)+'</b></span>';
+  return '<div class="bc-cell">'+svg+'<div class="bc-txt">'+esc(raw)+'</div></div>';
+}
+function efiCell(L, v){
+  var st=String(v.status||'').toLowerCase();
+  if(st!=='delivered') return '';
+  var key = esc(L.shipmentKey||'')+'|'+esc(String(v.invoiceNo));
+  var checked=v.efiScanned?'checked':'';
+  var by=v.efiScanned&&v.efiBy?('<span class="by">'+esc(v.efiBy)+'</span>'):'';
+  return '<label class="efi-wrap"><input type="checkbox" data-key="'+key+'" data-ship="'+esc(L.shipmentKey||'')+'" data-inv="'+esc(String(v.invoiceNo))+'" '+checked+'>'+by+'</label>';
+}
+function invRow(L, v, idx){
+  var st=String(v.status||'').toLowerCase();
+  var cls = v.mismatch?'row-mismatch':(st==='delivered'?'row-done':(st==='failed'?'row-prob':'row-pend'));
+  return '<tr class="'+cls+'">'
+    +'<td class="inv-no">'+esc(v.invoiceNo)+srcTag(v)+'</td>'
+    +'<td class="cust">'+esc(v.customer||v.customerName||v.custCode||'')+(v.area?'<span class="area">'+esc(v.area)+'</span>':'')+'</td>'
+    +'<td class="amt">'+(v.amount!=null?money(v.amount):'')+'</td>'
+    +'<td>'+statusBadge(v)+'</td>'
+    +'<td class="time">'+esc(fmtTime(v.deliveredDate||_boardData.date, v.deliveredAt))+'</td>'
+    +'<td>'+photoCell(v)+'</td>'
+    +'<td class="bc-cell">'+barcodeCell(v)+'</td>'
+    +'<td>'+efiCell(L, v)+'</td>'
+    +'</tr>';
+}
+
+/* ============================================================================
+   MARK EFI SCANNED — GET-write (no photo), token + clientToken, optimistic.
+   ============================================================================ */
+function wireEfiCheckboxes(){
+  var boxes=document.querySelectorAll('.efi-wrap input[type=checkbox]');
+  boxes.forEach(function(b){ b.addEventListener('change', function(){ markEfi(b); }); });
+}
+var _writesInFlight = 0;   // suppress auto-refresh while a write is pending (don't detach the box)
+function _liveEfiBox(ship, inv){
+  var found=null;
+  document.querySelectorAll('.efi-wrap input[type=checkbox]').forEach(function(b){
+    if(b.getAttribute('data-ship')===ship && b.getAttribute('data-inv')===inv) found=b;
+  });
+  return found;
+}
+async function markEfi(box){
+  if(DEMO){ toast('ok','Demo: EFI mark not sent'); return; }
+  if(!_authToken()){ box.checked=!box.checked; showLock('Unlock to record EFI entry · Buka untuk rekod'); return; }
+  var ship=box.getAttribute('data-ship'), inv=box.getAttribute('data-inv'), scanned=box.checked?1:0;
+  box.disabled=true; _writesInFlight++;
+  var tok=_newToken('efi');
+  // POST (not GET) so authToken is in the body, and the backend dispatches on formType (matches spec A3).
+  var rd = await postWithToken({ formType:'MARK_EFI_SCANNED', shipmentKey:ship, invoiceNo:inv,
+                                 scanned:scanned, authToken:_authToken(), clientToken:tok }, tok);
+  _writesInFlight--;
+  // a concurrent refresh may have re-rendered the row — re-query the live checkbox by data-*.
+  var live = _liveEfiBox(ship, inv) || box;
+  if(rd && rd.status==='success'){
+    _patchCache(ship, inv, scanned?true:false);
+    if(live){
+      live.checked = !!scanned; live.disabled=false;
+      var wrap=live.parentElement, by=wrap.querySelector('.by');
+      if(scanned){ if(!by){ by=document.createElement('span'); by.className='by'; wrap.appendChild(by); } by.textContent=_operator(); }
+      else if(by){ by.remove(); }
+    }
+    toast('ok', (scanned?'EFI recorded ✓':'EFI unmarked')+' · '+esc(inv));
+  } else {
+    if(live){ live.checked = !scanned; live.disabled=false; }   // revert
+    toast('err','Not saved: '+esc((rd&&rd.message)||'server error'));
+  }
+}
+function _patchCache(ship, inv, val){
+  if(!_boardData) return;
+  (_boardData.lorries||[]).forEach(function(L){ if(String(L.shipmentKey)===String(ship)){ (L.invoices||[]).forEach(function(v){ if(String(v.invoiceNo)===String(inv)){ v.efiScanned=val; v.efiBy=val?_operator():''; } }); } });
+}
+
+/* ============================================================================
+   LIGHTBOX
+   ============================================================================ */
+function _findInvoice(invoiceNo){
+  var out=null; (_boardData.lorries||[]).forEach(function(L){ (L.invoices||[]).forEach(function(v){ if(String(v.invoiceNo)===String(invoiceNo)) out=v; }); }); return out;
+}
+function openLightbox(invoiceNo, idx){
+  var v=_findInvoice(invoiceNo); if(!v||!v.photoUrls||!v.photoUrls.length) return;
+  _lbPhotos=v.photoUrls.slice(); _lbIdx=idx||0; _lbCap='Invoice '+invoiceNo+' · '+(v.customer||'');
+  $('lb-img').src=_lbPhotos[_lbIdx]; $('lb-cap').textContent=_lbCap+'  ('+(_lbIdx+1)+'/'+_lbPhotos.length+')';
+  $('lightbox').classList.add('show');
+}
+var _lbCap='';
+function lbStep(dir){ if(!_lbPhotos.length) return; _lbIdx=(_lbIdx+dir+_lbPhotos.length)%_lbPhotos.length; $('lb-img').src=_lbPhotos[_lbIdx]; $('lb-cap').textContent=_lbCap+'  ('+(_lbIdx+1)+'/'+_lbPhotos.length+')'; }
+function closeLightbox(){ $('lightbox').classList.remove('show'); $('lb-img').src=''; }
+document.addEventListener('keydown',function(e){ if(!$('lightbox').classList.contains('show')) return; if(e.key==='Escape') closeLightbox(); if(e.key==='ArrowLeft') lbStep(-1); if(e.key==='ArrowRight') lbStep(1); });
+
+/* ============================================================================
+   PRINT — one lorry per A4 page: barcode + invoice + customer + amount.
+   Fallback for when the handheld scanner can't read the screen.
+   ============================================================================ */
+function buildPrint(){
+  var d=_boardData;
+  if(!d){ $('printArea').innerHTML='<div class="p-page"><div class="p-head">Board not loaded — refresh first.</div></div>'; return; }
+  var html='';
+  (d.lorries||[]).forEach(function(L){
+    var invs=(L.invoices||[]).filter(function(v){ return String(v.status).toLowerCase()==='delivered'; });
+    if(!invs.length) return;
+    html+='<div class="p-page"><div class="p-head">'+esc(L.vehicleNo||'?')+'</div>'
+      +'<div class="p-sub">'+esc(d.date||'')+' · '+(BRANCH==='KTN'?'Kuantan':'Mentakab')+' · '+invs.length+' invoice(s)'+(L.drivers?(' · '+esc(L.drivers)):'')+'</div>';
+    invs.forEach(function(v){
+      var raw=v.barcodeRaw||v.invoiceNo||''; var svg=barcodeSvg(raw,{height:44,narrow:2});
+      html+='<div class="p-row"><div class="p-bc">'+(svg||'')+'<div class="p-bctxt">'+esc(raw)+'</div></div>'
+        +'<div class="p-meta"><div class="p-inv">'+esc(v.invoiceNo)+'</div><div class="p-cust">'+esc(v.customer||'')+'</div></div>'
+        +'<div class="p-amt">'+(v.amount!=null?('RM '+money(v.amount)):'')+'</div></div>';
+    });
+    html+='</div>';
+  });
+  $('printArea').innerHTML = html || '<div class="p-page"><div class="p-head">No delivered invoices to print.</div></div>';
+}
+
+/* ============================================================================
+   DEMO DATA (only via ?demo=1 — never masquerades as live)
+   ============================================================================ */
+function demoData(){
+  return { status:'ok', date: todayKL(), branch: BRANCH, lorries:[
+    { vehicleNo:'VBT 1234', shipmentKey:'SHIP-DEMO-1', drivers:'Ahmad · Rosli', invoices:[
+      { invoiceNo:'IV100231', barcodeRaw:'IV100231', customer:'Kedai Runcit Aman', custCode:'C0231', area:'Mentakab', amount:1240.50, status:'delivered', deliveredAt:'10:14', matchSource:'barcode', efiScanned:true, efiBy:'TER282', photoUrls:[] },
+      { invoiceNo:'IV100232', barcodeRaw:'IV100232', customer:'Restoran Sri Muda', custCode:'C0244', area:'Temerloh', amount:398.00, status:'delivered', deliveredAt:'10:52', matchSource:'ai', efiScanned:false, photoUrls:[] },
+      { invoiceNo:'IV100240', barcodeRaw:'', customer:'Pasar Mini Jaya', custCode:'C0261', area:'Lanchang', amount:2015.75, status:'delivered', deliveredAt:'11:37', matchSource:'none', efiScanned:false, photoUrls:[] },
+      { invoiceNo:'IV100255', customer:'Warung Pak Din', custCode:'C0288', area:'Kerdau', amount:150.00, status:'failed', failReason:'Shop closed', photoUrls:[] }
+    ]},
+    { vehicleNo:'WXX 5678', shipmentKey:'SHIP-DEMO-2', drivers:'Kumar', invoices:[
+      { invoiceNo:'IV100301', barcodeRaw:'IV100301', customer:'Gerai Selera Kampung', custCode:'C0301', area:'Mentakab', amount:730.25, status:'delivered', deliveredAt:'09:41', matchSource:'barcode', efiScanned:true, efiBy:'TER278', photoUrls:[] },
+      { invoiceNo:'IV100305', barcodeRaw:'IV100305', customer:'Kedai Buku Ilmu', custCode:'C0312', area:'Bandar', amount:88.90, status:'delivered', deliveredAt:'12:03', matchSource:'barcode', mismatch:true, efiScanned:false, photoUrls:[] },
+      { invoiceNo:'IV100320', customer:'Hardware Seng Hin', custCode:'C0333', area:'Mentakab', amount:0, status:'pending', photoUrls:[] }
+    ]}
+  ]};
+}
+
+/* ============================================================================
+   BOOT
+   ============================================================================ */
+$('date').value = todayKL(); $('date').max = todayKL();
+$('date').addEventListener('change', loadBoard);
+$('refreshBtn').addEventListener('click', loadBoard);
+$('printBtn').addEventListener('click', function(){ buildPrint(); setTimeout(function(){ window.print(); }, 60); });
+// Delegated thumbnail click (replaces inline onclick — XSS-safe, reads data-* attrs).
+$('board').addEventListener('click', function(e){
+  var t = e.target.closest('.thumb'); if(!t) return;
+  var wrap = t.closest('.thumbs'); if(!wrap) return;
+  openLightbox(wrap.getAttribute('data-inv'), parseInt(t.getAttribute('data-idx'),10)||0);
+});
+document.querySelectorAll('#branchSeg .seg-btn').forEach(function(b){
+  b.addEventListener('click', function(){
+    document.querySelectorAll('#branchSeg .seg-btn').forEach(function(x){ x.classList.remove('active'); });
+    b.classList.add('active'); BRANCH=b.getAttribute('data-branch'); loadBoard();
+  });
+});
+// preset branch toggle from URL
+document.querySelectorAll('#branchSeg .seg-btn').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-branch')===BRANCH); });
+document.addEventListener('visibilitychange', function(){ if(!document.hidden) loadBoard(); });
+
+window.onload = function(){
+  if(!DEMO && !_auth()){ showLock(); }   // office tool: lock until unlocked (shared session with Pallet Store)
+  loadBoard();
+};
+</script>
+</body>
+</html>

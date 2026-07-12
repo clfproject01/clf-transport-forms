@@ -112,7 +112,10 @@ input[type=date]{ font-family:inherit; font-size:var(--text-body); padding:8px 1
 <header class="header">
   <div class="header-inner">
     <div class="header-title">CLF <span>Shipment</span> Management <span id="branchBadge" class="badge badge-assigned" style="vertical-align:middle;margin-left:6px;">—</span></div>
-    <a class="header-link" href="CLF_Dashboard.html">← Dashboard</a>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <a class="header-link" id="podAdminLink" href="CLF_POD_Admin.html" style="color:var(--blue-700);border-color:var(--blue-500);">📇 POD Admin →</a>
+      <a class="header-link" href="CLF_Dashboard.html">← Dashboard</a>
+    </div>
   </div>
 </header>
 
@@ -559,6 +562,9 @@ document.getElementById('dateInput').addEventListener('change', e => { _date = e
   // Branch badge so the supervisor sees which branch they're managing
   const badge = document.getElementById('branchBadge');
   if (badge) badge.textContent = BRANCH_LABEL + ' · ' + BRANCH;
+  // POD Admin barcode board — carry the current branch through so Wayne (KTN) / Nich (MTK) land scoped
+  const padminLink = document.getElementById('podAdminLink');
+  if (padminLink) padminLink.href = 'CLF_POD_Admin.html?branch=' + encodeURIComponent(BRANCH);
 
   _date = todayStr();
   document.getElementById('dateInput').value = _date;
