@@ -548,7 +548,7 @@ let collectedPhotos = []; // [{dataUrl, name, type}]  — already compressed JPE
 // Never blocks submission. Kill switch: ENHANCE_SCAN=false → byte-identical behaviour to the old form.
 const ENHANCE_SCAN = true;
 const ENH_MAX_MS   = 1500;              // watchdog: a slower device quarantines itself to plain compress
-const ENH_QUAR_KEY = 'clf_enh_quarantine_v1';   // versioned: a faster future build can un-quarantine the fleet by bumping to _v2
+const ENH_QUAR_KEY = 'clf_enh_quarantine_v2';   // versioned: a faster future build can un-quarantine the fleet by bumping to _v2
 // Calibrated on real signed ACCOUNT-COPY invoices (2026-07-13): stamp ink is FADED PURPLE, so
 // whitening must be conservative — only truly-neutral AND very-bright pixels are pushed to white
 // (sat<0.08 & lum>225); any pixel with visible chroma (faded stamp) is never touched beyond the
