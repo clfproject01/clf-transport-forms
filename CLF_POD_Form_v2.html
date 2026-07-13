@@ -548,7 +548,7 @@ let collectedPhotos = []; // [{dataUrl, name, type}]  — already compressed JPE
 // Never blocks submission. Kill switch: ENHANCE_SCAN=false → byte-identical behaviour to the old form.
 const ENHANCE_SCAN = true;
 const ENH_MAX_MS   = 1500;              // watchdog: a slower device quarantines itself to plain compress
-const ENH_QUAR_KEY = 'clf_enh_quarantine';
+const ENH_QUAR_KEY = 'clf_enh_quarantine_v1';   // versioned: a faster future build can un-quarantine the fleet by bumping to _v2
 // Calibrated on real signed ACCOUNT-COPY invoices (2026-07-13): stamp ink is FADED PURPLE, so
 // whitening must be conservative — only truly-neutral AND very-bright pixels are pushed to white
 // (sat<0.08 & lum>225); any pixel with visible chroma (faded stamp) is never touched beyond the
@@ -588,10 +588,11 @@ function enhanceScanCanvas_(canvas, ctx) {
     bg = sm;
   }
   // 3) per-pixel: bilinear background sample → equal-channel gain [1.0,1.6] → gated soft whiten/darken
+  // (block values sit at block CENTERS — sample with a half-block offset so the gain map is aligned)
   for (var py = 0; py < h; py++) {
-    var fy = Math.min(py / bs, bh - 1), y0 = Math.floor(fy), yA = Math.min(y0 + 1, bh - 1), wy = fy - y0;
+    var fy = Math.min(Math.max((py - bs / 2) / bs, 0), bh - 1), y0 = Math.floor(fy), yA = Math.min(y0 + 1, bh - 1), wy = fy - y0;
     for (var px = 0; px < w; px++) {
-      var fx = Math.min(px / bs, bw - 1), x0 = Math.floor(fx), xA = Math.min(x0 + 1, bw - 1), wx = fx - x0;
+      var fx = Math.min(Math.max((px - bs / 2) / bs, 0), bw - 1), x0 = Math.floor(fx), xA = Math.min(x0 + 1, bw - 1), wx = fx - x0;
       var B = bg[y0 * bw + x0] * (1 - wx) * (1 - wy) + bg[y0 * bw + xA] * wx * (1 - wy)
             + bg[yA * bw + x0] * (1 - wx) * wy       + bg[yA * bw + xA] * wx * wy;
       var gain = 245 / Math.max(B, 40);
@@ -604,10 +605,13 @@ function enhanceScanCanvas_(canvas, ctx) {
       var sat = (mx - mn) / (mx > 1 ? mx : 1);
       var lum = 0.299 * r + 0.587 * g + 0.114 * b;
       if (sat < 0.08) {                       // truly neutral only — chroma (even faded stamp) untouched
-        if (lum > 225) {                      // flattened paper → soft-push to clean white
-          r += (255 - r) * 0.85; g += (255 - g) * 0.85; b += (255 - b) * 0.85;
-        } else if (lum < 130) {               // printed text / ballpoint signature → gently darker
-          r *= 0.75; g *= 0.75; b *= 0.75;
+        if (lum > 218) {                      // flattened paper → FEATHERED soft-push to clean white
+          var wS = ((lum - 218) / 14); if (wS > 1) wS = 1; wS *= 0.85;   // 0 at 218 → 0.85 at 232+ (no banding cliff)
+          r += (255 - r) * wS; g += (255 - g) * wS; b += (255 - b) * wS;
+        } else if (lum < 138) {               // printed text / ballpoint signature → FEATHERED gentle darken
+          var dS = ((138 - lum) / 16); if (dS > 1) dS = 1;               // 0 at 138 → 1 at 122- (smooth ramp)
+          var df = 1 - 0.25 * dS;                                        // 1.0 → 0.75
+          r *= df; g *= df; b *= df;
         }                                      // neutral midtones: leave (safety band for faded ink)
       }
       d[i2] = r; d[i2 + 1] = g; d[i2 + 2] = b;
@@ -625,6 +629,9 @@ function compressImage(file) {
     reader.onload = function(e) {
       const img = new Image();
       img.onload = function() {
+        // [E1 Tier A] yield once to the event loop before the heavy pixel pass so the previous
+        // thumbnail can paint between photos in a multi-photo batch (no back-to-back UI freeze).
+        setTimeout(function() {
         let w = img.naturalWidth;
         let h = img.naturalHeight;
         if (w > COMPRESS_MAX_DIM || h > COMPRESS_MAX_DIM) {
@@ -658,6 +665,7 @@ function compressImage(file) {
         } catch (err) {
           reject(err);
         }
+        }, 0);   // [E1 Tier A] end of yielded block
       };
       img.onerror = () => reject(new Error('Image decode failed'));
       img.src = e.target.result;
