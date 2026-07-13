@@ -716,6 +716,39 @@ function removePhoto(idx) {
   renderPhotoGrid();
 }
 
+// ── [E1 Tier A] tap a thumbnail → full-screen viewer (inspect the scan result before submitting).
+// Delegated on document so it covers BOTH photo paths (plain POD grid + shipment-flow buffer)
+// without touching either render function. Tap image = toggle 2.2x zoom; tap backdrop/× = close.
+(function () {
+  var ov = null;
+  document.addEventListener('click', function (e) {
+    var img = e.target;
+    // any captured-photo thumbnail: both the plain POD grid (.photo-thumb) and the shipment-flow
+    // 54px buffer thumbs render the compressed dataURL directly — match on that, not the container.
+    if (!(img && img.tagName === 'IMG' && String(img.src).slice(0, 10) === 'data:image')) return;
+    if (ov && ov.contains(img)) return;   // the overlay's own big image (zoom toggle handles it)
+    if (!ov) {
+      ov = document.createElement('div');
+      ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.93);display:flex;align-items:center;justify-content:center;overflow:auto;';
+      ov.innerHTML = '<img style="max-width:100%;max-height:100%;transition:transform .15s;transform-origin:center;">'
+        + '<div style="position:fixed;top:10px;right:14px;color:#fff;font-size:30px;line-height:1;padding:6px 10px;">&times;</div>'
+        + '<div style="position:fixed;bottom:12px;left:0;right:0;text-align:center;color:#bbb;font-size:12px;">Tap photo to zoom &middot; tap outside to close</div>';
+      ov.addEventListener('click', function (ev) {
+        var big = ov.querySelector('img');
+        if (ev.target === big) {                       // toggle zoom
+          big._z = !big._z;
+          big.style.transform = big._z ? 'scale(2.2)' : '';
+        } else { ov.style.display = 'none'; }
+      });
+      document.body.appendChild(ov);
+    }
+    var big = ov.querySelector('img');
+    big._z = false; big.style.transform = '';
+    big.src = img.src;
+    ov.style.display = 'flex';
+  });
+})();
+
 function renderPhotoGrid() {
   const grid = document.getElementById('photoGrid');
   const counter = document.getElementById('photoCounter');
