@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>CLF Trading — POD Submission</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --navy: #0B1F3A;
+    --navy-mid: #1A3A5C;
+    --navy-light: #1E4976;
+    --orange: #FF6B35;
+    --orange-dark: #E85A2A;
+    --orange-light: #FFA37A;
+    --orange-pale: #FFF1EB;
+    --teal: #0E7490;
+    --teal-light: #22D3EE;
+    --gold: #C9A84C;
+    --gold-light: #E8C97A;
+    --white: #FFFFFF;
+    --off-white: #FAFAFA;
+    --gray: #8A9BB0;
+    --gray-light: #E5E7EB;
+    --success: #22C55E;
+    --error: #EF4444;
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--off-white);
+    min-height: 100vh;
+    color: var(--navy);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app { max-width: 480px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; background: var(--white); }
+
+  .header {
+    background: linear-gradient(135deg, var(--orange) 0%, var(--orange-dark) 100%);
+    padding: 28px 24px 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+    position: relative; overflow: hidden;
+  }
+  /* form identity — big icon + name so drivers instantly know which app this is */
+  .form-identity { display: flex; align-items: center; gap: 14px; position: relative; z-index: 1; margin-top: 4px; }
+  .form-icon {
+    width: 54px; height: 54px; flex-shrink: 0;
+    background: rgba(255,255,255,0.16); border: 1.5px solid rgba(255,255,255,0.55);
+    border-radius: 14px; display: flex; align-items: center; justify-content: center;
+  }
+  .form-icon svg { width: 30px; height: 30px; stroke: var(--white); fill: none; }
+
+  .logo-row { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; position: relative; z-index: 1; }
+  .logo-box {
+    width: 52px; height: 52px; background: var(--white);
+    border-radius: 12px; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; overflow: hidden; border: 2px solid rgba(255,255,255,0.5);
+  }
+  .logo-text-clf { font-size: 13px; font-weight: 600; color: var(--orange-dark); line-height: 1; text-align: center; }
+  .logo-text-clf span { display: block; font-size: 9px; color: var(--orange); font-weight: 500; margin-top: 2px; }
+  .company-name { font-size: 16px; font-weight: 600; color: var(--white); line-height: 1.2; }
+  .company-reg { font-size: 11px; color: rgba(255,255,255,0.85); margin-top: 2px; font-weight: 400; }
+
+  .form-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.4);
+    border-radius: 20px; padding: 6px 14px; position: relative; z-index: 1;
+  }
+  .form-badge-dot { width: 7px; height: 7px; background: var(--white); border-radius: 50%; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+  .form-badge-text { font-size: 12px; font-weight: 600; color: var(--white); letter-spacing: 0.4px; }
+
+  .form-title { font-size: 30px; font-weight: 600; color: var(--white); letter-spacing: 1px; line-height: 1; margin: 0; position: relative; z-index: 1; }
+  .form-subtitle { font-size: 12px; color: rgba(255,255,255,0.85); position: relative; z-index: 1; line-height: 1.5; }
+  /* branch label — prominent so a driver on the wrong link notices (label, not a control) */
+  .branch-label {
+    display: inline-block;
+    font-size: 14px; font-weight: 600;
+    color: var(--navy);
+    background: var(--white);
+    border-radius: 8px;
+    padding: 2px 10px;
+    margin-left: 6px;
+    letter-spacing: 0.5px;
+    vertical-align: middle;
+  }
+
+  .form-body { flex: 1; background: var(--white); padding: 24px 20px 32px; }
+
+  .notice {
+    background: var(--orange-pale); border: 1px solid rgba(255,107,53,0.2);
+    border-left: 3px solid var(--orange); border-radius: var(--radius-sm);
+    padding: 10px 14px; margin-bottom: 20px;
+    font-size: 12px; color: var(--navy-mid); line-height: 1.5;
+  }
+  .notice b { color: var(--orange-dark); }
+
+  .section-label {
+    font-size: 10px; font-weight: 600; letter-spacing: 1.2px;
+    text-transform: uppercase; color: var(--orange-dark); margin: 20px 0 10px;
+  }
+
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 13px; font-weight: 500; color: var(--navy); margin-bottom: 6px; }
+  .field label .bm { display: block; font-size: 11px; font-weight: 400; color: var(--gray); margin-top: 1px; }
+  .field label .req { color: var(--orange); margin-left: 2px; }
+
+  input[type="text"], input[type="number"], input[type="date"], select, textarea {
+    width: 100%; padding: 13px 16px;
+    background: var(--white); border: 1.5px solid var(--gray-light);
+    border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif;
+    font-size: 15px; color: var(--navy); outline: none;
+    transition: border-color 0.2s; -webkit-appearance: none; appearance: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(255,107,53,0.15);
+  }
+  input::placeholder { color: var(--gray); font-size: 14px; }
+  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238A9BB0' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; padding-right: 40px; }
+
+  .photo-btn {
+    width: 100%; padding: 20px; background: var(--white);
+    border: 2px dashed var(--gray-light); border-radius: var(--radius);
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    cursor: pointer; transition: all 0.2s; position: relative;
+  }
+  .photo-btn:active { transform: scale(0.98); }
+  .photo-btn.has-photo { border-style: solid; border-color: var(--success); background: rgba(34,197,94,0.06); }
+  .photo-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .photo-icon {
+    width: 44px; height: 44px; background: var(--orange);
+    border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  }
+  .photo-icon svg { width: 22px; height: 22px; stroke: var(--white); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .photo-label { font-size: 14px; font-weight: 600; color: var(--navy); }
+  .photo-sublabel { font-size: 12px; color: var(--gray); }
+  .photo-preview { width: 100%; max-height: 200px; object-fit: cover; border-radius: var(--radius-sm); display: none; margin-top: 8px; }
+  .photo-preview.visible { display: block; }
+  .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 6px; margin-top: 10px; }
+  .photo-thumb { position: relative; padding-top: 100%; border-radius: var(--radius-sm); overflow: hidden; background: var(--off-white); border: 1px solid var(--gray-light); }
+  .photo-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .photo-thumb .remove-x { position: absolute; top: 2px; right: 2px; width: 22px; height: 22px; background: rgba(0,0,0,0.7); color: white; border: 0; border-radius: 50%; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; padding: 0; }
+  .photo-counter { font-size: 11px; color: var(--gray); margin-top: 6px; text-align: center; }
+
+  .confirm-row {
+    display: flex; gap: 12px; align-items: flex-start;
+    background: var(--orange-pale); border: 1px solid rgba(255,107,53,0.2);
+    border-radius: var(--radius-sm); padding: 14px; margin: 20px 0; cursor: pointer;
+  }
+  .confirm-row input[type="checkbox"] { width: 20px; height: 20px; flex-shrink: 0; margin-top: 1px; accent-color: var(--orange); cursor: pointer; }
+  .confirm-text { font-size: 12px; color: var(--navy-mid); line-height: 1.6; }
+  .confirm-text b { color: var(--orange-dark); }
+
+  .btn-wrap { position: relative; }
+  .submit-btn {
+    width: 100%; padding: 17px; background: var(--orange);
+    color: var(--white); border: none; border-radius: var(--radius);
+    font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px; letter-spacing: 0.3px;
+    box-shadow: 0 4px 12px rgba(255,107,53,0.25);
+  }
+  .submit-btn:active { transform: scale(0.98); opacity: 0.9; }
+  .teal-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: var(--orange-dark); border-radius: 0 0 var(--radius) var(--radius); }
+
+  .success-screen {
+    display: none; position: fixed; inset: 0; background: linear-gradient(135deg, var(--orange) 0%, var(--orange-dark) 100%);
+    z-index: 100; flex-direction: column; align-items: center; justify-content: center;
+    padding: 40px 32px; text-align: center;
+  }
+  .success-screen.show { display: flex; }
+  .success-icon {
+    width: 80px; height: 80px; background: rgba(34,197,94,0.15);
+    border: 2px solid var(--success); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 24px; animation: pop 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
+  }
+  @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
+  .success-icon svg { width: 36px; height: 36px; stroke: var(--success); fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+  .success-title { font-size: 26px; font-weight: 600; color: var(--white); margin-bottom: 8px; }
+  .success-subtitle { font-size: 15px; color: var(--gray); margin-bottom: 24px; line-height: 1.5; }
+  .success-time {
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+    border-radius: var(--radius-sm); padding: 12px 20px; margin-bottom: 20px;
+  }
+  .success-time-label { font-size: 11px; color: rgba(255,255,255,0.85); font-weight: 500; letter-spacing: 0.8px; text-transform: uppercase; }
+  .success-time-val { font-family: 'DM Mono', monospace; font-size: 18px; color: var(--white); margin-top: 4px; }
+  .success-info { font-size: 13px; color: rgba(255,255,255,0.85); margin-bottom: 6px; }
+  .success-info b { color: var(--white); }
+  .new-btn {
+    width: 100%; padding: 16px; background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15); border-radius: var(--radius);
+    color: var(--white); font-family: 'DM Sans', sans-serif;
+    font-size: 15px; font-weight: 500; cursor: pointer; margin-top: 12px;
+  }
+
+  .loading-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(232,90,42,0.92);
+    z-index: 99; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+  }
+  .loading-overlay.show { display: flex; }
+  .spinner { width: 44px; height: 44px; border: 3px solid rgba(255,255,255,0.25); border-top-color: var(--white); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { color: var(--white); font-size: 14px; }
+
+  .error-msg { font-size: 12px; color: var(--error); margin-top: 4px; display: none; }
+  .error-msg.show { display: block; }
+
+  .remembered-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25);
+    border-radius: 20px; padding: 2px 8px;
+    font-size: 10px; color: var(--success); font-weight: 500;
+    margin-left: 6px; vertical-align: middle;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <div class="logo-row">
+      <div class="logo-box">
+        <div class="logo-text-clf">CLF<span>Trading</span></div>
+      </div>
+      <div>
+        <div class="company-name">CLF Trading Sdn. Bhd.</div>
+        <div class="company-reg" id="companyReg">557522-A · Mentakab, Pahang</div>
+      </div>
+    </div>
+    <div class="form-identity">
+      <div class="form-icon">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      </div>
+      <div>
+        <div class="form-title">POD <span id="branchLabel" class="branch-label">Mentakab</span></div>
+        <div class="form-subtitle">Proof of Delivery · Bukti Penghantaran</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-body">
+    <div class="notice">
+      <b>Important · Penting:</b> Upload the <b>SIGNED</b> invoice on the <b>same delivery day</b>. Late or missing = penalty.<br>
+      <span style="opacity:.75;">Muat naik invois DITANDATANGANI pada hari sama. Lewat/hilang = penalti.</span>
+    </div>
+
+    <form id="podForm" novalidate>
+
+      <div class="section-label">Delivery Info · Maklumat Penghantaran</div>
+
+      <div class="field">
+        <label>Delivery Date · Tarikh Penghantaran <span class="req">*</span></label>
+        <input type="date" id="deliveryDate" required>
+        <div class="error-msg" id="err-date">Please select a date · Sila pilih tarikh</div>
+      </div>
+
+      <div class="field" style="position:relative;">
+        <label>
+          Driver · Pemandu <span class="req">*</span>
+          <span id="rememberedBadge" class="remembered-badge" style="display:none;">✓ Remembered</span>
+        </label>
+        <input type="text" id="driverSearch" autocomplete="off" placeholder="Staff ID (e.g. 448) atau nama" style="width:100%;box-sizing:border-box;padding:13px 16px;font-size:16px;border:1.5px solid #C7D0DC;border-radius:10px;background:#fff;">
+        <input type="hidden" id="driverName" required>
+        <div id="driverPanel" style="display:none;position:absolute;left:0;right:0;z-index:20;border:1.5px solid #C7D0DC;border-top:none;border-radius:0 0 10px 10px;max-height:240px;overflow-y:auto;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,.12);"></div>
+        <div class="error-msg" id="err-driver">Please select your name · Sila pilih nama</div>
+        <div id="staffIdBadge" style="display:none;margin-top:8px;padding:8px 12px;background:#FFF1E6;color:#9A3412;border-radius:8px;font-size:14px;font-weight:600;"></div>
+      </div>
+
+      <!-- SECOND DRIVER (optional) -->
+      <div class="field" style="position:relative;">
+        <label>
+          Second Driver · Pemandu Kedua
+          <span class="bm" style="display:block;font-size:11px;color:#6B7A8D;margin-top:2px;">If two drivers · optional</span>
+        </label>
+        <input type="text" id="secondSearch" autocomplete="off" placeholder="Staff ID atau nama (optional)" style="width:100%;box-sizing:border-box;padding:13px 16px;font-size:16px;border:1.5px solid #C7D0DC;border-radius:10px;background:#fff;">
+        <input type="hidden" id="secondDriver">
+        <div id="secondPanel" style="display:none;position:absolute;left:0;right:0;z-index:20;border:1.5px solid #C7D0DC;border-top:none;border-radius:0 0 10px 10px;max-height:240px;overflow-y:auto;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,.12);"></div>
+        <div id="staffIdBadge2" style="display:none;margin-top:8px;padding:8px 12px;background:#FFF1E6;color:#9A3412;border-radius:8px;font-size:14px;font-weight:600;"></div>
+      </div>
+
+      <div class="field">
+        <label>Vehicle Number · Nombor Kenderaan <span class="req">*</span></label>
+        <select id="vehicleNo" required>
+          <option value="">— Select vehicle · Pilih kenderaan —</option>
+        </select>
+        <div class="error-msg" id="err-vehicle">Please select a vehicle · Sila pilih kenderaan</div>
+      </div>
+
+      <!-- B4: shipment-aware delivery checklist (auto-shows when this lorry has a shipment today) -->
+      <div id="shipmentSection" style="display:none;"></div>
+      <input type="file" id="shipPhoto" accept="image/*" capture="environment" multiple style="display:none;" onchange="onShipPhoto(this)">
+
+      <div id="manualPodSection" style="display:none;">
+      <div class="section-label">Signed Invoice Photo · Foto Invois Ditandatangani</div>
+
+      <div class="notice">
+        <b>Up to 10 photos · 10 foto:</b> Multiple invoices? Snap each, tap <b>+ Add</b>.<br>
+        <span style="opacity:.75;">Banyak invois? Ambil setiap satu, ketik <b>+ Add</b>.</span>
+      </div>
+
+      <div class="field">
+        <label>Upload Signed Invoice(s) · Muat Naik Invois <span class="req">*</span></label>
+        <div class="photo-btn" id="photoBtn">
+          <input type="file" id="invoicePhoto" accept="image/*" capture="environment" multiple onchange="handlePhoto(this)">
+          <div class="photo-icon">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          </div>
+          <div class="photo-label" id="photoLabel">+ Tap to add invoice photo<br>Ketik untuk tambah foto invois</div>
+          <div class="photo-sublabel" id="photoSub">Up to 10 · Each must be SIGNED by customer</div>
+        </div>
+        <div class="photo-grid" id="photoGrid"></div>
+        <div class="photo-counter" id="photoCounter"></div>
+        <div class="error-msg" id="err-photo">Please take at least 1 photo · Sila ambil sekurang-kurangnya 1 foto</div>
+      </div>
+
+      <label class="confirm-row" for="confirmCheck">
+        <input type="checkbox" id="confirmCheck">
+        <div class="confirm-text">
+          <b>I confirm · Saya sahkan</b> the delivery is done and the invoice is <b>signed by the customer</b>.<br>
+          <span style="opacity:.75;">Penghantaran selesai dan invois ditandatangani pelanggan.</span>
+        </div>
+      </label>
+      <div class="error-msg" id="err-confirm">Please confirm the declaration · Sila sahkan perisytiharan</div>
+
+      <div class="btn-wrap">
+        <button type="button" class="submit-btn" onclick="submitForm()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Submit POD · Hantar Bukti Penghantaran
+        </button>
+        <div class="teal-bar"></div>
+      </div>
+      </div><!-- /manualPodSection -->
+
+    </form>
+  </div>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text">Submitting... · Menghantar...</div>
+</div>
+
+<div class="success-screen" id="successScreen">
+  <div class="success-icon">
+    <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+  </div>
+  <div class="success-title">POD Submitted! · POD Berjaya!</div>
+  <div class="success-subtitle">Proof of delivery recorded successfully.<br>Bukti penghantaran berjaya direkodkan.</div>
+  <div class="success-time">
+    <div class="success-time-label">Submission Time · Masa Penghantaran</div>
+    <div class="success-time-val" id="successTime"></div>
+  </div>
+  <div class="success-info">Driver · Pemandu: <b id="successDriver"></b></div>
+  <div class="success-info">Vehicle · Kenderaan: <b id="successVehicle"></b></div>
+  <div class="success-subtitle" style="margin-top:12px;font-size:12px;color:#854F0B;background:#FFF8E1;border:1px solid #F0D9A8;border-radius:6px;padding:8px 10px;">
+    ⓘ Photos uploaded — please verify they appear in the supervisor dashboard within 1 minute.<br>
+    Foto dimuat naik — sila sahkan ia muncul dalam papan pemuka penyelia dalam 1 minit.
+  </div>
+  <button class="new-btn" onclick="resetForm()">Submit Another POD · Hantar POD Lagi</button>
+</div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxabHh2Kd04z7k0zZOOoaJs2i5hgycQsO_AYoRS99xZx2WqMJ6cowumY0e1znehiRM1/exec';
+
+// Branch — read ONCE from the URL (?branch=KTN). Old MTK bookmarks with no param default to MTK.
+var BRANCH = (new URLSearchParams(location.search).get('branch') || 'MTK').toUpperCase();
+var BRANCH_DISPLAY = { MTK: 'Mentakab', KTN: 'Kuantan' };
+
+// V17: Dynamically loaded from backend /getDrivers — empty until fetchDrivers() resolves
+let STAFF_IDS = {};
+let ROSTER = [];   // [{name, staffId}] — drives the searchable Staff-ID picker
+
+function _normId(s){ return String(s == null ? '' : s).replace(/\s+/g, '').toUpperCase(); }
+
+// "Type Staff ID or name -> filtered list -> tap -> name confirmed" picker.
+// The hidden input keeps the NAME (what validate/submit/shipment/KPI read).
+function wireDriverPicker(searchId, hiddenId, panelId, badgeId, onPick){
+  var search = document.getElementById(searchId),
+      hidden = document.getElementById(hiddenId),
+      panel  = document.getElementById(panelId),
+      badge  = document.getElementById(badgeId);
+  if (!search || !hidden || !panel) return;
+  function render(q){
+    var nq = _normId(q), nameq = String(q || '').trim().toLowerCase();
+    if (!q || !q.trim()){ panel.style.display = 'none'; return; }
+    var matches = ROSTER.filter(function(d){
+      return (d.staffId && _normId(d.staffId).indexOf(nq) >= 0) ||
+             (d.name && d.name.toLowerCase().indexOf(nameq) >= 0);
+    }).slice(0, 8);
+    panel.innerHTML = matches.length
+      ? matches.map(function(d){
+          return '<div class="dp-row" data-name="' + _esc(d.name) + '" style="padding:13px 14px;border-bottom:1px solid #F0F0F0;cursor:pointer;font-size:15px;">' +
+                 '<b>' + _esc(d.staffId || '') + '</b> &middot; ' + _esc(d.name) + '</div>';
+        }).join('')
+      : '<div style="padding:13px 14px;color:#8A9BB0;font-size:13px;">No match &middot; Tiada padanan</div>';
+    panel.style.display = 'block';
+  }
+  function pick(name, silent){
+    var d = ROSTER.filter(function(x){ return x.name === name; })[0];
+    hidden.value = name;
+    search.value = (d && d.staffId ? d.staffId + ' · ' : '') + name;
+    if (badge){ badge.textContent = '✓ ' + name; badge.style.display = 'block'; }
+    panel.style.display = 'none';
+    if (!silent && onPick) onPick(name);   // silent=true for auto-fill: fill the field but don't persist/badge as "Remembered"
+  }
+  search.addEventListener('input', function(){ hidden.value = ''; if (badge) badge.style.display = 'none'; render(search.value); });
+  search.addEventListener('focus', function(){ search.select(); if (search.value.trim() && !hidden.value) render(search.value); });
+  panel.addEventListener('click', function(e){ var row = e.target.closest('.dp-row'); if (row) pick(row.getAttribute('data-name')); });
+  document.addEventListener('click', function(e){ if (e.target !== search && !panel.contains(e.target)) panel.style.display = 'none'; });
+  search._pick = pick;
+}
+
+const ROSTER_CACHE_KEY = 'clf_roster_cache_' + BRANCH;   // last good roster (per-branch) — picker still works in a dead zone
+
+function _applyRoster(drivers){
+  STAFF_IDS = {}; ROSTER = drivers.slice();
+  drivers.forEach(d => { STAFF_IDS[d.name] = d.staffId || ''; });
+
+  wireDriverPicker('driverSearch', 'driverName', 'driverPanel', 'staffIdBadge', function(name){
+    localStorage.setItem(STORAGE_KEY, name);
+    document.getElementById('rememberedBadge').style.display = 'inline-flex';
+  });
+  wireDriverPicker('secondSearch', 'secondDriver', 'secondPanel', 'staffIdBadge2', null);
+
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved && STAFF_IDS[saved] && document.getElementById('driverSearch')._pick) {
+    document.getElementById('driverSearch')._pick(saved);
+    document.getElementById('rememberedBadge').style.display = 'inline-flex';
+  }
+}
+
+async function fetchAndPopulateDrivers(isRetry) {
+  try {
+    const res = await fetch(SCRIPT_URL + '?action=getDrivers&branch=' + encodeURIComponent(BRANCH), { method: 'GET' });
+    const data = await res.json();
+    if (!data || data.status !== 'ok' || !Array.isArray(data.drivers) || data.drivers.length === 0) {
+      throw new Error('Empty driver roster from server');
+    }
+    _applyRoster(data.drivers);
+    try{ localStorage.setItem(ROSTER_CACHE_KEY, JSON.stringify(data.drivers)); }catch(e){}
+  } catch (err) {
+    console.error('fetchAndPopulateDrivers failed:', err);
+    // Fall back to the cached roster (still lets the driver pick + submit at the depot dead zone)
+    var usedCache = false;
+    try{
+      var cached = JSON.parse(localStorage.getItem(ROSTER_CACHE_KEY) || 'null');
+      if (Array.isArray(cached) && cached.length){ _applyRoster(cached); usedCache = true; }
+    }catch(e){}
+    if (!usedCache){
+      var ds = document.getElementById('driverSearch');
+      if (ds) ds.placeholder = '⚠ Failed to load — tap to retry · Ketik untuk cuba lagi';
+      if (ds && !ds._retryWired){ ds._retryWired = true; ds.addEventListener('focus', function(){ if (!ROSTER.length) fetchAndPopulateDrivers(true); }); }
+    }
+    if (!isRetry) setTimeout(function(){ if (!ROSTER.length) fetchAndPopulateDrivers(true); }, 5000);   // one auto-retry
+  }
+}
+
+// (driver Staff-ID confirmation is now handled inside wireDriverPicker)
+// localStorage keys are namespaced per branch so a KTN phone never shows a remembered MTK driver/vehicle.
+const STORAGE_KEY = 'clf_driver_name_' + BRANCH;
+const VEHICLE_KEY = 'clf_pod_vehicle_' + BRANCH;   // B5: cheap Androids evict the tab when the camera opens (per-branch key)
+
+// Fetch the branch-scoped lorry list from Apps Script (replaces the old hardcoded <option> plates).
+// This ONLY populates the option list — restoring the remembered vehicle (and firing the shipment
+// check + crew auto-fill) is owned by window.onload below, so it runs AFTER the options exist.
+// Mirrors the Fuel form's fetchVehicles() fetch/error style.
+async function fetchVehicles() {
+  var sel = document.getElementById('vehicleNo');
+  if (!sel) return;
+  try {
+    const res = await fetch(SCRIPT_URL + '?action=getVehicles&branch=' + encodeURIComponent(BRANCH), { method: 'GET' });
+    const data = await res.json();
+    if (!data || data.status !== 'ok' || !Array.isArray(data.vehicles) || data.vehicles.length === 0) {
+      throw new Error('Empty vehicle list from server');
+    }
+    // Keep the placeholder, append the branch's plates.
+    sel.innerHTML = '<option value="">— Select vehicle · Pilih kenderaan —</option>';
+    data.vehicles.forEach(function(plate){
+      var o = document.createElement('option');
+      o.value = plate; o.textContent = plate;
+      sel.appendChild(o);
+    });
+  } catch (err) {
+    console.error('fetchVehicles failed:', err);
+    // No hardcoded fallback — show a clear refresh state rather than a silently-empty dropdown.
+    sel.innerHTML = '<option value="">⚠ Refresh · Sila muat semula</option>';
+  }
+}
+
+window.onload = function() {
+  // Branch label in the header — prominent so a driver on the wrong link notices.
+  var branchName = BRANCH_DISPLAY[BRANCH] || BRANCH;
+  var bl = document.getElementById('branchLabel'); if (bl) bl.textContent = branchName;
+  var cr = document.getElementById('companyReg'); if (cr) cr.textContent = '557522-A · ' + branchName + ', Pahang';
+
+  // Kuala Lumpur timezone — fixes early-morning bug
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
+  document.getElementById('deliveryDate').value = today;
+  document.getElementById('deliveryDate').max = today;
+
+  // V17: Fetch driver list from backend; this also restores remembered driver.
+  // Branch-scoped lorry list (replaces the old hardcoded plates) loads in parallel.
+  // B5: restore the last vehicle AFTER BOTH the roster settles AND the vehicle options exist —
+  // restoring first made the crew auto-fill a silent no-op (ROSTER empty + pickers not wired yet),
+  // and would set vs.value before the <option> existed so it wouldn't stick.
+  Promise.all([
+    fetchAndPopulateDrivers().catch(function(){}),
+    fetchVehicles().catch(function(){}),
+    fetchPalletMaster().catch(function(){})
+  ]).finally(function(){
+    try{
+      var savedVeh = localStorage.getItem(VEHICLE_KEY);
+      if (savedVeh){
+        var vs = document.getElementById('vehicleNo');
+        vs.value = savedVeh;
+        if (vs.value === savedVeh) checkShipmentForVehicle();   // value sticks only if the option exists
+      }
+    }catch(e){ /* localStorage unavailable — fine */ }
+  });
+};
+
+// B6: when the driver comes back to this tab (camera / WhatsApp / pocket), silently re-sync the
+// list — matters on shared routes where the OTHER lorry may have delivered stops meanwhile.
+// GUARD: skip while a photo flow is in progress (_deliverIdx >= 0) — returning FROM THE CAMERA
+// also fires this, and a refresh racing onShipPhoto could drop the just-taken photo.
+document.addEventListener('visibilitychange', function(){
+  if (!document.hidden && _deliverIdx < 0 && document.getElementById('vehicleNo').value) checkShipmentForVehicle(true);
+});
+
+// (old <select> change-listeners removed — driver picking is handled by wireDriverPicker)
+
+// Multi-photo state (max 10)
+const MAX_PHOTOS = 10;
+const COMPRESS_MAX_DIM = 1600;   // longest side, in pixels
+const COMPRESS_QUALITY = 0.8;    // JPEG quality (0–1)
+let collectedPhotos = []; // [{dataUrl, name, type}]  — already compressed JPEG
+
+// ── [E1 Tier A 2026-07-13] scan-look whitening — colour-preserving, expert-panel design ──
+// Runs INSIDE compressImage's existing try/catch: any failure = today's exact plain-compress output.
+// Never blocks submission. Kill switch: ENHANCE_SCAN=false → byte-identical behaviour to the old form.
+const ENHANCE_SCAN = true;
+const ENH_MAX_MS   = 1500;              // watchdog: a slower device quarantines itself to plain compress
+const ENH_QUAR_KEY = 'clf_enh_quarantine';
+// Calibrated on real signed ACCOUNT-COPY invoices (2026-07-13): stamp ink is FADED PURPLE, so
+// whitening must be conservative — only truly-neutral AND very-bright pixels are pushed to white
+// (sat<0.08 & lum>225); any pixel with visible chroma (faded stamp) is never touched beyond the
+// equal-channel gain, which mathematically cannot shift hue. Ballpoint signatures fall in the
+// neutral-dark branch and get gently darkened (crisper), never lightened.
+function enhanceScanCanvas_(canvas, ctx) {
+  var t0 = (window.performance && performance.now) ? performance.now() : Date.now();
+  var w = canvas.width, h = canvas.height;
+  var im = ctx.getImageData(0, 0, w, h), d = im.data;
+
+  // 1) coarse background map: per-32px block p90 luminance (bright = paper), subsampled 1/16
+  var bs = 32, bw = Math.ceil(w / bs), bh = Math.ceil(h / bs);
+  var bg = new Float32Array(bw * bh);
+  for (var by = 0; by < bh; by++) {
+    for (var bx = 0; bx < bw; bx++) {
+      var x1 = bx * bs, y1 = by * bs, x2 = Math.min(x1 + bs, w), y2 = Math.min(y1 + bs, h);
+      var s = [];
+      for (var y = y1; y < y2; y += 4) for (var x = x1; x < x2; x += 4) {
+        var i = (y * w + x) * 4;
+        s.push(0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]);
+      }
+      s.sort(function (a, b) { return a - b; });
+      bg[by * bw + bx] = s.length ? s[Math.floor(s.length * 0.9)] : 255;
+    }
+  }
+  // 2) 3x3 box-smooth the block map (2 passes) so block seams never show
+  for (var pass = 0; pass < 2; pass++) {
+    var sm = new Float32Array(bw * bh);
+    for (var sy = 0; sy < bh; sy++) for (var sx = 0; sx < bw; sx++) {
+      var acc = 0, n = 0;
+      for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) {
+        var ny = sy + dy, nx = sx + dx;
+        if (ny >= 0 && ny < bh && nx >= 0 && nx < bw) { acc += bg[ny * bw + nx]; n++; }
+      }
+      sm[sy * bw + sx] = acc / n;
+    }
+    bg = sm;
+  }
+  // 3) per-pixel: bilinear background sample → equal-channel gain [1.0,1.6] → gated soft whiten/darken
+  for (var py = 0; py < h; py++) {
+    var fy = Math.min(py / bs, bh - 1), y0 = Math.floor(fy), yA = Math.min(y0 + 1, bh - 1), wy = fy - y0;
+    for (var px = 0; px < w; px++) {
+      var fx = Math.min(px / bs, bw - 1), x0 = Math.floor(fx), xA = Math.min(x0 + 1, bw - 1), wx = fx - x0;
+      var B = bg[y0 * bw + x0] * (1 - wx) * (1 - wy) + bg[y0 * bw + xA] * wx * (1 - wy)
+            + bg[yA * bw + x0] * (1 - wx) * wy       + bg[yA * bw + xA] * wx * wy;
+      var gain = 245 / Math.max(B, 40);
+      if (gain < 1) gain = 1; else if (gain > 1.6) gain = 1.6;   // equal per-channel → hue cannot shift
+      var i2 = (py * w + px) * 4;
+      var r = d[i2] * gain, g = d[i2 + 1] * gain, b = d[i2 + 2] * gain;
+      if (r > 255) r = 255; if (g > 255) g = 255; if (b > 255) b = 255;
+      var mx = r > g ? (r > b ? r : b) : (g > b ? g : b);
+      var mn = r < g ? (r < b ? r : b) : (g < b ? g : b);
+      var sat = (mx - mn) / (mx > 1 ? mx : 1);
+      var lum = 0.299 * r + 0.587 * g + 0.114 * b;
+      if (sat < 0.08) {                       // truly neutral only — chroma (even faded stamp) untouched
+        if (lum > 225) {                      // flattened paper → soft-push to clean white
+          r += (255 - r) * 0.85; g += (255 - g) * 0.85; b += (255 - b) * 0.85;
+        } else if (lum < 130) {               // printed text / ballpoint signature → gently darker
+          r *= 0.75; g *= 0.75; b *= 0.75;
+        }                                      // neutral midtones: leave (safety band for faded ink)
+      }
+      d[i2] = r; d[i2 + 1] = g; d[i2 + 2] = b;
+    }
+  }
+  ctx.putImageData(im, 0, 0);
+  return ((window.performance && performance.now) ? performance.now() : Date.now()) - t0;
+}
+
+// Compress an image File to JPEG, max 1600px on longest side, quality 0.8.
+// Returns { dataUrl, name, type } (dataUrl is "data:image/jpeg;base64,...").
+function compressImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+        let w = img.naturalWidth;
+        let h = img.naturalHeight;
+        if (w > COMPRESS_MAX_DIM || h > COMPRESS_MAX_DIM) {
+          if (w >= h) {
+            h = Math.round(h * (COMPRESS_MAX_DIM / w));
+            w = COMPRESS_MAX_DIM;
+          } else {
+            w = Math.round(w * (COMPRESS_MAX_DIM / h));
+            h = COMPRESS_MAX_DIM;
+          }
+        }
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          // [E1 Tier A] scan-look whitening. Its own try/catch: ANY failure → plain compress (old output).
+          // A device that once ran slow (> ENH_MAX_MS) self-quarantines via localStorage and skips forever.
+          let enhApplied = false;
+          try {
+            if (ENHANCE_SCAN && !localStorage.getItem(ENH_QUAR_KEY)) {
+              const enhMs = enhanceScanCanvas_(canvas, ctx);
+              enhApplied = true;
+              if (enhMs > ENH_MAX_MS) { try { localStorage.setItem(ENH_QUAR_KEY, String(Math.round(enhMs))); } catch (qe) {} }
+            }
+          } catch (enhErr) { console.warn('enhance skipped:', enhErr); }
+          const dataUrl = canvas.toDataURL('image/jpeg', COMPRESS_QUALITY);
+          const name = (file.name || 'invoice.jpg').replace(/\.[^.]+$/, '') + (enhApplied ? '_scanF' : '') + '.jpg';
+          resolve({ dataUrl, name, type: 'image/jpeg' });
+        } catch (err) {
+          reject(err);
+        }
+      };
+      img.onerror = () => reject(new Error('Image decode failed'));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error('File read failed'));
+    reader.readAsDataURL(file);
+  });
+}
+
+// Fallback: if compression fails, still embed the original file as base64.
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve({ dataUrl: reader.result, name: file.name || 'invoice.jpg', type: file.type || 'image/jpeg' });
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handlePhoto(input) {
+  if (!input.files || !input.files.length) return;
+  const inputEl = input;
+  inputEl.disabled = true;
+  for (const file of input.files) {
+    if (collectedPhotos.length >= MAX_PHOTOS) break;
+    let entry;
+    try {
+      entry = await compressImage(file);
+    } catch (err) {
+      console.warn('Compression failed, using original:', err);
+      try {
+        entry = await readFileAsDataUrl(file);
+      } catch (e2) {
+        console.error('File read failed:', e2);
+        continue;
+      }
+    }
+    collectedPhotos.push(entry);
+    renderPhotoGrid();
+  }
+  // reset input so user can pick same file again later if removed
+  input.value = '';
+  inputEl.disabled = collectedPhotos.length >= MAX_PHOTOS;
+}
+
+function removePhoto(idx) {
+  collectedPhotos.splice(idx, 1);
+  renderPhotoGrid();
+}
+
+function renderPhotoGrid() {
+  const grid = document.getElementById('photoGrid');
+  const counter = document.getElementById('photoCounter');
+  grid.innerHTML = collectedPhotos.map((p, i) =>
+    `<div class="photo-thumb">
+       <img src="${p.dataUrl}" alt="Invoice ${i+1}">
+       <button type="button" class="remove-x" onclick="removePhoto(${i})" aria-label="Remove">×</button>
+     </div>`
+  ).join('');
+  counter.textContent = collectedPhotos.length
+    ? `${collectedPhotos.length} / ${MAX_PHOTOS} photos · ${collectedPhotos.length === MAX_PHOTOS ? 'Max reached' : 'Tap above to add more'}`
+    : '';
+  const btn = document.getElementById('photoBtn');
+  if (collectedPhotos.length > 0) {
+    btn.classList.add('has-photo');
+    document.getElementById('photoLabel').textContent = `+ Add another photo (${collectedPhotos.length}/${MAX_PHOTOS})`;
+    document.getElementById('photoSub').textContent = 'Tap to take another invoice photo';
+  } else {
+    btn.classList.remove('has-photo');
+    document.getElementById('photoLabel').innerHTML = '+ Tap to add invoice photo<br>Ketik untuk tambah foto invois';
+    document.getElementById('photoSub').textContent = 'Up to 10 · Each must be SIGNED by customer';
+  }
+  if (collectedPhotos.length >= MAX_PHOTOS) {
+    document.getElementById('invoicePhoto').disabled = true;
+  } else {
+    document.getElementById('invoicePhoto').disabled = false;
+  }
+}
+
+function validate() {
+  let valid = true;
+  const fields = [
+    { id: 'deliveryDate', err: 'err-date' },
+    { id: 'driverName', err: 'err-driver', focusId: 'driverSearch' },
+    { id: 'vehicleNo', err: 'err-vehicle' },
+  ];
+  fields.forEach(f => {
+    const el = document.getElementById(f.id);
+    const err = document.getElementById(f.err);
+    if (!el.value) { err.classList.add('show'); if (valid) { var fe = document.getElementById(f.focusId || f.id); if (fe) fe.focus(); } valid = false; }
+    else { err.classList.remove('show'); }
+  });
+  if (!collectedPhotos.length) {
+    document.getElementById('err-photo').classList.add('show'); valid = false;
+  } else { document.getElementById('err-photo').classList.remove('show'); }
+  if (!document.getElementById('confirmCheck').checked) {
+    document.getElementById('err-confirm').classList.add('show'); valid = false;
+  } else { document.getElementById('err-confirm').classList.remove('show'); }
+  // B18 fix: driver and secondDriver must not be the same person (would double-count credit)
+  const dr = document.getElementById('driverName').value;
+  const sd = document.getElementById('secondDriver').value;
+  if (dr && sd && dr === sd) {
+    alert('Driver and Second Driver cannot be the same person.\nPemandu dan Pemandu Kedua tidak boleh sama.');
+    var _ss = document.getElementById('secondSearch'); if (_ss) _ss.focus();
+    valid = false;
+  }
+  return valid;
+}
+
+async function submitForm() {
+  if (!validate()) return;
+  document.getElementById('loadingOverlay').classList.add('show');
+  document.querySelector('.loading-text').textContent =
+    `Uploading ${collectedPhotos.length} photo(s)... · Memuat naik ${collectedPhotos.length} foto...`;
+  try {
+    // Photos are pre-compressed in handlePhoto() — just strip the data URL prefix.
+    const photos = collectedPhotos.map(p => ({
+      base64: p.dataUrl.split(',')[1],
+      name: p.name,
+      type: p.type,
+    }));
+    const now = new Date();
+    const payload = {
+      formType: 'POD',
+      branch: BRANCH,
+      timestamp: now.toISOString(),
+      deliveryDate: document.getElementById('deliveryDate').value,
+      driverName: document.getElementById('driverName').value,
+      secondDriver: document.getElementById('secondDriver').value || '',
+      vehicleNo: document.getElementById('vehicleNo').value,
+
+      // Multi-photo array (V11+)
+      photos: photos,
+
+      // Backwards-compat single fields (first photo, for old WebApp.gs that doesn't know about photos[])
+      photoBase64: photos[0].base64,
+      photoName: photos[0].name,
+      photoType: photos[0].type,
+    };
+    const formData = new FormData();
+    formData.append('data', JSON.stringify(payload));
+    await fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      body: formData
+    });
+    document.getElementById('loadingOverlay').classList.remove('show');
+    const timeStr = now.toLocaleDateString('en-MY', { day:'2-digit', month:'short', year:'numeric' })
+      + ' · ' + now.toLocaleTimeString('en-MY', { hour:'2-digit', minute:'2-digit' });
+    document.getElementById('successTime').textContent = timeStr;
+    document.getElementById('successDriver').textContent = payload.driverName;
+    document.getElementById('successVehicle').textContent = payload.vehicleNo + ' · ' + photos.length + ' photo(s)';
+
+    document.getElementById('successScreen').classList.add('show');
+  } catch (err) {
+    document.getElementById('loadingOverlay').classList.remove('show');
+    alert('Submission failed. Please check your connection and try again.\nPenghantaran gagal. Sila semak sambungan anda dan cuba lagi.');
+  }
+}
+
+function resetForm() {
+  document.getElementById('successScreen').classList.remove('show');
+  document.getElementById('podForm').reset();
+  collectedPhotos = [];
+  renderPhotoGrid();
+  if (typeof resetShipmentView === 'function') resetShipmentView();
+  // Kuala Lumpur timezone
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
+  document.getElementById('deliveryDate').value = today;
+  // reset driver pickers, then restore the remembered primary driver
+  ['staffIdBadge','staffIdBadge2'].forEach(function(id){ var b=document.getElementById(id); if(b) b.style.display='none'; });
+  var dsearch = document.getElementById('driverSearch'); if (dsearch) dsearch.value = '';
+  var ssearch = document.getElementById('secondSearch'); if (ssearch) ssearch.value = '';
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved && dsearch && dsearch._pick) {
+    dsearch._pick(saved);
+    document.getElementById('rememberedBadge').style.display = 'inline-flex';
+  }
+}
+
+// ===================== B4: Shipment-aware delivery checklist =====================
+function _esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+var _shipKey = '';
+var _shipGroups = [];   // [{name, code, area, invs:[item]}]
+var _deliverIdx = -1;   // group index awaiting photos
+
+function resetShipmentView(){
+  var sec = document.getElementById('shipmentSection');
+  var man = document.getElementById('manualPodSection');
+  if (sec) { sec.style.display='none'; sec.innerHTML=''; }
+  if (man) man.style.display='none';   // manual POD disabled — every delivery goes through the office-issued shipment checklist
+  _shipKey=''; _shipGroups=[]; _deliverIdx=-1;
+}
+
+// When vehicle + date are set, check if this lorry has a shipment today.
+async function checkShipmentForVehicle(keepListOnFail){
+  var vehicle = document.getElementById('vehicleNo').value;
+  var date = document.getElementById('deliveryDate').value;
+  var sec = document.getElementById('shipmentSection');
+  var man = document.getElementById('manualPodSection');
+  if (!sec || !man) return;
+  // Office always issues the delivery order first, so "no list" = not imported yet / wrong lorry or date.
+  // Manual POD is disabled (it wouldn't count on the dashboard), so we tell the driver to contact the office.
+  function fallManual(){ if (keepListOnFail) return; man.style.display='none'; sec.style.display='block';
+    sec.innerHTML = '<div style="padding:18px 14px;text-align:center;color:#9A3412;font-size:14px;line-height:1.6;border:1.5px solid #F0C9A8;background:#FFF7ED;border-radius:10px;">'
+      + '<div style="font-size:30px;margin-bottom:6px;">&#9888;&#65039;</div>'
+      + '<b>No delivery order matches this lorry' + (vehicle ? ' (' + _esc(vehicle) + ')' : '') + '.</b>'
+      + '<br><span style="font-size:12.5px;color:#6b5836;">Tiada senarai penghantaran sepadan untuk lori ini.</span>'
+      + '<br><br>Check the <b>lorry number</b> &amp; <b>date</b> are correct. If they are, the order may be under a <b>different / mis-typed lorry number</b> — ask the <b>office</b> to check &amp; re-import.'
+      + '<br><span style="font-size:12.5px;color:#6b5836;">Semak nombor lori &amp; tarikh. Jika betul, pesanan mungkin guna nombor lori salah taip — hubungi pejabat.</span>'
+      + '</div>'; }
+  if (!vehicle || !date){ fallManual(); return; }
+  if (!keepListOnFail){ sec.style.display='block'; sec.innerHTML = '<div style="padding:14px;text-align:center;color:#854F0B;">Checking delivery list… · Menyemak…</div>'; }
+  try{
+    var res = await fetch(SCRIPT_URL + '?action=getShipmentForLorry&vehicleNo=' + encodeURIComponent(vehicle) + '&date=' + encodeURIComponent(date));
+    var data = await res.json();
+    if (data && data.status==='ok' && data.shipments && data.shipments.length && data.items && data.items.length){
+      _shipKey = data.shipments[0].shipmentNo;
+      fetchPalletOnboard();   // pallets-on-board banner (default-accept; driver only acts on a wrong count)
+      _autoFillAssignedDrivers(data.shipments[0]);
+      _buildGroups(data.items);
+      sec.style.display='block'; man.style.display='none';   // has a list → use it (manual reachable via walk-in link)
+      renderShipmentList();
+    } else {
+      fallManual();   // no list → manual flow (read-back keeps current view)
+    }
+  }catch(e){
+    fallManual();     // error → manual fallback (read-back keeps current view)
+  }
+}
+
+// bug #7: auto-fill the driver picker(s) with the shipment's assigned crew.
+// GUARD: only fill when the driver hasn't already picked / restored someone (hidden value empty).
+// Skips gracefully if the assigned name isn't in ROSTER.
+function _autoFillAssignedDrivers(shipment){
+  if (!shipment) return;
+  // 2-lorries-one-route: each lorry has its OWN crew. Picked the primary lorry → fill its crew;
+  // picked the 2nd lorry → fill the Lorry2 crew (assigned by the office); anything else → don't fill.
+  function _n(s){ return String(s || '').replace(/\s+/g,'').toUpperCase(); }
+  var _veh = _n(document.getElementById('vehicleNo').value), _prim = _n(shipment.lorryNo), _l2 = _n(shipment.lorry2);
+  var primary, secondary;
+  if (_veh && _l2 && _veh === _l2){ primary = shipment.lorry2Primary; secondary = shipment.lorry2Secondary; }
+  else if (_veh && _prim && _veh !== _prim){ return; }
+  else { primary = shipment.assignedPrimary; secondary = shipment.assignedSecondary; }
+  function inRoster(name){ return ROSTER.some(function(d){ return d.name === name; }); }
+  primary = String(primary || '').trim();
+  var hidden  = document.getElementById('driverName');
+  var picker  = document.getElementById('driverSearch');
+  if (primary && hidden && !hidden.value && picker && picker._pick && inRoster(primary)){
+    picker._pick(primary, true);
+  }
+  secondary = String(secondary || '').trim();
+  var sHidden = document.getElementById('secondDriver');
+  var sPicker = document.getElementById('secondSearch');
+  if (secondary && secondary !== primary && sHidden && !sHidden.value && sPicker && sPicker._pick && inRoster(secondary)){
+    sPicker._pick(secondary, true);
+  }
+}
+
+function _buildGroups(items){
+  // A2: carry over photos the driver snapped but hasn't successfully saved yet — the post-save
+  // read-back rebuilds this list and used to silently discard them (driver had to re-take).
+  var prevPhotos = {};
+  (_shipGroups || []).forEach(function(g){ if (g.key && g.photos && g.photos.length) prevPhotos[g.key] = g.photos; });
+  var map = {}; _shipGroups = [];
+  items.forEach(function(it){
+    var k = it.custCode || it.customerName || it.invoiceNo;
+    if (!map[k]){ map[k] = { key: k, name: it.customerName||k, area: it.area||'', invs: [] }; _shipGroups.push(map[k]); }
+    map[k].invs.push(it);
+  });
+  _shipGroups.forEach(function(g){
+    // re-attach only while the group still has pending invoices; once the server confirms
+    // everything delivered, the buffered photos are no longer needed and are dropped.
+    var hasPending = g.invs.some(function(x){ return String(x.status).toLowerCase() !== 'delivered'; });
+    if (hasPending && prevPhotos[g.key]) g.photos = prevPhotos[g.key];
+  });
+}
+
+var _shipFilter = '';   // B4: live customer search (kept across re-renders)
+
+function renderShipmentList(){
+  var sec = document.getElementById('shipmentSection');
+  var all = []; _shipGroups.forEach(function(g){ g.invs.forEach(function(i){ all.push(i); }); });
+  var total = all.length;
+  var done = all.filter(function(i){ return String(i.status).toLowerCase()==='delivered'; }).length;
+  var failed = all.filter(function(i){ return String(i.status).toLowerCase()==='failed'; }).length;
+  var remaining = total - done - failed;
+  var pct = total ? Math.round(done/total*100) : 0;
+  var vehicle = document.getElementById('vehicleNo').value;
+  var html = '<div class="section-label">📋 Today\'s Delivery List · Senarai Penghantaran</div>'
+    + '<div style="background:#FFF8E1;border:1px solid #F0D9A8;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:#412402;">'
+    + '<b>'+_esc(vehicle)+'</b> · '+done+' / '+total+' delivered'+(failed?' · '+failed+' problem':'')
+    + (remaining>0 ? ' · <b>'+remaining+' to go · lagi</b>' : '')
+    + '<div style="height:8px;background:#F0D9A8;border-radius:99px;margin-top:7px;overflow:hidden;"><div style="height:100%;width:'+pct+'%;background:#2E7D32;border-radius:99px;transition:width .3s;"></div></div></div>'
+    // B4/B6: search + manual refresh (44-stop routes need both)
+    + '<div style="display:flex;gap:8px;margin-bottom:12px;">'
+    + '<input type="text" id="shipFilter" value="'+_esc(_shipFilter)+'" placeholder="🔍 Find customer · Cari pelanggan" autocomplete="off" '
+    +   'style="flex:1;box-sizing:border-box;padding:11px 14px;font-size:15px;border:1.5px solid #E0C68A;border-radius:8px;background:#fff;color:#412402;">'
+    + '<button type="button" id="shipRefresh" style="background:#fff;color:#854F0B;border:1.5px solid #E0C68A;border-radius:8px;padding:0 14px;font-weight:700;font-size:14px;cursor:pointer;">&#8635;</button>'
+    + '</div><div id="shipGroupsWrap"></div>'
+    + '<div style="text-align:center;color:#9a8050;font-size:11.5px;margin-top:6px;">Not on the list? Ask the office to add it. · Tiada dalam senarai? Hubungi pejabat.</div>';
+  sec.innerHTML = html;
+  renderShipGroups();
+}
+
+// B4: groups list only (separate from the header so typing in the search box keeps focus).
+// Pending customers first, delivered sink to the bottom; data-i stays the ORIGINAL index.
+// ===================== PALLET DROP (additive, independent of POD) =====================
+// Self-contained — POD form has no getWrite/_newToken/toast. Logic copied verbatim from
+// CLF_Pallet_Store.html so the backend sees identical params. PALLET_DROP is GET-write.
+var PALLET_MASTER = [];   // [{palletKey, displayName}] from getPalletMaster?active=1
+
+function _palletNewToken(p){ return (p||'plt') + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10); }
+
+// GET-write, never throws — mirrors CLF_Pallet_Store.html getWrite()
+async function _palletGetWrite(action, params){
+  try{
+    var qs = '?action=' + encodeURIComponent(action);
+    Object.keys(params).forEach(function(k){
+      var v = params[k];
+      if (v === undefined || v === null || v === '') return;
+      qs += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(v);
+    });
+    var res = await fetch(SCRIPT_URL + qs, { method: 'GET' });
+    return await res.json();
+  }catch(err){
+    console.error('PALLET_DROP getWrite ' + action + ' failed', err);
+    return { status: 'error', message: 'No connection · Tiada sambungan' };
+  }
+}
+
+// Lightweight non-blocking toast (POD form uses alert()/none; pallet failures must NOT block the POD result)
+var _palletToastTmr = null;
+function _palletToast(kind, html){
+  var t = document.getElementById('palletToast');
+  if (!t){
+    t = document.createElement('div');
+    t.id = 'palletToast';
+    t.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:120;max-width:90%;padding:12px 16px;border-radius:10px;font-size:13px;line-height:1.4;color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.25);opacity:0;transition:opacity .2s;pointer-events:none;';
+    document.body.appendChild(t);
+  }
+  t.style.background = (kind === 'ok') ? '#2E7D32' : (kind === 'err' ? '#C62828' : '#854F0B');
+  t.innerHTML = html;
+  t.style.opacity = '1';
+  if (_palletToastTmr) clearTimeout(_palletToastTmr);
+  _palletToastTmr = setTimeout(function(){ t.style.opacity = '0'; }, kind === 'err' ? 6000 : 4000);
+}
+
+// Fetch the active pallet master once at load. Never blocks POD — failure just leaves the dropdown empty.
+async function fetchPalletMaster(){
+  try{
+    var res = await fetch(SCRIPT_URL + '?action=getPalletMaster&active=1', { method: 'GET' });
+    var data = await res.json();
+    if (data && data.status === 'ok' && Array.isArray(data.master)){
+      PALLET_MASTER = data.master;
+    }
+  }catch(err){ console.warn('fetchPalletMaster failed (pallet UI stays hidden/empty)', err); }
+}
+
+// Options HTML for a pallet-type <select> (built fresh from PALLET_MASTER each render)
+function _palletOptions(selectedKey){
+  var opts = '<option value="">— Pallet type · Jenis pallet —</option>';
+  PALLET_MASTER.forEach(function(m){
+    var k = _esc(m.palletKey);
+    opts += '<option value="' + k + '"' + (selectedKey === m.palletKey ? ' selected' : '') + '>' + _esc(m.displayName || m.palletKey) + '</option>';
+  });
+  return opts;
+}
+
+// Fire-and-forget PALLET_DROP for one customer group. Own fresh token, own try/catch,
+// NEVER awaited by the POD result path. Toast-only on failure.
+function firePalletDrop(g){
+  try{
+    if (!g || !g._pallet || !g._pallet.palletKey || !g._pallet.qty) return;   // nothing entered → skip
+    var qty = parseInt(g._pallet.qty, 10);
+    if (isNaN(qty) || qty <= 0) return;
+    var params = {
+      palletKey: g._pallet.palletKey,
+      qty: qty,
+      custCode: g.key,                 // customer key (custCode || customerName || invoiceNo)
+      customerName: g.name,
+      shipmentKey: _shipKey,
+      driverName: document.getElementById('driverName').value,
+      entryDate: document.getElementById('deliveryDate').value,
+      clientToken: _palletNewToken('drop')
+    };
+    // intentionally NOT awaited at the call site — settle independently
+    var hasPhoto = !!(g._pallet && g._pallet.photo);
+    if (hasPhoto) params.photos = [g._pallet.photo];
+    (hasPhoto ? _palletPostWrite(Object.assign({ formType: 'PALLET_DROP' }, params)) : _palletGetWrite('PALLET_DROP', params)).then(function(r){
+      if (r && r.status === 'success'){
+        _palletToast('ok', '<b>Pallet recorded · Pallet direkod</b><br>' + _esc(g.name) + ' — ' + qty + ' × ' + _esc(_palletDisplayName(g._pallet.palletKey)));
+        if (g._pallet){ g._pallet.qty = ''; g._pallet.photo = null; }   // photo consumed by the drop; collect is independent
+      } else {
+        _palletToast('err', '<b>Pallet NOT recorded · Pallet TIDAK direkod</b><br>' + _esc((r && r.message) || 'Server error') + '<br>POD is saved — tell the office the pallet count.');
+      }
+    });
+  }catch(e){
+    console.warn('firePalletDrop failed (POD unaffected)', e);
+    _palletToast('err', '<b>Pallet not recorded.</b> POD is saved — report the pallet count to the office.');
+  }
+}
+
+// Fire-and-forget PALLET_COLLECT for one customer group — the empties the customer handed back (inverse of DROP).
+// Same independence as firePalletDrop: own token, own try/catch, never awaited, toast-only on failure.
+function firePalletCollect(g){
+  try{
+    if (!g || !g._pallet || !g._pallet.palletKey || !g._pallet.collectQty) return;   // nothing collected → skip
+    var qty = parseInt(g._pallet.collectQty, 10);
+    if (isNaN(qty) || qty <= 0) return;
+    var params = {
+      palletKey: g._pallet.palletKey,
+      qty: qty,
+      custCode: g.key,                 // customer key (custCode || customerName || invoiceNo)
+      customerName: g.name,
+      shipmentKey: _shipKey,
+      driverName: document.getElementById('driverName').value,
+      entryDate: document.getElementById('deliveryDate').value,
+      clientToken: _palletNewToken('collect')
+    };
+    var colPhoto = !!(g._pallet && g._pallet.photo) && !(parseInt(g._pallet.qty, 10) > 0);   // drop (if any) takes the photo first
+    if (colPhoto) params.photos = [g._pallet.photo];
+    (colPhoto ? _palletPostWrite(Object.assign({ formType: 'PALLET_COLLECT' }, params)) : _palletGetWrite('PALLET_COLLECT', params)).then(function(r){
+      if (r && r.status === 'success'){
+        _palletToast('ok', '<b>Pallet collected · Pallet diambil</b><br>' + _esc(g.name) + ' — ' + qty + ' × ' + _esc(_palletDisplayName(g._pallet.palletKey)));
+        if (g._pallet){ g._pallet.collectQty = ''; if (colPhoto) g._pallet.photo = null; }
+      } else {
+        _palletToast('err', '<b>Collect NOT recorded · Ambil TIDAK direkod</b><br>' + _esc((r && r.message) || 'Server error') + '<br>POD is saved — tell the office the count.');
+      }
+    });
+  }catch(e){
+    console.warn('firePalletCollect failed (POD unaffected)', e);
+  }
+}
+
+function _palletDisplayName(key){ var m = PALLET_MASTER.filter(function(x){ return x.palletKey === key; })[0]; return m ? (m.displayName || key) : key; }
+
+// POST + no-cors + poll getImportResult — used when a pallet drop/collect carries a photo
+// (base64 won't fit a GET URL). Mirrors the POD save's own readback pattern.
+async function _palletPostWrite(payload){
+  var token = payload.clientToken;
+  var fd = new FormData();
+  fd.append('data', JSON.stringify(payload));
+  try{ await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: fd }); }
+  catch(e){ return { status: 'error', message: 'No connection · Tiada sambungan' }; }
+  for (var t = 0; t < 8; t++){
+    await new Promise(function(r){ setTimeout(r, 1500); });
+    try{
+      var rb = await fetch(SCRIPT_URL + '?action=getImportResult&token=' + encodeURIComponent(token));
+      var rd = await rb.json();
+      if (rd && rd.status && rd.status !== 'pending') return rd;
+    }catch(e){ /* keep polling */ }
+  }
+  return { status: 'success', weak: true };   // POST landed; dedup token makes a resend safe
+}
+
+// ===== Pallets-on-board banner (default-accept flow) =====
+// After the shipment loads: show what the store assigned to this lorry. Correct = do nothing
+// (deemed accepted). Wrong = driver taps, edits the actual counts, sends -> PALLET_ACCEPT rows.
+var PALLET_ONBOARD = [];   // [{entryId, palletKey, displayName, assigned}]
+async function fetchPalletOnboard(){
+  try{
+    if (!_shipKey) return;
+    var res = await fetch(SCRIPT_URL + '?action=getPalletAssignForDate&shipmentKey=' + encodeURIComponent(_shipKey), { method: 'GET' });
+    var data = await res.json();
+    var sh = (data && data.status === 'ok' && Array.isArray(data.shipments)) ? data.shipments.filter(function(s){ return s.shipmentKey === _shipKey; })[0] : null;
+    PALLET_ONBOARD = (sh && sh.lines) ? sh.lines.filter(function(l){ return (Number(l.assigned)||0) > 0; }) : [];
+  }catch(e){ PALLET_ONBOARD = []; }
+  renderPalletOnboard();
+}
+function renderPalletOnboard(){
+  var sec = document.getElementById('shipmentSection');
+  if (!sec) return;
+  var box = document.getElementById('palletOnboard');
+  if (!PALLET_ONBOARD.length){ if (box) box.remove(); return; }
+  if (!box){ box = document.createElement('div'); box.id = 'palletOnboard'; sec.insertBefore(box, sec.firstChild); }
+  var summary = PALLET_ONBOARD.map(function(l){ return _esc(l.displayName || l.palletKey) + ' ×' + l.assigned; }).join(' · ');
+  box.innerHTML = '<div style="border:1.5px solid #E0C68A;background:#FFF9EE;border-radius:10px;padding:11px 12px;margin-bottom:10px;">'
+    + '<div style="font-weight:700;font-size:13px;color:#5C3A1E;">&#128230; Pallets on lorry · Pallet atas lori</div>'
+    + '<div style="font-size:13px;color:#412402;margin:4px 0 6px;">' + summary + '</div>'
+    + '<div style="font-size:11.5px;color:#854F0B;">Correct? Do nothing · Betul? Tak perlu buat apa-apa.</div>'
+    + '<button type="button" onclick="togglePalletFix()" style="margin-top:7px;background:#fff;color:#C62828;border:1px solid #E8B4B4;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:700;cursor:pointer;">Wrong count? Fix here · Angka salah? Betulkan</button>'
+    + '<div id="palletFixRows" style="display:none;margin-top:8px;"></div>'
+    + '</div>';
+}
+function togglePalletFix(){
+  var rows = document.getElementById('palletFixRows');
+  if (!rows) return;
+  if (rows.style.display === 'none'){
+    rows.innerHTML = PALLET_ONBOARD.map(function(l, i){
+      return '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;">'
+        + '<div style="flex:1;font-size:12.5px;color:#412402;">' + _esc(l.displayName || l.palletKey) + '<br><span style="color:#854F0B;font-size:11px;">assigned ' + l.assigned + '</span></div>'
+        + '<input type="number" id="palletFix-' + i + '" inputmode="numeric" min="0" value="' + l.assigned + '" style="width:80px;padding:9px;font-size:14px;border:1.5px solid #E0C68A;border-radius:8px;">'
+        + '</div>';
+    }).join('')
+    + '<button type="button" onclick="sendPalletFix()" style="width:100%;margin-top:8px;background:#5C3A1E;color:#fff;border:none;border-radius:8px;padding:11px;font-weight:700;font-size:13px;cursor:pointer;">Send actual received · Hantar jumlah sebenar</button>';
+    rows.style.display = 'block';
+  } else {
+    rows.style.display = 'none';
+  }
+}
+async function sendPalletFix(){
+  var driver = document.getElementById('driverName').value || '';
+  var changed = [];
+  PALLET_ONBOARD.forEach(function(l, i){
+    var el = document.getElementById('palletFix-' + i);
+    if (!el) return;
+    var got = parseInt(el.value, 10);
+    if (!isNaN(got) && got !== Number(l.assigned) && l.entryId) changed.push({ entryId: l.entryId, acceptedQty: got, name: l.displayName || l.palletKey });
+  });
+  if (!changed.length){ _palletToast('ok', 'No change — counts match · Tiada beza'); togglePalletFix(); return; }
+  for (var k = 0; k < changed.length; k++){
+    var c = changed[k];
+    var r = await _palletGetWrite('PALLET_ACCEPT', { entryId: c.entryId, acceptedQty: c.acceptedQty, driverName: driver, clientToken: _palletNewToken('acc') });
+    if (r && r.status === 'success') _palletToast('ok', '<b>Correction sent · Dihantar</b><br>' + _esc(c.name) + ' → ' + c.acceptedQty);
+    else _palletToast('err', '<b>Not sent · Gagal</b><br>' + _esc(c.name) + ' — ' + _esc((r && r.message) || 'try again'));
+  }
+  togglePalletFix();
+  fetchPalletOnboard();   // re-pull so the banner shows the corrected numbers
+}
+
+
+function renderShipGroups(){
+  var wrap = document.getElementById('shipGroupsWrap');
+  if (!wrap) return;
+  var q = String(_shipFilter||'').trim().toLowerCase();
+  var disp = _shipGroups.map(function(g,i){ return { g:g, i:i }; });
+  if (q){
+    disp = disp.filter(function(d){
+      return String(d.g.name||'').toLowerCase().indexOf(q)>=0
+          || String(d.g.area||'').toLowerCase().indexOf(q)>=0
+          || d.g.invs.some(function(x){ return String(x.invoiceNo||'').toLowerCase().indexOf(q)>=0; });
+    });
+  }
+  function rank(g){ return g.invs.every(function(x){ return String(x.status).toLowerCase()==='delivered'; }) ? 1 : 0; }
+  disp.sort(function(a,b){ return rank(a.g)-rank(b.g) || a.i-b.i; });
+  var html = '';
+  if (!disp.length){ html = '<div style="text-align:center;color:#9a8050;font-size:13px;padding:14px;">No match · Tiada padanan</div>'; }
+  disp.forEach(function(d){
+    var g = d.g, i = d.i;
+    var gDone = g.invs.every(function(x){ return String(x.status).toLowerCase()==='delivered'; });
+    var gFail = !gDone && g.invs.some(function(x){ return String(x.status).toLowerCase()==='failed'; });
+    var color = gDone ? '#2E7D32' : (gFail ? '#C62828' : '#C9A227');
+    var badge = gDone ? '<span style="color:#2E7D32;font-weight:700;font-size:13px;">&#10003; Delivered</span>'
+              : (gFail ? '<span style="color:#C62828;font-weight:700;font-size:13px;">&#10007; Problem</span>' : '');
+    html += '<div style="border:1px solid #E0C68A;border-left:5px solid '+color+';border-radius:8px;padding:12px;margin-bottom:10px;'+(gDone?'opacity:.55;':'')+'">'
+      + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;"><div style="font-weight:700;font-size:15px;color:#412402;">'+_esc(g.name)+'</div>'+badge+'</div>'
+      + '<div style="font-size:12px;color:#854F0B;margin:3px 0 6px;">'+_esc(g.area)+' · '+g.invs.length+' invoice(s)</div>'
+      + '<div style="font-size:11px;color:#6b5836;margin-bottom:'+(gDone?'0':'10px')+';word-break:break-all;">'+ g.invs.map(function(x){ return _esc(x.invoiceNo); }).join(' · ') +'</div>';
+    if (!gDone){
+      var photos = g.photos || [];
+      if (photos.length){
+        html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">'
+          + photos.map(function(p){ return '<img src="'+p.dataUrl+'" style="width:54px;height:54px;object-fit:cover;border-radius:6px;border:1px solid #E0C68A;">'; }).join('')
+          + '<span style="align-self:center;font-size:12px;color:#2E7D32;font-weight:600;">'+photos.length+' photo'+(photos.length>1?'s':'')+' ready &#10003;</span>'
+          + '</div>';
+      }
+      html += '<div style="display:flex;gap:8px;">'
+        + '<button type="button" class="ship-photo" data-i="'+i+'" style="flex:1;background:#fff;color:#2E7D32;border:1.5px solid #2E7D32;border-radius:8px;padding:11px;font-weight:700;font-size:13px;cursor:pointer;">&#128247; '+(photos.length? ('Add photo · Tambah') : 'Take photo · Ambil foto')+'</button>'
+        + '<button type="button" class="ship-fail" data-i="'+i+'" style="background:#fff;color:#854F0B;border:1px solid #E0C68A;border-radius:8px;padding:11px 12px;font-weight:600;font-size:13px;cursor:pointer;">Problem</button>'
+        + '</div>';
+      if (photos.length){
+        html += '<button type="button" class="ship-save" data-i="'+i+'" style="width:100%;margin-top:8px;background:#2E7D32;color:#fff;border:none;border-radius:8px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;">&#10003; Save — Delivered &middot; Dihantar</button>';
+      }
+      html += '<div class="ship-reasons" data-i="'+i+'" style="display:none;gap:6px;flex-wrap:wrap;margin-top:8px;">'
+        + ['Shop closed','Rejected','Partial','Reschedule'].map(function(r){ return '<button type="button" class="ship-reason" data-i="'+i+'" data-r="'+_esc(r)+'" style="background:#FFF3CD;color:#854F0B;border:1px solid #E0C68A;border-radius:6px;padding:7px 10px;font-size:12px;cursor:pointer;">'+_esc(r)+'</button>'; }).join('')
+        + '</div>';
+      // Optional pallet drop for THIS customer — hidden until the driver taps "Pallet?".
+      // Only shown if the master loaded; fill only if there are pallets (per boss).
+      if (PALLET_MASTER.length){
+        var pSel = (g._pallet && g._pallet.palletKey) || '';
+        var pQty = (g._pallet && g._pallet.qty) || '';
+        var pCollect = (g._pallet && g._pallet.collectQty) || '';
+        var openPallet = !!(pSel || pQty || pCollect);   // keep open across re-render if partially filled
+        html += '<button type="button" class="pallet-toggle" data-i="'+i+'" style="width:100%;margin-top:8px;background:#fff;color:#854F0B;border:1px dashed #E0C68A;border-radius:8px;padding:10px;font-weight:600;font-size:13px;cursor:pointer;">'
+          + '&#128230; Pallet? &middot; Ada pallet?</button>'
+          + '<div class="pallet-fields" data-i="'+i+'" style="display:'+(openPallet?'flex':'none')+';flex-direction:column;gap:8px;margin-top:8px;">'
+          + '<select class="pallet-type" data-i="'+i+'" style="width:100%;padding:11px 12px;font-size:14px;border:1.5px solid #E0C68A;border-radius:8px;background:#fff;color:#412402;">'+_palletOptions(pSel)+'</select>'
+          + '<div style="display:flex;gap:8px;">'
+          + '<label style="flex:1;font-size:11px;font-weight:600;color:#854F0B;">&#128230;&#10145;&#65039; Drop &middot; Beri'
+          + '<input type="number" class="pallet-qty" data-i="'+i+'" inputmode="numeric" min="0" value="'+_esc(pQty)+'" placeholder="0" style="width:100%;margin-top:3px;padding:11px 12px;font-size:14px;border:1.5px solid #E0C68A;border-radius:8px;background:#fff;color:#412402;box-sizing:border-box;"></label>'
+          + '<label style="flex:1;font-size:11px;font-weight:600;color:#0E7C5A;">&#8617;&#65039;&#128230; Collect &middot; Ambil'
+          + '<input type="number" class="pallet-collect" data-i="'+i+'" inputmode="numeric" min="0" value="'+_esc(pCollect)+'" placeholder="0" style="width:100%;margin-top:3px;padding:11px 12px;font-size:14px;border:1.5px solid #E0C68A;border-radius:8px;background:#fff;color:#412402;box-sizing:border-box;"></label>'
+          + '</div>'
+          + '<button type="button" class="pallet-photo" data-i="'+i+'" style="width:100%;background:#fff;color:'+(g._pallet && g._pallet.photo ? '#2E7D32' : '#854F0B')+';border:1px '+(g._pallet && g._pallet.photo ? 'solid #2E7D32' : 'dashed #E0C68A')+';border-radius:8px;padding:9px;font-size:12px;font-weight:600;cursor:pointer;">'
+          + (g._pallet && g._pallet.photo ? '&#10003; Photo attached · Foto ada' : '&#128247; Photo evidence · Foto bukti (optional)') + '</button>'
+          + '</div>';
+      }
+    }
+    html += '</div>';
+  });
+  wrap.innerHTML = html;
+}
+
+// B4: search box — input delegation; only the groups wrap re-renders so the keyboard stays open
+  document.getElementById('shipmentSection').addEventListener('input', function(e){
+    if (e.target && e.target.id === 'shipFilter'){ _shipFilter = e.target.value; renderShipGroups(); return; }
+    if (e.target && (e.target.classList.contains('pallet-type') || e.target.classList.contains('pallet-qty') || e.target.classList.contains('pallet-collect'))){
+      var gi = parseInt(e.target.getAttribute('data-i'), 10);
+      var grp = _shipGroups[gi];
+      if (grp){
+        if (!grp._pallet) grp._pallet = { palletKey:'', qty:'', collectQty:'' };
+        if (e.target.classList.contains('pallet-type')) grp._pallet.palletKey = e.target.value;
+        else if (e.target.classList.contains('pallet-qty')) grp._pallet.qty = e.target.value;
+        else grp._pallet.collectQty = e.target.value;
+      }
+      return;
+    }
+  });
+  // <select> fires 'change', not 'input', on some Android webviews — capture it too:
+  document.getElementById('shipmentSection').addEventListener('change', function(e){
+    if (e.target && e.target.classList.contains('pallet-type')){
+      var gi = parseInt(e.target.getAttribute('data-i'), 10);
+      var grp = _shipGroups[gi];
+      if (grp){ if (!grp._pallet) grp._pallet = { palletKey:'', qty:'', collectQty:'' }; grp._pallet.palletKey = e.target.value; }
+    }
+  });
+
+// click delegation on the shipment section
+document.getElementById('shipmentSection').addEventListener('click', function(e){
+  if (e.target.closest('#shipRefresh')){ checkShipmentForVehicle(true); return; }   // B6: manual re-sync
+  var ph = e.target.closest('.ship-photo');
+  if (ph){ _deliverIdx = parseInt(ph.getAttribute('data-i'),10); document.getElementById('shipPhoto').click(); return; }
+  var pp = e.target.closest('.pallet-photo');
+  if (pp){
+    var pi = parseInt(pp.getAttribute('data-i'), 10);
+    var inp = document.getElementById('palletPhotoInput');
+    if (!inp){
+      inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = 'image/*'; inp.capture = 'environment';
+      inp.id = 'palletPhotoInput'; inp.style.display = 'none';
+      document.body.appendChild(inp);
+      inp.addEventListener('change', function(){
+        var f = inp.files && inp.files[0]; var gi = Number(inp.getAttribute('data-i'));
+        var grp = _shipGroups[gi];
+        if (f && grp){
+          var rd = new FileReader();
+          rd.onload = function(){
+            var durl = String(rd.result || '');
+            var m = durl.match(/^data:([^;]+);base64,(.*)$/);
+            if (m){ if (!grp._pallet) grp._pallet = { palletKey:'', qty:'', collectQty:'' };
+              grp._pallet.photo = { base64: m[2], type: m[1], name: 'pallet_' + Date.now() + '.jpg' };
+              _palletToast('ok', '&#10003; Photo attached · Foto dilampirkan');
+              renderShipGroups();
+            }
+          };
+          rd.readAsDataURL(f);
+        }
+        inp.value = '';
+      });
+    }
+    inp.setAttribute('data-i', pi);
+    inp.click();
+    return;
+  }
+  var sv = e.target.closest('.ship-save');
+  if (sv){ saveDelivery(parseInt(sv.getAttribute('data-i'),10)); return; }
+  var fb = e.target.closest('.ship-fail');
+  if (fb){ var i = fb.getAttribute('data-i'); var box = document.querySelector('.ship-reasons[data-i="'+i+'"]'); if (box) box.style.display = (box.style.display==='none'?'flex':'none'); return; }
+  var rb = e.target.closest('.ship-reason');
+  if (rb){ failGroup(parseInt(rb.getAttribute('data-i'),10), rb.getAttribute('data-r')); return; }
+  var pt = e.target.closest('.pallet-toggle');
+  if (pt){ var pf = document.querySelector('.pallet-fields[data-i="'+pt.getAttribute('data-i')+'"]'); if (pf) pf.style.display = (pf.style.display==='none'?'flex':'none'); return; }   // FIX: this branch was dropped in the KTN merge — the Pallet? button did nothing
+});
+
+// photo taken for a customer → submit delivery for that customer's pending invoices
+// STEP 1: take photo(s) for a customer → buffer + show thumbnails (does NOT submit yet)
+async function onShipPhoto(input){
+  // Cancelled camera fires this with empty files — MUST reset _deliverIdx or the
+  // visibilitychange re-sync stays suppressed for the rest of the session.
+  if (_deliverIdx < 0 || !input.files || !input.files.length){ input.value=''; _deliverIdx = -1; return; }
+  var g = _shipGroups[_deliverIdx];
+  if (!g){ input.value=''; return; }
+  var gKey = g.key;   // a background re-sync may REPLACE _shipGroups while we await compression —
+                      // re-resolve by key after every await so the photo lands on the live object
+  for (var f=0; f<input.files.length; f++){
+    var entry;
+    try { entry = await compressImage(input.files[f]); } catch(err){ entry = await readFileAsDataUrl(input.files[f]); }
+    var cur = null;
+    for (var ci=0; ci<_shipGroups.length; ci++){ if (_shipGroups[ci].key === gKey){ cur = _shipGroups[ci]; break; } }
+    if (!cur) cur = g;
+    if (!cur.photos) cur.photos = [];
+    if (cur.photos.length >= 10) break;
+    cur.photos.push({ dataUrl: entry.dataUrl, name: entry.name, type: entry.type });
+    g = cur;
+  }
+  input.value=''; _deliverIdx=-1;
+  renderShipmentList();   // shows thumbnails + the green "Save — Delivered" button
+}
+
+// STEP 2: Save → submit the buffered photos → mark this customer's invoices delivered
+async function saveDelivery(i){
+  var g = _shipGroups[i];
+  if (!g) return;
+  // Double-tap guard: a 2nd tap before the overlay paints used to re-enter and double-submit
+  // (duplicate POD rows + double KPI credit) — same fix as the fuel form's submit button.
+  if (g._saving) return;
+  g._saving = true;
+  if (!g.photos || !g.photos.length){ g._saving = false; alert('Take a photo first · Sila ambil foto dulu'); return; }
+  var overlay = document.getElementById('loadingOverlay');
+  document.querySelector('.loading-text').textContent = 'Saving… · Menyimpan…';
+  overlay.classList.add('show');
+  try{
+    var photos = g.photos.map(function(p){ return { base64: p.dataUrl.split(',')[1], name: p.name, type: p.type }; });
+    var pendingInvs = g.invs.filter(function(x){ return String(x.status).toLowerCase()!=='delivered'; }).map(function(x){ return x.invoiceNo; });
+    var _drv = document.getElementById('driverName').value;
+    var _sd  = document.getElementById('secondDriver').value || '';
+    if (_sd === _drv) _sd = '';   // same name twice → drop helper (avoid double KPI count)
+    var now = new Date();
+    // A3: send a clientToken and poll the read-back endpoint for the REAL result —
+    // no-cors alone can't see server errors, so before this fix a failed save still showed "Delivered".
+    var token = 'pod_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+    var payload = { formType:'SUBMIT_POD_FOR_INVOICE', branch: BRANCH, shipmentKey:_shipKey, invoiceNos:pendingInvs,
+      driverName: _drv, secondDriver: _sd,
+      vehicleNo: document.getElementById('vehicleNo').value, deliveryDate: document.getElementById('deliveryDate').value,
+      timestamp: now.toISOString(), photos: photos, clientToken: token };
+    var fd = new FormData(); fd.append('data', JSON.stringify(payload));
+    // 90s upload timeout — on dead signal fetch can hang forever behind the overlay, and drivers
+    // kill the tab (losing buffered photos). Abort → catch → photos kept + clear retry message.
+    var _ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var _tmo = _ctrl ? setTimeout(function(){ _ctrl.abort(); }, 90000) : null;
+    try{
+      await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body: fd, signal: _ctrl ? _ctrl.signal : undefined });
+    } finally { if (_tmo) clearTimeout(_tmo); }
+
+    document.querySelector('.loading-text').textContent = 'Confirming… · Mengesahkan…';
+    var confirmed = null;
+    for (var t = 0; t < 8; t++){
+      await new Promise(function(r){ setTimeout(r, 1500); });
+      try{
+        var rb = await fetch(SCRIPT_URL + '?action=getImportResult&token=' + encodeURIComponent(token));
+        var rd = await rb.json();
+        if (rd && rd.status && rd.status !== 'pending'){ confirmed = rd; break; }
+      }catch(e){ /* keep polling */ }
+    }
+    if (confirmed && confirmed.status === 'error'){
+      // REAL failure — keep the photos so the driver can just hit Save again.
+      alert('NOT saved · TIDAK disimpan!\n' + (confirmed.message || 'Server error') + '\n\nYour photos are kept — please tap Save again. · Foto anda masih ada — sila tekan Simpan semula.');
+    } else if (confirmed){
+      g.invs.forEach(function(x){ x.status='delivered'; });   // confirmed by the server
+      g.photos = [];
+      firePalletDrop(g);
+      firePalletCollect(g);
+      renderShipmentList();
+    } else {
+      // No confirmation (weak signal) — show as delivered but KEEP the photos; the read-back
+      // below re-syncs with the server and only drops photos once it confirms delivered.
+      g.invs.forEach(function(x){ x.status='delivered'; });
+      firePalletDrop(g);
+      firePalletCollect(g);
+      renderShipmentList();
+    }
+  }catch(err){
+    alert('Save failed, please retry · Simpan gagal, sila cuba lagi\n(Your photos are kept · Foto anda masih ada)');
+  }finally{
+    g._saving = false;
+    overlay.classList.remove('show');
+    setTimeout(function(){ checkShipmentForVehicle(true); }, 2500);   // read-back to confirm (no-cors); keep list if read-back fails
+  }
+}
+
+// mark all of a customer's pending invoices as not-delivered, with a reason
+// A5: check the server's ACTUAL response per invoice — only paint "Problem" when the sheet
+// really recorded it (before this, a server error still showed red on the phone = wrong data).
+async function failGroup(i, reason){
+  var g = _shipGroups[i]; if (!g) return;
+  if (g._saving) return;            // double-tap guard (same as saveDelivery)
+  g._saving = true;
+  var pending = g.invs.filter(function(x){ return String(x.status).toLowerCase()!=='delivered'; });
+  var overlay = document.getElementById('loadingOverlay');
+  document.querySelector('.loading-text').textContent = 'Saving… · Menyimpan…';
+  overlay.classList.add('show');
+  var errMsg = '';
+  try{
+    for (var k=0; k<pending.length; k++){
+      var res = await fetch(SCRIPT_URL + '?action=MARK_INVOICE_FAILED&shipmentKey=' + encodeURIComponent(_shipKey)
+        + '&invoiceNo=' + encodeURIComponent(pending[k].invoiceNo) + '&reason=' + encodeURIComponent(reason));
+      var d = null; try{ d = await res.json(); }catch(je){}
+      if (d && d.status === 'success'){ pending[k].status = 'failed'; }
+      else { errMsg = (d && d.message) ? d.message : 'server error'; }
+    }
+  }catch(e){ errMsg = 'no connection'; }
+  finally{
+    g._saving = false;
+    overlay.classList.remove('show');
+    if (errMsg) alert('Some were NOT saved (' + errMsg + ') — please try again.\nSebahagian TIDAK disimpan — sila cuba lagi.');
+    renderShipmentList();
+  }
+}
+
+// wire vehicle + date selection to the shipment check (wrappers so the change-event isn't passed as keepListOnFail)
+document.getElementById('vehicleNo').addEventListener('change', function(){
+  try{ localStorage.setItem(VEHICLE_KEY, this.value || ''); }catch(e){}   // B5: remember across reloads
+  // Clear any auto-filled crew first, so it can't keep showing the PREVIOUS lorry's drivers.
+  // The newly-selected lorry's assigned crew re-fills from its own shipment (or stays blank if none matches).
+  ['driverName','secondDriver'].forEach(function(id){ var h=document.getElementById(id); if(h) h.value=''; });
+  ['driverSearch','secondSearch'].forEach(function(id){ var s=document.getElementById(id); if(s) s.value=''; });
+  ['staffIdBadge','staffIdBadge2'].forEach(function(id){ var b=document.getElementById(id); if(b){ b.style.display='none'; b.textContent=''; } });
+  checkShipmentForVehicle();
+});
+document.getElementById('deliveryDate').addEventListener('change', function(){ checkShipmentForVehicle(); });
+</script>
+</body>
+</html>
