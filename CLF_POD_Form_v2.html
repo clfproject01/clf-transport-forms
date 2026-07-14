@@ -495,6 +495,11 @@ async function fetchVehicles() {
   }
 }
 
+// [STAGING DEBUG — remove at cutover] surface silent errors on-screen so field testers can report them
+function _dbgToast_(msg){ try{ var t=document.createElement('div'); t.style.cssText='position:fixed;bottom:8px;left:8px;right:8px;z-index:99999;background:#B91C1C;color:#fff;font-size:11px;padding:8px 10px;border-radius:8px;word-break:break-all;'; t.textContent='DEBUG: '+String(msg).slice(0,220); document.body.appendChild(t); setTimeout(function(){ t.remove(); },20000); }catch(_){} }
+window.addEventListener('error', function(e){ _dbgToast_((e.message||'error')+' @'+(e.lineno||'?')); });
+window.addEventListener('unhandledrejection', function(e){ _dbgToast_('promise: '+String(e.reason && e.reason.message || e.reason)); });
+
 window.onload = function() {
   // Branch label in the header — prominent so a driver on the wrong link notices.
   var branchName = BRANCH_DISPLAY[BRANCH] || BRANCH;
@@ -1001,13 +1006,17 @@ async function handlePhoto(input) {
     }
     // [E5] quality gate: fail → dialog. Attempts 1-2 the shot is DISCARDED (input resets below,
     // so tapping the button re-opens the camera); attempt >=3 may "Upload anyway" → flagged.
-    if (entry.quality && !entry.quality.ok) {
-      _qGateTries++;
-      const act = await showQualityGate_(entry.quality.reasons, _qGateTries >= 3);
-      if (act !== 'anyway') continue;   // discarded — not added
-      entry.qualityFlag = true;
-    }
-    _qGateTries = 0;   // pass or flagged-add both reset the streak
+    // FAIL-OPEN: any error inside the gate/dialog accepts the photo ungated — a gate bug must
+    // never make a photo silently vanish (boss field-test 2026-07-14).
+    try {
+      if (entry.quality && !entry.quality.ok) {
+        _qGateTries++;
+        const act = await showQualityGate_(entry.quality.reasons, _qGateTries >= 3);
+        if (act !== 'anyway') continue;   // discarded — not added
+        entry.qualityFlag = true;
+      }
+      _qGateTries = 0;   // pass or flagged-add both reset the streak
+    } catch (gateErr) { console.warn('gate failed open:', gateErr); }
     collectedPhotos.push(entry);
     renderPhotoGrid();
   }
@@ -1701,13 +1710,15 @@ async function onShipPhoto(input){
     try { entry = await compressImage(input.files[f]); } catch(err){ entry = await readFileAsDataUrl(input.files[f]); }
     // [E5] quality gate — same rules as handlePhoto: 1-2 = retake only (shot discarded; the
     // input resets below so tapping re-opens the camera), >=3 may "Upload anyway" → flagged.
-    if (entry.quality && !entry.quality.ok){
-      _qGateTries++;
-      var act = await showQualityGate_(entry.quality.reasons, _qGateTries >= 3);
-      if (act !== 'anyway') continue;   // discarded — not buffered
-      entry.qualityFlag = true;
-    }
-    _qGateTries = 0;   // pass or flagged-add both reset the streak
+    try {
+      if (entry.quality && !entry.quality.ok){
+        _qGateTries++;
+        var act = await showQualityGate_(entry.quality.reasons, _qGateTries >= 3);
+        if (act !== 'anyway') continue;   // discarded — not buffered
+        entry.qualityFlag = true;
+      }
+      _qGateTries = 0;   // pass or flagged-add both reset the streak
+    } catch (gateErr) { console.warn('gate failed open:', gateErr); }
     var cur = null;
     for (var ci=0; ci<_shipGroups.length; ci++){ if (_shipGroups[ci].key === gKey){ cur = _shipGroups[ci]; break; } }
     if (!cur) cur = g;
