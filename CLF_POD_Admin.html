@@ -86,7 +86,11 @@
   .stat .bar i{display:block;height:100%;background:var(--blue);border-radius:99px;transition:width .3s;}
 
   .lorry{background:var(--card);border:1px solid var(--gray-200);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:16px;overflow:hidden;}
-  .lorry-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:13px 16px;background:var(--blue-50);border-bottom:1px solid var(--gray-200);}
+  .lorry-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:13px 16px;background:var(--blue-50);border-bottom:1px solid var(--gray-200);cursor:pointer;user-select:none;}
+  .lorry-head .chev{display:inline-block;width:14px;color:var(--blue);font-size:13px;transition:transform .15s;}
+  .lorry .lorry-body{display:none;}
+  .lorry.open .lorry-body{display:block;}
+  .lorry:not(.open) .lorry-head{border-bottom:none;}
   .lorry-head .plate{font-size:17px;font-weight:800;color:var(--blue);letter-spacing:.01em;}
   .lorry-head .crew{font-size:12.5px;color:var(--gray-600);}
   .lorry-head .mini{font-size:12px;color:var(--gray-500);font-variant-numeric:tabular-nums;}
@@ -173,6 +177,7 @@
         <button class="seg-btn active" data-branch="MTK">Mentakab</button>
         <button class="seg-btn" data-branch="KTN">Kuantan</button>
       </span>
+      <button class="btn" id="toggleAllBtn">▾ Expand all</button>
       <button class="btn" id="refreshBtn">↻ Refresh</button>
       <button class="btn btn-primary" id="printBtn">🖨 Print barcodes</button>
     </div>
@@ -224,6 +229,7 @@ var BARCODE_SYMBOLOGY = 'code39';      // 'code39' (default, shipped) | 'code128
 var PHOTO_DISPLAY = 'thumbnail';
 
 var _boardData = null;      // last good board payload
+var _openKeys = new Set();  // collapsed by DEFAULT — office expands the lorry they are scanning (survives auto-refresh)
 var _refreshTmr = null;
 var _lbPhotos = [], _lbIdx = 0;
 
@@ -425,18 +431,22 @@ function render(){
   lorries.forEach(function(L){
     var invs=L.invoices||[];
     var ld=invs.filter(function(v){return String(v.status).toLowerCase()==='delivered';}).length;
-    html+='<div class="lorry"><div class="lorry-head">'
-      +'<div><span class="plate">'+esc(L.vehicleNo||'?')+'</span>'+(L.drivers?' <span class="crew">· '+esc(L.drivers)+'</span>':'')+'</div>'
-      +'<div class="mini">'+ld+' / '+invs.length+' delivered</div></div>';
-    html+='<div style="overflow-x:auto;"><table class="inv"><thead><tr>'
+    var efid=invs.filter(function(v){return v.efiScanned;}).length;
+    var lkey=String(L.shipmentKey||L.vehicleNo||'');
+    var isOpen=_openKeys.has(lkey);
+    html+='<div class="lorry'+(isOpen?' open':'')+'"><div class="lorry-head" data-key="'+esc(lkey)+'">'
+      +'<div><span class="chev">'+(isOpen?'▾':'▸')+'</span> <span class="plate">'+esc(L.vehicleNo||'?')+'</span>'+(L.drivers?' <span class="crew">· '+esc(L.drivers)+'</span>':'')+'</div>'
+      +'<div class="mini">EFI '+efid+'/'+ld+' · '+ld+' / '+invs.length+' delivered</div></div>';
+    html+='<div class="lorry-body"><div style="overflow-x:auto;"><table class="inv"><thead><tr>'
       +'<th>Invoice</th><th>Customer</th><th style="text-align:right;">Amount</th><th>Status</th><th>Time</th><th>POD photo</th><th>Barcode</th><th>EFI</th>'
       +'</tr></thead><tbody>';
     invs.forEach(function(v, idx){
       html+=invRow(L, v, idx);
     });
-    html+='</tbody></table></div></div>';
+    html+='</tbody></table></div></div></div>';
   });
   board.innerHTML=html;
+  var tab=$('toggleAllBtn'); if(tab) tab.textContent=_openKeys.size?'▸ Collapse all':'▾ Expand all';
   wireEfiCheckboxes();
 }
 
@@ -622,6 +632,20 @@ $('date').value = todayKL(); $('date').max = todayKL();
 $('date').addEventListener('change', loadBoard);
 $('refreshBtn').addEventListener('click', loadBoard);
 $('printBtn').addEventListener('click', function(){ buildPrint(); setTimeout(function(){ window.print(); }, 60); });
+// Collapse/expand: click a lorry header to toggle just that card (no full re-render, checkboxes stay live).
+$('board').addEventListener('click', function(e){
+  var head = e.target.closest('.lorry-head'); if(!head) return;
+  var key = head.getAttribute('data-key'), card = head.closest('.lorry');
+  if(_openKeys.has(key)){ _openKeys.delete(key); card.classList.remove('open'); }
+  else { _openKeys.add(key); card.classList.add('open'); }
+  var ch = head.querySelector('.chev'); if(ch) ch.textContent = _openKeys.has(key) ? '▾' : '▸';
+  var tab=$('toggleAllBtn'); if(tab) tab.textContent=_openKeys.size?'▸ Collapse all':'▾ Expand all';
+});
+$('toggleAllBtn').addEventListener('click', function(){
+  var keys = ((_boardData && _boardData.lorries) || []).map(function(L){ return String(L.shipmentKey||L.vehicleNo||''); });
+  if(_openKeys.size) _openKeys.clear(); else keys.forEach(function(k){ _openKeys.add(k); });
+  render();
+});
 // Delegated thumbnail click (replaces inline onclick — XSS-safe, reads data-* attrs).
 $('board').addEventListener('click', function(e){
   var t = e.target.closest('.thumb'); if(!t) return;
