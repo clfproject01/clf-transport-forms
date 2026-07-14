@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CLF POD Scanify - photo to scan-copy PDF</title>
+<!--
+  ============================================================================
+  CLF POD Scanify  -  one-click: delivered POD photos -> scanner-look PDFs -> ZIP
+  ----------------------------------------------------------------------------
+  Office desktop-Chrome tool. Pick a date + branch, Load day, Run, review the
+  grid, Download ZIP (NAS folder structure), and the backend rows get stamped
+  MARK_SCAN_COPY. A "Local files" mode runs the same pipeline on local images
+  with no backend (testing / fallback).
+
+  SELF-CONTAINED AT RUNTIME: no CDN. Both libraries are vendored next to this
+  file (downloaded once at build time, never fetched at runtime):
+    vendor/opencv.js     from https://docs.opencv.org/4.7.0/opencv.js
+    vendor/fflate.min.js from https://unpkg.com/fflate@0.8.2/umd/index.js
+  (The two URLs above are documentation only - nothing here loads from them.)
+
+  BACKEND (live, same /exec deployment as the other transport forms):
+    POST PALLET_UNLOCK            -> session authToken   (shared localStorage
+                                     key 'clf_pallet_auth' with POD Admin /
+                                     Pallet Store, so one sign-in covers all)
+    POST GET_POD_SCAN_GRANT       -> short-lived photo grant (6 h, memory only)
+    GET  getPodAdminBoard         -> the day's lorries + delivered invoices
+    GET  getPodPhoto&id&grant     -> photo bytes as base64
+    POST MARK_SCAN_COPY           -> stamps the archived invoices
+
+  PIPELINE (port of the validated OpenCV python bench):
+    detect page contour on background-flattened gray -> perspective warp ->
+    scanner-lid mask (raw contour, eroded 1.5%) -> per-channel background
+    division whitening + white-snap + ink-deepen -> JPEG q0.85 ->
+    single/multi-page JPEG-in-PDF (same byte logic as PodScanCopy.gs) ->
+    fflate STORE zip:  CLF_POD_Scans/<dd-MM-yyyy>/<PLATE>/<INV>_<dd-MM-yyyy>.pdf
+  Fallback ladder per photo: SCAN (green) -> WHITEN-only (yellow, detect
+  refused) -> RAW re-encode (red, exception). Every WHITEN/RAW cell offers a
+  manual 4-corner adjust that reruns warp+whiten with the hand-set quad.
+  ============================================================================
+-->
+<style>
+  :root{
+    --blue:#1A56DB; --blue-600:#2563EB; --blue-50:#EFF4FF;
+    --green-50:#ECFDF5; --green-500:#16A34A; --green-700:#15803D;
+    --amber-50:#FFFBEB; --amber-500:#D97706; --amber-700:#B45309;
+    --red-50:#FEF2F2; --red-500:#EF4444; --red-700:#B91C1C;
+    --gray-50:#F9FAFB; --gray-100:#F3F4F6; --gray-200:#E5E7EB; --gray-300:#D1D5DB;
+    --gray-400:#9CA3AF; --gray-500:#6B7280; --gray-600:#4B5563; --gray-700:#374151; --gray-900:#111827;
+    --card:#fff; --radius:14px; --shadow:0 1px 2px rgba(17,24,39,.06),0 1px 3px rgba(17,24,39,.08);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--gray-50);color:var(--gray-900);line-height:1.5;-webkit-font-smoothing:antialiased;padding-bottom:60px;}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px 16px;}
+  .topbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:6px;}
+  .topbar h1{font-size:19px;font-weight:700;letter-spacing:-.01em;display:flex;align-items:center;gap:9px;}
+  .topbar h1 .logo{background:var(--blue);color:#fff;font-size:12px;font-weight:800;border-radius:7px;padding:4px 8px;letter-spacing:.02em;}
+  .topbar h1 .sub{font-size:13px;font-weight:500;color:var(--gray-500);}
+  .session{font-size:12.5px;color:var(--gray-600);display:flex;align-items:center;gap:8px;}
+  .session .who{font-weight:700;color:var(--gray-700);}
+  .linkbtn{background:none;border:none;color:var(--blue);font-size:12px;font-weight:600;cursor:pointer;text-decoration:underline;font-family:inherit;padding:0;}
+
+  .card{background:var(--card);border:1px solid var(--gray-200);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;margin-bottom:14px;}
+  .controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .controls label{font-size:13px;color:var(--gray-700);font-weight:500;}
+  .controls input[type=date]{font-family:inherit;font-size:13px;padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;background:#fff;color:var(--gray-900);}
+  .seg{display:inline-flex;border:1px solid var(--gray-200);border-radius:8px;overflow:hidden;}
+  .seg-btn{font-family:inherit;font-size:13px;font-weight:600;padding:6px 15px;border:0;background:#fff;color:var(--gray-500);cursor:pointer;}
+  .seg-btn+.seg-btn{border-left:1px solid var(--gray-200);}
+  .seg-btn.active{background:var(--blue);color:#fff;}
+  .btn{font-family:inherit;font-size:13px;font-weight:600;padding:7px 14px;border:1px solid var(--gray-200);border-radius:8px;background:#fff;color:var(--gray-700);cursor:pointer;}
+  .btn:hover{background:var(--gray-50);}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+  .btn-primary{background:var(--blue);color:#fff;border-color:var(--blue);}
+  .btn-primary:hover:not(:disabled){background:#1749b8;}
+  .btn-green{background:var(--green-700);color:#fff;border-color:var(--green-700);}
+  .btn-green:hover:not(:disabled){background:#116a33;}
+  .btn-big{font-size:15px;padding:10px 22px;border-radius:10px;}
+
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;border:1px solid var(--gray-200);background:var(--gray-100);color:var(--gray-600);}
+  .chip.ok{background:var(--green-50);color:var(--green-700);border-color:var(--green-500);}
+  .chip.warn{background:var(--amber-50);color:var(--amber-700);border-color:var(--amber-500);}
+  .chip .dot{width:8px;height:8px;border-radius:50%;background:var(--gray-400);}
+  .chip.ok .dot{background:var(--green-500);}
+  .chip.warn .dot{background:var(--amber-500);animation:pulse 1.2s ease-in-out infinite;}
+  @keyframes pulse{50%{opacity:.35;}}
+
+  .summaryline{font-size:13.5px;color:var(--gray-700);}
+  .summaryline b{font-variant-numeric:tabular-nums;}
+  .warnline{display:none;font-size:12.5px;color:var(--amber-700);background:var(--amber-50);border:1px solid var(--amber-500);border-radius:8px;padding:8px 12px;margin-top:10px;}
+  .warnline.show{display:block;}
+  .missline{display:none;font-size:12.5px;color:var(--red-700);background:var(--red-50);border:1px solid var(--red-500);border-radius:8px;padding:8px 12px;margin-top:10px;}
+  .missline.show{display:block;}
+
+  .runrow{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .pbar{flex:1;min-width:200px;height:10px;background:var(--gray-100);border-radius:99px;overflow:hidden;}
+  .pbar i{display:block;height:100%;width:0%;background:var(--blue);border-radius:99px;transition:width .2s;}
+  .progtext{font-size:12.5px;color:var(--gray-500);min-height:18px;font-variant-numeric:tabular-nums;}
+  .stampline{font-size:12.5px;color:var(--gray-600);min-height:18px;margin-top:6px;}
+  .stampline.ok{color:var(--green-700);font-weight:600;}
+  .stampline.err{color:var(--red-700);font-weight:600;}
+
+  .plate-sec{margin-bottom:18px;}
+  .plate-head{display:flex;align-items:baseline;gap:10px;margin:0 2px 8px;}
+  .plate-head .plate{font-size:16px;font-weight:800;color:var(--blue);letter-spacing:.01em;}
+  .plate-head .mini{font-size:12px;color:var(--gray-500);font-variant-numeric:tabular-nums;}
+  .cellgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;}
+  .cell{background:var(--card);border:1px solid var(--gray-200);border-radius:12px;box-shadow:var(--shadow);padding:8px;display:flex;flex-direction:column;gap:6px;}
+  .cell .thumbbox{position:relative;width:100%;height:150px;border-radius:8px;background:var(--gray-100);overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .cell .thumbbox img{width:100%;height:100%;object-fit:contain;background:#fff;}
+  .cell .thumbbox .nothumb{font-size:12px;color:var(--gray-400);}
+  .badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap;}
+  .badge.scan{background:var(--green-50);color:var(--green-700);border:1px solid var(--green-500);}
+  .badge.whiten{background:var(--amber-50);color:var(--amber-700);border:1px solid var(--amber-500);}
+  .badge.raw{background:var(--red-50);color:var(--red-700);border:1px solid var(--red-500);}
+  .badge.wait{background:var(--gray-100);color:var(--gray-500);border:1px solid var(--gray-300);}
+  .badge.fail{background:var(--red-50);color:var(--red-700);border:1px solid var(--red-500);}
+  .cell .inv-no{font-weight:700;font-size:12.5px;font-variant-numeric:tabular-nums;font-family:"SFMono-Regular",Consolas,monospace;word-break:break-all;}
+  .cell .cust{font-size:11.5px;color:var(--gray-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cell .rowline{display:flex;align-items:center;justify-content:space-between;gap:6px;}
+  .cell .pcount{font-size:11px;color:var(--gray-400);}
+  .cell .adjust{font-size:11.5px;padding:4px 9px;border-radius:7px;}
+  .empty{text-align:center;color:var(--gray-400);font-size:14px;padding:40px 16px;}
+
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:320;max-width:90%;padding:12px 16px;border-radius:10px;font-size:13px;color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.25);opacity:0;transition:opacity .2s;pointer-events:none;}
+  .toast.ok{background:var(--green-700);} .toast.err{background:var(--red-700);} .toast.show{opacity:1;}
+
+  /* sign-in overlay */
+  #lockOverlay{display:none;position:fixed;inset:0;z-index:300;background:rgba(17,24,39,.94);align-items:center;justify-content:center;padding:20px;}
+  #lockOverlay.show{display:flex;}
+  .lockcard{background:#fff;border-radius:16px;max-width:360px;width:100%;padding:26px 22px;box-shadow:0 20px 60px rgba(0,0,0,.4);}
+  .lockcard h2{font-weight:800;font-size:17px;text-align:center;margin:6px 0 2px;color:var(--gray-900);}
+  .lockcard .note{font-size:12.5px;color:var(--gray-500);text-align:center;margin-bottom:14px;}
+  .lockcard label{font-size:12px;font-weight:700;color:var(--gray-700);}
+  .lockcard input{width:100%;margin:4px 0 10px;padding:12px;font-size:15px;border:1.5px solid var(--gray-300);border-radius:9px;font-family:inherit;}
+  .lockcard .errline{min-height:16px;font-size:12px;color:var(--red-700);font-weight:600;}
+  .lockcard .big{width:100%;margin-top:8px;background:var(--blue);color:#fff;border:none;border-radius:10px;padding:14px;font-weight:800;font-size:15px;cursor:pointer;}
+  .lockcard .alt{text-align:center;margin-top:12px;}
+
+  /* compare overlay */
+  #cmpOverlay{display:none;position:fixed;inset:0;z-index:280;background:rgba(0,0,0,.88);flex-direction:column;padding:16px;}
+  #cmpOverlay.show{display:flex;}
+  .cmp-top{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#fff;margin-bottom:10px;}
+  .cmp-top .cap{font-size:14px;font-weight:600;}
+  .cmp-panes{flex:1;display:flex;gap:12px;min-height:0;}
+  .cmp-pane{flex:1;display:flex;flex-direction:column;min-width:0;}
+  .cmp-pane .lbl{color:#cbd5e1;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;}
+  .cmp-pane .imgbox{flex:1;background:#111;border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden;min-height:0;}
+  .cmp-pane img{max-width:100%;max-height:100%;object-fit:contain;}
+  .cmp-nav{display:flex;align-items:center;justify-content:center;gap:14px;color:#fff;margin-top:10px;font-size:13px;}
+  .cmp-nav .btn{background:rgba(255,255,255,.12);border-color:transparent;color:#fff;}
+
+  /* corner editor overlay */
+  #adjOverlay{display:none;position:fixed;inset:0;z-index:290;background:rgba(0,0,0,.92);flex-direction:column;align-items:center;justify-content:center;padding:14px;}
+  #adjOverlay.show{display:flex;}
+  #adjOverlay .adj-top{color:#fff;font-size:13.5px;margin-bottom:10px;text-align:center;}
+  #adjCanvas{background:#111;border-radius:10px;touch-action:none;cursor:crosshair;max-width:96vw;max-height:78vh;}
+  #adjOverlay .adj-btns{display:flex;gap:12px;margin-top:12px;align-items:center;}
+  #adjOverlay .adj-btns .btn{font-size:14px;padding:9px 20px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <h1><span class="logo">CLF</span> POD Scanify <span class="sub">photo to scan-copy PDF</span></h1>
+    <div class="session" id="sessionBox"></div>
+  </div>
+
+  <div class="card">
+    <div class="controls">
+      <label>Date <input type="date" id="date"></label>
+      <span class="seg" id="branchSeg">
+        <button class="seg-btn active" data-branch="MTK">Mentakab</button>
+        <button class="seg-btn" data-branch="KTN">Kuantan</button>
+      </span>
+      <button class="btn btn-primary" id="loadBtn">Load day</button>
+      <button class="btn" id="localBtn" title="Run the pipeline on images from this PC - no backend, no stamping">Local files</button>
+      <input type="file" id="localInput" accept="image/*" multiple style="display:none;">
+      <span class="chip warn" id="engineChip"><span class="dot"></span><span id="engineTxt">Loading scan engine...</span></span>
+    </div>
+    <div class="summaryline" id="summaryLine" style="margin-top:10px;">Pick a date and press Load day.</div>
+    <div class="warnline" id="noPhotoLine"></div>
+  </div>
+
+  <div class="card">
+    <div class="runrow">
+      <button class="btn btn-primary btn-big" id="runBtn" disabled>Run</button>
+      <div class="pbar"><i id="pbarFill"></i></div>
+      <button class="btn btn-green btn-big" id="dlBtn" disabled>Download ZIP</button>
+    </div>
+    <div class="progtext" id="progText" style="margin-top:8px;"></div>
+    <div class="missline" id="missLine"></div>
+    <div class="stampline" id="stampLine"></div>
+  </div>
+
+  <div id="grid"><div class="empty">Nothing loaded yet.</div></div>
+</div>
+
+<div id="lockOverlay">
+  <div class="lockcard">
+    <div style="font-size:34px;text-align:center;">&#128274;</div>
+    <h2>POD Scanify is locked</h2>
+    <div class="note">Authorised office staff only. Same Staff ID + PIN as the Pallet / POD Admin tools.</div>
+    <label for="lk-emp">Staff ID</label>
+    <input id="lk-emp" autocomplete="off" placeholder="e.g. TER282">
+    <label for="lk-pin">PIN</label>
+    <input id="lk-pin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN">
+    <div class="errline" id="lk-err"></div>
+    <button class="big" id="lk-btn">Sign in</button>
+    <div class="alt"><button class="linkbtn" id="lk-local">Use local files instead (no sign-in)</button></div>
+  </div>
+</div>
+
+<div id="cmpOverlay">
+  <div class="cmp-top">
+    <div class="cap" id="cmpCap"></div>
+    <button class="btn" id="cmpClose" style="background:rgba(255,255,255,.12);border-color:transparent;color:#fff;">Close</button>
+  </div>
+  <div class="cmp-panes">
+    <div class="cmp-pane"><div class="lbl">Original</div><div class="imgbox"><img id="cmpOrig" alt="original"></div></div>
+    <div class="cmp-pane"><div class="lbl">Processed <span id="cmpBadge"></span></div><div class="imgbox"><img id="cmpProc" alt="processed"></div></div>
+  </div>
+  <div class="cmp-nav">
+    <button class="btn" id="cmpPrev">&#8249; Prev photo</button>
+    <span id="cmpPage"></span>
+    <button class="btn" id="cmpNext">Next photo &#8250;</button>
+    <button class="btn" id="cmpAdjust">Adjust corners</button>
+  </div>
+</div>
+
+<div id="adjOverlay">
+  <div class="adj-top" id="adjCap">Drag the 4 circles onto the document corners, then Apply.</div>
+  <canvas id="adjCanvas"></canvas>
+  <div class="adj-btns">
+    <button class="btn" id="adjPrev">&#8249; Photo</button>
+    <span id="adjPage" style="color:#fff;font-size:13px;"></span>
+    <button class="btn" id="adjNext">Photo &#8250;</button>
+    <button class="btn" id="adjReset">Reset corners</button>
+    <button class="btn btn-primary" id="adjApply">Apply</button>
+    <button class="btn" id="adjCancel">Cancel</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script async src="vendor/opencv.js"></script>
+<script src="vendor/fflate.min.js"></script>
+<script>
+/* ============================================================================
+   CONFIG
+   ============================================================================ */
+var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxabHh2Kd04z7k0zZOOoaJs2i5hgycQsO_AYoRS99xZx2WqMJ6cowumY0e1znehiRM1/exec';
+var AUTH_KEY   = 'clf_pallet_auth';   // shared session with CLF_Pallet_Store / CLF_POD_Admin
+var MAX_SIDE   = 2400;                // longest-side cap for processing and output
+var JPEG_Q     = 0.85;
+var FETCH_POOL = 5;                   // max parallel getPodPhoto requests
+var PREFETCH_AHEAD = 8;               // photos to prefetch ahead of the processor
+
+var BRANCH = 'MTK';
+var _grant = '', _grantExp = 0;       // photo grant (memory only, ~6 h server-side)
+var _runId = '';
+var _day = null;                      // { date, branch, local, invoices:[], noPhoto:[] }
+var _running = false;
+var _cvReady = false;
+
+/* ============================================================================
+   UTIL
+   ============================================================================ */
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function todayKL(){ return new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kuala_Lumpur'}); }
+function yesterdayKL(){ return new Date(Date.now()-864e5).toLocaleDateString('en-CA',{timeZone:'Asia/Kuala_Lumpur'}); }
+function _newToken(p){ return (p||'scn')+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,10); }
+function _auth(){ try{ return JSON.parse(localStorage.getItem(AUTH_KEY)||'null'); }catch(e){ return null; } }
+function _authToken(){ var a=_auth(); return (a&&a.token)?a.token:''; }
+function toast(kind, html){
+  var t=$('toast'); t.className='toast '+(kind==='ok'?'ok':'err')+' show'; t.innerHTML=html;
+  clearTimeout(toast._tmr); toast._tmr=setTimeout(function(){ t.classList.remove('show'); }, kind==='err'?6000:3500);
+}
+function sanitizeName(s){ return String(s==null?'':s).replace(/[\/\\:*?"<>|]+/g,'_').trim(); }
+function ddmmyyyy(v){
+  var m=String(v||'').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? (m[3]+'-'+m[2]+'-'+m[1]) : sanitizeName(v).replace(/[^0-9A-Za-z_-]/g,'-');
+}
+function b64ToU8(b64){
+  var bin=atob(String(b64).replace(/\s+/g,'')), n=bin.length, u8=new Uint8Array(n);
+  for(var i=0;i<n;i++) u8[i]=bin.charCodeAt(i);
+  return u8;
+}
+
+/* ============================================================================
+   AUTH - sign-in card + POST/poll readback (same pattern as CLF_POD_Admin)
+   ============================================================================ */
+async function postWithToken(payload, token){
+  var fd=new FormData(); fd.append('data', JSON.stringify(payload));
+  try{ await fetch(SCRIPT_URL,{ method:'POST', mode:'no-cors', body:fd }); }
+  catch(e){ return { status:'error', message:'No connection' }; }
+  for(var t=0;t<8;t++){
+    await new Promise(function(r){ setTimeout(r,1500); });
+    try{
+      var rb=await fetch(SCRIPT_URL+'?action=getImportResult&token='+encodeURIComponent(token));
+      var rd=await rb.json();
+      if(rd && rd.status && rd.status!=='pending') return rd;
+    }catch(e){}
+  }
+  return { status:'error', message:'No confirmation from server' };
+}
+function showLock(msg){
+  $('lockOverlay').classList.add('show');
+  if(msg) $('lk-err').textContent=msg;
+  var a=_auth(); if(a && a.empNo && !$('lk-emp').value) $('lk-emp').value=a.empNo;
+}
+function hideLock(){ $('lockOverlay').classList.remove('show'); }
+async function doUnlock(){
+  var emp=$('lk-emp').value.trim().toUpperCase(), pin=$('lk-pin').value.trim(), err=$('lk-err');
+  if(!emp||!pin){ err.textContent='Enter Staff ID and PIN'; return; }
+  var btn=$('lk-btn'); btn.disabled=true; btn.textContent='Checking...';
+  var tok=_newToken('ulk');
+  var rd=await postWithToken({ formType:'PALLET_UNLOCK', empNo:emp, pin:pin, clientToken:tok }, tok);
+  btn.disabled=false; btn.textContent='Sign in';
+  if(rd && rd.status==='success' && rd.authToken){
+    localStorage.setItem(AUTH_KEY, JSON.stringify({ token:rd.authToken, empNo:rd.empNo, name:rd.name }));
+    $('lk-pin').value=''; err.textContent=''; hideLock(); renderSession();
+    toast('ok','<b>Signed in</b> '+esc(rd.name||'')+' ('+esc(rd.empNo||'')+')');
+    ensureGrant();   // warm the photo grant in the background
+  } else {
+    err.textContent=(rd && rd.message)?rd.message:'Could not sign in - check connection';
+  }
+}
+function signOut(){
+  localStorage.removeItem(AUTH_KEY); _grant=''; _grantExp=0;
+  renderSession(); showLock();
+}
+function renderSession(){
+  var a=_auth(), box=$('sessionBox');
+  if(a && a.token){
+    box.innerHTML='<span class="who">'+esc(a.name||'')+' ('+esc(a.empNo||'')+')</span><button class="linkbtn" id="soBtn">Sign out</button>';
+    $('soBtn').addEventListener('click', signOut);
+  } else {
+    box.innerHTML='<button class="linkbtn" id="siBtn">Sign in</button>';
+    $('siBtn').addEventListener('click', function(){ showLock(); });
+  }
+}
+// Photo grant: short-lived, memory only. Returns '' on failure (and re-locks on auth loss).
+async function ensureGrant(){
+  if(_grant && Date.now() < _grantExp) return _grant;
+  var atk=_authToken();
+  if(!atk){ showLock('Sign in to fetch photos'); return ''; }
+  var tok=_newToken('grt');
+  var rd=await postWithToken({ formType:'GET_POD_SCAN_GRANT', authToken:atk, clientToken:tok }, tok);
+  if(rd && rd.status==='success' && rd.grant){
+    _grant=rd.grant; _grantExp=Date.now()+5.5*3600*1000;
+    return _grant;
+  }
+  _grant=''; _grantExp=0;
+  localStorage.removeItem(AUTH_KEY); renderSession();
+  showLock((rd&&rd.message)?rd.message:'Session expired - sign in again');
+  return '';
+}
+
+/* ============================================================================
+   ENGINE READINESS (vendored opencv.js loads async; fflate is sync)
+   ============================================================================ */
+function engineUp(){
+  _cvReady=true;
+  var c=$('engineChip'); c.className='chip ok'; $('engineTxt').textContent='Scan engine ready';
+  updateGates();
+}
+function pollCv(){
+  if(typeof cv==='undefined'){ setTimeout(pollCv,150); return; }
+  if(typeof cv.then==='function'){ cv.then(function(m){ window.cv=m; engineUp(); }); return; }
+  if(cv.Mat){ engineUp(); return; }
+  cv['onRuntimeInitialized']=engineUp;
+}
+if(typeof fflate==='undefined' || typeof fflate.zipSync!=='function'){
+  document.addEventListener('DOMContentLoaded', function(){
+    toast('err','vendor/fflate.min.js failed to load - ZIP export unavailable');
+  });
+}
+
+/* ============================================================================
+   ===CORE-BEGIN===  pure pipeline: PDF builder + OpenCV detect/warp/whiten.
+   These functions touch only `cv` + typed arrays (no DOM) so they can be
+   smoke-tested in Node against the same vendored opencv.js.
+   ============================================================================ */
+
+// Baseline-JPEG SOF parser -> {w,h,comps} (null if not found). Unsigned port
+// of _jpegSof_ from PodScanCopy.gs (Uint8Array is already 0..255).
+function jpegSof(u8){
+  var i=2, n=u8.length;
+  while(i < n-1){
+    if(u8[i] !== 0xFF){ i++; continue; }
+    var m=u8[i+1];
+    if(m === 0xC0 || m === 0xC1){                       // SOF0 baseline / SOF1 extended-sequential
+      return { h:(u8[i+5]<<8)|u8[i+6], w:(u8[i+7]<<8)|u8[i+8], comps:u8[i+9] };
+    }
+    if(m === 0xDA) break;                               // start of scan - stop
+    if(m === 0x01 || (m >= 0xD0 && m <= 0xD9)){ i+=2; continue; }   // standalone markers
+    i += 2 + ((u8[i+2]<<8) | u8[i+3]);                  // skip this segment
+  }
+  return null;
+}
+
+// Multi-page JPEG-in-PDF builder - byte-for-byte port of _buildImagePdf_ from
+// PodScanCopy.gs (validated there in Node + pdfium). pages: [{bytes:Uint8Array,
+// w, h, comps}]. Returns a Uint8Array of the whole PDF.
+// Objects: 1=Catalog, 2=Pages, then per page p: 3+3p=Page, 4+3p=Image, 5+3p=Content.
+function buildImagePdf(pages){
+  var chunks=[], len=0, off={};
+  function S(str){
+    var a=new Uint8Array(str.length);
+    for(var i=0;i<str.length;i++) a[i]=str.charCodeAt(i)&0xFF;   // ASCII (all <=127)
+    chunks.push(a); len+=a.length;
+  }
+  function BIN(u8){ chunks.push(u8); len+=u8.length; }
+  function beginObj(num){ off[num]=len; S(num+' 0 obj\n'); }
+
+  S('%PDF-1.4\n');
+  BIN(new Uint8Array([0x25,0xE2,0xE3,0xCF,0xD3,0x0A]));          // binary-file marker
+
+  var N=pages.length;
+  beginObj(1); S('<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+  var kids=[];
+  for(var p=0;p<N;p++) kids.push((3+p*3)+' 0 R');
+  beginObj(2); S('<< /Type /Pages /Kids ['+kids.join(' ')+'] /Count '+N+' >>\nendobj\n');
+
+  for(var q=0;q<N;q++){
+    var pg=pages[q], pageNum=3+q*3, imgNum=4+q*3, contNum=5+q*3;
+    var cs = pg.comps===1?'/DeviceGray':(pg.comps===4?'/DeviceCMYK':'/DeviceRGB');
+    beginObj(pageNum);
+    S('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+pg.w+' '+pg.h+'] /Resources << /XObject << /Im0 '+imgNum+' 0 R >> /ProcSet [/PDF /ImageC] >> /Contents '+contNum+' 0 R >>\nendobj\n');
+    beginObj(imgNum);
+    S('<< /Type /XObject /Subtype /Image /Width '+pg.w+' /Height '+pg.h+' /ColorSpace '+cs+' /BitsPerComponent 8 /Filter /DCTDecode /Length '+pg.bytes.length+' >>\nstream\n');
+    BIN(pg.bytes);
+    S('\nendstream\nendobj\n');
+    var content='q\n'+pg.w+' 0 0 '+pg.h+' 0 0 cm\n/Im0 Do\nQ\n';
+    beginObj(contNum);
+    S('<< /Length '+content.length+' >>\nstream\n'); S(content); S('endstream\nendobj\n');
+  }
+
+  var maxObj=2+N*3, xrefOff=len;
+  S('xref\n0 '+(maxObj+1)+'\n0000000000 65535 f \n');
+  for(var o=1;o<=maxObj;o++){
+    var s=''+(off[o]||0); while(s.length<10) s='0'+s;
+    S(s+' 00000 n \n');
+  }
+  S('trailer\n<< /Size '+(maxObj+1)+' /Root 1 0 R >>\nstartxref\n'+xrefOff+'\n%%EOF\n');
+
+  var out=new Uint8Array(len), pos=0;
+  for(var c=0;c<chunks.length;c++){ out.set(chunks[c], pos); pos+=chunks[c].length; }
+  return out;
+}
+
+function _dist(a,b){ var dx=a[0]-b[0], dy=a[1]-b[1]; return Math.sqrt(dx*dx+dy*dy); }
+
+// DETECT (bench step 1): background-flatten the gray, Otsu, close, largest
+// external contour, hull corners by diagonal projections, area + aspect gates.
+// Returns { quad:[TL,TR,BR,BL], contour:Mat (caller must .delete()) } or null.
+// NOTE: explicit Gaussian ksizes 127 / 5 equal OpenCV's auto ksize for
+// sigma 21 / the bench's (5,5),0 - identical output to the python bench.
+function detectDocQuad(gray){
+  var W=gray.cols, H=gray.rows;
+  var k31=cv.Mat.ones(31,31,cv.CV_8UC1);
+  var dil=new cv.Mat(); cv.dilate(gray,dil,k31); k31.delete();
+  var bgL=new cv.Mat(); cv.GaussianBlur(dil,bgL,new cv.Size(127,127),21); dil.delete();
+
+  var flat=new cv.Mat(H,W,cv.CV_8UC1);
+  var g=gray.data, b=bgL.data, f=flat.data, n=W*H;
+  for(var i=0;i<n;i++){
+    var v=g[i]/Math.max(b[i],30)*200;
+    f[i]=v>255?255:v;
+  }
+  bgL.delete();
+
+  var fb=new cv.Mat(); cv.GaussianBlur(flat,fb,new cv.Size(5,5),0); flat.delete();
+  var bin=new cv.Mat(); cv.threshold(fb,bin,0,255,cv.THRESH_BINARY+cv.THRESH_OTSU); fb.delete();
+  var k9=cv.Mat.ones(9,9,cv.CV_8UC1); cv.morphologyEx(bin,bin,cv.MORPH_CLOSE,k9); k9.delete();
+
+  var contours=new cv.MatVector(), hier=new cv.Mat();
+  cv.findContours(bin,contours,hier,cv.RETR_EXTERNAL,cv.CHAIN_APPROX_SIMPLE);
+  bin.delete(); hier.delete();
+
+  var best=-1, bestArea=0;
+  for(var c=0;c<contours.size();c++){
+    var cnt=contours.get(c), a=cv.contourArea(cnt);
+    if(a>bestArea){ bestArea=a; best=c; }
+    cnt.delete();
+  }
+  if(best<0 || bestArea < 0.30*W*H){ contours.delete(); return null; }   // refuse: too small
+
+  var picked=contours.get(best), contour=picked.clone();
+  var hull=new cv.Mat(); cv.convexHull(picked,hull);
+  picked.delete(); contours.delete();
+
+  // corner points by diagonal projections over the hull
+  var pts=hull.data32S, m=hull.rows;
+  var TL=null,TR=null,BR=null,BL=null, vTL=Infinity, vTR=Infinity, vBR=-Infinity, vBL=-Infinity;
+  for(var h=0;h<m;h++){
+    var x=pts[h*2], y=pts[h*2+1];
+    if(x+y<vTL){ vTL=x+y; TL=[x,y]; }     // TL = min(x+y)
+    if(y-x<vTR){ vTR=y-x; TR=[x,y]; }     // TR = min(y-x)
+    if(x+y>vBR){ vBR=x+y; BR=[x,y]; }     // BR = max(x+y)
+    if(y-x>vBL){ vBL=y-x; BL=[x,y]; }     // BL = max(y-x)
+  }
+  hull.delete();
+  if(!TL||!TR||!BR||!BL){ contour.delete(); return null; }
+
+  var wTop=_dist(TL,TR), wBot=_dist(BL,BR), hL=_dist(TL,BL), hR=_dist(TR,BR);
+  if(hL+hR<=0){ contour.delete(); return null; }
+  var aspect=(wTop+wBot)/(hL+hR);
+  if(aspect<0.45 || aspect>2.4){ contour.delete(); return null; }        // refuse: bad aspect
+
+  return { quad:[TL,TR,BR,BL], contour:contour };
+}
+
+// WHITEN (bench step 4) + optional SCANNER LID (step 3 mask applied after 4).
+// rgb: CV_8UC3 Mat. lidMask: CV_8UC1 Mat (same size) or null.
+// Returns a plain {data:Uint8ClampedArray(RGBA), width, height}.
+function whitenCompose(rgb, lidMask){
+  var W=rgb.cols, H=rgb.rows, n=W*H;
+  var chans=new cv.MatVector(); cv.split(rgb, chans);
+  var kClose=cv.getStructuringElement(cv.MORPH_ELLIPSE, new cv.Size(25,25));
+  var bgs=[];
+  for(var c=0;c<3;c++){
+    var ch=chans.get(c), closed=new cv.Mat(), bg=new cv.Mat();
+    cv.morphologyEx(ch, closed, cv.MORPH_CLOSE, kClose);
+    cv.GaussianBlur(closed, bg, new cv.Size(37,37), 6);   // 37 == OpenCV auto ksize for sigma 6 (8U)
+    bgs.push(bg); closed.delete(); ch.delete();
+  }
+  kClose.delete(); chans.delete();
+
+  var src=rgb.data, b0=bgs[0].data, b1=bgs[1].data, b2=bgs[2].data;
+  var maskData = lidMask ? lidMask.data : null;
+  var out=new Uint8ClampedArray(n*4);
+  for(var i=0,j=0,k=0;i<n;i++,j+=3,k+=4){
+    if(maskData && maskData[i]<128){ out[k]=255; out[k+1]=255; out[k+2]=255; out[k+3]=255; continue; }
+    var r0=src[j]  /Math.max(b0[i],40);
+    var r1=src[j+1]/Math.max(b1[i],40);
+    var r2=src[j+2]/Math.max(b2[i],40);
+    var o0=r0*250; if(o0>255)o0=255;
+    var o1=r1*250; if(o1>255)o1=255;
+    var o2=r2*250; if(o2>255)o2=255;
+    var rmin=r0<r1?(r0<r2?r0:r2):(r1<r2?r1:r2);
+    var wS=(rmin-0.70)/0.15; if(wS<0)wS=0; else if(wS>1)wS=1;             // white-snap
+    if(wS>0){ o0=o0*(1-wS)+255*wS; o1=o1*(1-wS)+255*wS; o2=o2*(1-wS)+255*wS; }
+    var dS=(0.50-rmin)/0.22; if(dS<0)dS=0; else if(dS>1)dS=1;             // ink deepen
+    if(dS>0){ var fm=1-0.30*dS; o0*=fm; o1*=fm; o2*=fm; }
+    out[k]=o0; out[k+1]=o1; out[k+2]=o2; out[k+3]=255;
+  }
+  bgs[0].delete(); bgs[1].delete(); bgs[2].delete();
+  return { data:out, width:W, height:H };
+}
+
+// WARP (bench step 2) + LID (step 3) + WHITEN (step 4) with a given quad.
+// rgb: CV_8UC3 Mat. quad: [TL,TR,BR,BL] in rgb coords. contourMat: the RAW
+// detected contour (or a 4-point quad Mat for manual mode) - used for the lid.
+function warpWithQuad(rgb, quad, contourMat){
+  var wTop=_dist(quad[0],quad[1]), wBot=_dist(quad[3],quad[2]);
+  var hL=_dist(quad[0],quad[3]),  hR=_dist(quad[1],quad[2]);
+  var outW=Math.max(8, Math.round(Math.max(wTop,wBot)));
+  var outH=Math.max(8, Math.round(Math.max(hL,hR)));
+  var mx=Math.max(outW,outH);
+  if(mx>MAX_SIDE){ var sc=MAX_SIDE/mx; outW=Math.max(8,Math.round(outW*sc)); outH=Math.max(8,Math.round(outH*sc)); }
+
+  var srcTri=cv.matFromArray(4,1,cv.CV_32FC2,[
+    quad[0][0],quad[0][1], quad[1][0],quad[1][1], quad[2][0],quad[2][1], quad[3][0],quad[3][1] ]);
+  var dstTri=cv.matFromArray(4,1,cv.CV_32FC2,[ 0,0, outW-1,0, outW-1,outH-1, 0,outH-1 ]);
+  var M=cv.getPerspectiveTransform(srcTri,dstTri);
+  srcTri.delete(); dstTri.delete();
+
+  var warped=new cv.Mat();
+  cv.warpPerspective(rgb,warped,M,new cv.Size(outW,outH));
+
+  // scanner lid: fill the RAW contour, warp the mask with the same M, erode 1.5%
+  var maskSrc=cv.Mat.zeros(rgb.rows,rgb.cols,cv.CV_8UC1);
+  var vec=new cv.MatVector(); vec.push_back(contourMat);
+  cv.drawContours(maskSrc,vec,0,new cv.Scalar(255,255,255,255),-1);
+  vec.delete();
+  var maskW=new cv.Mat();
+  cv.warpPerspective(maskSrc,maskW,M,new cv.Size(outW,outH));
+  maskSrc.delete(); M.delete();
+  var ek=Math.round(0.015*Math.max(outW,outH));
+  if(ek>=1){
+    var eK=cv.Mat.ones(ek,ek,cv.CV_8UC1);
+    cv.erode(maskW,maskW,eK); eK.delete();
+  }
+
+  var res=whitenCompose(warped,maskW);
+  warped.delete(); maskW.delete();
+  return res;
+}
+
+// Full pipeline on one RGBA image ({data,width,height}). Returns
+// { out:{data,width,height}, mode:'scan'|'whiten' } - throws on engine errors
+// (caller ladders down to RAW).
+function processImageData(rgba){
+  var src=cv.matFromImageData(rgba);
+  var rgb=new cv.Mat(), gray=new cv.Mat();
+  try{
+    cv.cvtColor(src,rgb,cv.COLOR_RGBA2RGB);
+    cv.cvtColor(src,gray,cv.COLOR_RGBA2GRAY);
+    src.delete(); src=null;
+    var det=detectDocQuad(gray);
+    gray.delete(); gray=null;
+    var out, mode;
+    if(det){
+      out=warpWithQuad(rgb,det.quad,det.contour);
+      det.contour.delete();
+      mode='scan';
+    } else {
+      out=whitenCompose(rgb,null);   // detect refused -> whiten-only full frame
+      mode='whiten';
+    }
+    rgb.delete(); rgb=null;
+    return { out:out, mode:mode };
+  } finally {
+    if(src) src.delete();
+    if(rgb) rgb.delete();
+    if(gray) gray.delete();
+  }
+}
+
+// Manual corner rerun: same warp+whiten, quad supplied by the user, gates skipped.
+function processImageDataManual(rgba, quad){
+  var src=cv.matFromImageData(rgba);
+  var rgb=new cv.Mat();
+  var contour=null;
+  try{
+    cv.cvtColor(src,rgb,cv.COLOR_RGBA2RGB);
+    src.delete(); src=null;
+    contour=cv.matFromArray(4,1,cv.CV_32SC2,[
+      Math.round(quad[0][0]),Math.round(quad[0][1]),
+      Math.round(quad[1][0]),Math.round(quad[1][1]),
+      Math.round(quad[2][0]),Math.round(quad[2][1]),
+      Math.round(quad[3][0]),Math.round(quad[3][1]) ]);
+    var out=warpWithQuad(rgb,quad,contour);
+    return { out:out, mode:'scan' };
+  } finally {
+    if(src) src.delete();
+    rgb.delete();
+    if(contour) contour.delete();
+  }
+}
+/* ===CORE-END=== */
+
+/* ============================================================================
+   IMAGE I/O (browser side)
+   ============================================================================ */
+function blobToImage(blob){
+  return new Promise(function(res,rej){
+    var u=URL.createObjectURL(blob), im=new Image();
+    im.onload=function(){ URL.revokeObjectURL(u); res(im); };
+    im.onerror=function(){ URL.revokeObjectURL(u); rej(new Error('image decode failed')); };
+    im.src=u;
+  });
+}
+// decode blob -> canvas, longest side capped (pipeline + corner editor share this,
+// so manual quads are always in the same coordinate space).
+async function decodeToCanvas(blob){
+  var bmp=null;
+  try{ bmp=await createImageBitmap(blob); }catch(e){ bmp=await blobToImage(blob); }
+  var w=bmp.width, h=bmp.height;
+  if(!w || !h) throw new Error('empty image');
+  var s=Math.min(1, MAX_SIDE/Math.max(w,h));
+  var cw=Math.max(1,Math.round(w*s)), ch=Math.max(1,Math.round(h*s));
+  var cnv=document.createElement('canvas'); cnv.width=cw; cnv.height=ch;
+  cnv.getContext('2d').drawImage(bmp,0,0,cw,ch);
+  if(bmp.close) bmp.close();
+  return cnv;
+}
+function canvasToJpeg(cnv,q){
+  return new Promise(function(res,rej){
+    cnv.toBlob(function(b){ if(b) res(b); else rej(new Error('JPEG encode failed')); },'image/jpeg',q);
+  });
+}
+function outToJpeg(out,q){
+  var cnv=document.createElement('canvas'); cnv.width=out.width; cnv.height=out.height;
+  cnv.getContext('2d').putImageData(new ImageData(out.data,out.width,out.height),0,0);
+  return canvasToJpeg(cnv,q);
+}
+
+// Process one photo blob through the full ladder. Never throws:
+// success -> SCAN / WHITEN; engine exception -> RAW re-encode; decode
+// failure -> RAW original bytes (if baseline JPEG) else a failed photo.
+async function processPhotoBlob(blob){
+  var cnv=null;
+  try{ cnv=await decodeToCanvas(blob); }
+  catch(eDecode){
+    var u8=new Uint8Array(await blob.arrayBuffer());
+    var sof=jpegSof(u8);
+    if(sof && sof.w>0 && sof.h>0) return { blob:blob, bytes:u8, w:sof.w, h:sof.h, comps:sof.comps, mode:'raw', note:'decode failed - original bytes kept' };
+    return { failed:true, err:'not a readable image' };
+  }
+  try{
+    var ctx=cnv.getContext('2d');
+    var rgba=ctx.getImageData(0,0,cnv.width,cnv.height);
+    var r=processImageData(rgba);
+    var jb=await outToJpeg(r.out,JPEG_Q);
+    return { blob:jb, w:r.out.width, h:r.out.height, comps:3, mode:r.mode };
+  }catch(err){
+    try{
+      var rb=await canvasToJpeg(cnv,JPEG_Q);   // raw passthrough re-encode
+      return { blob:rb, w:cnv.width, h:cnv.height, comps:3, mode:'raw', note:String(err&&err.message?err.message:err) };
+    }catch(e2){
+      return { failed:true, err:String(err&&err.message?err.message:err) };
+    }
+  }
+}
+
+/* ============================================================================
+   DAY LOAD (server mode)
+   ============================================================================ */
+function extractFileId(url){
+  var m=String(url||'').match(/[-\w]{25,}/);
+  return m?m[0]:'';
+}
+function resetDay(){
+  if(_day){
+    _day.invoices.forEach(function(inv){ inv.photos.forEach(function(p){ freePhoto(p); }); });
+  }
+  _day=null; _runId='';
+  $('grid').innerHTML='<div class="empty">Nothing loaded yet.</div>';
+  $('pbarFill').style.width='0%'; $('progText').textContent='';
+  $('missLine').className='missline'; $('noPhotoLine').className='warnline';
+  $('stampLine').textContent=''; $('stampLine').className='stampline';
+  updateGates();
+}
+function freePhoto(p){
+  if(p.thumbUrl){ URL.revokeObjectURL(p.thumbUrl); p.thumbUrl=null; }
+  if(p.origUrl){ URL.revokeObjectURL(p.origUrl); p.origUrl=null; }
+  p.origBlob=null; p.result=null; p.fetchP=null;
+}
+async function loadDay(){
+  if(_running) return;
+  resetDay();
+  var date=$('date').value;
+  if(!date){ toast('err','Pick a date first'); return; }
+  $('loadBtn').disabled=true; $('summaryLine').textContent='Loading '+date+' ('+BRANCH+') ...';
+  try{
+    var res=await fetch(SCRIPT_URL+'?action=getPodAdminBoard&date='+encodeURIComponent(date)+'&branch='+encodeURIComponent(BRANCH));
+    var data=await res.json();
+    if(!data || data.status!=='ok' || !Array.isArray(data.lorries)) throw new Error((data&&data.message)||'unexpected response');
+    var invoices=[], noPhoto=[];
+    data.lorries.forEach(function(L){
+      var plate=String(L.vehicleNo||'UNKNOWN');
+      (L.invoices||[]).forEach(function(v){
+        if(String(v.status||'').toLowerCase()!=='delivered') return;
+        var ids=(v.photoUrls||[]).map(extractFileId).filter(String);
+        var rec={
+          plate:plate, shipmentKey:String(L.shipmentKey||''), invoiceNo:String(v.invoiceNo||''),
+          customer:String(v.customer||v.customerName||v.custCode||''),
+          deliveredDate:String(v.deliveredDate||''), invoiceDate:String(v.invoiceDate||''),
+          photos:ids.map(function(fid){ return { fileId:fid, origBlob:null, fetchP:null, result:null, failedErr:'' }; })
+        };
+        if(rec.photos.length) invoices.push(rec); else noPhoto.push(rec);
+      });
+    });
+    _day={ date:date, branch:BRANCH, local:false, invoices:invoices, noPhoto:noPhoto };
+    var nPhotos=invoices.reduce(function(a,v){ return a+v.photos.length; },0);
+    $('summaryLine').innerHTML='<b>'+invoices.length+'</b> delivered invoice(s) with photos - <b>'+nPhotos+'</b> photo(s) - '+ddmmyyyy(date)+' - '+(BRANCH==='KTN'?'Kuantan':'Mentakab');
+    if(noPhoto.length){
+      var names=noPhoto.map(function(v){ return esc(v.invoiceNo); });
+      $('noPhotoLine').innerHTML='<b>'+noPhoto.length+'</b> delivered invoice(s) have no POD photo and will NOT be in the ZIP: '+names.slice(0,25).join(', ')+(names.length>25?' and '+(names.length-25)+' more':'');
+      $('noPhotoLine').className='warnline show';
+    }
+    if(!invoices.length){
+      $('grid').innerHTML='<div class="empty">No delivered invoices with photos on this date.</div>';
+    } else {
+      renderGrid();
+    }
+  }catch(err){
+    $('summaryLine').textContent='Could not load the day - '+(err&&err.message?err.message:'check connection');
+    toast('err','Load failed: '+esc(err&&err.message?err.message:err));
+  }
+  $('loadBtn').disabled=false;
+  updateGates();
+}
+
+/* ============================================================================
+   LOCAL FILES MODE (same pipeline, no backend, no stamping)
+   ============================================================================ */
+function loadLocal(files){
+  if(_running || !files || !files.length) return;
+  resetDay();
+  var invoices=[];
+  for(var i=0;i<files.length;i++){
+    var f=files[i];
+    var base=sanitizeName(String(f.name||('IMG_'+(i+1))).replace(/\.[^.]+$/,''))||('IMG_'+(i+1));
+    invoices.push({
+      plate:'LOCAL', shipmentKey:'', invoiceNo:base, customer:f.name||'',
+      deliveredDate:'', invoiceDate:'',
+      photos:[{ fileId:'', origBlob:f, fetchP:null, result:null, failedErr:'' }]
+    });
+  }
+  _day={ date:todayKL(), branch:'LOCAL', local:true, invoices:invoices, noPhoto:[] };
+  $('summaryLine').innerHTML='<b>'+invoices.length+'</b> local image(s) loaded - LOCAL run (no backend, no stamping)';
+  renderGrid(); updateGates();
+}
+
+/* ============================================================================
+   RUN - prefetch pool (max 5 parallel) + sequential main-thread pipeline
+   ============================================================================ */
+var _poolActive=0, _poolQueue=[];
+function pooledTask(fn){
+  return new Promise(function(res,rej){ _poolQueue.push({fn:fn,res:res,rej:rej}); drainPool(); });
+}
+function drainPool(){
+  while(_poolActive<FETCH_POOL && _poolQueue.length){
+    (function(t){
+      _poolActive++;
+      t.fn().then(
+        function(v){ _poolActive--; drainPool(); t.res(v); },
+        function(e){ _poolActive--; drainPool(); t.rej(e); });
+    })(_poolQueue.shift());
+  }
+}
+async function fetchPhotoBlob(fileId){
+  var r=await fetch(SCRIPT_URL+'?action=getPodPhoto&id='+encodeURIComponent(fileId)+'&grant='+encodeURIComponent(_grant));
+  var d=await r.json();
+  if(!d || d.status!=='ok' || !d.b64) throw new Error((d&&d.message)||'photo fetch failed');
+  var u8=b64ToU8(d.b64);
+  return new Blob([u8],{type:d.mime||'image/jpeg'});
+}
+function ensureFetch(p){
+  if(p.origBlob || p.fetchP) return;
+  p.fetchP=pooledTask(function(){ return fetchPhotoBlob(p.fileId); });
+}
+function allPhotos(){
+  var list=[];
+  if(_day) _day.invoices.forEach(function(inv){ inv.photos.forEach(function(p){ list.push({inv:inv,p:p}); }); });
+  return list;
+}
+function invDone(inv){ return inv.photos.every(function(p){ return !!p.result; }); }
+
+async function runAll(){
+  if(_running || !_day || !_cvReady) return;
+  if(!_day.local){
+    var g=await ensureGrant();
+    if(!g) return;
+  }
+  _running=true;
+  if(!_runId) _runId=_newToken('run');
+  $('runBtn').disabled=true; $('loadBtn').disabled=true; $('localBtn').disabled=true;
+  $('stampLine').textContent=''; $('stampLine').className='stampline';
+
+  var todo=allPhotos().filter(function(t){ return !t.p.result; });
+  var total=todo.length, doneN=0, failN=0;
+  for(var i=0;i<todo.length;i++){
+    var t=todo[i], inv=t.inv, p=t.p;
+    // sliding prefetch window (pool caps real parallelism at FETCH_POOL)
+    if(!_day.local){
+      for(var a=i;a<Math.min(todo.length,i+PREFETCH_AHEAD);a++){
+        if(todo[a].p.fileId) ensureFetch(todo[a].p);
+      }
+    }
+    var pn=inv.photos.indexOf(p)+1;
+    $('progText').textContent='Processing '+inv.invoiceNo+' - photo '+pn+'/'+inv.photos.length+' ('+(doneN+failN+1)+'/'+total+')';
+    try{
+      if(!p.origBlob){
+        try{ p.origBlob=await p.fetchP; }
+        catch(eFetch){
+          p.fetchP=null;                                     // one retry
+          ensureFetch(p);
+          p.origBlob=await p.fetchP;
+        }
+      }
+      var res=await processPhotoBlob(p.origBlob);
+      if(res.failed){ p.failedErr=res.err||'failed'; failN++; }
+      else { setPhotoResult(p,res); doneN++; }
+    }catch(err){
+      p.failedErr=String(err&&err.message?err.message:err); failN++;
+    }
+    p.fetchP=null;
+    $('pbarFill').style.width=Math.round((doneN+failN)/total*100)+'%';
+    updateCell(inv);
+    await new Promise(function(r){ setTimeout(r,0); });      // keep the UI alive between photos
+  }
+  $('progText').textContent='Done: '+doneN+' photo(s) processed'+(failN?(', '+failN+' failed - press Run to retry the failed ones'):'');
+  _running=false;
+  $('loadBtn').disabled=false; $('localBtn').disabled=false;
+  updateGates();
+}
+function setPhotoResult(p,res){
+  if(p.thumbUrl){ URL.revokeObjectURL(p.thumbUrl); p.thumbUrl=null; }
+  p.result=res; p.failedErr='';
+  if(res.blob) p.thumbUrl=URL.createObjectURL(res.blob);
+}
+
+/* ============================================================================
+   REVIEW GRID
+   ============================================================================ */
+var MODE_RANK={scan:0,whiten:1,raw:2};
+function invBadge(inv){
+  if(!inv.photos.length) return {cls:'wait',txt:'NO PHOTO'};
+  var anyFail=inv.photos.some(function(p){ return !p.result && p.failedErr; });
+  var pend=inv.photos.some(function(p){ return !p.result && !p.failedErr; });
+  if(anyFail) return {cls:'fail',txt:'FAILED'};
+  if(pend) return {cls:'wait',txt:'PENDING'};
+  var worst='scan';
+  inv.photos.forEach(function(p){ if(MODE_RANK[p.result.mode]>MODE_RANK[worst]) worst=p.result.mode; });
+  return {cls:worst, txt:worst.toUpperCase()};
+}
+function renderGrid(){
+  if(!_day || !_day.invoices.length){ $('grid').innerHTML='<div class="empty">Nothing loaded yet.</div>'; return; }
+  var byPlate={}, order=[];
+  _day.invoices.forEach(function(inv,i){
+    if(!byPlate[inv.plate]){ byPlate[inv.plate]=[]; order.push(inv.plate); }
+    byPlate[inv.plate].push(i);
+  });
+  var html='';
+  order.forEach(function(plate){
+    html+='<div class="plate-sec"><div class="plate-head"><span class="plate">'+esc(plate)+'</span><span class="mini">'+byPlate[plate].length+' invoice(s)</span></div><div class="cellgrid">';
+    byPlate[plate].forEach(function(i){ html+=cellHtml(i); });
+    html+='</div></div>';
+  });
+  $('grid').innerHTML=html;
+}
+function cellHtml(i){
+  var inv=_day.invoices[i], b=invBadge(inv);
+  var first=inv.photos[0];
+  var thumb=(first&&first.thumbUrl)
+    ? '<img src="'+first.thumbUrl+'" alt="processed">'
+    : '<span class="nothumb">'+(b.cls==='fail'?'failed':'not processed yet')+'</span>';
+  var showAdj = inv.photos.some(function(p){ return p.result && p.result.mode!=='scan'; });
+  return '<div class="cell" id="cell-'+i+'" data-i="'+i+'">'
+    +'<div class="thumbbox" data-i="'+i+'" data-act="cmp">'+thumb+'</div>'
+    +'<div class="rowline"><span class="inv-no">'+esc(inv.invoiceNo)+'</span><span class="badge '+b.cls+'">'+b.txt+'</span></div>'
+    +'<div class="cust">'+esc(inv.customer)+'</div>'
+    +'<div class="rowline"><span class="pcount">'+inv.photos.length+' photo(s)</span>'
+    +(showAdj?'<button class="btn adjust" data-i="'+i+'" data-act="adj">Adjust corners</button>':'')
+    +'</div></div>';
+}
+function updateCell(inv){
+  var i=_day.invoices.indexOf(inv);
+  var el=$('cell-'+i);
+  if(!el){ renderGrid(); return; }
+  var tmp=document.createElement('div'); tmp.innerHTML=cellHtml(i);
+  el.replaceWith(tmp.firstChild);
+}
+$('grid').addEventListener('click', function(e){
+  var t=e.target.closest('[data-act]'); if(!t||!_day) return;
+  var i=parseInt(t.getAttribute('data-i'),10), inv=_day.invoices[i];
+  if(!inv) return;
+  if(t.getAttribute('data-act')==='adj'){
+    var pi=0;
+    for(var k=0;k<inv.photos.length;k++){ var r=inv.photos[k].result; if(r&&r.mode!=='scan'){ pi=k; break; } }
+    openAdjust(i,pi);
+  } else {
+    openCompare(i,0);
+  }
+});
+
+/* ============================================================================
+   GATES - completeness check + button enable/disable
+   ============================================================================ */
+function updateGates(){
+  var haveDay=!!(_day && _day.invoices.length);
+  $('runBtn').disabled = !(haveDay && _cvReady && !_running);
+  var doneInv=0, missing=[];
+  if(haveDay){
+    _day.invoices.forEach(function(inv){ if(invDone(inv)) doneInv++; else missing.push(inv.invoiceNo); });
+  }
+  var complete = haveDay && doneInv===_day.invoices.length;
+  $('dlBtn').disabled = !(complete && !_running && typeof fflate!=='undefined');
+  var ml=$('missLine');
+  if(haveDay && missing.length && !_running){
+    ml.innerHTML='Download locked - <b>'+missing.length+'</b> invoice(s) not processed yet: '
+      +missing.slice(0,25).map(esc).join(', ')+(missing.length>25?' and '+(missing.length-25)+' more':'')
+      +'. Press Run to process them.';
+    ml.className='missline show';
+  } else {
+    ml.className='missline';
+  }
+  if(haveDay && !_running){
+    $('runBtn').textContent = (doneInv>0 && !complete) ? 'Run again' : (complete ? 'Re-run' : 'Run');
+  } else if(_running){
+    $('runBtn').textContent='Running...';
+  }
+}
+
+/* ============================================================================
+   COMPARE - fullscreen before/after
+   ============================================================================ */
+var _cmpInv=-1, _cmpPh=0;
+function openCompare(i,pi){
+  var inv=_day.invoices[i]; if(!inv) return;
+  _cmpInv=i; _cmpPh=pi||0;
+  $('cmpOverlay').classList.add('show');
+  paintCompare();
+}
+function paintCompare(){
+  var inv=_day.invoices[_cmpInv]; if(!inv) return;
+  var p=inv.photos[_cmpPh];
+  $('cmpCap').textContent=inv.invoiceNo+(inv.customer?(' - '+inv.customer):'')+' - '+inv.plate;
+  $('cmpPage').textContent='photo '+(_cmpPh+1)+' / '+inv.photos.length;
+  var multi=inv.photos.length>1;
+  $('cmpPrev').style.visibility=multi?'visible':'hidden';
+  $('cmpNext').style.visibility=multi?'visible':'hidden';
+  if(p.origBlob){
+    if(!p.origUrl) p.origUrl=URL.createObjectURL(p.origBlob);
+    $('cmpOrig').src=p.origUrl;
+  } else { $('cmpOrig').removeAttribute('src'); }
+  if(p.result && p.thumbUrl){
+    $('cmpProc').src=p.thumbUrl;
+    $('cmpBadge').innerHTML='<span class="badge '+p.result.mode+'">'+p.result.mode.toUpperCase()+(p.result.manual?' (manual)':'')+'</span>';
+  } else {
+    $('cmpProc').removeAttribute('src');
+    $('cmpBadge').innerHTML='<span class="badge '+(p.failedErr?'fail':'wait')+'">'+(p.failedErr?'FAILED':'PENDING')+'</span>';
+  }
+  $('cmpAdjust').style.display=(p.result && p.origBlob)?'':'none';
+}
+function closeCompare(){ $('cmpOverlay').classList.remove('show'); _cmpInv=-1; }
+$('cmpClose').addEventListener('click', closeCompare);
+$('cmpOverlay').addEventListener('click', function(e){ if(e.target===this) closeCompare(); });
+$('cmpPrev').addEventListener('click', function(){ var inv=_day.invoices[_cmpInv]; if(!inv)return; _cmpPh=(_cmpPh-1+inv.photos.length)%inv.photos.length; paintCompare(); });
+$('cmpNext').addEventListener('click', function(){ var inv=_day.invoices[_cmpInv]; if(!inv)return; _cmpPh=(_cmpPh+1)%inv.photos.length; paintCompare(); });
+$('cmpAdjust').addEventListener('click', function(){ var i=_cmpInv, pi=_cmpPh; closeCompare(); openAdjust(i,pi); });
+document.addEventListener('keydown', function(e){
+  if($('cmpOverlay').classList.contains('show')){
+    if(e.key==='Escape') closeCompare();
+    if(e.key==='ArrowLeft') $('cmpPrev').click();
+    if(e.key==='ArrowRight') $('cmpNext').click();
+  } else if($('adjOverlay').classList.contains('show')){
+    if(e.key==='Escape') closeAdjust();
+  }
+});
+
+/* ============================================================================
+   CORNER ADJUST - fullscreen original with 4 draggable circles
+   ============================================================================ */
+var _adjInv=-1, _adjPh=0, _adjCanvasImg=null, _adjQuad=null, _adjScale=1, _adjDrag=-1;
+var ADJ_LABELS=['TL','TR','BR','BL'];
+async function openAdjust(i,pi){
+  var inv=_day.invoices[i]; if(!inv) return;
+  var p=inv.photos[pi||0];
+  if(!p || !p.origBlob){ toast('err','Original photo not in memory - run first'); return; }
+  _adjInv=i; _adjPh=pi||0;
+  $('adjOverlay').classList.add('show');
+  $('adjCap').textContent='Loading photo ...';
+  try{
+    _adjCanvasImg=await decodeToCanvas(p.origBlob);   // SAME cap as the pipeline -> same coords
+  }catch(e){
+    toast('err','Could not decode this photo'); closeAdjust(); return;
+  }
+  var w=_adjCanvasImg.width, h=_adjCanvasImg.height;
+  _adjQuad=(p.manualQuad && p.manualQuad.length===4) ? p.manualQuad.map(function(q){ return q.slice(); }) : defaultQuad(w,h);
+  $('adjCap').textContent=inv.invoiceNo+' - drag the 4 circles onto the document corners, then Apply.';
+  $('adjPage').textContent='photo '+(_adjPh+1)+' / '+inv.photos.length;
+  var multi=inv.photos.length>1;
+  $('adjPrev').style.visibility=multi?'visible':'hidden';
+  $('adjNext').style.visibility=multi?'visible':'hidden';
+  fitAdjCanvas(); drawAdj();
+}
+function defaultQuad(w,h){
+  var ix=w*0.05, iy=h*0.05;   // image corners inset 5%
+  return [[ix,iy],[w-ix,iy],[w-ix,h-iy],[ix,h-iy]];
+}
+function fitAdjCanvas(){
+  var c=$('adjCanvas'), w=_adjCanvasImg.width, h=_adjCanvasImg.height;
+  var maxW=window.innerWidth*0.96, maxH=window.innerHeight*0.78;
+  _adjScale=Math.min(maxW/w, maxH/h, 1);
+  c.width=Math.round(w*_adjScale); c.height=Math.round(h*_adjScale);
+}
+function drawAdj(){
+  var c=$('adjCanvas'), ctx=c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+  ctx.drawImage(_adjCanvasImg,0,0,c.width,c.height);
+  ctx.save();
+  ctx.strokeStyle='#2563EB'; ctx.lineWidth=2; ctx.setLineDash([7,5]);
+  ctx.beginPath();
+  for(var i=0;i<4;i++){
+    var q=_adjQuad[i];
+    if(i===0) ctx.moveTo(q[0]*_adjScale,q[1]*_adjScale); else ctx.lineTo(q[0]*_adjScale,q[1]*_adjScale);
+  }
+  ctx.closePath(); ctx.stroke(); ctx.setLineDash([]);
+  for(var k=0;k<4;k++){
+    var pt=_adjQuad[k], x=pt[0]*_adjScale, y=pt[1]*_adjScale;
+    ctx.beginPath(); ctx.arc(x,y,11,0,Math.PI*2);
+    ctx.fillStyle=(k===_adjDrag)?'rgba(37,99,235,.95)':'rgba(37,99,235,.65)';
+    ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.font='bold 9px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(ADJ_LABELS[k],x,y);
+  }
+  ctx.restore();
+}
+function adjPos(ev){
+  var r=$('adjCanvas').getBoundingClientRect();
+  return [ (ev.clientX-r.left)/_adjScale, (ev.clientY-r.top)/_adjScale ];
+}
+$('adjCanvas').addEventListener('pointerdown', function(ev){
+  if(!_adjQuad) return;
+  var m=adjPos(ev), best=-1, bestD=28/_adjScale;
+  for(var i=0;i<4;i++){ var d=_dist(m,_adjQuad[i]); if(d<bestD){ bestD=d; best=i; } }
+  _adjDrag=best;
+  if(best>=0){ this.setPointerCapture(ev.pointerId); drawAdj(); }
+});
+$('adjCanvas').addEventListener('pointermove', function(ev){
+  if(_adjDrag<0 || !_adjQuad) return;
+  var m=adjPos(ev), w=_adjCanvasImg.width, h=_adjCanvasImg.height;
+  _adjQuad[_adjDrag]=[ Math.max(0,Math.min(w-1,m[0])), Math.max(0,Math.min(h-1,m[1])) ];
+  drawAdj();
+});
+$('adjCanvas').addEventListener('pointerup', function(){ _adjDrag=-1; drawAdj(); });
+$('adjReset').addEventListener('click', function(){
+  if(_adjCanvasImg){ _adjQuad=defaultQuad(_adjCanvasImg.width,_adjCanvasImg.height); drawAdj(); }
+});
+function adjStep(dir){
+  var inv=_day.invoices[_adjInv]; if(!inv) return;
+  var pi=(_adjPh+dir+inv.photos.length)%inv.photos.length;
+  openAdjust(_adjInv,pi);
+}
+$('adjPrev').addEventListener('click', function(){ adjStep(-1); });
+$('adjNext').addEventListener('click', function(){ adjStep(1); });
+function closeAdjust(){ $('adjOverlay').classList.remove('show'); _adjInv=-1; _adjCanvasImg=null; _adjQuad=null; _adjDrag=-1; }
+$('adjCancel').addEventListener('click', closeAdjust);
+$('adjApply').addEventListener('click', async function(){
+  if(_adjInv<0 || !_adjQuad || !_cvReady) return;
+  var inv=_day.invoices[_adjInv], p=inv.photos[_adjPh];
+  var quad=_adjQuad.map(function(q){ return q.slice(); });
+  var btn=$('adjApply'); btn.disabled=true; btn.textContent='Applying...';
+  try{
+    var cnv=await decodeToCanvas(p.origBlob);
+    var rgba=cnv.getContext('2d').getImageData(0,0,cnv.width,cnv.height);
+    var r=processImageDataManual(rgba,quad);
+    var jb=await outToJpeg(r.out,JPEG_Q);
+    setPhotoResult(p,{ blob:jb, w:r.out.width, h:r.out.height, comps:3, mode:'scan', manual:true });
+    p.manualQuad=quad;
+    updateCell(inv); updateGates();
+    toast('ok','Corners applied - '+esc(inv.invoiceNo)+' rebuilt as SCAN');
+    closeAdjust();
+  }catch(err){
+    toast('err','Adjust failed: '+esc(err&&err.message?err.message:err));
+  }
+  btn.disabled=false; btn.textContent='Apply';
+});
+
+/* ============================================================================
+   ZIP DOWNLOAD (fflate STORE) + MARK_SCAN_COPY stamp
+   ============================================================================ */
+async function photoPdfPage(p){
+  var r=p.result;
+  var bytes=r.bytes || new Uint8Array(await r.blob.arrayBuffer());
+  var sof=jpegSof(bytes);
+  return {
+    bytes:bytes,
+    w:(sof&&sof.w>0)?sof.w:r.w,
+    h:(sof&&sof.h>0)?sof.h:r.h,
+    comps:(sof&&sof.comps)?sof.comps:(r.comps||3)
+  };
+}
+async function downloadZip(){
+  if(!_day || _running) return;
+  var invs=_day.invoices.filter(invDone);
+  if(invs.length!==_day.invoices.length){ toast('err','Not all invoices processed yet'); return; }
+  var btn=$('dlBtn'); btn.disabled=true; btn.textContent='Building ZIP...';
+  try{
+    var rootDate=ddmmyyyy(_day.date);
+    var files={}, used={};
+    for(var i=0;i<invs.length;i++){
+      var inv=invs[i];
+      var pages=[];
+      for(var k=0;k<inv.photos.length;k++) pages.push(await photoPdfPage(inv.photos[k]));
+      var pdf=buildImagePdf(pages);
+      var folder='CLF_POD_Scans/'+rootDate+'/'+(sanitizeName(inv.plate)||'UNKNOWN')+'/';
+      var fileDate=ddmmyyyy(inv.invoiceDate || inv.deliveredDate || _day.date);
+      var base=sanitizeName(inv.invoiceNo)+'_'+fileDate, name=base+'.pdf', dup=2;
+      while(used[folder+name]){ name=base+'('+dup+').pdf'; dup++; }
+      used[folder+name]=1;
+      files[folder+name]=pdf;
+      if(i%10===9) await new Promise(function(r){ setTimeout(r,0); });
+    }
+    var zipped=fflate.zipSync(files,{level:0});   // STORE - JPEG-PDFs do not recompress
+    var zname='CLF_POD_Scans_'+(_day.local?('LOCAL_'+rootDate):(rootDate+'_'+_day.branch))+'.zip';
+    var blob=new Blob([zipped],{type:'application/zip'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob); a.download=zname;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); },30000);
+    toast('ok','ZIP ready: '+esc(zname)+' ('+invs.length+' PDF'+(invs.length===1?'':'s')+')');
+    if(!_day.local) stampScanCopy(invs);
+    else { $('stampLine').textContent='LOCAL run - no backend stamping.'; $('stampLine').className='stampline'; }
+  }catch(err){
+    toast('err','ZIP failed: '+esc(err&&err.message?err.message:err));
+  }
+  btn.disabled=false; btn.textContent='Download ZIP';
+  updateGates();
+}
+async function stampScanCopy(invs){
+  var sl=$('stampLine');
+  sl.textContent='Stamping archive on the backend ...'; sl.className='stampline';
+  var g=await ensureGrant();
+  if(!g){ sl.textContent='Stamp skipped - session expired. Sign in and press Download again.'; sl.className='stampline err'; return; }
+  var list=invs.map(function(inv){ return { shipmentKey:inv.shipmentKey, invoiceNo:inv.invoiceNo }; });
+  var tok=_newToken('stp');
+  var rd=await postWithToken({ formType:'MARK_SCAN_COPY', grant:g, date:_day.date, branch:_day.branch,
+                               runId:_runId, invoices:list, clientToken:tok }, tok);
+  if(rd && rd.status==='success'){
+    sl.textContent='Archive stamped on the backend: '+(rd.stamped!=null?rd.stamped:list.length)+' invoice(s) marked SCAN_COPY.';
+    sl.className='stampline ok';
+  } else {
+    sl.innerHTML='Stamp failed: '+esc((rd&&rd.message)||'server error')+' <button class="linkbtn" id="restampBtn">Retry stamp</button>';
+    sl.className='stampline err';
+    var rb=$('restampBtn'); if(rb) rb.addEventListener('click', function(){ stampScanCopy(invs); });
+  }
+}
+
+/* ============================================================================
+   BOOT
+   ============================================================================ */
+$('date').value=yesterdayKL(); $('date').max=todayKL();
+$('date').addEventListener('change', function(){ if(_day && !_day.local) resetDay(); });
+document.querySelectorAll('#branchSeg .seg-btn').forEach(function(b){
+  b.addEventListener('click', function(){
+    if(_running) return;
+    document.querySelectorAll('#branchSeg .seg-btn').forEach(function(x){ x.classList.remove('active'); });
+    b.classList.add('active'); BRANCH=b.getAttribute('data-branch');
+    if(_day && !_day.local) resetDay();
+  });
+});
+$('loadBtn').addEventListener('click', loadDay);
+$('runBtn').addEventListener('click', runAll);
+$('dlBtn').addEventListener('click', downloadZip);
+$('localBtn').addEventListener('click', function(){ if(!_running) $('localInput').click(); });
+$('localInput').addEventListener('change', function(){ loadLocal(this.files); this.value=''; });
+$('lk-btn').addEventListener('click', doUnlock);
+$('lk-pin').addEventListener('keydown', function(e){ if(e.key==='Enter') doUnlock(); });
+$('lk-local').addEventListener('click', function(){ hideLock(); $('localInput').click(); });
+
+renderSession();
+if(!_auth()) showLock();
+pollCv();
+updateGates();
+</script>
+</body>
+</html>
