@@ -495,6 +495,13 @@ async function fetchVehicles() {
   }
 }
 
+// [FIELD DEBUG] on-screen error bar — only on the staging copy or with ?debug=1 (office can ask any
+// driver to open the form with ?debug=1 to read a device-specific failure off the screen).
+var _DBG_ON_ = /debug=1/.test(location.search) || /_v2/.test(location.pathname);
+function _dbgToast_(msg){ if(!_DBG_ON_) return; try{ var t=document.createElement('div'); t.style.cssText='position:fixed;bottom:8px;left:8px;right:8px;z-index:99999;background:#B91C1C;color:#fff;font-size:11px;padding:8px 10px;border-radius:8px;word-break:break-all;'; t.textContent='DEBUG: '+String(msg).slice(0,220); document.body.appendChild(t); setTimeout(function(){ t.remove(); },20000); }catch(_){} }
+window.addEventListener('error', function(e){ _dbgToast_((e.message||'error')+' @'+(e.lineno||'?')); });
+window.addEventListener('unhandledrejection', function(e){ _dbgToast_('promise: '+String(e.reason && e.reason.message || e.reason)); });
+
 window.onload = function() {
   // Branch label in the header — prominent so a driver on the wrong link notices.
   var branchName = BRANCH_DISPLAY[BRANCH] || BRANCH;
@@ -539,18 +546,346 @@ document.addEventListener('visibilitychange', function(){
 
 // Multi-photo state (max 10)
 const MAX_PHOTOS = 10;
-const COMPRESS_MAX_DIM = 1600;   // longest side, in pixels
-const COMPRESS_QUALITY = 0.8;    // JPEG quality (0–1)
+const COMPRESS_MAX_DIM = 2400;   // longest side, in pixels (raised 1600→2400: office scan tool needs the detail)
+const COMPRESS_QUALITY = 0.85;   // JPEG quality (0–1) (raised 0.8→0.85 with the dim bump)
 let collectedPhotos = []; // [{dataUrl, name, type}]  — already compressed JPEG
 
-// Compress an image File to JPEG, max 1600px on longest side, quality 0.8.
-// Returns { dataUrl, name, type } (dataUrl is "data:image/jpeg;base64,...").
+// ── [E1 Tier A 2026-07-13] scan-look whitening — colour-preserving, expert-panel design ──
+// Runs INSIDE compressImage's existing try/catch: any failure = today's exact plain-compress output.
+// Never blocks submission. Kill switch: ENHANCE_SCAN=false → byte-identical behaviour to the old form.
+// PARKED 2026-07-14: the office-side scan tool now does scan-look — code kept as a kill-switched fallback.
+const ENHANCE_SCAN = false;
+const ENH_MAX_MS   = 1500;              // watchdog: a slower device quarantines itself to plain compress
+const ENH_QUAR_KEY = 'clf_enh_quarantine_v2';   // versioned: a faster future build can un-quarantine the fleet by bumping to _v2
+// Calibrated on real signed ACCOUNT-COPY invoices (2026-07-13): stamp ink is FADED PURPLE, so
+// whitening must be conservative — only truly-neutral AND very-bright pixels are pushed to white
+// (sat<0.08 & lum>225); any pixel with visible chroma (faded stamp) is never touched beyond the
+// equal-channel gain, which mathematically cannot shift hue. Ballpoint signatures fall in the
+// neutral-dark branch and get gently darkened (crisper), never lightened.
+function enhanceScanCanvas_(canvas, ctx) {
+  var t0 = (window.performance && performance.now) ? performance.now() : Date.now();
+  var w = canvas.width, h = canvas.height;
+  var im = ctx.getImageData(0, 0, w, h), d = im.data;
+
+  // 1) coarse background map: per-32px block p90 luminance (bright = paper), subsampled 1/16
+  var bs = 32, bw = Math.ceil(w / bs), bh = Math.ceil(h / bs);
+  var bg = new Float32Array(bw * bh);
+  for (var by = 0; by < bh; by++) {
+    for (var bx = 0; bx < bw; bx++) {
+      var x1 = bx * bs, y1 = by * bs, x2 = Math.min(x1 + bs, w), y2 = Math.min(y1 + bs, h);
+      var s = [];
+      for (var y = y1; y < y2; y += 4) for (var x = x1; x < x2; x += 4) {
+        var i = (y * w + x) * 4;
+        s.push(0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]);
+      }
+      s.sort(function (a, b) { return a - b; });
+      bg[by * bw + bx] = s.length ? s[Math.floor(s.length * 0.9)] : 255;
+    }
+  }
+  // 2) 3x3 box-smooth the block map (2 passes) so block seams never show
+  for (var pass = 0; pass < 2; pass++) {
+    var sm = new Float32Array(bw * bh);
+    for (var sy = 0; sy < bh; sy++) for (var sx = 0; sx < bw; sx++) {
+      var acc = 0, n = 0;
+      for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) {
+        var ny = sy + dy, nx = sx + dx;
+        if (ny >= 0 && ny < bh && nx >= 0 && nx < bw) { acc += bg[ny * bw + nx]; n++; }
+      }
+      sm[sy * bw + sx] = acc / n;
+    }
+    bg = sm;
+  }
+  // 3) per-pixel: bilinear background sample → equal-channel gain [1.0,1.6] → gated soft whiten/darken
+  // (block values sit at block CENTERS — sample with a half-block offset so the gain map is aligned)
+  for (var py = 0; py < h; py++) {
+    var fy = Math.min(Math.max((py - bs / 2) / bs, 0), bh - 1), y0 = Math.floor(fy), yA = Math.min(y0 + 1, bh - 1), wy = fy - y0;
+    for (var px = 0; px < w; px++) {
+      var fx = Math.min(Math.max((px - bs / 2) / bs, 0), bw - 1), x0 = Math.floor(fx), xA = Math.min(x0 + 1, bw - 1), wx = fx - x0;
+      var B = bg[y0 * bw + x0] * (1 - wx) * (1 - wy) + bg[y0 * bw + xA] * wx * (1 - wy)
+            + bg[yA * bw + x0] * (1 - wx) * wy       + bg[yA * bw + xA] * wx * wy;
+      var gain = 245 / Math.max(B, 40);
+      if (gain < 1) gain = 1; else if (gain > 1.6) gain = 1.6;   // equal per-channel → hue cannot shift
+      var i2 = (py * w + px) * 4;
+      var r = d[i2] * gain, g = d[i2 + 1] * gain, b = d[i2 + 2] * gain;
+      if (r > 255) r = 255; if (g > 255) g = 255; if (b > 255) b = 255;
+      var mx = r > g ? (r > b ? r : b) : (g > b ? g : b);
+      var mn = r < g ? (r < b ? r : b) : (g < b ? g : b);
+      var sat = (mx - mn) / (mx > 1 ? mx : 1);
+      var lum = 0.299 * r + 0.587 * g + 0.114 * b;
+      if (sat < 0.08) {                       // truly neutral only — chroma (even faded stamp) untouched
+        if (lum > 218) {                      // flattened paper → FEATHERED soft-push to clean white
+          var wS = ((lum - 218) / 14); if (wS > 1) wS = 1; wS *= 0.85;   // 0 at 218 → 0.85 at 232+ (no banding cliff)
+          r += (255 - r) * wS; g += (255 - g) * wS; b += (255 - b) * wS;
+        } else if (lum < 138) {               // printed text / ballpoint signature → FEATHERED gentle darken
+          var dS = ((138 - lum) / 16); if (dS > 1) dS = 1;               // 0 at 138 → 1 at 122- (smooth ramp)
+          var df = 1 - 0.25 * dS;                                        // 1.0 → 0.75
+          r *= df; g *= df; b *= df;
+        }                                      // neutral midtones: leave (safety band for faded ink)
+      }
+      d[i2] = r; d[i2 + 1] = g; d[i2 + 2] = b;
+    }
+  }
+  ctx.putImageData(im, 0, 0);
+  return ((window.performance && performance.now) ? performance.now() : Date.now()) - t0;
+}
+
+// ── [E5 2026-07-14] photo QUALITY GATES — cheap advisory checks on a ≤512px copy ──
+// Returns { ok, reasons[] } with reasons drawn from 'cut' | 'blur' | 'exposure'.
+// LENIENT by design: only clear violations trip. FAIL-OPEN: any internal error returns
+// ok:true — a gate bug must never block a driver from submitting a POD.
+const BLUR_MIN = 30;   // Laplacian-variance floor — MTK pilot calibrates this (raise = stricter)
+function checkPhotoQuality_(canvas, ctx) {
+  try {
+    var reasons = [];
+    var W = canvas.width, H = canvas.height;
+    // all math on a downscaled copy, max 512px long side
+    var dw, dh;
+    if (W >= H) { dw = Math.min(512, W); dh = Math.max(8, Math.round(H * dw / W)); }
+    else        { dh = Math.min(512, H); dw = Math.max(8, Math.round(W * dh / H)); }
+    var tc = document.createElement('canvas'); tc.width = dw; tc.height = dh;
+    var tx = tc.getContext('2d'); tx.drawImage(canvas, 0, 0, dw, dh);
+    var d = tx.getImageData(0, 0, dw, dh).data;
+    var n = dw * dh, lum = new Float32Array(n);
+    var sum = 0, hot = 0;
+    for (var i = 0, p = 0; p < n; i += 4, p++) {
+      var L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      lum[p] = L; sum += L; if (L > 250) hot++;
+    }
+    var mean = sum / n;
+    // EXPOSURE: washed-out (bright mean OR big blown-white share) or far too dark
+    if (mean > 236 || (hot / n) > 0.28 || mean < 40) reasons.push('exposure');
+    // BLUR: variance of 3x3 Laplacian [0,1,0 / 1,-4,1 / 0,1,0] responses, 2px border skipped
+    var lSum = 0, lSq = 0, lN = 0;
+    for (var y = 2; y < dh - 2; y++) {
+      for (var x = 2; x < dw - 2; x++) {
+        var c = y * dw + x;
+        var v = lum[c - 1] + lum[c + 1] + lum[c - dw] + lum[c + dw] - 4 * lum[c];
+        lSum += v; lSq += v * v; lN++;
+      }
+    }
+    if (lN > 0) {
+      var lMean = lSum / lN;
+      if ((lSq / lN - lMean * lMean) < BLUR_MIN) reasons.push('blur');
+    }
+    // COMPLETENESS ('cut'): 128px-wide luminance map, bright mask = paper (thr = mean + 0.5*std);
+    // a border row/col that is >30% bright means the paper runs off-frame. Only clear violations.
+    var cw = Math.min(128, dw), ch = Math.max(8, Math.round(dh * cw / dw));
+    var cc = document.createElement('canvas'); cc.width = cw; cc.height = ch;
+    var ccx = cc.getContext('2d'); ccx.drawImage(tc, 0, 0, cw, ch);
+    var cd = ccx.getImageData(0, 0, cw, ch).data;
+    var cn = cw * ch, cl = new Float32Array(cn), cSum = 0;
+    for (var i2 = 0, p2 = 0; p2 < cn; i2 += 4, p2++) {
+      cl[p2] = 0.299 * cd[i2] + 0.587 * cd[i2 + 1] + 0.114 * cd[i2 + 2]; cSum += cl[p2];
+    }
+    var cMean = cSum / cn, cSq = 0;
+    for (var p3 = 0; p3 < cn; p3++) { var dv = cl[p3] - cMean; cSq += dv * dv; }
+    var cThr = cMean + 0.5 * Math.sqrt(cSq / cn);
+    var top = 0, bot = 0, lef = 0, rig = 0;
+    for (var x2 = 0; x2 < cw; x2++) {
+      if (cl[x2] > cThr) top++;
+      if (cl[(ch - 1) * cw + x2] > cThr) bot++;
+    }
+    for (var y2 = 0; y2 < ch; y2++) {
+      if (cl[y2 * cw] > cThr) lef++;
+      if (cl[y2 * cw + cw - 1] > cThr) rig++;
+    }
+    if (top / cw > 0.30 || bot / cw > 0.30 || lef / ch > 0.30 || rig / ch > 0.30) reasons.push('cut');
+    return { ok: reasons.length === 0, reasons: reasons };
+  } catch (e) {
+    return { ok: true, reasons: [] };   // fail-open — never block the driver on a gate bug
+  }
+}
+
+// ── [E1 Tier B 2026-07-13] auto-crop + perspective correction ("paper fills the page") ──
+// Detection runs on a FLATTENED 256px luminance map (body-shadow can't bisect the paper blob);
+// SAFETY GATES: any doubt → return null → caller keeps the full frame (whiten-only). A wrong crop
+// is worse than no crop — these gates deliberately refuse white-on-white, edge-out-of-frame,
+// two-documents and low-confidence shots.
+const ENHANCE_CROP = false;   // PARKED 2026-07-14 with ENHANCE_SCAN — office-side tool handles crop now
+function scanCropCanvas_(src) {
+  var W = src.width, H = src.height;
+  // 1) downscale to ≤256px luminance map
+  var dw, dh;
+  if (W >= H) { dw = 256; dh = Math.max(8, Math.round(H * 256 / W)); }
+  else        { dh = 256; dw = Math.max(8, Math.round(W * 256 / H)); }
+  var sc = document.createElement('canvas'); sc.width = dw; sc.height = dh;
+  var scx = sc.getContext('2d'); scx.drawImage(src, 0, 0, dw, dh);
+  var sd = scx.getImageData(0, 0, dw, dh).data;
+  var n = dw * dh, lum = new Float32Array(n);
+  for (var i = 0, p = 0; p < n; i += 4, p++) lum[p] = 0.299 * sd[i] + 0.587 * sd[i + 1] + 0.114 * sd[i + 2];
+  // 2) flatten-first: 16px-block p90 map (nearest-block divide) so shadows don't split the paper
+  var bs = 16, bw = Math.ceil(dw / bs), bh = Math.ceil(dh / bs);
+  var bmap = new Float32Array(bw * bh);
+  for (var by = 0; by < bh; by++) for (var bx = 0; bx < bw; bx++) {
+    var s = [], x2 = Math.min((bx + 1) * bs, dw), y2 = Math.min((by + 1) * bs, dh);
+    for (var y = by * bs; y < y2; y += 2) for (var x = bx * bs; x < x2; x += 2) s.push(lum[y * dw + x]);
+    s.sort(function (a, b) { return a - b; });
+    bmap[by * bw + bx] = s.length ? s[Math.floor(s.length * 0.9)] : 255;
+  }
+  var flat = new Float32Array(n), mean = 0;
+  for (var p2 = 0; p2 < n; p2++) {
+    var fb = bmap[Math.min(Math.floor((p2 / dw) / bs), bh - 1) * bw + Math.min(Math.floor((p2 % dw) / bs), bw - 1)];
+    flat[p2] = lum[p2] / Math.max(fb, 30) * 200; mean += flat[p2];
+  }
+  mean /= n;
+  var sq = 0; for (var p3 = 0; p3 < n; p3++) { var dv = flat[p3] - mean; sq += dv * dv; }
+  var thr = mean + 0.6 * Math.sqrt(sq / n);
+  // 3) largest bright connected component (BFS, 4-neigh) + track 2nd-largest (two-documents gate)
+  var mask = new Uint8Array(n), seen = new Uint8Array(n);
+  for (var p4 = 0; p4 < n; p4++) mask[p4] = flat[p4] > thr ? 1 : 0;
+  var best = null, bestSize = 0, secondSize = 0, q = new Int32Array(n);
+  for (var st = 0; st < n; st += 4) {
+    if (!mask[st] || seen[st]) continue;
+    var head = 0, tail = 0; q[tail++] = st; seen[st] = 1;
+    var comp = [];
+    while (head < tail) {
+      var c = q[head++]; comp.push(c);
+      var cy = (c / dw) | 0, cx = c % dw;
+      if (cx > 0 && mask[c - 1] && !seen[c - 1]) { seen[c - 1] = 1; q[tail++] = c - 1; }
+      if (cx < dw - 1 && mask[c + 1] && !seen[c + 1]) { seen[c + 1] = 1; q[tail++] = c + 1; }
+      if (cy > 0 && mask[c - dw] && !seen[c - dw]) { seen[c - dw] = 1; q[tail++] = c - dw; }
+      if (cy < dh - 1 && mask[c + dw] && !seen[c + dw]) { seen[c + dw] = 1; q[tail++] = c + dw; }
+    }
+    if (comp.length > bestSize) { secondSize = bestSize; bestSize = comp.length; best = comp; }
+    else if (comp.length > secondSize) secondSize = comp.length;
+  }
+  if (!best) return null;
+  var areaPct = bestSize / n;
+  if (areaPct < 0.25 || areaPct > 0.97) return null;                     // gate: paper share of frame
+  if (secondSize > bestSize * 0.20) return null;                         // gate: two documents → refuse
+  // 4) corners via diagonal projections (TL/TR/BR/BL)
+  var tl = -1, tr = -1, br = -1, bl = -1, vTL = 1e9, vTR = 1e9, vBR = -1e9, vBL = -1e9;
+  for (var k = 0; k < best.length; k++) {
+    var c2 = best[k], yy = (c2 / dw) | 0, xx = c2 % dw;
+    if (xx + yy < vTL) { vTL = xx + yy; tl = c2; }
+    if (yy - xx < vTR) { vTR = yy - xx; tr = c2; }
+    if (xx + yy > vBR) { vBR = xx + yy; br = c2; }
+    if (yy - xx > vBL) { vBL = yy - xx; bl = c2; }
+  }
+  var sx = W / dw, sy = H / dh;
+  var quad = [tl, tr, br, bl].map(function (c3) { return [(c3 % dw) * sx, ((c3 / dw) | 0) * sy]; });
+  // 5) geometry gates: convexity, opposite sides within 25%, aspect band
+  function d2(a, b) { return Math.hypot(a[0] - b[0], a[1] - b[1]); }
+  var wT = d2(quad[0], quad[1]), wB = d2(quad[3], quad[2]), hL = d2(quad[0], quad[3]), hR = d2(quad[1], quad[2]);
+  if (Math.abs(wT - wB) / Math.max(wT, wB) > 0.25) return null;
+  if (Math.abs(hL - hR) / Math.max(hL, hR) > 0.25) return null;
+  var aspect = (wT + wB) / Math.max(hL + hR, 1);
+  if (aspect < 0.4 || aspect > 2.5) return null;
+  var convSign = 0;
+  for (var e = 0; e < 4; e++) {
+    var A = quad[e], B = quad[(e + 1) % 4], C = quad[(e + 2) % 4];
+    var cr = (B[0] - A[0]) * (C[1] - B[1]) - (B[1] - A[1]) * (C[0] - B[0]);
+    if (e === 0) convSign = cr > 0 ? 1 : -1;
+    else if ((cr > 0 ? 1 : -1) !== convSign) return null;                // gate: not convex
+  }
+  // 6) outward 2.5% padding from centroid; if a padded corner leaves the safe border band → the
+  //    page may extend past the photo edge → REFUSE (never guess-crop legal evidence)
+  var cxm = (quad[0][0] + quad[1][0] + quad[2][0] + quad[3][0]) / 4;
+  var cym = (quad[0][1] + quad[1][1] + quad[2][1] + quad[3][1]) / 4;
+  for (var g2 = 0; g2 < 4; g2++) {
+    quad[g2][0] = cxm + (quad[g2][0] - cxm) * 1.025;
+    quad[g2][1] = cym + (quad[g2][1] - cym) * 1.025;
+    if (quad[g2][0] < -W * 0.01 || quad[g2][0] > W * 1.01 || quad[g2][1] < -H * 0.01 || quad[g2][1] > H * 1.01) return null;
+    quad[g2][0] = Math.min(Math.max(quad[g2][0], 0), W - 1);
+    quad[g2][1] = Math.min(Math.max(quad[g2][1], 0), H - 1);
+  }
+  // 7) output size from the quad, longest side ≤1600
+  var outW = Math.round(Math.max(wT, wB)), outH = Math.round(Math.max(hL, hR));
+  var mxSide = Math.max(outW, outH);
+  if (mxSide > 1600) { outW = Math.round(outW * 1600 / mxSide); outH = Math.round(outH * 1600 / mxSide); }
+  if (outW < 300 || outH < 300) return null;
+  // 8) true perspective warp on the GPU (WebGL); no WebGL → refuse (whiten-only tier still applies)
+  return _warpQuadWebGL_(src, quad, outW, outH);
+}
+
+// Solve the 8 perspective coeffs mapping output-normalized (u,v [0..1], v=0 top) → source uv.
+function _homographyCoeffs_(srcQuadUv) {
+  var dst = [[0, 0], [1, 0], [1, 1], [0, 1]];                            // TL TR BR BL in v-down space
+  var A = [], Bv = [];
+  for (var i = 0; i < 4; i++) {
+    var u = dst[i][0], v = dst[i][1], X = srcQuadUv[i][0], Y = srcQuadUv[i][1];
+    A.push([u, v, 1, 0, 0, 0, -X * u, -X * v]); Bv.push(X);
+    A.push([0, 0, 0, u, v, 1, -Y * u, -Y * v]); Bv.push(Y);
+  }
+  for (var c = 0; c < 8; c++) {                                          // Gaussian elimination w/ partial pivot
+    var piv = c;
+    for (var r = c + 1; r < 8; r++) if (Math.abs(A[r][c]) > Math.abs(A[piv][c])) piv = r;
+    if (Math.abs(A[piv][c]) < 1e-12) return null;
+    var t = A[c]; A[c] = A[piv]; A[piv] = t; var tb = Bv[c]; Bv[c] = Bv[piv]; Bv[piv] = tb;
+    for (var r2 = 0; r2 < 8; r2++) {
+      if (r2 === c) continue;
+      var f = A[r2][c] / A[c][c];
+      for (var c2 = c; c2 < 8; c2++) A[r2][c2] -= f * A[c][c2];
+      Bv[r2] -= f * Bv[c];
+    }
+  }
+  var out = [];
+  for (var s = 0; s < 8; s++) out.push(Bv[s] / A[s][s]);
+  return out;                                                            // [a,b,c,d,e,f,g,h]
+}
+
+function _warpQuadWebGL_(src, quadPx, outW, outH) {
+  var glc = document.createElement('canvas'); glc.width = outW; glc.height = outH;
+  var gl = glc.getContext('webgl') || glc.getContext('experimental-webgl');
+  if (!gl) return null;
+  var srcUv = quadPx.map(function (q) { return [q[0] / src.width, q[1] / src.height]; });
+  var hc = _homographyCoeffs_(srcUv);
+  if (!hc) return null;
+  function sh(type, code) {
+    var s = gl.createShader(type); gl.shaderSource(s, code); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error('shader: ' + gl.getShaderInfoLog(s));
+    return s;
+  }
+  var prog = gl.createProgram();
+  gl.attachShader(prog, sh(gl.VERTEX_SHADER,
+    'attribute vec2 aP; varying vec2 vUv; void main(){ vUv = vec2(aP.x*0.5+0.5, 0.5-aP.y*0.5); gl_Position = vec4(aP,0.,1.); }'));
+  gl.attachShader(prog, sh(gl.FRAGMENT_SHADER,
+    'precision highp float; varying vec2 vUv; uniform sampler2D uT; uniform mat3 uH;' +
+    'void main(){ vec3 s = uH * vec3(vUv, 1.0); vec2 suv = s.xy / s.z;' +
+    ' if (suv.x < 0.0 || suv.x > 1.0 || suv.y < 0.0 || suv.y > 1.0) { gl_FragColor = vec4(1.0); }' +
+    ' else { gl_FragColor = texture2D(uT, suv); } }'));
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
+  gl.useProgram(prog);
+  var buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+  var loc = gl.getAttribLocation(prog, 'aP');
+  gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+  var tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);                          // uv v=0 = image top (matches shader)
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.uniformMatrix3fv(gl.getUniformLocation(prog, 'uH'), false,
+    new Float32Array([hc[0], hc[3], hc[6], hc[1], hc[4], hc[7], hc[2], hc[5], 1]));  // column-major
+  gl.uniform1i(gl.getUniformLocation(prog, 'uT'), 0);
+  gl.viewport(0, 0, outW, outH);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  // copy into a 2D canvas (browser handles orientation) so the whiten pass can getImageData it
+  var out = document.createElement('canvas'); out.width = outW; out.height = outH;
+  var octx = out.getContext('2d'); octx.drawImage(glc, 0, 0);
+  return { canvas: out, ctx: octx };
+}
+
+// viewer caption lookup: dataUrl tail → produced filename (tells the boss/driver what was applied)
+window._photoNameByUrl = {};
+
+// Compress an image File to JPEG, max COMPRESS_MAX_DIM px on longest side, quality COMPRESS_QUALITY.
+// Returns { dataUrl, name, type, quality } (dataUrl is "data:image/jpeg;base64,...";
+// quality = checkPhotoQuality_ result {ok, reasons[]} — callers that ignore it keep working).
 function compressImage(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = function(e) {
       const img = new Image();
       img.onload = function() {
+        // [E1 Tier A] yield once to the event loop before the heavy pixel pass so the previous
+        // thumbnail can paint between photos in a multi-photo batch (no back-to-back UI freeze).
+        setTimeout(function() {
         let w = img.naturalWidth;
         let h = img.naturalHeight;
         if (w > COMPRESS_MAX_DIM || h > COMPRESS_MAX_DIM) {
@@ -568,12 +903,37 @@ function compressImage(file) {
           canvas.height = h;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, w, h);
-          const dataUrl = canvas.toDataURL('image/jpeg', COMPRESS_QUALITY);
-          const name = (file.name || 'invoice.jpg').replace(/\.[^.]+$/, '') + '.jpg';
-          resolve({ dataUrl, name, type: 'image/jpeg' });
+          // [E1 Tier A+B] crop (safety-gated) then whiten. Each step in its own try/catch: any failure
+          // falls back one tier (crop fail → whiten-only; whiten fail → plain compress = old output).
+          // A device that once ran slow (> ENH_MAX_MS total) self-quarantines and skips both forever.
+          let enhApplied = false, cropApplied = false;
+          let outCanvas = canvas, outCtx = ctx;
+          const _enhT0 = (window.performance && performance.now) ? performance.now() : Date.now();
+          try {
+            if (ENHANCE_CROP && ENHANCE_SCAN && !localStorage.getItem(ENH_QUAR_KEY)) {
+              const cropped = scanCropCanvas_(canvas);        // null = a safety gate refused → keep full frame
+              if (cropped) { outCanvas = cropped.canvas; outCtx = cropped.ctx; cropApplied = true; }
+            }
+          } catch (cropErr) { console.warn('crop skipped:', cropErr); outCanvas = canvas; outCtx = ctx; cropApplied = false; }
+          try {
+            if (ENHANCE_SCAN && !localStorage.getItem(ENH_QUAR_KEY)) {
+              enhanceScanCanvas_(outCanvas, outCtx);
+              enhApplied = true;
+              const _enhMs = ((window.performance && performance.now) ? performance.now() : Date.now()) - _enhT0;
+              if (_enhMs > ENH_MAX_MS) { try { localStorage.setItem(ENH_QUAR_KEY, String(Math.round(_enhMs))); } catch (qe) {} }
+            }
+          } catch (enhErr) { console.warn('enhance skipped:', enhErr); outCanvas = canvas; outCtx = ctx; cropApplied = false; }
+          // [E5] quality gate — advisory result rides on the entry; fail-open inside the gate
+          const q = checkPhotoQuality_(outCanvas, outCtx);
+          const dataUrl = outCanvas.toDataURL('image/jpeg', COMPRESS_QUALITY);
+          const name = (file.name || 'invoice.jpg').replace(/\.[^.]+$/, '')
+            + (cropApplied ? '_scanC' : (enhApplied ? '_scanF' : '')) + '.jpg';
+          try { window._photoNameByUrl[dataUrl.slice(-64)] = name; } catch (me) {}
+          resolve({ dataUrl, name, type: 'image/jpeg', quality: q });
         } catch (err) {
           reject(err);
         }
+        }, 0);   // [E1 Tier A] end of yielded block
       };
       img.onerror = () => reject(new Error('Image decode failed'));
       img.src = e.target.result;
@@ -590,6 +950,41 @@ function readFileAsDataUrl(file) {
     reader.onload = () => resolve({ dataUrl: reader.result, name: file.name || 'invoice.jpg', type: file.type || 'image/jpeg' });
     reader.onerror = reject;
     reader.readAsDataURL(file);
+  });
+}
+
+// ── [E5 2026-07-14] quality-gate dialog: full-screen overlay, built once (loading-overlay style).
+// Attempts 1-2 = Retake only (photo DISCARDED); attempt >=3 also offers "Upload anyway" (flagged).
+var _qGateTries = 0;    // consecutive failed shots; reset whenever a photo PASSES (or a flagged one is added)
+var _qGateEls = null;   // DOM built once, reused
+function _qGateBuild_(){
+  var ov = document.createElement('div');
+  ov.id = 'qGateOverlay';
+  ov.style.cssText = 'display:none;position:fixed;inset:0;z-index:10000;background:rgba(11,31,58,.93);flex-direction:column;align-items:center;justify-content:center;padding:28px 22px;';
+  ov.innerHTML =
+      '<div style="background:#fff;border-radius:14px;max-width:340px;width:100%;padding:22px 18px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.35);">'
+    + '<div style="font-size:19px;font-weight:700;color:#0B1F3A;margin-bottom:10px;">&#9888;&#65039; 照片不合格 · Gambar tidak jelas</div>'
+    + '<div id="qGateReasons" style="font-size:14px;color:#1A3A5C;line-height:1.7;margin-bottom:16px;"></div>'
+    + '<button type="button" id="qGateRetake" style="width:100%;padding:15px;background:#1D4ED8;color:#fff;border:none;border-radius:10px;font-family:\'DM Sans\',sans-serif;font-size:16px;font-weight:700;cursor:pointer;">&#128247; Retake · Ambil semula</button>'
+    + '<button type="button" id="qGateAnyway" style="display:none;margin-top:10px;background:none;border:none;color:#8A9BB0;font-size:13px;text-decoration:underline;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Upload anyway · Tetap hantar</button>'
+    + '</div>';
+  document.body.appendChild(ov);
+  _qGateEls = { ov: ov, reasons: ov.querySelector('#qGateReasons'), retake: ov.querySelector('#qGateRetake'), anyway: ov.querySelector('#qGateAnyway') };
+}
+// Shows the dialog; resolves 'retake' or 'anyway'. allowAnyway=false hides the grey escape hatch.
+function showQualityGate_(reasons, allowAnyway){
+  if (!_qGateEls) _qGateBuild_();
+  var TXT = {
+    cut:      'Invoice not fully in frame · Invois terpotong',
+    blur:     'Photo is blurry · Kabur',
+    exposure: 'Too bright/dark · Terlalu cerah/gelap'
+  };
+  _qGateEls.reasons.innerHTML = (reasons || []).map(function(r){ return '&bull; ' + (TXT[r] || _esc(r)); }).join('<br>');
+  _qGateEls.anyway.style.display = allowAnyway ? 'inline-block' : 'none';
+  _qGateEls.ov.style.display = 'flex';
+  return new Promise(function(resolve){
+    _qGateEls.retake.onclick = function(){ _qGateEls.ov.style.display = 'none'; resolve('retake'); };
+    _qGateEls.anyway.onclick = function(){ _qGateEls.ov.style.display = 'none'; resolve('anyway'); };
   });
 }
 
@@ -611,6 +1006,19 @@ async function handlePhoto(input) {
         continue;
       }
     }
+    // [E5] quality gate: fail → dialog. Attempts 1-2 the shot is DISCARDED (input resets below,
+    // so tapping the button re-opens the camera); attempt >=3 may "Upload anyway" → flagged.
+    // FAIL-OPEN: any error inside the gate/dialog accepts the photo ungated — a gate bug must
+    // never make a photo silently vanish (boss field-test 2026-07-14).
+    try {
+      if (entry.quality && !entry.quality.ok) {
+        _qGateTries++;
+        const act = await showQualityGate_(entry.quality.reasons, _qGateTries >= 3);
+        if (act !== 'anyway') continue;   // discarded — not added
+        entry.qualityFlag = true;
+      }
+      _qGateTries = 0;   // pass or flagged-add both reset the streak
+    } catch (gateErr) { console.warn('gate failed open:', gateErr); }
     collectedPhotos.push(entry);
     renderPhotoGrid();
   }
@@ -624,12 +1032,54 @@ function removePhoto(idx) {
   renderPhotoGrid();
 }
 
+// ── [E1 Tier A] tap a thumbnail → full-screen viewer (inspect the scan result before submitting).
+// Delegated on document so it covers BOTH photo paths (plain POD grid + shipment-flow buffer)
+// without touching either render function. Tap image = toggle 2.2x zoom; tap backdrop/× = close.
+(function () {
+  var ov = null;
+  document.addEventListener('click', function (e) {
+    var img = e.target;
+    // any captured-photo thumbnail: both the plain POD grid (.photo-thumb) and the shipment-flow
+    // 54px buffer thumbs render the compressed dataURL directly — match on that, not the container.
+    if (!(img && img.tagName === 'IMG' && String(img.src).slice(0, 10) === 'data:image')) return;
+    if (ov && ov.contains(img)) return;   // the overlay's own big image (zoom toggle handles it)
+    if (!ov) {
+      ov = document.createElement('div');
+      ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.93);display:flex;align-items:center;justify-content:center;overflow:auto;';
+      ov.innerHTML = '<img style="max-width:100%;max-height:100%;transition:transform .15s;transform-origin:center;">'
+        + '<div style="position:fixed;top:10px;right:14px;color:#fff;font-size:30px;line-height:1;padding:6px 10px;">&times;</div>'
+        + '<div id="pvCap" style="position:fixed;bottom:12px;left:0;right:0;text-align:center;color:#bbb;font-size:12px;">Tap photo to zoom &middot; tap outside to close</div>';
+      ov.addEventListener('click', function (ev) {
+        var big = ov.querySelector('img');
+        if (ev.target === big) {                       // toggle zoom
+          big._z = !big._z;
+          big.style.transform = big._z ? 'scale(2.2)' : '';
+        } else { ov.style.display = 'none'; }
+      });
+      document.body.appendChild(ov);
+    }
+    var big = ov.querySelector('img');
+    big._z = false; big.style.transform = '';
+    big.src = img.src;
+    // caption: what processing produced this photo (from the compressImage name registry)
+    var nm = (window._photoNameByUrl && window._photoNameByUrl[String(img.src).slice(-64)]) || '';
+    var cap = ov.querySelector('#pvCap');
+    if (cap) cap.innerHTML =
+      (nm.indexOf('_scanC') >= 0 ? '<b style="color:#7f7;">SCAN &#10003; 已裁边+白底</b>'
+       : nm.indexOf('_scanF') >= 0 ? '<b style="color:#ff5;">SCAN &#10003; 白底(未裁边:纸边不完整或不够清晰,保留全图)</b>'
+       : '<b style="color:#f97;">原图(未处理)</b>')
+      + ' &middot; Tap photo to zoom &middot; tap outside to close';
+    ov.style.display = 'flex';
+  });
+})();
+
 function renderPhotoGrid() {
   const grid = document.getElementById('photoGrid');
   const counter = document.getElementById('photoCounter');
   grid.innerHTML = collectedPhotos.map((p, i) =>
     `<div class="photo-thumb">
        <img src="${p.dataUrl}" alt="Invoice ${i+1}">
+       ${p.qualityFlag ? '<span style="position:absolute;bottom:2px;left:2px;font-size:13px;line-height:1;z-index:1;">&#128681;</span>' : ''}
        <button type="button" class="remove-x" onclick="removePhoto(${i})" aria-label="Remove">×</button>
      </div>`
   ).join('');
@@ -707,6 +1157,9 @@ async function submitForm() {
 
       // Multi-photo array (V11+)
       photos: photos,
+
+      // [E5] true if ANY included photo was force-uploaded past the quality gate
+      qualityFlag: collectedPhotos.some(p => !!p.qualityFlag),
 
       // Backwards-compat single fields (first photo, for old WebApp.gs that doesn't know about photos[])
       photoBase64: photos[0].base64,
@@ -1127,7 +1580,12 @@ function renderShipGroups(){
       var photos = g.photos || [];
       if (photos.length){
         html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">'
-          + photos.map(function(p){ return '<img src="'+p.dataUrl+'" style="width:54px;height:54px;object-fit:cover;border-radius:6px;border:1px solid #E0C68A;">'; }).join('')
+          + photos.map(function(p){
+              var t = '<img src="'+p.dataUrl+'" style="width:54px;height:54px;object-fit:cover;border-radius:6px;border:1px solid #E0C68A;">';
+              return p.qualityFlag
+                ? '<span style="position:relative;display:inline-block;">' + t + '<span style="position:absolute;bottom:1px;left:1px;font-size:12px;line-height:1;">&#128681;</span></span>'
+                : t;
+            }).join('')
           + '<span style="align-self:center;font-size:12px;color:#2E7D32;font-weight:600;">'+photos.length+' photo'+(photos.length>1?'s':'')+' ready &#10003;</span>'
           + '</div>';
       }
@@ -1252,12 +1710,23 @@ async function onShipPhoto(input){
   for (var f=0; f<input.files.length; f++){
     var entry;
     try { entry = await compressImage(input.files[f]); } catch(err){ entry = await readFileAsDataUrl(input.files[f]); }
+    // [E5] quality gate — same rules as handlePhoto: 1-2 = retake only (shot discarded; the
+    // input resets below so tapping re-opens the camera), >=3 may "Upload anyway" → flagged.
+    try {
+      if (entry.quality && !entry.quality.ok){
+        _qGateTries++;
+        var act = await showQualityGate_(entry.quality.reasons, _qGateTries >= 3);
+        if (act !== 'anyway') continue;   // discarded — not buffered
+        entry.qualityFlag = true;
+      }
+      _qGateTries = 0;   // pass or flagged-add both reset the streak
+    } catch (gateErr) { console.warn('gate failed open:', gateErr); }
     var cur = null;
     for (var ci=0; ci<_shipGroups.length; ci++){ if (_shipGroups[ci].key === gKey){ cur = _shipGroups[ci]; break; } }
     if (!cur) cur = g;
     if (!cur.photos) cur.photos = [];
     if (cur.photos.length >= 10) break;
-    cur.photos.push({ dataUrl: entry.dataUrl, name: entry.name, type: entry.type });
+    cur.photos.push({ dataUrl: entry.dataUrl, name: entry.name, type: entry.type, qualityFlag: !!entry.qualityFlag });
     g = cur;
   }
   input.value=''; _deliverIdx=-1;
@@ -1289,7 +1758,9 @@ async function saveDelivery(i){
     var payload = { formType:'SUBMIT_POD_FOR_INVOICE', branch: BRANCH, shipmentKey:_shipKey, invoiceNos:pendingInvs,
       driverName: _drv, secondDriver: _sd,
       vehicleNo: document.getElementById('vehicleNo').value, deliveryDate: document.getElementById('deliveryDate').value,
-      timestamp: now.toISOString(), photos: photos, clientToken: token };
+      timestamp: now.toISOString(), photos: photos, clientToken: token,
+      // [E5] true if ANY included photo was force-uploaded past the quality gate
+      qualityFlag: g.photos.some(function(p){ return !!p.qualityFlag; }) };
     var fd = new FormData(); fd.append('data', JSON.stringify(payload));
     // 90s upload timeout — on dead signal fetch can hang forever behind the overlay, and drivers
     // kill the tab (losing buffered photos). Abort → catch → photos kept + clear retry message.

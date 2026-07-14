@@ -495,8 +495,10 @@ async function fetchVehicles() {
   }
 }
 
-// [STAGING DEBUG — remove at cutover] surface silent errors on-screen so field testers can report them
-function _dbgToast_(msg){ try{ var t=document.createElement('div'); t.style.cssText='position:fixed;bottom:8px;left:8px;right:8px;z-index:99999;background:#B91C1C;color:#fff;font-size:11px;padding:8px 10px;border-radius:8px;word-break:break-all;'; t.textContent='DEBUG: '+String(msg).slice(0,220); document.body.appendChild(t); setTimeout(function(){ t.remove(); },20000); }catch(_){} }
+// [FIELD DEBUG] on-screen error bar — only on the staging copy or with ?debug=1 (office can ask any
+// driver to open the form with ?debug=1 to read a device-specific failure off the screen).
+var _DBG_ON_ = /debug=1/.test(location.search) || /_v2/.test(location.pathname);
+function _dbgToast_(msg){ if(!_DBG_ON_) return; try{ var t=document.createElement('div'); t.style.cssText='position:fixed;bottom:8px;left:8px;right:8px;z-index:99999;background:#B91C1C;color:#fff;font-size:11px;padding:8px 10px;border-radius:8px;word-break:break-all;'; t.textContent='DEBUG: '+String(msg).slice(0,220); document.body.appendChild(t); setTimeout(function(){ t.remove(); },20000); }catch(_){} }
 window.addEventListener('error', function(e){ _dbgToast_((e.message||'error')+' @'+(e.lineno||'?')); });
 window.addEventListener('unhandledrejection', function(e){ _dbgToast_('promise: '+String(e.reason && e.reason.message || e.reason)); });
 
