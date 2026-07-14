@@ -963,7 +963,7 @@ function _qGateBuild_(){
   ov.style.cssText = 'display:none;position:fixed;inset:0;z-index:10000;background:rgba(11,31,58,.93);flex-direction:column;align-items:center;justify-content:center;padding:28px 22px;';
   ov.innerHTML =
       '<div style="background:#fff;border-radius:14px;max-width:340px;width:100%;padding:22px 18px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.35);">'
-    + '<div style="font-size:19px;font-weight:700;color:#0B1F3A;margin-bottom:10px;">&#9888;&#65039; 照片不合格 · Gambar tidak jelas</div>'
+    + '<div style="font-size:19px;font-weight:700;color:#0B1F3A;margin-bottom:10px;">&#9888;&#65039; Photo not clear &middot; Gambar tidak jelas</div>'
     + '<div id="qGateReasons" style="font-size:14px;color:#1A3A5C;line-height:1.7;margin-bottom:16px;"></div>'
     + '<button type="button" id="qGateRetake" style="width:100%;padding:15px;background:#1D4ED8;color:#fff;border:none;border-radius:10px;font-family:\'DM Sans\',sans-serif;font-size:16px;font-weight:700;cursor:pointer;">&#128247; Retake · Ambil semula</button>'
     + '<button type="button" id="qGateAnyway" style="display:none;margin-top:10px;background:none;border:none;color:#8A9BB0;font-size:13px;text-decoration:underline;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Upload anyway · Tetap hantar</button>'
@@ -1065,9 +1065,9 @@ function removePhoto(idx) {
     var nm = (window._photoNameByUrl && window._photoNameByUrl[String(img.src).slice(-64)]) || '';
     var cap = ov.querySelector('#pvCap');
     if (cap) cap.innerHTML =
-      (nm.indexOf('_scanC') >= 0 ? '<b style="color:#7f7;">SCAN &#10003; 已裁边+白底</b>'
-       : nm.indexOf('_scanF') >= 0 ? '<b style="color:#ff5;">SCAN &#10003; 白底(未裁边:纸边不完整或不够清晰,保留全图)</b>'
-       : '<b style="color:#f97;">原图(未处理)</b>')
+      (nm.indexOf('_scanC') >= 0 ? '<b style="color:#7f7;">SCAN &#10003; Cropped + whitened &middot; Dipotong + diputihkan</b>'
+       : nm.indexOf('_scanF') >= 0 ? '<b style="color:#ff5;">SCAN &#10003; Whitened, full frame kept &middot; Diputihkan, bingkai penuh</b>'
+       : '<b style="color:#f97;">Original photo &middot; Foto asal</b>')
       + ' &middot; Tap photo to zoom &middot; tap outside to close';
     ov.style.display = 'flex';
   });
