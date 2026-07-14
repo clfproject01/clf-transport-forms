@@ -1192,8 +1192,8 @@ async function stampScanCopy(invs){
   if(!g){ sl.textContent='Stamp skipped - session expired. Sign in and press Download again.'; sl.className='stampline err'; return; }
   var list=invs.map(function(inv){ return { shipmentKey:inv.shipmentKey, invoiceNo:inv.invoiceNo }; });
   var tok=_newToken('stp');
-  var rd=await postWithToken({ formType:'MARK_SCAN_COPY', grant:g, date:_day.date, branch:_day.branch,
-                               runId:_runId, invoices:list, clientToken:tok }, tok);
+  var rd=await postWithToken({ formType:'MARK_SCAN_COPY', authToken:_authToken(), grant:g, date:_day.date, branch:_day.branch,
+                               runId:_runId, invoices:list, clientToken:tok }, tok);   // authToken: the write now needs the strong pallet session (not the read-only grant)
   if(rd && rd.status==='success'){
     sl.textContent='Archive stamped on the backend: '+(rd.stamped!=null?rd.stamped:list.length)+' invoice(s) marked SCAN_COPY.';
     sl.className='stampline ok';
