@@ -6,7 +6,7 @@
 <title>CLF POD Admin — Barcode Board</title>
 <!--
   ============================================================================
-  CLF POD Admin Board  (Program B of the POD 数字归档方案)
+  CLF POD Admin Board  (Program B of the POD digital-archive plan)
   ----------------------------------------------------------------------------
   Office/admin screen: shows every delivered invoice per lorry, its signed POD
   photo, and a re-drawn barcode the admin scans straight into EFI — so EFI entry
@@ -15,7 +15,7 @@
   SELF-CONTAINED: no CDN, no external library (barcode is drawn in-page). Deploy
   to clfproject01/clf-transport-forms (GitHub Pages), same as the other forms.
 
-  BACKEND CONTRACT (implemented by POD_Admin_backend_贴这份.txt — Program A):
+  BACKEND CONTRACT (implemented by the WebApp paste file — Program A):
     GET  ?action=getPodAdminBoard&date=YYYY-MM-DD&branch=MTK|KTN
          -> { status:'ok', date, branch, lorries:[ { vehicleNo, drivers, shipmentKey,
                 invoices:[ { invoiceNo, barcodeRaw, customer, custCode, area, amount,
@@ -32,7 +32,7 @@
     roster — no NEW auth system is invented here. Open question for the boss only:
     should office/admin staff be added to Pallet_Access, or does he want a separate
     POD_Admin_Access roster (a backend change)? Until he decides, unlock accepts
-    anyone already on Pallet_Access. See README_部署清单.md.
+    anyone already on Pallet_Access. See the deploy checklist README.
 
   BARCODE: Code 39 (default). A hand-drawn Code 39 encoder ships here so the board
     works with zero dependencies and is universally readable by handheld/imager
@@ -113,7 +113,7 @@
   .badge.pend{background:var(--amber-50);color:var(--amber-700);border:1px solid var(--amber-500);}
   .badge.mismatch{background:#FCE7F3;color:#9D174D;border:1px solid #DB2777;}
   .src{font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;margin-left:5px;vertical-align:1px;}
-  .src.bc{background:#DCFCE7;color:#166534;}    /* 条码 ✓ */
+  .src.bc{background:#DCFCE7;color:#166534;}    /* barcode-read tag */
   .src.ai{background:#FEF9C3;color:#854D0E;}    /* AI ~ */
   .src.no{background:#F3F4F6;color:#6B7280;}    /* ✗ */
   .time{font-variant-numeric:tabular-nums;color:var(--gray-500);font-size:12px;white-space:nowrap;}
@@ -222,10 +222,10 @@ var REFRESH_MS= 60000;
 var UNLOCK_ACTION = 'PALLET_UNLOCK';   // reuse the EXISTING verified unlock (see PROPOSE-FIRST note in header)
 var AUTH_KEY  = 'clf_pallet_auth';     // shared with CLF_Pallet_Store so one unlock covers both office tools
 var BARCODE_SYMBOLOGY = 'code39';      // 'code39' (default, shipped) | 'code128b' (also implemented below)
-// 照片显示方式(老板 2026-07-11 批准"内嵌缩略图 vs 点开 Drive"的混合方案):
-//   'thumbnail'(默认) = 内嵌缩略图,加载失败(未授权/未共享)自动降级成"点开 Drive"链接
-//   'link'            = 一律"点开 Drive"链接,不内嵌(最稳;若试点发现缩略图跨域加载不稳,翻这个开关)
-// 两种都**不需要**公开共享 —— 靠 CLF_POD_Scans 文件夹共享给 office 账号,Google 登录挡访问。
+// Photo display mode (approved 2026-07-11: hybrid thumbnail-vs-link):
+//   'thumbnail' (default) = inline Drive thumbnails; a failed load degrades to an open-in-Drive link
+//   'link'                = always an open-in-Drive link, never inline (fallback if thumbnails prove flaky)
+// Neither requires public sharing — folder sharing to the office account + Google login gates access.
 var PHOTO_DISPLAY = 'thumbnail';
 
 var _boardData = null;      // last good board payload
@@ -458,7 +458,7 @@ function statusBadge(v){
   return '<span class="badge pend">… Pending</span>';
 }
 function srcTag(v){
-  if(v.matchSource==='barcode') return '<span class="src bc" title="Read from the scanned barcode">条码✓</span>';
+  if(v.matchSource==='barcode') return '<span class="src bc" title="Read from the scanned barcode">BC&#10003;</span>';
   if(v.matchSource==='ai')      return '<span class="src ai" title="Matched by AI (Gemini) — double-check">AI~</span>';
   if(v.matchSource==='none')    return '<span class="src no" title="Not auto-identified">✗</span>';
   return '';
