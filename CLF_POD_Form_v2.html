@@ -1580,11 +1580,12 @@ function renderShipGroups(){
       var photos = g.photos || [];
       if (photos.length){
         html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">'
-          + photos.map(function(p){
+          + photos.map(function(p, pi){
               var t = '<img src="'+p.dataUrl+'" style="width:54px;height:54px;object-fit:cover;border-radius:6px;border:1px solid #E0C68A;">';
-              return p.qualityFlag
-                ? '<span style="position:relative;display:inline-block;">' + t + '<span style="position:absolute;bottom:1px;left:1px;font-size:12px;line-height:1;">&#128681;</span></span>'
-                : t;
+              var x = '<button type="button" class="ship-photo-x" data-g="'+i+'" data-p="'+pi+'" aria-label="Remove" style="position:absolute;top:-4px;right:-4px;width:20px;height:20px;background:rgba(0,0,0,.72);color:#fff;border:0;border-radius:50%;font-size:13px;line-height:1;cursor:pointer;padding:0;">&times;</button>';
+              return '<span style="position:relative;display:inline-block;margin-top:4px;">' + t
+                + (p.qualityFlag ? '<span style="position:absolute;bottom:1px;left:1px;font-size:12px;line-height:1;">&#128681;</span>' : '')
+                + x + '</span>';
             }).join('')
           + '<span style="align-self:center;font-size:12px;color:#2E7D32;font-weight:600;">'+photos.length+' photo'+(photos.length>1?'s':'')+' ready &#10003;</span>'
           + '</div>';
@@ -1653,6 +1654,15 @@ function renderShipGroups(){
 // click delegation on the shipment section
 document.getElementById('shipmentSection').addEventListener('click', function(e){
   if (e.target.closest('#shipRefresh')){ checkShipmentForVehicle(true); return; }   // B6: manual re-sync
+  var xbtn = e.target.closest('.ship-photo-x');
+  if (xbtn){
+    var xg = parseInt(xbtn.getAttribute('data-g'),10), xp = parseInt(xbtn.getAttribute('data-p'),10);
+    if (_shipGroups[xg] && _shipGroups[xg].photos && _shipGroups[xg].photos[xp] !== undefined){
+      _shipGroups[xg].photos.splice(xp, 1);
+      renderShipmentList();
+    }
+    return;
+  }
   var ph = e.target.closest('.ship-photo');
   if (ph){ _deliverIdx = parseInt(ph.getAttribute('data-i'),10); document.getElementById('shipPhoto').click(); return; }
   var pp = e.target.closest('.pallet-photo');
