@@ -539,14 +539,15 @@ document.addEventListener('visibilitychange', function(){
 
 // Multi-photo state (max 10)
 const MAX_PHOTOS = 10;
-const COMPRESS_MAX_DIM = 1600;   // longest side, in pixels
-const COMPRESS_QUALITY = 0.8;    // JPEG quality (0–1)
+const COMPRESS_MAX_DIM = 2400;   // longest side, in pixels (raised 1600→2400: office scan tool needs the detail)
+const COMPRESS_QUALITY = 0.85;   // JPEG quality (0–1) (raised 0.8→0.85 with the dim bump)
 let collectedPhotos = []; // [{dataUrl, name, type}]  — already compressed JPEG
 
 // ── [E1 Tier A 2026-07-13] scan-look whitening — colour-preserving, expert-panel design ──
 // Runs INSIDE compressImage's existing try/catch: any failure = today's exact plain-compress output.
 // Never blocks submission. Kill switch: ENHANCE_SCAN=false → byte-identical behaviour to the old form.
-const ENHANCE_SCAN = true;
+// PARKED 2026-07-14: the office-side scan tool now does scan-look — code kept as a kill-switched fallback.
+const ENHANCE_SCAN = false;
 const ENH_MAX_MS   = 1500;              // watchdog: a slower device quarantines itself to plain compress
 const ENH_QUAR_KEY = 'clf_enh_quarantine_v2';   // versioned: a faster future build can un-quarantine the fleet by bumping to _v2
 // Calibrated on real signed ACCOUNT-COPY invoices (2026-07-13): stamp ink is FADED PURPLE, so
@@ -621,12 +622,79 @@ function enhanceScanCanvas_(canvas, ctx) {
   return ((window.performance && performance.now) ? performance.now() : Date.now()) - t0;
 }
 
+// ── [E5 2026-07-14] photo QUALITY GATES — cheap advisory checks on a ≤512px copy ──
+// Returns { ok, reasons[] } with reasons drawn from 'cut' | 'blur' | 'exposure'.
+// LENIENT by design: only clear violations trip. FAIL-OPEN: any internal error returns
+// ok:true — a gate bug must never block a driver from submitting a POD.
+const BLUR_MIN = 30;   // Laplacian-variance floor — MTK pilot calibrates this (raise = stricter)
+function checkPhotoQuality_(canvas, ctx) {
+  try {
+    var reasons = [];
+    var W = canvas.width, H = canvas.height;
+    // all math on a downscaled copy, max 512px long side
+    var dw, dh;
+    if (W >= H) { dw = Math.min(512, W); dh = Math.max(8, Math.round(H * dw / W)); }
+    else        { dh = Math.min(512, H); dw = Math.max(8, Math.round(W * dh / H)); }
+    var tc = document.createElement('canvas'); tc.width = dw; tc.height = dh;
+    var tx = tc.getContext('2d'); tx.drawImage(canvas, 0, 0, dw, dh);
+    var d = tx.getImageData(0, 0, dw, dh).data;
+    var n = dw * dh, lum = new Float32Array(n);
+    var sum = 0, hot = 0;
+    for (var i = 0, p = 0; p < n; i += 4, p++) {
+      var L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      lum[p] = L; sum += L; if (L > 250) hot++;
+    }
+    var mean = sum / n;
+    // EXPOSURE: washed-out (bright mean OR big blown-white share) or far too dark
+    if (mean > 236 || (hot / n) > 0.28 || mean < 40) reasons.push('exposure');
+    // BLUR: variance of 3x3 Laplacian [0,1,0 / 1,-4,1 / 0,1,0] responses, 2px border skipped
+    var lSum = 0, lSq = 0, lN = 0;
+    for (var y = 2; y < dh - 2; y++) {
+      for (var x = 2; x < dw - 2; x++) {
+        var c = y * dw + x;
+        var v = lum[c - 1] + lum[c + 1] + lum[c - dw] + lum[c + dw] - 4 * lum[c];
+        lSum += v; lSq += v * v; lN++;
+      }
+    }
+    if (lN > 0) {
+      var lMean = lSum / lN;
+      if ((lSq / lN - lMean * lMean) < BLUR_MIN) reasons.push('blur');
+    }
+    // COMPLETENESS ('cut'): 128px-wide luminance map, bright mask = paper (thr = mean + 0.5*std);
+    // a border row/col that is >30% bright means the paper runs off-frame. Only clear violations.
+    var cw = Math.min(128, dw), ch = Math.max(8, Math.round(dh * cw / dw));
+    var cc = document.createElement('canvas'); cc.width = cw; cc.height = ch;
+    var ccx = cc.getContext('2d'); ccx.drawImage(tc, 0, 0, cw, ch);
+    var cd = ccx.getImageData(0, 0, cw, ch).data;
+    var cn = cw * ch, cl = new Float32Array(cn), cSum = 0;
+    for (var i2 = 0, p2 = 0; p2 < cn; i2 += 4, p2++) {
+      cl[p2] = 0.299 * cd[i2] + 0.587 * cd[i2 + 1] + 0.114 * cd[i2 + 2]; cSum += cl[p2];
+    }
+    var cMean = cSum / cn, cSq = 0;
+    for (var p3 = 0; p3 < cn; p3++) { var dv = cl[p3] - cMean; cSq += dv * dv; }
+    var cThr = cMean + 0.5 * Math.sqrt(cSq / cn);
+    var top = 0, bot = 0, lef = 0, rig = 0;
+    for (var x2 = 0; x2 < cw; x2++) {
+      if (cl[x2] > cThr) top++;
+      if (cl[(ch - 1) * cw + x2] > cThr) bot++;
+    }
+    for (var y2 = 0; y2 < ch; y2++) {
+      if (cl[y2 * cw] > cThr) lef++;
+      if (cl[y2 * cw + cw - 1] > cThr) rig++;
+    }
+    if (top / cw > 0.30 || bot / cw > 0.30 || lef / ch > 0.30 || rig / ch > 0.30) reasons.push('cut');
+    return { ok: reasons.length === 0, reasons: reasons };
+  } catch (e) {
+    return { ok: true, reasons: [] };   // fail-open — never block the driver on a gate bug
+  }
+}
+
 // ── [E1 Tier B 2026-07-13] auto-crop + perspective correction ("paper fills the page") ──
 // Detection runs on a FLATTENED 256px luminance map (body-shadow can't bisect the paper blob);
 // SAFETY GATES: any doubt → return null → caller keeps the full frame (whiten-only). A wrong crop
 // is worse than no crop — these gates deliberately refuse white-on-white, edge-out-of-frame,
 // two-documents and low-confidence shots.
-const ENHANCE_CROP = true;
+const ENHANCE_CROP = false;   // PARKED 2026-07-14 with ENHANCE_SCAN — office-side tool handles crop now
 function scanCropCanvas_(src) {
   var W = src.width, H = src.height;
   // 1) downscale to ≤256px luminance map
@@ -799,8 +867,9 @@ function _warpQuadWebGL_(src, quadPx, outW, outH) {
 // viewer caption lookup: dataUrl tail → produced filename (tells the boss/driver what was applied)
 window._photoNameByUrl = {};
 
-// Compress an image File to JPEG, max 1600px on longest side, quality 0.8.
-// Returns { dataUrl, name, type } (dataUrl is "data:image/jpeg;base64,...").
+// Compress an image File to JPEG, max COMPRESS_MAX_DIM px on longest side, quality COMPRESS_QUALITY.
+// Returns { dataUrl, name, type, quality } (dataUrl is "data:image/jpeg;base64,...";
+// quality = checkPhotoQuality_ result {ok, reasons[]} — callers that ignore it keep working).
 function compressImage(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -847,11 +916,13 @@ function compressImage(file) {
               if (_enhMs > ENH_MAX_MS) { try { localStorage.setItem(ENH_QUAR_KEY, String(Math.round(_enhMs))); } catch (qe) {} }
             }
           } catch (enhErr) { console.warn('enhance skipped:', enhErr); outCanvas = canvas; outCtx = ctx; cropApplied = false; }
+          // [E5] quality gate — advisory result rides on the entry; fail-open inside the gate
+          const q = checkPhotoQuality_(outCanvas, outCtx);
           const dataUrl = outCanvas.toDataURL('image/jpeg', COMPRESS_QUALITY);
           const name = (file.name || 'invoice.jpg').replace(/\.[^.]+$/, '')
             + (cropApplied ? '_scanC' : (enhApplied ? '_scanF' : '')) + '.jpg';
           try { window._photoNameByUrl[dataUrl.slice(-64)] = name; } catch (me) {}
-          resolve({ dataUrl, name, type: 'image/jpeg' });
+          resolve({ dataUrl, name, type: 'image/jpeg', quality: q });
         } catch (err) {
           reject(err);
         }
@@ -875,6 +946,41 @@ function readFileAsDataUrl(file) {
   });
 }
 
+// ── [E5 2026-07-14] quality-gate dialog: full-screen overlay, built once (loading-overlay style).
+// Attempts 1-2 = Retake only (photo DISCARDED); attempt >=3 also offers "Upload anyway" (flagged).
+var _qGateTries = 0;    // consecutive failed shots; reset whenever a photo PASSES (or a flagged one is added)
+var _qGateEls = null;   // DOM built once, reused
+function _qGateBuild_(){
+  var ov = document.createElement('div');
+  ov.id = 'qGateOverlay';
+  ov.style.cssText = 'display:none;position:fixed;inset:0;z-index:10000;background:rgba(11,31,58,.93);flex-direction:column;align-items:center;justify-content:center;padding:28px 22px;';
+  ov.innerHTML =
+      '<div style="background:#fff;border-radius:14px;max-width:340px;width:100%;padding:22px 18px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.35);">'
+    + '<div style="font-size:19px;font-weight:700;color:#0B1F3A;margin-bottom:10px;">&#9888;&#65039; 照片不合格 · Gambar tidak jelas</div>'
+    + '<div id="qGateReasons" style="font-size:14px;color:#1A3A5C;line-height:1.7;margin-bottom:16px;"></div>'
+    + '<button type="button" id="qGateRetake" style="width:100%;padding:15px;background:#1D4ED8;color:#fff;border:none;border-radius:10px;font-family:\'DM Sans\',sans-serif;font-size:16px;font-weight:700;cursor:pointer;">&#128247; Retake · Ambil semula</button>'
+    + '<button type="button" id="qGateAnyway" style="display:none;margin-top:10px;background:none;border:none;color:#8A9BB0;font-size:13px;text-decoration:underline;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Upload anyway · Tetap hantar</button>'
+    + '</div>';
+  document.body.appendChild(ov);
+  _qGateEls = { ov: ov, reasons: ov.querySelector('#qGateReasons'), retake: ov.querySelector('#qGateRetake'), anyway: ov.querySelector('#qGateAnyway') };
+}
+// Shows the dialog; resolves 'retake' or 'anyway'. allowAnyway=false hides the grey escape hatch.
+function showQualityGate_(reasons, allowAnyway){
+  if (!_qGateEls) _qGateBuild_();
+  var TXT = {
+    cut:      'Invoice not fully in frame · Invois terpotong',
+    blur:     'Photo is blurry · Kabur',
+    exposure: 'Too bright/dark · Terlalu cerah/gelap'
+  };
+  _qGateEls.reasons.innerHTML = (reasons || []).map(function(r){ return '&bull; ' + (TXT[r] || _esc(r)); }).join('<br>');
+  _qGateEls.anyway.style.display = allowAnyway ? 'inline-block' : 'none';
+  _qGateEls.ov.style.display = 'flex';
+  return new Promise(function(resolve){
+    _qGateEls.retake.onclick = function(){ _qGateEls.ov.style.display = 'none'; resolve('retake'); };
+    _qGateEls.anyway.onclick = function(){ _qGateEls.ov.style.display = 'none'; resolve('anyway'); };
+  });
+}
+
 async function handlePhoto(input) {
   if (!input.files || !input.files.length) return;
   const inputEl = input;
@@ -893,6 +999,15 @@ async function handlePhoto(input) {
         continue;
       }
     }
+    // [E5] quality gate: fail → dialog. Attempts 1-2 the shot is DISCARDED (input resets below,
+    // so tapping the button re-opens the camera); attempt >=3 may "Upload anyway" → flagged.
+    if (entry.quality && !entry.quality.ok) {
+      _qGateTries++;
+      const act = await showQualityGate_(entry.quality.reasons, _qGateTries >= 3);
+      if (act !== 'anyway') continue;   // discarded — not added
+      entry.qualityFlag = true;
+    }
+    _qGateTries = 0;   // pass or flagged-add both reset the streak
     collectedPhotos.push(entry);
     renderPhotoGrid();
   }
@@ -953,6 +1068,7 @@ function renderPhotoGrid() {
   grid.innerHTML = collectedPhotos.map((p, i) =>
     `<div class="photo-thumb">
        <img src="${p.dataUrl}" alt="Invoice ${i+1}">
+       ${p.qualityFlag ? '<span style="position:absolute;bottom:2px;left:2px;font-size:13px;line-height:1;z-index:1;">&#128681;</span>' : ''}
        <button type="button" class="remove-x" onclick="removePhoto(${i})" aria-label="Remove">×</button>
      </div>`
   ).join('');
@@ -1030,6 +1146,9 @@ async function submitForm() {
 
       // Multi-photo array (V11+)
       photos: photos,
+
+      // [E5] true if ANY included photo was force-uploaded past the quality gate
+      qualityFlag: collectedPhotos.some(p => !!p.qualityFlag),
 
       // Backwards-compat single fields (first photo, for old WebApp.gs that doesn't know about photos[])
       photoBase64: photos[0].base64,
@@ -1450,7 +1569,12 @@ function renderShipGroups(){
       var photos = g.photos || [];
       if (photos.length){
         html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">'
-          + photos.map(function(p){ return '<img src="'+p.dataUrl+'" style="width:54px;height:54px;object-fit:cover;border-radius:6px;border:1px solid #E0C68A;">'; }).join('')
+          + photos.map(function(p){
+              var t = '<img src="'+p.dataUrl+'" style="width:54px;height:54px;object-fit:cover;border-radius:6px;border:1px solid #E0C68A;">';
+              return p.qualityFlag
+                ? '<span style="position:relative;display:inline-block;">' + t + '<span style="position:absolute;bottom:1px;left:1px;font-size:12px;line-height:1;">&#128681;</span></span>'
+                : t;
+            }).join('')
           + '<span style="align-self:center;font-size:12px;color:#2E7D32;font-weight:600;">'+photos.length+' photo'+(photos.length>1?'s':'')+' ready &#10003;</span>'
           + '</div>';
       }
@@ -1575,12 +1699,21 @@ async function onShipPhoto(input){
   for (var f=0; f<input.files.length; f++){
     var entry;
     try { entry = await compressImage(input.files[f]); } catch(err){ entry = await readFileAsDataUrl(input.files[f]); }
+    // [E5] quality gate — same rules as handlePhoto: 1-2 = retake only (shot discarded; the
+    // input resets below so tapping re-opens the camera), >=3 may "Upload anyway" → flagged.
+    if (entry.quality && !entry.quality.ok){
+      _qGateTries++;
+      var act = await showQualityGate_(entry.quality.reasons, _qGateTries >= 3);
+      if (act !== 'anyway') continue;   // discarded — not buffered
+      entry.qualityFlag = true;
+    }
+    _qGateTries = 0;   // pass or flagged-add both reset the streak
     var cur = null;
     for (var ci=0; ci<_shipGroups.length; ci++){ if (_shipGroups[ci].key === gKey){ cur = _shipGroups[ci]; break; } }
     if (!cur) cur = g;
     if (!cur.photos) cur.photos = [];
     if (cur.photos.length >= 10) break;
-    cur.photos.push({ dataUrl: entry.dataUrl, name: entry.name, type: entry.type });
+    cur.photos.push({ dataUrl: entry.dataUrl, name: entry.name, type: entry.type, qualityFlag: !!entry.qualityFlag });
     g = cur;
   }
   input.value=''; _deliverIdx=-1;
@@ -1612,7 +1745,9 @@ async function saveDelivery(i){
     var payload = { formType:'SUBMIT_POD_FOR_INVOICE', branch: BRANCH, shipmentKey:_shipKey, invoiceNos:pendingInvs,
       driverName: _drv, secondDriver: _sd,
       vehicleNo: document.getElementById('vehicleNo').value, deliveryDate: document.getElementById('deliveryDate').value,
-      timestamp: now.toISOString(), photos: photos, clientToken: token };
+      timestamp: now.toISOString(), photos: photos, clientToken: token,
+      // [E5] true if ANY included photo was force-uploaded past the quality gate
+      qualityFlag: g.photos.some(function(p){ return !!p.qualityFlag; }) };
     var fd = new FormData(); fd.append('data', JSON.stringify(payload));
     // 90s upload timeout — on dead signal fetch can hang forever behind the overlay, and drivers
     // kill the tab (losing buffered photos). Abort → catch → photos kept + clear retry message.
