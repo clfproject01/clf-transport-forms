@@ -772,6 +772,13 @@
     else { alert('❌ '+((res&&res.message)||'Delete failed / Gagal padam')); }
   }
 
+  // FIX 2026-07-15: these three are called from inline onclick="editFuel(i)" in the fuel table, but
+  // they live inside this IIFE — inline handlers resolve on window, so without exporting them the
+  // manager ✏️ / 🗑 / ↹Receipt buttons threw ReferenceError and did nothing. Expose them on window.
+  window.editFuel = editFuel;
+  window.useOcr = useOcr;
+  window.deleteFuel = deleteFuel;
+
   function renderFuel(fuel, dash){
     if(!fuel){
       $('fuelPerKmHero').textContent='—'; $('fuelKmPerL').textContent='data unavailable'; $('fuelTotal').textContent='—';
