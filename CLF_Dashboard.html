@@ -639,7 +639,8 @@
       $('needsActionBody').innerHTML = '<tr><td colspan="6"><span class="unavail">⚠ POD data unavailable — tap Refresh</span></td></tr>';
       $('podNotSubmitted').innerHTML = '<span class="unavail">⚠ Data unavailable — tap Refresh</span>';
       $('podNotSubmittedNote').textContent='';
-      $('lorrySuccess').innerHTML=''; $('lorrySuccessEmpty').style.display='block';
+      // UX-5: on FAILURE show "unavailable", not the "no started lorries" empty text (which reads as a real zero).
+      $('lorrySuccessEmpty').style.display='none'; $('lorrySuccess').innerHTML='<span class="unavail">⚠ Data unavailable — tap Refresh</span>';
       $('crewRows').innerHTML = '<tr><td colspan="4"><span class="unavail">⚠ Data unavailable</span></td></tr>';
       $('routePicker').innerHTML='<span class="empty">Data unavailable.</span>'; $('routeStops').innerHTML='';
       NA_GROUPS=[];
@@ -647,13 +648,26 @@
     }
     var t = ship.totals || {planned:0,delivered:0,failed:0,pending:0,successPct:null};
     $('podPct').textContent = (t.successPct==null?'—':t.successPct+'%');
-    $('podFrac').textContent = fmtInt(t.delivered)+' / '+fmtInt(t.planned)+' delivered';
+    // UX-7: in Weekly/Monthly the POD half is still a single day — mark the big number itself, not just the zone header.
+    $('podFrac').textContent = fmtInt(t.delivered)+' / '+fmtInt(t.planned)+' delivered'
+      + (selectedView!=='daily' ? ' · DAILY '+selectedDate+' only' : '');
+    // UX-4: split the money at risk. "at risk" (red) = FAILED stops only — a real problem. Undelivered stops
+    // that just haven't been reached yet are shown separately in amber, so the red number stops crying wolf
+    // every morning (when the whole day's value is still "pending"). The TOTAL is anchored to the backend's
+    // authoritative t.rmAtRisk (so the headline never silently shrinks if the per-stop failedList is missing
+    // some amounts); failedList is used only to carve out how much of that total is FAILED vs not-yet-reached.
+    var _fl = (ship.failedList||[]), _rmFailList=0;
+    _fl.forEach(function(f){ var a=num(f.amount); if(a!=null && f.status==='failed') _rmFailList+=a; });
+    var _total = num(t.rmAtRisk), _rmFail, _rmPend;
+    if(_total!=null && _total>0){ _rmFail = Math.min(_rmFailList, _total); _rmPend = Math.round((_total - _rmFail)*100)/100; }
+    else { _rmFail = _rmFailList; _rmPend = 0; }   // no backend total → only what the list gives us
+    function _rm(n){ return 'RM '+Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
     $('podChips').innerHTML =
       '<span class="chip green">'+fmtInt(t.delivered)+' delivered</span>' +
       '<span class="chip red">'+fmtInt(t.failed)+' failed</span>' +
       '<span class="chip amber">'+fmtInt(t.pending)+' pending</span>' +
-      // B3: the money number the boss actually asks for — total RM stuck in failed+pending stops
-      (num(t.rmAtRisk)>0 ? '<span class="chip red mono">RM '+Number(t.rmAtRisk).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+' at risk</span>' : '');
+      (_rmFail>0 ? '<span class="chip red mono">'+_rm(_rmFail)+' at risk (failed)</span>' : '') +
+      (_rmPend>0 ? '<span class="chip amber mono">'+_rm(_rmPend)+' not yet delivered</span>' : '');
 
     // Needs action — group per lorry (accordion): failed lorries first, then by RM at risk
     var fl = (ship.failedList||[]);
@@ -671,7 +685,12 @@
     renderNeedsAction();
 
     // Haven't submitted POD — lorry-first table, driver AND helper shown (nobody singled out)
-    var ns = (ship.notStarted||[]);
+    // UX-6: a lorry with ANY confirmed POD (delivered OR failed) has started — drop it from this
+    // "haven't submitted" list even if the backend's delivered-only notStarted still includes it,
+    // so a driver who logged only failed stops isn't wrongly accused of doing nothing.
+    function _plateKey(v){ return String(v==null?'':v).trim().toUpperCase(); }
+    var _shByLorry = {}; (ship.shipments||[]).forEach(function(s){ _shByLorry[_plateKey(s.lorryNo)] = s; });
+    var ns = (ship.notStarted||[]).filter(function(x){ var s=_shByLorry[_plateKey(x.lorryNo)]; return !s || (((s.delivered||0)+(s.failed||0))===0); });
     if(!ns.length){
       $('podNotSubmitted').innerHTML = '<span class="chip green">All routes have started ✓</span>';
     } else {
@@ -687,7 +706,9 @@
     $('podNotSubmittedNote').textContent = ns.length ? (ns.length+' of '+((ship.shipments||[]).length)+' routes haven\'t started POD.') : '';
 
     // Per-lorry success (started only, worst at top)
-    var started = (ship.shipments||[]).filter(function(s){ return (s.delivered||0) > 0 && (s.planned||0) > 0; });
+    // UX-6: "started" = any POD confirmed, delivered OR failed. A lorry that's all-failed is still working
+    // (and is the WORST performer) — the old delivered-only test hid it from this "worst at top" chart.
+    var started = (ship.shipments||[]).filter(function(s){ return (((s.delivered||0)+(s.failed||0)) > 0) && (s.planned||0) > 0; });
     started.sort(function(a,b){ return (a.pct||0)-(b.pct||0); });
     if(!started.length){ $('lorrySuccess').innerHTML=''; if(CHARTS['lorrySuccess']){try{CHARTS['lorrySuccess'].destroy();}catch(e){}} $('lorrySuccessEmpty').style.display='block'; }
     else {
@@ -713,7 +734,7 @@
     var crew = $('crewRows');
     crew.innerHTML = sh.length ? sh.map(function(s){
       var pct = s.planned>0 ? Math.round(((s.delivered||0)/s.planned)*100) : 0;
-      var notStarted = (s.delivered||0)===0;
+      var notStarted = ((s.delivered||0)+(s.failed||0))===0;   // UX-6: an all-failed lorry HAS started (don't red-flag it as "not started")
       var fracHtml = '<span class="prog-mini"><i style="width:'+pct+'%;'+(notStarted?'background:var(--red-500);':'')+'"></i></span><span class="prog-frac"'+(notStarted?' style="color:var(--red-700);font-weight:600;"':'')+'>'+(s.delivered||0)+' / '+(s.planned||0)+'</span>';
       var rows = '<tr'+(notStarted?' class="pend"':'')+'><td class="plate">'+esc(s.lorryNo)+((s.trips||1)>1?'<span class="tag2">2ND TRIP</span>':'')+'</td><td>'+idShort(s.assignedPrimary)+'</td><td>'+(s.assignedSecondary?idShort(s.assignedSecondary):'—')+'</td><td>'+fracHtml+'</td></tr>';
       if(s.lorry2){
@@ -873,11 +894,14 @@
   // transient unavailable flash on that card during a normal load).
   function renderFuel(fuel, dash, skipNoFuel){
     if(!fuel){
+      // UX-5: on FAILURE every fuel card shows "unavailable" — not the "no RM recorded yet / needs 2 fills"
+      // empty text, which reads as a real zero and could make the boss wrongly think nobody logged fuel.
+      var _un='<span class="unavail">⚠ Data unavailable — tap Refresh</span>';
       $('fuelPerKmHero').textContent='—'; $('fuelKmPerL').textContent='data unavailable'; $('fuelTotal').textContent='—';
-      $('fuelCostLorry').innerHTML=''; $('fuelCostEmpty').style.display='block';
-      $('fuelPerKm').innerHTML=''; $('fuelPerKmEmpty').style.display='block';
+      $('fuelCostEmpty').style.display='none'; $('fuelCostLorry').innerHTML=_un;
+      $('fuelPerKmEmpty').style.display='none'; $('fuelPerKm').innerHTML=_un;
       $('crossCheckWrap').innerHTML='<span class="unavail">⚠ Fuel data unavailable — tap Refresh</span>';
-      $('tankRows').innerHTML=''; $('tankEmpty').style.display='block';
+      $('tankEmpty').style.display='none'; $('tankRows').innerHTML='<tr><td colspan="7">'+_un+'</td></tr>';
       $('fuelRows').innerHTML='<tr><td colspan="7"><span class="unavail">⚠ Fuel data unavailable — tap Refresh</span></td></tr>';
       if(!skipNoFuel) renderNoFuel(dash);   // this card's data comes from dash, which may still be fine
       return;
