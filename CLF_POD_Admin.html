@@ -147,24 +147,6 @@
 
   /* lock overlay is built in JS (mirrors CLF_Pallet_Store) */
 
-  /* print condar sheet — one lorry per A4 page */
-  #printArea{display:none;}
-  @media print{
-    body *{visibility:hidden;}
-    #printArea, #printArea *{visibility:visible;}
-    #printArea{display:block;position:absolute;left:0;top:0;width:100%;}
-    .p-page{page-break-after:always;padding:14mm 12mm;}
-    .p-page:last-child{page-break-after:auto;}
-    .p-head{font-size:18px;font-weight:800;margin-bottom:2mm;}
-    .p-sub{font-size:11px;color:#555;margin-bottom:6mm;}
-    .p-row{display:flex;align-items:center;gap:6mm;padding:3mm 0;border-bottom:1px solid #ddd;}
-    .p-row .p-bc{flex:0 0 auto;}
-    .p-row .p-meta{font-size:12px;}
-    .p-row .p-inv{font-weight:700;font-family:Consolas,monospace;}
-    .p-row .p-cust{color:#333;}
-    .p-row .p-amt{margin-left:auto;font-weight:700;font-variant-numeric:tabular-nums;}
-    .p-bctxt{font-family:Consolas,monospace;font-size:9px;text-align:center;letter-spacing:.05em;}
-  }
 </style>
 </head>
 <body>
@@ -179,7 +161,6 @@
       </span>
       <button class="btn" id="toggleAllBtn">▾ Expand all</button>
       <button class="btn" id="refreshBtn">↻ Refresh</button>
-      <button class="btn btn-primary" id="printBtn">🖨 Print barcodes</button>
       <a class="btn" id="scanifyLink" href="CLF_POD_Scanify.html" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:3px;">📄 Scan copies</a>
     </div>
   </div>
@@ -206,7 +187,6 @@
   <div class="lb-cap" id="lb-cap"></div>
 </div>
 
-<div id="printArea"></div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -583,29 +563,6 @@ function closeLightbox(){ $('lightbox').classList.remove('show'); $('lb-img').sr
 $('lightbox').addEventListener('click', function(e){ if(e.target===this) closeLightbox(); });   // tap the dark area = close
 document.addEventListener('keydown',function(e){ if(!$('lightbox').classList.contains('show')) return; if(e.key==='Escape') closeLightbox(); if(e.key==='ArrowLeft') lbStep(-1); if(e.key==='ArrowRight') lbStep(1); });
 
-/* ============================================================================
-   PRINT — one lorry per A4 page: barcode + invoice + customer + amount.
-   Fallback for when the handheld scanner can't read the screen.
-   ============================================================================ */
-function buildPrint(){
-  var d=_boardData;
-  if(!d){ $('printArea').innerHTML='<div class="p-page"><div class="p-head">Board not loaded — refresh first.</div></div>'; return; }
-  var html='';
-  (d.lorries||[]).forEach(function(L){
-    var invs=(L.invoices||[]).filter(function(v){ return String(v.status).toLowerCase()==='delivered'; });
-    if(!invs.length) return;
-    html+='<div class="p-page"><div class="p-head">'+esc(L.vehicleNo||'?')+'</div>'
-      +'<div class="p-sub">'+esc(d.date||'')+' · '+(BRANCH==='KTN'?'Kuantan':'Mentakab')+' · '+invs.length+' invoice(s)'+(L.drivers?(' · '+esc(L.drivers)):'')+'</div>';
-    invs.forEach(function(v){
-      var raw=v.barcodeRaw||v.invoiceNo||''; var svg=barcodeSvg(raw,{height:44,narrow:2});
-      html+='<div class="p-row"><div class="p-bc">'+(svg||'')+'<div class="p-bctxt">'+esc(raw)+'</div></div>'
-        +'<div class="p-meta"><div class="p-inv">'+esc(v.invoiceNo)+'</div><div class="p-cust">'+esc(v.customer||'')+'</div></div>'
-        +'<div class="p-amt">'+(v.amount!=null?('RM '+money(v.amount)):'')+'</div></div>';
-    });
-    html+='</div>';
-  });
-  $('printArea').innerHTML = html || '<div class="p-page"><div class="p-head">No delivered invoices to print.</div></div>';
-}
 
 /* ============================================================================
    DEMO DATA (only via ?demo=1 — never masquerades as live)
@@ -632,7 +589,6 @@ function demoData(){
 $('date').value = todayKL(); $('date').max = todayKL();
 $('date').addEventListener('change', loadBoard);
 $('refreshBtn').addEventListener('click', loadBoard);
-$('printBtn').addEventListener('click', function(){ buildPrint(); setTimeout(function(){ window.print(); }, 60); });
 // Collapse/expand: click a lorry header to toggle just that card (no full re-render, checkboxes stay live).
 $('board').addEventListener('click', function(e){
   var head = e.target.closest('.lorry-head'); if(!head) return;
