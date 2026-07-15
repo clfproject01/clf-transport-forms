@@ -121,7 +121,9 @@
   .thumb{width:38px;height:38px;border-radius:6px;object-fit:cover;border:1px solid var(--gray-200);cursor:pointer;background:var(--gray-100);}
   .thumb-link{display:inline-flex;width:38px;height:38px;border-radius:6px;border:1px solid var(--gray-200);align-items:center;justify-content:center;text-decoration:none;font-size:18px;background:var(--gray-50);}
   .thumb-none{font-size:11px;color:var(--gray-400);}
-  .bc-cell svg{display:block;}
+  td.bc-cell{width:340px;}
+  .bc-box{width:320px;max-width:100%;}
+  .bc-box svg{display:block;width:100%;height:auto;}
   .bc-txt{font-family:"SFMono-Regular",Consolas,monospace;font-size:11px;color:var(--gray-600);margin-top:1px;text-align:center;letter-spacing:.04em;}
   .bc-na{font-size:11px;color:var(--gray-400);font-style:italic;}
   .efi-wrap{display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;}
@@ -474,7 +476,7 @@ function barcodeCell(v){
   var svg = barcodeSvg(raw, {height:40});
   // fallback must show `raw` (the exact string EFI expects), NOT invoiceNo — they can differ
   if(!svg) return '<span class="bc-na">no barcode<br>type manually:<br><b>'+esc(raw)+'</b></span>';
-  return '<div class="bc-cell">'+svg+'<div class="bc-txt">'+esc(raw)+'</div></div>';
+  return '<div class="bc-cell"><div class="bc-box">'+svg+'</div><div class="bc-txt">'+esc(raw)+'</div></div>';
 }
 function efiCell(L, v){
   var st=String(v.status||'').toLowerCase();
