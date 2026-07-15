@@ -180,6 +180,7 @@
       <button class="btn" id="toggleAllBtn">▾ Expand all</button>
       <button class="btn" id="refreshBtn">↻ Refresh</button>
       <button class="btn btn-primary" id="printBtn">🖨 Print barcodes</button>
+      <a class="btn" id="scanifyLink" href="CLF_POD_Scanify.html" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:3px;">📄 Scan copies</a>
     </div>
   </div>
   <div class="meta" id="lastUpdated" style="font-size:12px;color:var(--gray-500);margin:-8px 0 12px;"></div>
@@ -655,11 +656,13 @@ $('board').addEventListener('click', function(e){
 document.querySelectorAll('#branchSeg .seg-btn').forEach(function(b){
   b.addEventListener('click', function(){
     document.querySelectorAll('#branchSeg .seg-btn').forEach(function(x){ x.classList.remove('active'); });
-    b.classList.add('active'); BRANCH=b.getAttribute('data-branch'); loadBoard();
+    b.classList.add('active'); BRANCH=b.getAttribute('data-branch'); _syncScanifyLink_(); loadBoard();
   });
 });
 // preset branch toggle from URL
 document.querySelectorAll('#branchSeg .seg-btn').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-branch')===BRANCH); });
+function _syncScanifyLink_(){ var sl=$('scanifyLink'); if(sl) sl.href='CLF_POD_Scanify.html?branch='+encodeURIComponent(BRANCH); }
+_syncScanifyLink_();
 document.addEventListener('visibilitychange', function(){ if(!document.hidden) loadBoard(); });
 
 window.onload = function(){

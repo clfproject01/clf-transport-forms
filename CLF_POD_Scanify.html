@@ -256,7 +256,7 @@ var JPEG_Q     = 0.85;
 var FETCH_POOL = 5;                   // max parallel getPodPhoto requests
 var PREFETCH_AHEAD = 8;               // photos to prefetch ahead of the processor
 
-var BRANCH = 'MTK';
+var BRANCH = (function(){ var b=(new URLSearchParams(location.search).get('branch')||'MTK').toUpperCase(); return (b==='KTN')?'KTN':'MTK'; })();   // honor ?branch from the board 'Scan copies' link
 var _grant = '', _grantExp = 0;       // photo grant (memory only, ~6 h server-side)
 var _runId = '';
 var _day = null;                      // { date, branch, local, invoices:[], noPhoto:[] }
@@ -1209,6 +1209,7 @@ async function stampScanCopy(invs){
    ============================================================================ */
 $('date').value=yesterdayKL(); $('date').max=todayKL();
 $('date').addEventListener('change', function(){ if(_day && !_day.local) resetDay(); });
+document.querySelectorAll('#branchSeg .seg-btn').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-branch')===BRANCH); });   // reflect ?branch on load
 document.querySelectorAll('#branchSeg .seg-btn').forEach(function(b){
   b.addEventListener('click', function(){
     if(_running) return;
