@@ -102,9 +102,15 @@
   .stampline.err{color:var(--red-700);font-weight:600;}
 
   .plate-sec{margin-bottom:18px;}
-  .plate-head{display:flex;align-items:baseline;gap:10px;margin:0 2px 8px;}
+  .plate-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 2px 8px;}
   .plate-head .plate{font-size:16px;font-weight:800;color:var(--blue);letter-spacing:.01em;}
   .plate-head .mini{font-size:12px;color:var(--gray-500);font-variant-numeric:tabular-nums;}
+  .plate-head .lorry-status{font-size:12px;color:var(--gray-500);font-variant-numeric:tabular-nums;}
+  .plate-head .lorry-btns{margin-left:auto;display:flex;gap:8px;}
+  .plate-head .lorry-btns .btn{font-size:12px;padding:5px 12px;}
+  .plate-head .lorry-saved{margin-left:auto;font-size:12.5px;font-weight:700;color:var(--green-700);}
+  .plate-sec.saved .plate-head{opacity:.7;}
+  .plate-sec .saved-note{font-size:12.5px;color:var(--gray-500);margin:0 2px;}
   .cellgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;}
   .cell{background:var(--card);border:1px solid var(--gray-200);border-radius:12px;box-shadow:var(--shadow);padding:8px;display:flex;flex-direction:column;gap:6px;}
   .cell .thumbbox{position:relative;width:100%;height:150px;border-radius:8px;background:var(--gray-100);overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer;}
@@ -185,9 +191,8 @@
 
   <div class="card">
     <div class="runrow">
-      <button class="btn btn-primary btn-big" id="runBtn" disabled>Run</button>
+      <button class="btn btn-primary btn-big" id="runBtn" disabled>Process all lorries</button>
       <div class="pbar"><i id="pbarFill"></i></div>
-      <button class="btn btn-green btn-big" id="dlBtn" disabled>Download ZIP</button>
     </div>
     <div class="progtext" id="progText" style="margin-top:8px;"></div>
     <div class="missline" id="missLine"></div>
@@ -261,7 +266,8 @@ var BRANCH = (function(){ var b=(new URLSearchParams(location.search).get('branc
 var _grant = '', _grantExp = 0;       // photo grant (memory only, ~6 h server-side)
 var _runId = '';
 var _day = null;                      // { date, branch, local, invoices:[], noPhoto:[] }
-var _running = false;
+var _running = false;                  // single lock: only one run OR download at a time (global or per-lorry)
+var _saved = {};                      // plate -> true once that lorry's ZIP has been downloaded + its photos freed
 var _cvReady = false;
 
 /* ============================================================================
@@ -279,6 +285,7 @@ function toast(kind, html){
   clearTimeout(toast._tmr); toast._tmr=setTimeout(function(){ t.classList.remove('show'); }, kind==='err'?6000:3500);
 }
 function sanitizeName(s){ return String(s==null?'':s).replace(/[\/\\:*?"<>|]+/g,'_').trim(); }
+function safePlate(s){ return String(s==null?'':s).replace(/[^A-Za-z0-9]/g,'_'); }   // stable id suffix for a lorry's status span
 function ddmmyyyy(v){
   var m=String(v||'').match(/^(\d{4})-(\d{2})-(\d{2})/);
   return m ? (m[3]+'-'+m[2]+'-'+m[1]) : sanitizeName(v).replace(/[^0-9A-Za-z_-]/g,'-');
@@ -719,7 +726,7 @@ function resetDay(){
   if(_day){
     _day.invoices.forEach(function(inv){ inv.photos.forEach(function(p){ freePhoto(p); }); });
   }
-  _day=null; _runId='';
+  _day=null; _runId=''; _saved={};
   $('grid').innerHTML='<div class="empty">Nothing loaded yet.</div>';
   $('pbarFill').style.width='0%'; $('progText').textContent='';
   $('missLine').className='missline'; $('noPhotoLine').className='warnline';
@@ -833,18 +840,56 @@ function allPhotos(){
 }
 function invDone(inv){ return inv.photos.every(function(p){ return !!p.result; }); }
 
-async function runAll(){
-  if(_running || !_day || !_cvReady) return;
-  if(!_day.local){
-    var g=await ensureGrant();
-    if(!g) return;
-  }
-  _running=true;
-  if(!_runId) _runId=_newToken('run');
-  $('runBtn').disabled=true; $('loadBtn').disabled=true; $('localBtn').disabled=true;
-  $('stampLine').textContent=''; $('stampLine').className='stampline';
+// Ordered lorry groups by inv.plate, SAME order renderGrid walks (_day.invoices,
+// first-seen plate wins). Each group carries its invoices AND a flat {inv,p} list.
+function lorryGroups(){
+  var groups=[], byPlate={};
+  if(_day) _day.invoices.forEach(function(inv){
+    var g=byPlate[inv.plate];
+    if(!g){ g={plate:inv.plate, invoices:[], photos:[]}; byPlate[inv.plate]=g; groups.push(g); }
+    g.invoices.push(inv);
+    inv.photos.forEach(function(p){ g.photos.push({inv:inv, p:p}); });
+  });
+  return groups;
+}
+function groupByPlate(plate){
+  var gs=lorryGroups();
+  for(var i=0;i<gs.length;i++) if(gs[i].plate===plate) return gs[i];
+  return null;
+}
+// A lorry is ready to download when every one of its (photo-bearing) invoices is done.
+function lorryReady(g){ return g.invoices.length>0 && g.invoices.every(invDone); }
+// Neutral one-line status for a lorry's head (used when not actively running).
+function lorryStatusText(g){
+  if(_saved[g.plate]) return '';
+  var total=g.photos.length, done=0, failed=0, pend=0;
+  g.photos.forEach(function(t){
+    if(t.p.result) done++;
+    else if(t.p.failedErr) failed++;
+    else pend++;
+  });
+  if(total===0) return '';
+  if(done===total) return 'done '+done+'/'+total+' - ready to download';
+  if(failed>0 && pend===0) return failed+' failed - retry or Adjust';
+  if(done===0 && failed===0) return 'not processed yet';
+  return done+'/'+total+' done'+(failed?(', '+failed+' failed'):'');
+}
 
-  var todo=allPhotos().filter(function(t){ return !t.p.result; });
+// Crude "everything off" while a run/download is in flight. On re-enable the
+// caller runs updateGates() which restores precise per-lorry / run-button states.
+function setControlsBusy(on){
+  $('loadBtn').disabled=on; $('localBtn').disabled=on;
+  if(on){
+    $('runBtn').disabled=true;
+    document.querySelectorAll('#grid [data-act="proc"],#grid [data-act="dl"]').forEach(function(b){ b.disabled=true; });
+  }
+}
+
+// Shared per-photo processing loop. `todo` is an array of {inv,p} to process.
+// Identical body to the old runAll inner loop (prefetch window, fetch+one retry,
+// processPhotoBlob, setPhotoResult/failedErr, progress, updateCell, yield).
+// Optional statusCb(msg) mirrors live progress into a lorry's head status span.
+async function _runPhotos(todo, statusCb){
   var total=todo.length, doneN=0, failN=0;
   for(var i=0;i<todo.length;i++){
     var t=todo[i], inv=t.inv, p=t.p;
@@ -856,6 +901,7 @@ async function runAll(){
     }
     var pn=inv.photos.indexOf(p)+1;
     $('progText').textContent='Processing '+inv.invoiceNo+' - photo '+pn+'/'+inv.photos.length+' ('+(doneN+failN+1)+'/'+total+')';
+    if(statusCb) statusCb('processing '+(doneN+failN+1)+'/'+total+' ...');
     try{
       if(!p.origBlob){
         try{ p.origBlob=await p.fetchP; }
@@ -876,9 +922,47 @@ async function runAll(){
     updateCell(inv);
     await new Promise(function(r){ setTimeout(r,0); });      // keep the UI alive between photos
   }
-  $('progText').textContent='Done: '+doneN+' photo(s) processed'+(failN?(', '+failN+' failed - press Run to retry the failed ones'):'');
+  return { doneN:doneN, failN:failN, total:total };
+}
+
+// Process EVERY lorry's not-yet-done photos (office can then Download per lorry).
+async function runAll(){
+  if(_running || !_day || !_cvReady) return;
+  if(!_day.local){
+    var g=await ensureGrant();
+    if(!g) return;
+  }
+  _running=true;
+  if(!_runId) _runId=_newToken('run');
+  setControlsBusy(true);
+  $('stampLine').textContent=''; $('stampLine').className='stampline';
+  var todo=allPhotos().filter(function(t){ return !t.p.result; });
+  var r=await _runPhotos(todo);
+  $('progText').textContent='Done: '+r.doneN+' photo(s) processed'+(r.failN?(', '+r.failN+' failed - press Process to retry the failed ones'):'');
   _running=false;
-  $('loadBtn').disabled=false; $('localBtn').disabled=false;
+  setControlsBusy(false);
+  updateGates();
+}
+
+// Process ONLY this lorry's not-yet-done photos. Peak memory stays one lorry.
+async function runLorry(plate){
+  if(_running || !_day || !_cvReady) return;
+  var g=groupByPlate(plate);
+  if(!g || _saved[plate]) return;
+  if(!_day.local){
+    var gr=await ensureGrant();
+    if(!gr) return;
+  }
+  _running=true;
+  if(!_runId) _runId=_newToken('run');
+  setControlsBusy(true);
+  $('stampLine').textContent=''; $('stampLine').className='stampline';
+  var safe=safePlate(plate);
+  var todo=g.photos.filter(function(t){ return !t.p.result; });
+  var r=await _runPhotos(todo, function(msg){ var s=$('lst-'+safe); if(s) s.textContent=msg; });
+  $('progText').textContent='Lorry '+plate+': '+r.doneN+' processed'+(r.failN?(', '+r.failN+' failed'):'')+'.';
+  _running=false;
+  setControlsBusy(false);
   updateGates();
 }
 function setPhotoResult(p,res){
@@ -901,20 +985,37 @@ function invBadge(inv){
   inv.photos.forEach(function(p){ if(MODE_RANK[p.result.mode]>MODE_RANK[worst]) worst=p.result.mode; });
   return {cls:worst, txt:worst.toUpperCase()};
 }
+function plateHeadHtml(g){
+  var plate=g.plate, safe=safePlate(plate), n=g.invoices.length;
+  var head='<div class="plate-head"><span class="plate">'+esc(plate)+'</span>'
+    +'<span class="mini">'+n+' invoice(s)</span>';
+  if(_saved[plate]){
+    head+='<span class="lorry-saved">&#10003; Saved to ZIP</span></div>';
+    return head;
+  }
+  head+='<span class="lorry-status" id="lst-'+safe+'">'+esc(lorryStatusText(g))+'</span>'
+    +'<span class="lorry-btns">'
+    +'<button class="btn" data-plate="'+esc(plate)+'" data-act="proc">&#9654; Process</button>'
+    +'<button class="btn btn-green" data-plate="'+esc(plate)+'" data-act="dl" disabled>&#11015; Download ZIP</button>'
+    +'</span></div>';
+  return head;
+}
 function renderGrid(){
   if(!_day || !_day.invoices.length){ $('grid').innerHTML='<div class="empty">Nothing loaded yet.</div>'; return; }
-  var byPlate={}, order=[];
-  _day.invoices.forEach(function(inv,i){
-    if(!byPlate[inv.plate]){ byPlate[inv.plate]=[]; order.push(inv.plate); }
-    byPlate[inv.plate].push(i);
-  });
+  var groups=lorryGroups();
   var html='';
-  order.forEach(function(plate){
-    html+='<div class="plate-sec"><div class="plate-head"><span class="plate">'+esc(plate)+'</span><span class="mini">'+byPlate[plate].length+' invoice(s)</span></div><div class="cellgrid">';
-    byPlate[plate].forEach(function(i){ html+=cellHtml(i); });
+  groups.forEach(function(g){
+    if(_saved[g.plate]){
+      html+='<div class="plate-sec saved">'+plateHeadHtml(g)
+        +'<div class="saved-note">'+g.invoices.length+' invoice(s) archived to ZIP and cleared from memory.</div></div>';
+      return;
+    }
+    html+='<div class="plate-sec">'+plateHeadHtml(g)+'<div class="cellgrid">';
+    g.invoices.forEach(function(inv){ html+=cellHtml(_day.invoices.indexOf(inv)); });
     html+='</div></div>';
   });
   $('grid').innerHTML=html;
+  updateGates();
 }
 function cellHtml(i){
   var inv=_day.invoices[i], b=invBadge(inv);
@@ -940,9 +1041,16 @@ function updateCell(inv){
 }
 $('grid').addEventListener('click', function(e){
   var t=e.target.closest('[data-act]'); if(!t||!_day) return;
+  var act=t.getAttribute('data-act');
+  if(act==='proc' || act==='dl'){                 // per-lorry Process / Download
+    if(t.disabled) return;
+    var plate=t.getAttribute('data-plate');
+    if(act==='proc') runLorry(plate); else downloadLorry(plate);
+    return;
+  }
   var i=parseInt(t.getAttribute('data-i'),10), inv=_day.invoices[i];
   if(!inv) return;
-  if(t.getAttribute('data-act')==='adj'){
+  if(act==='adj'){
     var pi=0;
     for(var k=0;k<inv.photos.length;k++){ var r=inv.photos[k].result; if(r&&r.mode!=='scan'){ pi=k; break; } }
     openAdjust(i,pi);
@@ -957,29 +1065,44 @@ $('grid').addEventListener('click', function(e){
 function updateGates(){
   var haveDay=!!(_day && _day.invoices.length);
   $('runBtn').disabled = !(haveDay && _cvReady && !_running);
-  var doneInv=0, missing=[];
-  if(haveDay){
-    _day.invoices.forEach(function(inv){ if(invDone(inv)) doneInv++; else missing.push(inv.invoiceNo); });
-  }
-  var complete = haveDay && doneInv===_day.invoices.length;
-  $('dlBtn').disabled = !(complete && !_running && typeof fflate!=='undefined');
+  var groups = haveDay ? lorryGroups() : [];
+  // per-lorry state map (ready = every invoice done; saved = ZIP already taken)
+  var st={};
+  var totalLorries=groups.length, savedLorries=0;
+  groups.forEach(function(g){
+    var saved=!!_saved[g.plate], ready=lorryReady(g);
+    st[g.plate]={ saved:saved, ready:ready };
+    if(saved) savedLorries++;
+    // refresh the head status line when idle (during a run the loop owns it)
+    if(!_running){ var sp=$('lst-'+safePlate(g.plate)); if(sp) sp.textContent=lorryStatusText(g); }
+  });
+  var haveFflate = typeof fflate!=='undefined' && typeof fflate.zipSync==='function';
+  document.querySelectorAll('#grid [data-act="proc"]').forEach(function(b){
+    var s=st[b.getAttribute('data-plate')]||{};
+    b.disabled = _running || s.saved || !_cvReady;
+  });
+  document.querySelectorAll('#grid [data-act="dl"]').forEach(function(b){
+    var s=st[b.getAttribute('data-plate')]||{};
+    b.disabled = !(s.ready && !s.saved && !_running && haveFflate);
+  });
+  // banner: neutral info only (no red, no "locked", no invoice list)
   var ml=$('missLine');
-  if(haveDay && missing.length && !_running){
-    var _totPh=0; _day.invoices.forEach(function(iv){ _totPh+=iv.photos.length; });
-    if(doneInv===0){
-      ml.innerHTML='Loaded <b>'+_day.invoices.length+'</b> invoice(s) / <b>'+_totPh+'</b> photo(s). Press <b>Run</b> to make the scan copies — Download unlocks when they finish.';
+  if(haveDay && !_running){
+    if(savedLorries<totalLorries){
+      if(savedLorries===0){
+        ml.innerHTML='Loaded <b>'+_day.invoices.length+'</b> invoice(s) across <b>'+totalLorries+'</b> lorr'+(totalLorries===1?'y':'ies')+'. Process + Download each lorry (Download unlocks per lorry when it finishes).';
+      } else {
+        ml.innerHTML='<b>'+savedLorries+'</b> of <b>'+totalLorries+'</b> lorr'+(totalLorries===1?'y':'ies')+' saved.';
+      }
     } else {
-      ml.innerHTML='<b>'+doneInv+'</b> of <b>'+_day.invoices.length+'</b> invoice(s) done, <b>'+missing.length+'</b> to go. Press <b>Run again</b> to finish the rest.';
+      ml.innerHTML='All <b>'+totalLorries+'</b> lorr'+(totalLorries===1?'y':'ies')+' saved to ZIP.';
     }
     ml.className='missline info show';
-  } else {
+  } else if(!_running){
     ml.className='missline';
   }
-  if(haveDay && !_running){
-    $('runBtn').textContent = (doneInv>0 && !complete) ? 'Run again' : (complete ? 'Re-run' : 'Run');
-  } else if(_running){
-    $('runBtn').textContent='Running...';
-  }
+  // global run button label
+  $('runBtn').textContent = _running ? 'Processing...' : 'Process all lorries';
 }
 
 /* ============================================================================
@@ -1152,42 +1275,78 @@ async function photoPdfPage(p){
     comps:(sof&&sof.comps)?sof.comps:(r.comps||3)
   };
 }
-async function downloadZip(){
-  if(!_day || _running) return;
-  var invs=_day.invoices.filter(invDone);
-  if(invs.length!==_day.invoices.length){ toast('err','Not all invoices processed yet'); return; }
-  var btn=$('dlBtn'); btn.disabled=true; btn.textContent='Building ZIP...';
+// Build ONE lorry's ZIP (exact zip-building logic from the old downloadZip:
+// photoPdfPage -> buildImagePdf -> files{folder/name} with (2) dedup, folder
+// CLF_POD_Scans/<date>/<plate>/, fflate STORE). Returns {blob,zname,count}.
+async function buildLorryZip(invs, plate){
+  var rootDate=ddmmyyyy(_day.date);
+  var files={}, used={};
+  for(var i=0;i<invs.length;i++){
+    var inv=invs[i];
+    var pages=[];
+    for(var k=0;k<inv.photos.length;k++) pages.push(await photoPdfPage(inv.photos[k]));
+    var pdf=buildImagePdf(pages);
+    var folder='CLF_POD_Scans/'+rootDate+'/'+(sanitizeName(inv.plate)||'UNKNOWN')+'/';
+    var fileDate=ddmmyyyy(inv.invoiceDate || inv.deliveredDate || _day.date);
+    var base=sanitizeName(inv.invoiceNo)+'_'+fileDate, name=base+'.pdf', dup=2;
+    while(used[folder+name]){ name=base+'('+dup+').pdf'; dup++; }
+    used[folder+name]=1;
+    files[folder+name]=pdf;
+    if(i%10===9) await new Promise(function(r){ setTimeout(r,0); });
+  }
+  var zipped=fflate.zipSync(files,{level:0});   // STORE - JPEG-PDFs do not recompress
+  var plateTag=sanitizeName(plate)||'UNKNOWN';
+  var zname=_day.local
+    ? ('CLF_POD_Scans_LOCAL_'+rootDate+'_'+plateTag+'.zip')
+    : ('CLF_POD_Scans_'+rootDate+'_'+_day.branch+'_'+plateTag+'.zip');
+  var blob=new Blob([zipped],{type:'application/zip'});
+  return { blob:blob, zname:zname, count:invs.length };
+}
+
+// Download ONE lorry: build its ZIP, save it, stamp (server mode), then free its
+// photos and mark it saved. One bad photo only ever blocks its own lorry.
+async function downloadLorry(plate){
+  if(_running || !_day) return;
+  var g=groupByPlate(plate);
+  if(!g) return;
+  if(_saved[plate]){ toast('err','This lorry is already saved to ZIP'); return; }
+  if(!g.invoices.every(invDone)){ toast('err','This lorry is not fully processed yet'); return; }
+  _running=true; setControlsBusy(true);
+  var safe=safePlate(plate), sEl=$('lst-'+safe);
+  if(sEl) sEl.textContent='building ZIP ...';
   try{
-    var rootDate=ddmmyyyy(_day.date);
-    var files={}, used={};
-    for(var i=0;i<invs.length;i++){
-      var inv=invs[i];
-      var pages=[];
-      for(var k=0;k<inv.photos.length;k++) pages.push(await photoPdfPage(inv.photos[k]));
-      var pdf=buildImagePdf(pages);
-      var folder='CLF_POD_Scans/'+rootDate+'/'+(sanitizeName(inv.plate)||'UNKNOWN')+'/';
-      var fileDate=ddmmyyyy(inv.invoiceDate || inv.deliveredDate || _day.date);
-      var base=sanitizeName(inv.invoiceNo)+'_'+fileDate, name=base+'.pdf', dup=2;
-      while(used[folder+name]){ name=base+'('+dup+').pdf'; dup++; }
-      used[folder+name]=1;
-      files[folder+name]=pdf;
-      if(i%10===9) await new Promise(function(r){ setTimeout(r,0); });
-    }
-    var zipped=fflate.zipSync(files,{level:0});   // STORE - JPEG-PDFs do not recompress
-    var zname='CLF_POD_Scans_'+(_day.local?('LOCAL_'+rootDate):(rootDate+'_'+_day.branch))+'.zip';
-    var blob=new Blob([zipped],{type:'application/zip'});
+    var built=await buildLorryZip(g.invoices, plate);
     var a=document.createElement('a');
-    a.href=URL.createObjectURL(blob); a.download=zname;
+    a.href=URL.createObjectURL(built.blob); a.download=built.zname;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function(){ URL.revokeObjectURL(a.href); },30000);
-    toast('ok','ZIP ready: '+esc(zname)+' ('+invs.length+' PDF'+(invs.length===1?'':'s')+')');
-    if(!_day.local) stampScanCopy(invs);
+    toast('ok','ZIP ready: '+esc(built.zname)+' ('+built.count+' PDF'+(built.count===1?'':'s')+')');
+    if(!_day.local) stampScanCopy(g.invoices.slice());
     else { $('stampLine').textContent='LOCAL run - no backend stamping.'; $('stampLine').className='stampline'; }
+    freeLorry(plate);          // bound memory: drop this lorry's photos/results
+    _saved[plate]=true;
+    _running=false;
+    setControlsBusy(false);
+    renderGrid();              // this lorry now renders as "Saved to ZIP"; updateGates() runs inside
   }catch(err){
-    toast('err','ZIP failed: '+esc(err&&err.message?err.message:err));
+    _running=false;
+    setControlsBusy(false);
+    toast('err','ZIP failed: '+esc(err&&err.message?err.message:err));   // do NOT set _saved -> they can retry
+    updateGates();
   }
-  btn.disabled=false; btn.textContent='Download ZIP';
-  updateGates();
+}
+
+// Free ONE lorry's photos + results. This is what caps peak memory at one lorry.
+function freeLorry(plate){
+  var g=groupByPlate(plate);
+  if(!g) return;
+  g.invoices.forEach(function(inv){
+    inv.photos.forEach(function(p){
+      freePhoto(p);                          // revoke thumbUrl+origUrl, null them + origBlob/result/fetchP
+      p.result=null; p.origBlob=null; p.bytes=null;
+    });
+    inv._saved=true;
+  });
 }
 async function stampScanCopy(invs){
   var sl=$('stampLine');
@@ -1223,8 +1382,7 @@ document.querySelectorAll('#branchSeg .seg-btn').forEach(function(b){
   });
 });
 $('loadBtn').addEventListener('click', loadDay);
-$('runBtn').addEventListener('click', runAll);
-$('dlBtn').addEventListener('click', downloadZip);
+$('runBtn').addEventListener('click', runAll);   // process every lorry; download is now per-lorry (delegated on #grid)
 $('localBtn').addEventListener('click', function(){ if(!_running) $('localInput').click(); });
 $('localInput').addEventListener('change', function(){ loadLocal(this.files); this.value=''; });
 $('lk-btn').addEventListener('click', doUnlock);
