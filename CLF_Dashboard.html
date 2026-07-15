@@ -329,9 +329,33 @@
   function hideErr(){ var b=$('errBanner'); if(b) b.classList.remove('show'); }
 
   // ---------- fetch ----------
-  function api(params){
+  // Hardened fetch (FN-3): a 45s timeout so a hung Apps Script request can't leave the page stuck on
+  // "Loading…" forever; one 2.5s-backoff retry on a network blip; and an optional AbortSignal from
+  // load() so a newer load (Date/View/Branch switch or auto-refresh) cancels the previous one instead
+  // of piling up in-flight requests. A deliberate abort is never retried.
+  function api(params, signal){
     var url = SCRIPT_URL + '?' + params.join('&');
-    return fetch(url, { method:'GET' }).then(function(r){ return r.json(); });
+    function once(){
+      var ctl = (window.AbortController ? new AbortController() : null);
+      var to  = ctl ? setTimeout(function(){ try{ ctl.abort(); }catch(e){} }, 45000) : null;
+      if(ctl && signal){
+        if(signal.aborted){ try{ ctl.abort(); }catch(e){} }
+        else signal.addEventListener('abort', function(){ try{ ctl.abort(); }catch(e){} });
+      }
+      var opt = { method:'GET' }; if(ctl) opt.signal = ctl.signal;
+      return fetch(url, opt).then(
+        function(r){ if(to) clearTimeout(to); return r.json(); },
+        function(e){ if(to) clearTimeout(to); throw e; }
+      );
+    }
+    function isAbort(e){ return (e && e.name==='AbortError') || (signal && signal.aborted); }
+    return once().catch(function(e){
+      if(isAbort(e)) throw e;                                   // cancelled on purpose — don't retry
+      return new Promise(function(r){ setTimeout(r, 2500); }).then(function(){
+        if(signal && signal.aborted) throw e;                  // cancelled during the backoff
+        return once();
+      });
+    });
   }
 
   // ISO week key for a yyyy-mm-dd string — same algorithm as the backend's formatWeekKey_,
@@ -349,6 +373,21 @@
 
   var LOAD_SEQ = 0;        // discard out-of-order responses (fast Daily→Weekly clicks can cross)
   var LAST_UPDATED = null; // ms timestamp of the last successful render — drives the staleness label
+  var _curAbort = null;    // AbortController of the in-flight load; a newer load aborts it (FN-3)
+  var _SNAP_KEY = 'clfDash_snap_v1', _STAFF_KEY = 'clfDash_staff_v1';
+
+  // A backend {status:'error'} comes back as HTTP 200 (Apps Script can't set status codes), so treat
+  // anything that isn't status:'ok' as missing — never render an error payload as a green "all good" day.
+  function okData(r){ return (r && r.status==='ok') ? r : null; }
+
+  // localStorage snapshot (FN-4) + staff-id cache (FN-5). The snapshot lets a re-open paint instantly
+  // from the last good data; the staff map (changes rarely) keeps worker IDs visible even when the
+  // heavy getDashboardData call is slow or failing. All wrapped — private mode / quota never throws.
+  function saveSnapshot(o){ try{ localStorage.setItem(_SNAP_KEY, JSON.stringify(o)); }catch(e){} }
+  function loadSnapshot(){ try{ return JSON.parse(localStorage.getItem(_SNAP_KEY)||'null'); }catch(e){ return null; } }
+  function saveStaff(){ try{ localStorage.setItem(_STAFF_KEY, JSON.stringify(STAFF)); }catch(e){} }
+  function loadStaff(){ try{ return JSON.parse(localStorage.getItem(_STAFF_KEY)||'null'); }catch(e){ return null; } }
+  function seedStaffFromDrivers(drivers){ STAFF={}; (drivers||[]).forEach(function(d){ if(d&&d.name) STAFF[d.name]=d.staffId||''; }); }
 
   function fmtUpdated(){
     if(!LAST_UPDATED){ return ''; }
@@ -367,39 +406,89 @@
     hideErr();
     var _h1 = document.querySelector('.topbar h1');
     if(_h1) _h1.textContent = 'CLF Fleet Dashboard' + (selectedBranch==='ALL' ? '' : ' · ' + branchLabel());
-    $('dashMeta').textContent = 'Loading… · ' + branchLabel();
+    // Don't wipe the meta to "Loading…" if we already have data on screen — show a subtle "refreshing…"
+    // next to the timestamp instead, so an auto-refresh doesn't blank the board (pairs with FN-4).
+    if(!LAST_UPDATED) $('dashMeta').textContent = 'Loading… · ' + branchLabel();
+    else { var _lr=$('lastRefresh'); if(_lr) _lr.textContent = fmtUpdated()+' · refreshing…'; }
+
     var seq = ++LOAD_SEQ;
+    // Cancel the previous load's in-flight requests so fast Date/View/Branch clicks (or an overlapping
+    // auto-refresh) don't pile up 4+ requests each (FN-3).
+    if(_curAbort){ try{ _curAbort.abort(); }catch(e){} }
+    var ac  = (window.AbortController ? new AbortController() : null);
+    _curAbort = ac;
+    var sig = ac ? ac.signal : null;
+
     var periodParam = selectedView==='daily'  ? ('&date='+encodeURIComponent(selectedDate))
                     : selectedView==='weekly' ? ('&period='+encodeURIComponent(isoWeekKey(selectedDate)))
                     :                            ('&period='+encodeURIComponent(selectedDate.slice(0,7)));
     var fp = forceFresh ? '&fresh=1' : '';   // ↻ Refresh forces the backend to skip its ~90s cache
     var bp = '&branch=' + encodeURIComponent(selectedBranch);   // branch filter rides on every read (ALL = combined)
-    Promise.all([
-      api(['action=getDashboardData','view='+selectedView + periodParam + bp + fp]).catch(function(){return null;}),
-      api(['action=getShipmentsForDate','date='+encodeURIComponent(selectedDate) + bp + fp]).catch(function(){return null;}),
-      api(['action=getFuelOps','view='+selectedView + periodParam + bp + fp]).catch(function(){return null;}),
-      api(['action=getLeaveToday' + bp]).catch(function(){return null;})
-    ]).then(function(res){
-      if(seq !== LOAD_SEQ) return;   // a newer load started — drop this stale response
-      // A1: a backend {status:'error'} (HTTP 200) must NOT render as a green "all good" day —
-      // treat anything that isn't status:'ok' as missing, and show "unavailable" per zone.
-      function ok(r){ return (r && r.status==='ok') ? r : null; }
-      var dash=ok(res[0]), ship=ok(res[1]), fuel=ok(res[2]), leave=ok(res[3]);
+
+    // Show cached worker IDs immediately if STAFF is empty, so names aren't ID-less while dash loads (FN-5).
+    if(!STAFF || !Object.keys(STAFF).length){ var cs=loadStaff(); if(cs) STAFF=cs; }
+
+    var cur = { ship:null, fuel:null, dash:null, leave:null };
+    function fresh(){ return seq === LOAD_SEQ; }   // a newer load started → this one's late arrivals are ignored
+    function draw(fn){ try{ fn(); }catch(e){ if(window.console)console.error('render failed', e); } }
+
+    var pDash  = api(['action=getDashboardData','view='+selectedView + periodParam + bp + fp], sig).then(okData, function(){return null;});
+    var pShip  = api(['action=getShipmentsForDate','date='+encodeURIComponent(selectedDate) + bp + fp], sig).then(okData, function(){return null;});
+    var pFuel  = api(['action=getFuelOps','view='+selectedView + periodParam + bp + fp], sig).then(okData, function(){return null;});
+    var pLeave = api(['action=getLeaveToday' + bp], sig).then(okData, function(){return null;});
+
+    // Progressive render (FN-2/FR-1): paint each ZONE the instant ITS OWN primary source lands, rather
+    // than waiting for the slowest of the four. Each zone is rendered by exactly one primary source so a
+    // slower/secondary source can never blank a zone another source already filled (verify: R1/R2/R6):
+    //   • meta + POD + driver board  ← ship    • fuel charts/tables ← fuel
+    //   • driver summary + no-fuel card ← dash  • (leave & dash only REFINE the board, never blank it)
+    pShip.then(function(ship){ if(!fresh()) return; cur.ship=ship;
+      draw(function(){ renderTop(ship, cur.fuel); });     // meta's lorry count is ship's; fuelScope filled if fuel already in
+      draw(function(){ renderPod(ship); });               // rendered once here only — dash re-render removed (R6: kept accordion/route state)
+      draw(function(){ renderBoard(ship, cur.dash, cur.leave); });
+    });
+    pFuel.then(function(fuel){ if(!fresh()) return; cur.fuel=fuel;
+      if(cur.ship!=null) draw(function(){ renderTop(cur.ship, fuel); });   // only refine fuelScope; don't blank ship's meta before ship lands (R3)
+      draw(function(){ renderFuel(fuel, cur.dash, cur.dash==null); });   // fuel charts are fuel's; skip the no-fuel card until dash lands (its branch fills it) to avoid a flash
+    });
+    pDash.then(function(dash){ if(!fresh()) return; cur.dash=dash;
+      if(dash && dash.drivers && dash.drivers.length){ seedStaffFromDrivers(dash.drivers); saveStaff(); }  // (R5) empty [] must not wipe the cached IDs
+      draw(function(){ renderDriverSummary(dash); });     // this zone IS dash's — null → its own unavailable
+      if(cur.ship!=null) draw(function(){ renderBoard(cur.ship, dash, cur.leave); });  // only REFINE the board (add No-route/leave); never blank it (R1/R2)
+      draw(function(){ renderNoFuel(dash); });            // just the no-fuel card — not a full renderFuel (avoids chart flicker + R1 fuel-blanking)
+    });
+    pLeave.then(function(leave){ if(!fresh()) return; cur.leave=leave;
+      if(cur.ship!=null) draw(function(){ renderBoard(cur.ship, cur.dash, leave); });  // board needs ship; leave only refines the On-leave group
+    });
+
+    // All settled: banner + "updated" stamp + snapshot for the next instant open (FN-4).
+    Promise.all([pDash,pShip,pFuel,pLeave]).then(function(){
+      if(!fresh()) return;
+      var dash=cur.dash, ship=cur.ship, fuel=cur.fuel, leave=cur.leave;
       if(!ship && !fuel){ showErr('Cannot reach server. Please check connection and Refresh.'); $('dashMeta').textContent=''; }
       else if(!ship || !fuel || !dash){ showErr('Some data failed to load — sections marked "unavailable" are NOT empty, just not loaded. Refresh to retry.'); }
-      // build staff-id map from driver list
-      STAFF = {};
-      if(dash && dash.drivers){ dash.drivers.forEach(function(d){ if(d && d.name) STAFF[d.name]=d.staffId||''; }); }
-      // Each section renders independently — one section throwing (e.g. a chart lib that didn't
-      // load) must NOT blank out the whole dashboard. Errors are logged per-section, not fatal.
-      try{ renderTop(ship, fuel); }catch(e){ if(window.console)console.error('renderTop failed', e); }
-      try{ renderPod(ship); }catch(e){ if(window.console)console.error('renderPod failed', e); }
-      try{ renderBoard(ship, dash, leave); }catch(e){ if(window.console)console.error('renderBoard failed', e); }
-      try{ renderDriverSummary(dash); }catch(e){ if(window.console)console.error('renderDriverSummary failed', e); }
-      try{ renderFuel(fuel, dash); }catch(e){ if(window.console)console.error('renderFuel failed', e); }
-      if(ship || fuel) LAST_UPDATED = Date.now();   // only a load with real data counts as "updated"
+      if(ship || fuel){
+        LAST_UPDATED = Date.now();
+        saveSnapshot({ ts:LAST_UPDATED, date:selectedDate, view:selectedView, branch:selectedBranch, dash:dash, ship:ship, fuel:fuel, leave:leave });
+      }
       paintUpdated();
-    }).catch(function(e){ if(seq !== LOAD_SEQ) return; showErr('Something went wrong loading the dashboard. Please Refresh.'); $('dashMeta').textContent=''; });
+    }).catch(function(e){ if(!fresh()) return; showErr('Something went wrong loading the dashboard. Please Refresh.'); $('dashMeta').textContent=''; });
+  }
+
+  // Paint the last cached snapshot for the current selection before the network round-trip (FN-4) —
+  // an instant open instead of a blank "Loading…". Returns true if it painted, so init can skip the spinner.
+  function paintSnapshot(){
+    var s = loadSnapshot();
+    if(!s || s.date!==selectedDate || s.view!==selectedView || s.branch!==selectedBranch) return false;
+    if(s.dash && s.dash.drivers && s.dash.drivers.length) seedStaffFromDrivers(s.dash.drivers);
+    try{ renderTop(s.ship, s.fuel); }catch(e){}
+    try{ renderPod(s.ship); }catch(e){}
+    try{ renderBoard(s.ship, s.dash, s.leave); }catch(e){}
+    try{ renderDriverSummary(s.dash); }catch(e){}
+    try{ renderFuel(s.fuel, s.dash); }catch(e){}
+    LAST_UPDATED = s.ts || Date.now();
+    paintUpdated();
+    return true;
   }
 
   function renderTop(ship, fuel){
@@ -779,7 +868,10 @@
   window.useOcr = useOcr;
   window.deleteFuel = deleteFuel;
 
-  function renderFuel(fuel, dash){
+  // skipNoFuel: when the fuel request lands before dash, don't let this paint the dash-sourced
+  // "haven't submitted fuel" card as unavailable — leave it for the dash branch to fill (avoids a
+  // transient unavailable flash on that card during a normal load).
+  function renderFuel(fuel, dash, skipNoFuel){
     if(!fuel){
       $('fuelPerKmHero').textContent='—'; $('fuelKmPerL').textContent='data unavailable'; $('fuelTotal').textContent='—';
       $('fuelCostLorry').innerHTML=''; $('fuelCostEmpty').style.display='block';
@@ -787,7 +879,7 @@
       $('crossCheckWrap').innerHTML='<span class="unavail">⚠ Fuel data unavailable — tap Refresh</span>';
       $('tankRows').innerHTML=''; $('tankEmpty').style.display='block';
       $('fuelRows').innerHTML='<tr><td colspan="7"><span class="unavail">⚠ Fuel data unavailable — tap Refresh</span></td></tr>';
-      renderNoFuel(dash);   // this card's data comes from dash, which may still be fine
+      if(!skipNoFuel) renderNoFuel(dash);   // this card's data comes from dash, which may still be fine
       return;
     }
     var t = fuel.totals || {rm:0,litres:0,km:0,rmPerKm:null,kmPerLitre:null};
@@ -870,8 +962,9 @@
     }
 
     // Haven't submitted fuel today (from getDashboardData) — if THAT call failed, say so
-    // instead of showing a green "everyone submitted" (A1).
-    renderNoFuel(dash);
+    // instead of showing a green "everyone submitted" (A1). Skipped when dash hasn't landed yet
+    // (the dash branch will paint this card) so we don't flash it unavailable mid-load.
+    if(!skipNoFuel) renderNoFuel(dash);
 
     // Fuel submissions today
     var subs = (fuel.submissions||[]);
@@ -918,9 +1011,12 @@
     setInterval(function(){ if(!document.hidden) load(); }, 5*60000);
     setInterval(paintUpdated, 60000);
     document.addEventListener('visibilitychange', function(){
-      if(!document.hidden && LAST_UPDATED && Date.now()-LAST_UPDATED > 2*60000) load();
+      // Retry on return to the tab if the data is stale OR if we never got any (FN-11: previously this
+      // required LAST_UPDATED, so a first load that failed while offline would never auto-retry).
+      if(!document.hidden && (!LAST_UPDATED || Date.now()-LAST_UPDATED > 2*60000)) load();
       paintUpdated();
     });
+    paintSnapshot();   // instant open from the cached snapshot (FN-4), then fetch fresh below
     load();
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
