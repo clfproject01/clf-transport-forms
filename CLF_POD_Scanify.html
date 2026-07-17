@@ -749,18 +749,43 @@ async function loadDay(){
     var data=await res.json();
     if(!data || data.status!=='ok' || !Array.isArray(data.lorries)) throw new Error((data&&data.message)||'unexpected response');
     var invoices=[], noPhoto=[];
+    function mkPhoto(fid){ return { fileId:fid, origBlob:null, fetchP:null, result:null, failedErr:'' }; }
     data.lorries.forEach(function(L){
       var plate=String(L.vehicleNo||'UNKNOWN');
+      // Group this lorry's DELIVERED invoices by station (customer) — SAME key as the board.
+      // The backend writes the whole photo bucket onto every invoice in a station, so we dedupe
+      // the bucket and hand each invoice ONE photo (positional 1:1). That turns N invoices × N
+      // photos = N-squared scan copies into exactly N — one photo per invoice (per boss:
+      // "one invoice one photo, no need to match the exact invoice number").
+      var stations={}, order=[];
       (L.invoices||[]).forEach(function(v){
         if(String(v.status||'').toLowerCase()!=='delivered') return;
-        var ids=(v.photoUrls||[]).map(extractFileId).filter(String);
-        var rec={
-          plate:plate, shipmentKey:String(L.shipmentKey||''), invoiceNo:String(v.invoiceNo||''),
-          customer:String(v.customer||v.customerName||v.custCode||''),
-          deliveredDate:String(v.deliveredDate||''), invoiceDate:String(v.invoiceDate||''),
-          photos:ids.map(function(fid){ return { fileId:fid, origBlob:null, fetchP:null, result:null, failedErr:'' }; })
-        };
-        if(rec.photos.length) invoices.push(rec); else noPhoto.push(rec);
+        var ck=String(v.custCode||v.customer||v.customerName||v.area||'-');
+        if(!stations[ck]){ stations[ck]={invs:[], ids:[], seen:{}}; order.push(ck); }
+        var S=stations[ck];
+        S.invs.push(v);
+        (v.photoUrls||[]).map(extractFileId).filter(String).forEach(function(fid){
+          if(!S.seen[fid]){ S.seen[fid]=1; S.ids.push(fid); }
+        });
+      });
+      order.forEach(function(ck){
+        var S=stations[ck], nInv=S.invs.length, nPh=S.ids.length;
+        S.invs.forEach(function(v, idx){
+          var rec={
+            plate:plate, shipmentKey:String(L.shipmentKey||''), invoiceNo:String(v.invoiceNo||''),
+            customer:String(v.customer||v.customerName||v.custCode||''),
+            deliveredDate:String(v.deliveredDate||''), invoiceDate:String(v.invoiceDate||''),
+            photos:[]
+          };
+          if(idx<nPh){
+            rec.photos.push(mkPhoto(S.ids[idx]));
+            // legacy safety: a station with MORE photos than invoices loses no POD photo —
+            // the extras ride along on the last invoice's PDF (multi-page). Go-forward the
+            // driver form enforces photos == delivered invoices, so this branch stays idle.
+            if(idx===nInv-1 && nPh>nInv){ for(var k=nInv;k<nPh;k++) rec.photos.push(mkPhoto(S.ids[k])); }
+          }
+          if(rec.photos.length) invoices.push(rec); else noPhoto.push(rec);
+        });
       });
     });
     _day={ date:date, branch:BRANCH, local:false, invoices:invoices, noPhoto:noPhoto };
