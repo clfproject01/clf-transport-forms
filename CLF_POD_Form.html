@@ -1575,9 +1575,30 @@ function renderShipGroups(){
     html += '<div style="border:1px solid #E0C68A;border-left:5px solid '+color+';border-radius:8px;padding:12px;margin-bottom:10px;'+(gDone?'opacity:.55;':'')+'">'
       + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;"><div style="font-weight:700;font-size:15px;color:#412402;">'+_esc(g.name)+'</div>'+badge+'</div>'
       + '<div style="font-size:12px;color:#854F0B;margin:3px 0 6px;">'+_esc(g.area)+' · '+g.invs.length+' invoice(s)</div>'
-      + '<div style="font-size:11px;color:#6b5836;margin-bottom:'+(gDone?'0':'10px')+';word-break:break-all;">'+ g.invs.map(function(x){ return _esc(x.invoiceNo); }).join(' · ') +'</div>';
+      ;
+    if (gDone){
+      html += '<div style="font-size:11px;color:#6b5836;word-break:break-all;">'+ g.invs.map(function(x){ return _esc(x.invoiceNo); }).join(' · ') +'</div>';
+    }
     if (!gDone){
+      // [untag+count 2026-07-15] each pending invoice is a tap-to-toggle chip (default = to deliver).
+      // Untag the ones not delivered; photo count MUST equal the to-deliver count (no-missing / no-duplicate at source).
+      html += '<div style="display:flex;flex-wrap:wrap;gap:5px;margin:2px 0 8px;">'
+        + g.invs.map(function(x, xi){
+            var dv = String(x.status).toLowerCase()==='delivered';
+            if (dv) return '<span style="font-size:11px;color:#2E7D32;border:1px solid #A5D6A7;border-radius:6px;padding:4px 8px;">&#10003; '+_esc(x.invoiceNo)+'</span>';
+            var ut = !!x._untag;
+            return '<button type="button" class="ship-untag" data-i="'+i+'" data-x="'+xi+'" style="font-size:11px;cursor:pointer;border-radius:6px;padding:4px 8px;'
+              + (ut ? 'color:#9a8050;background:#F4EEDF;border:1px dashed #C9A227;text-decoration:line-through;' : 'color:#412402;background:#fff;border:1.5px solid #2E7D32;')
+              + '">'+(ut?'&#9711; ':'&#10003; ')+_esc(x.invoiceNo)+'</button>';
+          }).join('')
+        + '</div>';
+      var toDeliver = g.invs.filter(function(x){ return String(x.status).toLowerCase()!=='delivered' && !x._untag; }).length;
       var photos = g.photos || [];
+      var matchCount = (photos.length===toDeliver && toDeliver>0);
+      html += '<div style="font-size:12px;font-weight:700;margin-bottom:8px;color:'+(matchCount?'#2E7D32':'#C62828')+';">'
+        + toDeliver+' to deliver &middot; '+photos.length+' photo'+(photos.length===1?'':'s')
+        + (matchCount ? ' &#10003;' : (photos.length<toDeliver ? ' &mdash; take '+(toDeliver-photos.length)+' more &middot; ambil '+(toDeliver-photos.length)+' lagi' : ' &mdash; remove '+(photos.length-toDeliver)+' &middot; buang '+(photos.length-toDeliver)))
+        + '</div>';
       if (photos.length){
         html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">'
           + photos.map(function(p, pi){
@@ -1594,7 +1615,7 @@ function renderShipGroups(){
         + '<button type="button" class="ship-photo" data-i="'+i+'" style="flex:1;background:#fff;color:#2E7D32;border:1.5px solid #2E7D32;border-radius:8px;padding:11px;font-weight:700;font-size:13px;cursor:pointer;">&#128247; '+(photos.length? ('Add photo · Tambah') : 'Take photo · Ambil foto')+'</button>'
         + '<button type="button" class="ship-fail" data-i="'+i+'" style="background:#fff;color:#854F0B;border:1px solid #E0C68A;border-radius:8px;padding:11px 12px;font-weight:600;font-size:13px;cursor:pointer;">Problem</button>'
         + '</div>';
-      if (photos.length){
+      if (matchCount){
         html += '<button type="button" class="ship-save" data-i="'+i+'" style="width:100%;margin-top:8px;background:#2E7D32;color:#fff;border:none;border-radius:8px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;">&#10003; Save — Delivered &middot; Dihantar</button>';
       }
       html += '<div class="ship-reasons" data-i="'+i+'" style="display:none;gap:6px;flex-wrap:wrap;margin-top:8px;">'
@@ -1697,6 +1718,9 @@ document.getElementById('shipmentSection').addEventListener('click', function(e)
     inp.click();
     return;
   }
+  var ut = e.target.closest('.ship-untag');
+  if (ut){ var _gi=parseInt(ut.getAttribute('data-i'),10), _xi=parseInt(ut.getAttribute('data-x'),10);
+    if (_shipGroups[_gi] && _shipGroups[_gi].invs[_xi]){ _shipGroups[_gi].invs[_xi]._untag = !_shipGroups[_gi].invs[_xi]._untag; renderShipGroups(); } return; }
   var sv = e.target.closest('.ship-save');
   if (sv){ saveDelivery(parseInt(sv.getAttribute('data-i'),10)); return; }
   var fb = e.target.closest('.ship-fail');
@@ -1752,12 +1776,15 @@ async function saveDelivery(i){
   if (g._saving) return;
   g._saving = true;
   if (!g.photos || !g.photos.length){ g._saving = false; alert('Take a photo first · Sila ambil foto dulu'); return; }
+  var _tagged = g.invs.filter(function(x){ return String(x.status).toLowerCase()!=='delivered' && !x._untag; }).map(function(x){ return x.invoiceNo; });
+  if (!_tagged.length){ g._saving=false; alert('Select at least one invoice to deliver · Pilih sekurang-kurangnya satu invois'); return; }
+  if (g.photos.length !== _tagged.length){ g._saving=false; alert('Photos must equal invoices delivered: '+g.photos.length+' photo(s) vs '+_tagged.length+' invoice(s) · Foto mesti sama dengan bilangan invois'); return; }
   var overlay = document.getElementById('loadingOverlay');
   document.querySelector('.loading-text').textContent = 'Saving… · Menyimpan…';
   overlay.classList.add('show');
   try{
     var photos = g.photos.map(function(p){ return { base64: p.dataUrl.split(',')[1], name: p.name, type: p.type }; });
-    var pendingInvs = g.invs.filter(function(x){ return String(x.status).toLowerCase()!=='delivered'; }).map(function(x){ return x.invoiceNo; });
+    var pendingInvs = _tagged;   // [untag] only the invoices the driver kept tagged (delivered)
     var _drv = document.getElementById('driverName').value;
     var _sd  = document.getElementById('secondDriver').value || '';
     if (_sd === _drv) _sd = '';   // same name twice → drop helper (avoid double KPI count)
@@ -1794,7 +1821,7 @@ async function saveDelivery(i){
       // REAL failure — keep the photos so the driver can just hit Save again.
       alert('NOT saved · TIDAK disimpan!\n' + (confirmed.message || 'Server error') + '\n\nYour photos are kept — please tap Save again. · Foto anda masih ada — sila tekan Simpan semula.');
     } else if (confirmed){
-      g.invs.forEach(function(x){ x.status='delivered'; });   // confirmed by the server
+      g.invs.forEach(function(x){ if(!x._untag && String(x.status).toLowerCase()!=='delivered') x.status='delivered'; x._untag=false; });   // [untag] only tagged ones delivered; untagged stay pending
       g.photos = [];
       firePalletDrop(g);
       firePalletCollect(g);
