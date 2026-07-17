@@ -95,6 +95,22 @@
   .lorry-head .crew{font-size:12.5px;color:var(--gray-600);}
   .lorry-head .mini{font-size:12px;color:var(--gray-500);font-variant-numeric:tabular-nums;}
 
+  /* one STATION (customer) = one photo bucket, shown once */
+  .station{border-top:1px solid var(--gray-200);}
+  .station:first-child{border-top:none;}
+  .station-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:11px 16px 9px;cursor:pointer;user-select:none;}
+  .station-head:hover{background:var(--gray-50);}
+  .st-meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0;}
+  .st-chev{color:var(--blue);font-size:12px;width:12px;display:inline-block;}
+  .st-cust{font-size:14.5px;font-weight:700;color:var(--gray-900);}
+  .st-area{font-size:12px;color:var(--gray-500);}
+  .st-count{font-size:11.5px;font-weight:700;color:var(--blue);background:var(--blue-50);border:1px solid var(--blue-100,#DBEAFE);border-radius:999px;padding:2px 9px;white-space:nowrap;}
+  .st-efi{font-size:11px;color:var(--gray-500);font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .st-warn{font-size:11.5px;font-weight:700;color:var(--red-700);background:var(--red-50);border:1px solid var(--red-500);border-radius:999px;padding:2px 9px;white-space:nowrap;}
+  .st-photos .thumbs{justify-content:flex-end;}
+  .station-body{display:none;}
+  .station.open .station-body{display:block;}
+
   table.inv{width:100%;border-collapse:collapse;font-size:13px;}
   table.inv th{text-align:left;color:var(--gray-500);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;padding:8px 12px;border-bottom:1px solid var(--gray-200);background:var(--gray-50);}
   table.inv td{padding:10px 12px;border-bottom:1px solid var(--gray-100);vertical-align:middle;}
@@ -213,6 +229,7 @@ var PHOTO_DISPLAY = 'thumbnail';
 
 var _boardData = null;      // last good board payload
 var _openKeys = new Set();  // collapsed by DEFAULT — office expands the lorry they are scanning (survives auto-refresh)
+var _openStations = new Set();  // per-customer collapse INSIDE a lorry — click a customer to reveal its barcodes (survives auto-refresh)
 var _refreshTmr = null;
 var _lbPhotos = [], _lbIdx = 0;
 
@@ -420,13 +437,35 @@ function render(){
     html+='<div class="lorry'+(isOpen?' open':'')+'"><div class="lorry-head" data-key="'+esc(lkey)+'">'
       +'<div><span class="chev">'+(isOpen?'▾':'▸')+'</span> <span class="plate">'+esc(L.vehicleNo||'?')+'</span>'+(L.drivers?' <span class="crew">· '+esc(L.drivers)+'</span>':'')+'</div>'
       +'<div class="mini">EFI '+efid+'/'+ld+' · '+ld+' / '+invs.length+' delivered</div></div>';
-    html+='<div class="lorry-body"><div style="overflow-x:auto;"><table class="inv"><thead><tr>'
-      +'<th>Invoice</th><th>Customer</th><th style="text-align:right;">Amount</th><th>Status</th><th>Time</th><th>POD photo</th><th>Barcode</th><th>EFI</th>'
-      +'</tr></thead><tbody>';
-    invs.forEach(function(v, idx){
-      html+=invRow(L, v, idx);
+    html+='<div class="lorry-body">';
+    // One STATION (customer) = one photo bucket. The backend writes the same photo set to every
+    // invoice in a station, so grouping by customer lets us show the bucket ONCE + "N invoices"
+    // instead of repeating every photo on every invoice row (the 5-invoice×5-photo explosion).
+    groupStations(invs).forEach(function(S){
+      var sd = S.invs.filter(function(v){return String(v.status).toLowerCase()==='delivered';}).length;
+      var ec = S.invs.filter(function(v){return v.efiScanned;}).length;
+      var pc = S.photoUrls.length;
+      // count-match check (driver form now enforces photos == delivered invoices; flag legacy/odd data)
+      var warn = (pc && sd && pc!==sd)
+        ? '<span class="st-warn" title="Photos do not match delivered invoices">&#9873; '+pc+' photo'+(pc===1?'':'s')+' &ne; '+sd+' delivered</span>' : '';
+      var skey = lkey+'¦'+S.custKey;   // stable across auto-refresh so an open station stays open
+      var sOpen = _openStations.has(skey);
+      html+='<div class="station'+(sOpen?' open':'')+'">'
+        +'<div class="station-head" data-skey="'+esc(skey)+'">'
+          +'<div class="st-meta"><span class="chev st-chev">'+(sOpen?'▾':'▸')+'</span>'
+            +'<span class="st-cust">'+esc(S.customer||S.custKey||'&mdash;')+'</span>'
+            +(S.area?'<span class="st-area">'+esc(S.area)+'</span>':'')
+            +'<span class="st-count">'+S.invs.length+' invoice'+(S.invs.length===1?'':'s')+'</span>'
+            +(sd?'<span class="st-efi">EFI '+ec+'/'+sd+'</span>':'')+warn+'</div>'
+          +'<div class="st-photos">'+stationPhotoCell(S.photoUrls, S.anchorInv)+'</div>'
+        +'</div>'
+        +'<div class="station-body"><div style="overflow-x:auto;"><table class="inv"><thead><tr>'
+          +'<th>Invoice</th><th style="text-align:right;">Amount</th><th>Status</th><th>Time</th><th>Barcode</th><th>EFI</th>'
+          +'</tr></thead><tbody>';
+      S.invs.forEach(function(v, idx){ html+=invRow(L, v, idx); });
+      html+='</tbody></table></div></div></div>';
     });
-    html+='</tbody></table></div></div></div>';
+    html+='</div></div>';
   });
   board.innerHTML=html;
   var tab=$('toggleAllBtn'); if(tab) tab.textContent=_openKeys.size?'▸ Collapse all':'▾ Expand all';
@@ -445,6 +484,40 @@ function srcTag(v){
   if(v.matchSource==='ai')      return '<span class="src ai" title="Matched by AI (Gemini) — double-check">AI~</span>';
   if(v.matchSource==='none')    return '<span class="src no" title="Not auto-identified">✗</span>';
   return '';
+}
+// Group a lorry's invoices into stations (one customer = one photo bucket).
+// Preserves first-seen order; unions+dedupes the photo URLs (they're identical per station,
+// but a union is safe if any row differs). anchorInv = an invoice that owns the bucket, so
+// the existing lightbox delegation (data-inv → openLightbox) still resolves the photos.
+function groupStations(invs){
+  var map={}, order=[];
+  (invs||[]).forEach(function(v){
+    var key=String(v.custCode||v.customer||v.customerName||v.area||'—');
+    if(!map[key]){ map[key]={custKey:key, customer:v.customer||v.customerName||v.custCode||'', area:v.area||'', invs:[], photoUrls:[], anchorInv:null, _seen:{}}; order.push(key); }
+    var S=map[key];
+    S.invs.push(v);
+    if(!S.area && v.area) S.area=v.area;
+    if(!S.customer && (v.customer||v.customerName)) S.customer=v.customer||v.customerName;
+    (v.photoUrls||[]).forEach(function(u){ if(u && !S._seen[u]){ S._seen[u]=1; S.photoUrls.push(u); if(!S.anchorInv) S.anchorInv=String(v.invoiceNo); } });
+  });
+  return order.map(function(k){ var S=map[k]; delete S._seen; return S; });
+}
+// The station photo bucket, rendered ONCE. Same markup/contract as photoCell so the board-level
+// click delegation (.thumb → .thumbs[data-inv] → openLightbox) works with no extra wiring.
+function stationPhotoCell(urls, anchorInv){
+  urls = urls||[];
+  if(!urls.length) return '<span class="thumb-none">no photo</span>';
+  if(PHOTO_DISPLAY==='link'){
+    return '<div class="thumbs">'+urls.map(function(u,i){
+      return '<a class="thumb-link" href="'+esc(u)+'" target="_blank" rel="noopener" title="POD '+(i+1)+'">📷</a>';
+    }).join('')+'</div>';
+  }
+  var h='<div class="thumbs" data-inv="'+esc(String(anchorInv||''))+'">';
+  urls.forEach(function(u,i){ var su=esc(u);
+    h+='<img class="thumb" src="'+su+'" alt="POD" data-idx="'+i+'" loading="lazy" '
+      +'onerror="this.onerror=null;var a=document.createElement(\'a\');a.href=this.src;a.target=\'_blank\';a.rel=\'noopener\';a.className=\'thumb-link\';a.textContent=\'📷\';this.replaceWith(a);">';
+  });
+  return h+'</div>';
 }
 function photoCell(v){
   var urls=v.photoUrls||[];
@@ -491,11 +564,9 @@ function invRow(L, v, idx){
   var cls = v.mismatch?'row-mismatch':(st==='delivered'?'row-done':(st==='failed'?'row-prob':'row-pend'));
   return '<tr class="'+cls+'">'
     +'<td class="inv-no">'+esc(v.invoiceNo)+srcTag(v)+'</td>'
-    +'<td class="cust">'+esc(v.customer||v.customerName||v.custCode||'')+(v.area?'<span class="area">'+esc(v.area)+'</span>':'')+'</td>'
     +'<td class="amt">'+(v.amount!=null?money(v.amount):'')+'</td>'
     +'<td>'+statusBadge(v)+'</td>'
     +'<td class="time">'+esc(fmtTime(v.deliveredDate||_boardData.date, v.deliveredAt))+'</td>'
-    +'<td>'+photoCell(v)+'</td>'
     +'<td class="bc-cell">'+barcodeCell(v)+'</td>'
     +'<td>'+efiCell(L, v)+'</td>'
     +'</tr>';
@@ -604,6 +675,16 @@ $('toggleAllBtn').addEventListener('click', function(){
   var keys = ((_boardData && _boardData.lorries) || []).map(function(L){ return String(L.shipmentKey||L.vehicleNo||''); });
   if(_openKeys.size) _openKeys.clear(); else keys.forEach(function(k){ _openKeys.add(k); });
   render();
+});
+// Station collapse: click a customer header to reveal just that station's invoices/barcodes.
+// (Photos inside the header open the lightbox instead — excluded below. Class-toggle, no re-render.)
+$('board').addEventListener('click', function(e){
+  if(e.target.closest('.thumbs')) return;             // a photo click = lightbox, not collapse
+  var head = e.target.closest('.station-head'); if(!head) return;
+  var skey = head.getAttribute('data-skey'), st = head.closest('.station');
+  if(_openStations.has(skey)){ _openStations.delete(skey); st.classList.remove('open'); }
+  else { _openStations.add(skey); st.classList.add('open'); }
+  var ch = head.querySelector('.st-chev'); if(ch) ch.textContent = _openStations.has(skey) ? '▾' : '▸';
 });
 // Delegated thumbnail click (replaces inline onclick — XSS-safe, reads data-* attrs).
 $('board').addEventListener('click', function(e){
