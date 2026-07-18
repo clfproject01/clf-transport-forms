@@ -302,7 +302,7 @@
       <div class="section-label">Signed Invoice Photo · Foto Invois Ditandatangani</div>
 
       <div class="notice">
-        <b>Up to 10 photos · 10 foto:</b> Multiple invoices? Snap each, tap <b>+ Add</b>.<br>
+        <b>Up to 30 photos · 30 foto:</b> Multiple invoices? Snap each, tap <b>+ Add</b>.<br>
         <span style="opacity:.75;">Banyak invois? Ambil setiap satu, ketik <b>+ Add</b>.</span>
       </div>
 
@@ -545,7 +545,7 @@ document.addEventListener('visibilitychange', function(){
 // (old <select> change-listeners removed — driver picking is handled by wireDriverPicker)
 
 // Multi-photo state (max 10)
-const MAX_PHOTOS = 10;
+const MAX_PHOTOS = 30;   // manual-flow flood guard only; the shipment flow caps at the stop's invoice count
 const COMPRESS_MAX_DIM = 2400;   // longest side, in pixels (raised 1600→2400: office scan tool needs the detail)
 const COMPRESS_QUALITY = 0.85;   // JPEG quality (0–1) (raised 0.8→0.85 with the dim bump)
 let collectedPhotos = []; // [{dataUrl, name, type}]  — already compressed JPEG
@@ -1759,7 +1759,16 @@ async function onShipPhoto(input){
     for (var ci=0; ci<_shipGroups.length; ci++){ if (_shipGroups[ci].key === gKey){ cur = _shipGroups[ci]; break; } }
     if (!cur) cur = g;
     if (!cur.photos) cur.photos = [];
-    if (cur.photos.length >= 10) break;
+    // [untag+count] cap = this station's pending-invoice count (1 photo per invoice; the Save
+    // gate requires exact equality anyway). The old hard 10 silently dropped photo #11+ at big
+    // stops — now the limit follows the stop size and the driver gets told when it is reached.
+    var _cap = (cur.invs && cur.invs.length)
+      ? cur.invs.filter(function(x){ return String(x.status).toLowerCase() !== 'delivered'; }).length
+      : 99;
+    if (cur.photos.length >= _cap){
+      _palletToast('err', 'Limit reached: ' + _cap + ' photo(s) = ' + _cap + ' invoice(s) at this stop &middot; Had: ' + _cap + ' foto = ' + _cap + ' invois di hentian ini');
+      break;
+    }
     cur.photos.push({ dataUrl: entry.dataUrl, name: entry.name, type: entry.type, qualityFlag: !!entry.qualityFlag });
     g = cur;
   }
