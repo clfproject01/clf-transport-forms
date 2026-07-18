@@ -1577,17 +1577,24 @@ function renderShipGroups(){
       + '<div style="font-size:12px;color:#854F0B;margin:3px 0 6px;">'+_esc(g.area)+' · '+g.invs.length+' invoice(s)</div>'
       ;
     if (gDone){
-      html += '<div style="font-size:11px;color:#6b5836;word-break:break-all;">'+ g.invs.map(function(x){ return _esc(x.invoiceNo); }).join(' · ') +'</div>';
+      html += '<div style="font-size:11px;color:#6b5836;word-break:break-all;">'+ g.invs.map(function(x){ return String(x.invoiceNo); }).sort(function(a,b){ return a.localeCompare(b); }).map(_esc).join(' · ') +'</div>';
     }
     if (!gDone){
       // [untag+count 2026-07-15] each pending invoice is a tap-to-toggle chip (default = to deliver).
       // Untag the ones not delivered; photo count MUST equal the to-deliver count (no-missing / no-duplicate at source).
-      html += '<div style="display:flex;flex-wrap:wrap;gap:5px;margin:2px 0 8px;">'
-        + g.invs.map(function(x, xi){
+      // [tidy 2026-07-18] chips sorted by invoice number + uniform grid — big stops used to render
+      // in raw import order with ragged widths. data-x keeps the ORIGINAL g.invs index, so the
+      // untag toggle and every count/save path are untouched; only the display order changes.
+      var _ord = g.invs.map(function(_x, _xi){ return _xi; }).sort(function(a, b){
+        return String(g.invs[a].invoiceNo).localeCompare(String(g.invs[b].invoiceNo));
+      });
+      html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(106px,1fr));gap:5px;margin:2px 0 8px;">'
+        + _ord.map(function(xi){
+            var x = g.invs[xi];
             var dv = String(x.status).toLowerCase()==='delivered';
-            if (dv) return '<span style="font-size:11px;color:#2E7D32;border:1px solid #A5D6A7;border-radius:6px;padding:4px 8px;">&#10003; '+_esc(x.invoiceNo)+'</span>';
+            if (dv) return '<span style="font-size:11px;color:#2E7D32;border:1px solid #A5D6A7;border-radius:6px;padding:4px 6px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">&#10003; '+_esc(x.invoiceNo)+'</span>';
             var ut = !!x._untag;
-            return '<button type="button" class="ship-untag" data-i="'+i+'" data-x="'+xi+'" style="font-size:11px;cursor:pointer;border-radius:6px;padding:4px 8px;'
+            return '<button type="button" class="ship-untag" data-i="'+i+'" data-x="'+xi+'" style="font-size:11px;cursor:pointer;border-radius:6px;padding:4px 6px;width:100%;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'
               + (ut ? 'color:#9a8050;background:#F4EEDF;border:1px dashed #C9A227;text-decoration:line-through;' : 'color:#412402;background:#fff;border:1.5px solid #2E7D32;')
               + '">'+(ut?'&#9711; ':'&#10003; ')+_esc(x.invoiceNo)+'</button>';
           }).join('')
