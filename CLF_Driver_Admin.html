@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CLF Driver Admin — Roster</title>
+<!--
+  CLF Driver Roster Admin  [2026-07-18]
+  Office page to manage the driver roster without touching Google Sheets:
+    - list all drivers (Drivers sheet + Master_Control status merged)
+    - NEW JOINER: add name + staff ID + branch  -> backend DRIVER_ADD writes
+      the Drivers sheet row AND the Master_Control row (targeted cells)
+    - RESIGN / REJOIN: one click -> Master_Control col L (+ resign date col M);
+      resigned drivers vanish from the forms/dashboard/KPI immediately
+  Auth: same PALLET_UNLOCK session as POD Admin / Pallet Store (AUTH_KEY shared).
+  All writes POST-only (authToken in body, never in a URL) + clientToken readback.
+-->
+<style>
+  :root{ --blue:#1A56DB; --blue-50:#EBF5FF; --gray-50:#F9FAFB; --gray-100:#F3F4F6; --gray-200:#E5E7EB;
+         --gray-400:#9CA3AF; --gray-500:#6B7280; --gray-600:#4B5563; --gray-900:#111827;
+         --green-50:#F3FAF7; --green-500:#0E9F6E; --green-700:#046C4E;
+         --red-50:#FDF2F2; --red-500:#F05252; --red-700:#C81E1E;
+         --amber-50:#FDFDEA; --amber-500:#C27803; --amber-700:#8E4B10;
+         --card:#fff; --radius:12px; --shadow:0 1px 3px rgba(0,0,0,.08); }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--gray-50);color:var(--gray-900);padding:18px;}
+  .wrap{max-width:980px;margin:0 auto;}
+  header{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .logo{width:38px;height:38px;border-radius:9px;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;}
+  h1{font-size:18px;} .sub{font-size:12px;color:var(--gray-500);}
+  .hbtns{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  button{font-family:inherit;}
+  .btn{background:#fff;border:1px solid var(--gray-200);border-radius:9px;padding:9px 13px;font-size:13px;font-weight:600;color:var(--gray-600);cursor:pointer;}
+  .btn:hover{background:var(--gray-100);}
+  .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff;}
+  .summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:14px;}
+  .sum{background:var(--card);border:1px solid var(--gray-200);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px 14px;}
+  .sum .n{font-size:22px;font-weight:800;} .sum .l{font-size:11px;color:var(--gray-500);text-transform:uppercase;letter-spacing:.04em;}
+  .card{background:var(--card);border:1px solid var(--gray-200);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:14px;}
+  .card h2{font-size:14px;margin-bottom:10px;}
+  .addgrid{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:10px;align-items:end;}
+  @media(max-width:640px){ .addgrid{grid-template-columns:1fr;} }
+  label{display:block;font-size:11.5px;font-weight:700;color:var(--gray-600);margin-bottom:4px;}
+  input,select{width:100%;padding:10px 11px;font-size:14px;border:1.5px solid var(--gray-200);border-radius:9px;background:#fff;color:var(--gray-900);}
+  input:focus,select:focus{outline:none;border-color:var(--blue);}
+  .hint{font-size:11px;color:var(--gray-400);margin-top:3px;}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
+  .chip{border:1px solid var(--gray-200);background:#fff;border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:600;color:var(--gray-600);cursor:pointer;}
+  .chip.on{background:var(--blue);border-color:var(--blue);color:#fff;}
+  #search{max-width:230px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;color:var(--gray-500);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.03em;padding:8px 10px;border-bottom:1px solid var(--gray-200);background:var(--gray-50);}
+  td{padding:9px 10px;border-bottom:1px solid var(--gray-100);vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  .nm{font-weight:600;}
+  .sid{font-variant-numeric:tabular-nums;font-family:"SFMono-Regular",Consolas,monospace;white-space:nowrap;}
+  .badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;white-space:nowrap;}
+  .badge.act{background:var(--green-50);color:var(--green-700);border:1px solid var(--green-500);}
+  .badge.res{background:var(--red-50);color:var(--red-700);border:1px solid var(--red-500);}
+  .badge.unk{background:var(--gray-100);color:var(--gray-500);border:1px solid var(--gray-200);}
+  .badge.warn{background:var(--amber-50);color:var(--amber-700);border:1px solid var(--amber-500);}
+  .act-btn{border-radius:8px;border:1px solid var(--gray-200);background:#fff;padding:6px 11px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;}
+  .act-btn.resign{color:var(--red-700);} .act-btn.resign:hover{background:var(--red-50);border-color:var(--red-500);}
+  .act-btn.rejoin{color:var(--green-700);} .act-btn.rejoin:hover{background:var(--green-50);border-color:var(--green-500);}
+  .empty{padding:30px;text-align:center;color:var(--gray-400);font-size:13.5px;}
+  .banner{display:none;background:var(--amber-50);border:1px solid var(--amber-500);color:var(--amber-700);border-radius:10px;padding:11px 14px;font-size:13px;margin-bottom:12px;}
+  .banner.show{display:block;}
+  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:300;max-width:92%;padding:12px 16px;border-radius:10px;font-size:13px;line-height:1.45;color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.25);opacity:0;transition:opacity .2s;pointer-events:none;}
+  .tblwrap{overflow-x:auto;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo">CLF</div>
+      <div><h1>Driver Admin &middot; Roster</h1><div class="sub" id="whoLine">New joiner / resign / rejoin — no spreadsheet needed</div></div>
+    </div>
+    <div class="hbtns">
+      <button class="btn" id="refreshBtn">&#8635; Refresh</button>
+      <button class="btn" id="signOutBtn">Sign out</button>
+    </div>
+  </header>
+
+  <div class="banner" id="setupBanner"><b>Drivers sheet not found.</b> Open the Apps Script editor and run <b>setupDriversSheetOnce</b> once, then refresh.</div>
+
+  <div class="summary" id="summary" style="display:none;">
+    <div class="sum"><div class="n" id="s-total">0</div><div class="l">Total</div></div>
+    <div class="sum"><div class="n" id="s-active" style="color:var(--green-700);">0</div><div class="l">Active</div></div>
+    <div class="sum"><div class="n" id="s-resigned" style="color:var(--red-700);">0</div><div class="l">Resigned</div></div>
+    <div class="sum"><div class="n" id="s-mtk">0</div><div class="l">MTK</div></div>
+    <div class="sum"><div class="n" id="s-ktn">0</div><div class="l">KTN</div></div>
+  </div>
+
+  <div class="card">
+    <h2>&#10133; New joiner</h2>
+    <div class="addgrid">
+      <div>
+        <label>Full name (as per IC)</label>
+        <input id="addName" autocomplete="off" placeholder="e.g. ALI BIN ABU" style="text-transform:uppercase;">
+      </div>
+      <div>
+        <label>Staff ID</label>
+        <input id="addSid" autocomplete="off" placeholder="e.g. TER 563">
+        <div class="hint">Format: TER 563 / KTN 701</div>
+      </div>
+      <div>
+        <label>Branch</label>
+        <select id="addBranch"><option value="MTK">MTK — Mentakab</option><option value="KTN">KTN — Kuantan</option></select>
+      </div>
+      <div><button class="btn primary" id="addBtn" style="padding:11px 18px;">Add driver</button></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="filters">
+      <input id="search" placeholder="Search name / ID&hellip;" autocomplete="off">
+      <span class="chip on" data-f="branch" data-v="">All branches</span>
+      <span class="chip" data-f="branch" data-v="MTK">MTK</span>
+      <span class="chip" data-f="branch" data-v="KTN">KTN</span>
+      <span class="chip on" data-f="status" data-v="">All status</span>
+      <span class="chip" data-f="status" data-v="active">Active</span>
+      <span class="chip" data-f="status" data-v="resigned">Resigned</span>
+    </div>
+    <div class="tblwrap">
+      <table>
+        <thead><tr><th>Name</th><th>Staff ID</th><th>Branch</th><th>Status</th><th>Resigned on</th><th></th></tr></thead>
+        <tbody id="rows"><tr><td colspan="6" class="empty">Unlock to load the roster.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxabHh2Kd04z7k0zZOOoaJs2i5hgycQsO_AYoRS99xZx2WqMJ6cowumY0e1znehiRM1/exec';
+var UNLOCK_ACTION = 'PALLET_UNLOCK';   // reuse the EXISTING verified unlock (shared with Pallet Store / POD Admin)
+var AUTH_KEY  = 'clf_pallet_auth';     // shared session — one unlock covers all office tools
+
+var _drivers = [];                     // last DRIVER_LIST result
+var _fBranch = '', _fStatus = '';
+var _busy = false;                     // one write at a time
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function _newToken(p){ return (p||'drv')+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,10); }
+function _auth(){ try{ return JSON.parse(localStorage.getItem(AUTH_KEY)||'null'); }catch(e){ return null; } }
+function _authToken(){ var a=_auth(); return (a&&a.token)?a.token:''; }
+function toast(kind, html){
+  var t=$('toast');
+  t.style.background = (kind==='ok') ? '#046C4E' : '#C81E1E';
+  t.innerHTML=html; t.style.opacity='1';
+  clearTimeout(t._tm); t._tm=setTimeout(function(){ t.style.opacity='0'; }, 3200);
+}
+
+/* ── access lock (same PALLET_UNLOCK as POD Admin) ───────────────────────── */
+function showLock(msg){
+  var ov=$('lockOverlay');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='lockOverlay';
+    ov.style.cssText='position:fixed;inset:0;z-index:200;background:rgba(17,24,39,.94);display:flex;align-items:center;justify-content:center;padding:20px;';
+    ov.innerHTML='<div style="background:#fff;border-radius:16px;max-width:360px;width:100%;padding:26px 22px;box-shadow:0 20px 60px rgba(0,0,0,.4);">'
+      +'<div style="font-size:34px;text-align:center;">&#128274;</div>'
+      +'<div style="font-weight:800;font-size:17px;text-align:center;margin:6px 0 2px;color:#111827;">Driver Admin is locked</div>'
+      +'<div style="font-size:12.5px;color:#6B7280;text-align:center;margin-bottom:14px;">Authorised staff only</div>'
+      +'<label style="font-size:12px;font-weight:700;color:#374151;">Staff ID</label>'
+      +'<input id="lk-emp" autocomplete="off" placeholder="e.g. TER282" style="width:100%;box-sizing:border-box;margin:4px 0 10px;padding:12px;font-size:15px;border:1.5px solid #D1D5DB;border-radius:9px;">'
+      +'<label style="font-size:12px;font-weight:700;color:#374151;">PIN</label>'
+      +'<input id="lk-pin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN" style="width:100%;box-sizing:border-box;margin:4px 0 6px;padding:12px;font-size:15px;border:1.5px solid #D1D5DB;border-radius:9px;">'
+      +'<div id="lk-err" style="min-height:16px;font-size:12px;color:#B91C1C;font-weight:600;"></div>'
+      +'<button id="lk-btn" style="width:100%;margin-top:8px;background:#1A56DB;color:#fff;border:none;border-radius:10px;padding:14px;font-weight:800;font-size:15px;cursor:pointer;">Unlock</button></div>';
+    document.body.appendChild(ov);
+    $('lk-btn').onclick=doUnlock;
+    $('lk-pin').addEventListener('keydown',function(e){ if(e.key==='Enter') doUnlock(); });
+  }
+  ov.style.display='flex';
+  if(msg) $('lk-err').textContent=msg;
+  var a=_auth(); var emp=$('lk-emp'); if(emp && !emp.value) emp.value=(a&&a.empNo)||'';
+}
+function hideLock(){ var ov=$('lockOverlay'); if(ov) ov.style.display='none'; }
+async function doUnlock(){
+  var emp=$('lk-emp').value.trim().toUpperCase(), pin=$('lk-pin').value.trim(), err=$('lk-err');
+  if(!emp||!pin){ err.textContent='Enter Staff ID + PIN'; return; }
+  var btn=$('lk-btn'); btn.disabled=true; btn.textContent='Checking…';
+  var tok=_newToken('ulk');
+  var rd=await postWithToken({ formType:UNLOCK_ACTION, empNo:emp, pin:pin, clientToken:tok }, tok);
+  btn.disabled=false; btn.textContent='Unlock';
+  if(rd && rd.status==='success' && rd.authToken){
+    localStorage.setItem(AUTH_KEY, JSON.stringify({ token:rd.authToken, empNo:rd.empNo, name:rd.name }));
+    $('lk-pin').value=''; err.textContent=''; hideLock();
+    toast('ok','<b>Unlocked &#10003;</b><br>'+esc(rd.name)+' ('+esc(rd.empNo)+')');
+    renderWho(); loadRoster();
+  } else {
+    err.textContent=(rd && rd.message)?rd.message:'Could not unlock — check connection';
+  }
+}
+function signOut(){ localStorage.removeItem(AUTH_KEY); _drivers=[]; renderRows(); renderWho(); showLock(); }
+function renderWho(){
+  var a=_auth();
+  $('whoLine').textContent = a ? ('Signed in: '+(a.name||'')+' ('+(a.empNo||'')+')') : 'New joiner / resign / rejoin — no spreadsheet needed';
+}
+
+/* ── POST + no-cors + clientToken readback (same as the other office tools) ─ */
+async function postWithToken(payload, token){
+  var fd=new FormData(); fd.append('data', JSON.stringify(payload));
+  try{ await fetch(SCRIPT_URL,{ method:'POST', mode:'no-cors', body:fd }); }
+  catch(e){ return { status:'error', message:'No connection' }; }
+  for(var t=0;t<8;t++){
+    await new Promise(function(r){ setTimeout(r,1500); });
+    try{ var rb=await fetch(SCRIPT_URL+'?action=getImportResult&token='+encodeURIComponent(token)); var rd=await rb.json(); if(rd && rd.status && rd.status!=='pending') return rd; }
+    catch(e){}
+  }
+  return { status:'error', message:'No confirmation — refresh and check' };
+}
+
+/* ── roster load + render ────────────────────────────────────────────────── */
+async function loadRoster(){
+  if(!_authToken()){ showLock(); return; }
+  $('rows').innerHTML='<tr><td colspan="6" class="empty">Loading roster…</td></tr>';
+  var tok=_newToken('lst');
+  var rd=await postWithToken({ formType:'DRIVER_LIST', authToken:_authToken(), clientToken:tok }, tok);
+  if(rd && rd.status==='success' && Array.isArray(rd.drivers)){
+    _drivers=rd.drivers;
+    $('setupBanner').classList.toggle('show', rd.hasDriversSheet===false);
+    renderRows();
+  } else if(rd && /session expired/i.test(rd.message||'')){
+    localStorage.removeItem(AUTH_KEY); showLock(rd.message);
+  } else {
+    $('rows').innerHTML='<tr><td colspan="6" class="empty">Could not load — '+esc((rd&&rd.message)||'check connection')+'</td></tr>';
+  }
+}
+function statusBadge(d){
+  var st=String(d.status||'').toLowerCase();
+  if(st==='active') return '<span class="badge act">&#10003; Active</span>';
+  if(st==='resigned') return '<span class="badge res">&#10007; Resigned</span>';
+  if(!d.inMaster) return '<span class="badge warn" title="Name missing from Master_Control — forms will not show this driver">&#9888; Not in Master_Control</span>';
+  return '<span class="badge unk">'+(d.status?esc(d.status):'No status')+'</span>';
+}
+function renderRows(){
+  var q=($('search').value||'').trim().toUpperCase();
+  var list=_drivers.filter(function(d){
+    if(_fBranch && String(d.branch||'').toUpperCase()!==_fBranch) return false;
+    var st=String(d.status||'').toLowerCase();
+    if(_fStatus==='active' && st!=='active') return false;
+    if(_fStatus==='resigned' && st!=='resigned') return false;
+    if(q && (d.name+' '+(d.staffId||'')).toUpperCase().indexOf(q)<0) return false;
+    return true;
+  });
+  // summary (over the FULL list, not the filtered one)
+  var tot=_drivers.length, act=0,res=0,mtk=0,ktn=0;
+  _drivers.forEach(function(d){ var st=String(d.status||'').toLowerCase();
+    if(st==='active')act++; if(st==='resigned')res++;
+    var b=String(d.branch||'').toUpperCase(); if(b==='MTK')mtk++; if(b==='KTN')ktn++; });
+  $('summary').style.display=tot?'grid':'none';
+  $('s-total').textContent=tot; $('s-active').textContent=act; $('s-resigned').textContent=res;
+  $('s-mtk').textContent=mtk; $('s-ktn').textContent=ktn;
+
+  if(!list.length){ $('rows').innerHTML='<tr><td colspan="6" class="empty">'+(tot?'No drivers match the filter.':'No drivers loaded yet.')+'</td></tr>'; return; }
+  list.sort(function(a,b){ return String(a.branch).localeCompare(String(b.branch)) || String(a.name).localeCompare(String(b.name)); });
+  var h='';
+  list.forEach(function(d){
+    var st=String(d.status||'').toLowerCase();
+    var actBtn = (st==='resigned')
+      ? '<button class="act-btn rejoin" data-act="rejoin" data-name="'+esc(d.name)+'">Rejoin</button>'
+      : (st==='active' ? '<button class="act-btn resign" data-act="resign" data-name="'+esc(d.name)+'">Resign</button>' : '');
+    h+='<tr'+(st==='resigned'?' style="opacity:.55;"':'')+'>'
+      +'<td class="nm">'+esc(d.name)+(d.missingInDrivers?' <span class="badge warn" title="In Master_Control but missing from the Drivers sheet — use New joiner above with the same name to fix">&#9888; no ID row</span>':'')+'</td>'
+      +'<td class="sid">'+(d.staffId?esc(d.staffId):'<span style="color:var(--gray-400);">&mdash;</span>')+'</td>'
+      +'<td>'+esc(d.branch||'')+'</td>'
+      +'<td>'+statusBadge(d)+'</td>'
+      +'<td style="font-size:12px;color:var(--gray-500);white-space:nowrap;">'+esc((d.resignDate||'').slice(0,10))+'</td>'
+      +'<td style="text-align:right;">'+actBtn+'</td>'
+      +'</tr>';
+  });
+  $('rows').innerHTML=h;
+}
+
+/* ── writes ──────────────────────────────────────────────────────────────── */
+async function addDriver(){
+  if(_busy) return;
+  var name=$('addName').value.trim().toUpperCase().replace(/\s+/g,' ');
+  var sid=$('addSid').value.trim().toUpperCase().replace(/\s+/g,' ');
+  var branch=$('addBranch').value;
+  if(!name){ toast('err','Enter the driver’s full name'); return; }
+  if(!/^[A-Z][A-Z .@'\/-]{2,59}$/.test(name)){ toast('err','Name: A-Z letters and spaces only, 3-60 chars'); return; }
+  if(sid && !/^[A-Z]{2,4} ?\d{3,4}$/.test(sid)){ toast('err','Staff ID looks wrong — expected like TER 563 or KTN 701'); return; }
+  if(!confirm('Add new driver?\n\n'+name+'\n'+(sid||'(no staff ID)')+' · '+branch)) return;
+  _busy=true; var btn=$('addBtn'); btn.disabled=true; btn.textContent='Adding…';
+  var tok=_newToken('add');
+  var rd=await postWithToken({ formType:'DRIVER_ADD', authToken:_authToken(), clientToken:tok, name:name, staffId:sid, branch:branch }, tok);
+  _busy=false; btn.disabled=false; btn.textContent='Add driver';
+  if(rd && rd.status==='success'){
+    toast('ok','<b>&#10003; Added</b><br>'+esc(name)+' · '+esc(sid||'no ID')+' · '+esc(branch));
+    $('addName').value=''; $('addSid').value='';
+    loadRoster();
+  } else if(rd && /session expired/i.test(rd.message||'')){
+    localStorage.removeItem(AUTH_KEY); showLock(rd.message);
+  } else {
+    toast('err','<b>Not added</b><br>'+esc((rd&&rd.message)||'check connection'));
+  }
+}
+async function setStatus(name, to){
+  if(_busy) return;
+  var verb = (to==='Resigned') ? 'RESIGN' : 'REJOIN';
+  if(!confirm(verb+' this driver?\n\n'+name+'\n\n'+(to==='Resigned'
+      ? 'They disappear from the forms, dashboard and KPI immediately. History is kept.'
+      : 'They reappear in the forms and dashboard.'))) return;
+  _busy=true;
+  var tok=_newToken('sts');
+  var rd=await postWithToken({ formType:'DRIVER_SET_STATUS', authToken:_authToken(), clientToken:tok, name:name, status:to }, tok);
+  _busy=false;
+  if(rd && rd.status==='success'){
+    toast('ok','<b>&#10003; '+esc(rd.message||'Done')+'</b><br>'+esc(name));
+    loadRoster();
+  } else if(rd && /session expired/i.test(rd.message||'')){
+    localStorage.removeItem(AUTH_KEY); showLock(rd.message);
+  } else {
+    toast('err','<b>Failed</b><br>'+esc((rd&&rd.message)||'check connection'));
+  }
+}
+
+/* ── wiring ──────────────────────────────────────────────────────────────── */
+$('refreshBtn').addEventListener('click', loadRoster);
+$('signOutBtn').addEventListener('click', signOut);
+$('addBtn').addEventListener('click', addDriver);
+$('search').addEventListener('input', renderRows);
+document.querySelectorAll('.chip').forEach(function(c){
+  c.addEventListener('click', function(){
+    var f=c.getAttribute('data-f'), v=c.getAttribute('data-v');
+    document.querySelectorAll('.chip[data-f="'+f+'"]').forEach(function(x){ x.classList.remove('on'); });
+    c.classList.add('on');
+    if(f==='branch') _fBranch=v; else _fStatus=v;
+    renderRows();
+  });
+});
+document.getElementById('rows').addEventListener('click', function(e){
+  var b=e.target.closest('.act-btn'); if(!b) return;
+  var name=b.getAttribute('data-name'), act=b.getAttribute('data-act');
+  if(act==='resign') setStatus(name,'Resigned');
+  if(act==='rejoin') setStatus(name,'Active');
+});
+
+/* ── boot ────────────────────────────────────────────────────────────────── */
+if(_auth()){ renderWho(); loadRoster(); } else { showLock(); }
+</script>
+</body>
+</html>
