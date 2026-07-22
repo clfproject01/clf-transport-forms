@@ -261,8 +261,13 @@ function renderRows(){
   var h='';
   list.forEach(function(d){
     var st=String(d.status||'').toLowerCase();
+    // A resigned driver with no staff-ID row can't be made visible by a plain Rejoin (backend blocks
+    // it) — send the office to "New joiner" (which writes both sheets) via Re-add.
+    var noIdRow = d.missingInDrivers || !d.staffId;
     var actBtn = (st==='resigned')
-      ? '<button class="act-btn rejoin" data-act="rejoin" data-name="'+esc(d.name)+'">Rejoin</button>'
+      ? (noIdRow
+          ? '<button class="act-btn rejoin" data-act="readd" data-name="'+esc(d.name)+'">Re-add</button>'
+          : '<button class="act-btn rejoin" data-act="rejoin" data-name="'+esc(d.name)+'">Rejoin</button>')
       : (st==='active' ? '<button class="act-btn resign" data-act="resign" data-name="'+esc(d.name)+'">Resign</button>' : '');
     h+='<tr'+(st==='resigned'?' style="opacity:.55;"':'')+'>'
       +'<td class="nm">'+esc(d.name)+(d.missingInDrivers?' <span class="badge warn" title="In Master_Control but missing from the Drivers sheet — use New joiner above with the same name to fix">&#9888; no ID row</span>':'')+'</td>'
@@ -339,7 +344,14 @@ document.getElementById('rows').addEventListener('click', function(e){
   var name=b.getAttribute('data-name'), act=b.getAttribute('data-act');
   if(act==='resign') setStatus(name,'Resigned');
   if(act==='rejoin') setStatus(name,'Active');
+  if(act==='readd') prefillAdd(name);
 });
+function prefillAdd(name){
+  $('addName').value=name; $('addSid').value='';
+  $('addName').scrollIntoView({block:'center'});
+  $('addSid').focus();
+  toast('ok','Enter this driver’s staff ID + branch, then Add — it re-links them and brings them back.');
+}
 
 /* ── boot ────────────────────────────────────────────────────────────────── */
 if(_auth()){ renderWho(); loadRoster(); } else { showLock(); }
