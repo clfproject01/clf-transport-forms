@@ -1625,7 +1625,14 @@ function renderShipGroups(){
       if (matchCount){
         html += '<button type="button" class="ship-save" data-i="'+i+'" style="width:100%;margin-top:8px;background:#2E7D32;color:#fff;border:none;border-radius:8px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;">&#10003; Save — Delivered &middot; Dihantar</button>';
       }
-      html += '<div class="ship-reasons" data-i="'+i+'" style="display:none;gap:6px;flex-wrap:wrap;margin-top:8px;">'
+      // [FailProof 2026-07-23] photo evidence for a problem stop (e.g. the closed shopfront):
+      // driver snaps the proof FIRST, then taps the reason — the photo rides the same submit
+      // and shows up on the POD Admin board next to the failed invoice.
+      html += '<div class="ship-reasons" data-i="'+i+'" style="display:none;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center;">'
+        + '<button type="button" class="ship-proof" data-i="'+i+'" style="background:#fff;color:#2E7D32;border:1.5px solid #2E7D32;border-radius:6px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer;">&#128247; '
+          + (g._failProof ? 'Retake proof · Ambil semula' : 'Photo proof · Foto bukti') + '</button>'
+        + (g._failProof ? '<span style="font-size:12px;color:#2E7D32;font-weight:700;">1 proof &#10003; <button type="button" class="ship-proof-x" data-i="'+i+'" aria-label="Remove" style="background:rgba(0,0,0,.6);color:#fff;border:0;border-radius:50%;width:18px;height:18px;font-size:12px;line-height:1;cursor:pointer;padding:0;vertical-align:1px;">&times;</button></span>' : '')
+        + '<span style="flex-basis:100%;height:0;"></span>'
         + ['Shop closed','Rejected','Partial','Reschedule'].map(function(r){ return '<button type="button" class="ship-reason" data-i="'+i+'" data-r="'+_esc(r)+'" style="background:#FFF3CD;color:#854F0B;border:1px solid #E0C68A;border-radius:6px;padding:7px 10px;font-size:12px;cursor:pointer;">'+_esc(r)+'</button>'; }).join('')
         + '</div>';
       // Optional pallet drop for THIS customer — hidden until the driver taps "Pallet?".
@@ -1732,6 +1739,40 @@ document.getElementById('shipmentSection').addEventListener('click', function(e)
   if (sv){ saveDelivery(parseInt(sv.getAttribute('data-i'),10)); return; }
   var fb = e.target.closest('.ship-fail');
   if (fb){ var i = fb.getAttribute('data-i'); var box = document.querySelector('.ship-reasons[data-i="'+i+'"]'); if (box) box.style.display = (box.style.display==='none'?'flex':'none'); return; }
+  // [FailProof] take / remove the problem-evidence photo (buffered on the group until a reason is tapped)
+  var pfx = e.target.closest('.ship-proof-x');
+  if (pfx){ var _pg=_shipGroups[parseInt(pfx.getAttribute('data-i'),10)]; if(_pg){ _pg._failProof=null; renderShipGroups();
+      var _bx=document.querySelector('.ship-reasons[data-i="'+pfx.getAttribute('data-i')+'"]'); if(_bx) _bx.style.display='flex'; } return; }
+  var pfb = e.target.closest('.ship-proof');
+  if (pfb){
+    var pfi = parseInt(pfb.getAttribute('data-i'), 10);
+    var pin = document.getElementById('proofPhotoInput');
+    if (!pin){
+      pin = document.createElement('input');
+      pin.type='file'; pin.accept='image/*'; pin.capture='environment';
+      pin.id='proofPhotoInput'; pin.style.display='none';
+      document.body.appendChild(pin);
+      pin.addEventListener('change', async function(){
+        var f = pin.files && pin.files[0]; var gi = Number(pin.getAttribute('data-i'));
+        var grp = _shipGroups[gi];
+        if (f && grp){
+          var entry;
+          try { entry = await compressImage(f); } catch(err){ entry = await readFileAsDataUrl(f); }
+          // evidence photo: no quality gate — any shot of the closed shop is better than none
+          var m = String(entry.dataUrl||'').match(/^data:([^;]+);base64,(.*)$/);
+          if (m){ grp._failProof = { base64:m[2], type:m[1], name:'proof.jpg' };
+            renderShipGroups();
+            var bx=document.querySelector('.ship-reasons[data-i="'+gi+'"]'); if(bx) bx.style.display='flex';
+            _palletToast('ok', '&#10003; Proof photo attached &middot; Foto bukti dilampirkan &mdash; now tap the reason &middot; sila tekan sebab');
+          }
+        }
+        pin.value='';
+      });
+    }
+    pin.setAttribute('data-i', pfi);
+    pin.click();
+    return;
+  }
   var rb = e.target.closest('.ship-reason');
   if (rb){ failGroup(parseInt(rb.getAttribute('data-i'),10), rb.getAttribute('data-r')); return; }
   var pt = e.target.closest('.pallet-toggle');
@@ -1872,12 +1913,40 @@ async function failGroup(i, reason){
   overlay.classList.add('show');
   var errMsg = '';
   try{
-    for (var k=0; k<pending.length; k++){
-      var res = await fetch(SCRIPT_URL + '?action=MARK_INVOICE_FAILED&shipmentKey=' + encodeURIComponent(_shipKey)
-        + '&invoiceNo=' + encodeURIComponent(pending[k].invoiceNo) + '&reason=' + encodeURIComponent(reason));
-      var d = null; try{ d = await res.json(); }catch(je){}
-      if (d && d.status === 'success'){ pending[k].status = 'failed'; }
-      else { errMsg = (d && d.message) ? d.message : 'server error'; }
+    if (g._failProof){
+      // [FailProof] one batch POST: all pending invoices + the proof photo (uploaded ONCE).
+      // no-cors hides the response, so poll the standard clientToken readback for the real result.
+      var token = 'flp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+      var fd = new FormData();
+      fd.append('data', JSON.stringify({ formType:'MARK_INVOICE_FAILED', shipmentKey:_shipKey,
+        invoiceNos: pending.map(function(x){ return x.invoiceNo; }), reason: reason,
+        photo: g._failProof, branch: BRANCH,
+        driverName: document.getElementById('driverName').value || '', clientToken: token }));
+      await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body: fd });
+      var confirmed = null;
+      for (var t = 0; t < 8; t++){
+        await new Promise(function(r){ setTimeout(r, 1500); });
+        try{
+          var rb = await fetch(SCRIPT_URL + '?action=getImportResult&token=' + encodeURIComponent(token));
+          var rd = await rb.json();
+          if (rd && rd.status && rd.status !== 'pending'){ confirmed = rd; break; }
+        }catch(pe){ /* keep polling */ }
+      }
+      if (confirmed && confirmed.status === 'success'){
+        var okSet = {}; (confirmed.failed || []).forEach(function(n){ okSet[n] = true; });
+        pending.forEach(function(x){ if (okSet[x.invoiceNo]) x.status = 'failed'; });
+        g._failProof = null;   // consumed
+      } else {
+        errMsg = (confirmed && confirmed.message) ? confirmed.message : 'no confirmation - photo kept, try again';
+      }
+    } else {
+      for (var k=0; k<pending.length; k++){
+        var res = await fetch(SCRIPT_URL + '?action=MARK_INVOICE_FAILED&shipmentKey=' + encodeURIComponent(_shipKey)
+          + '&invoiceNo=' + encodeURIComponent(pending[k].invoiceNo) + '&reason=' + encodeURIComponent(reason));
+        var d = null; try{ d = await res.json(); }catch(je){}
+        if (d && d.status === 'success'){ pending[k].status = 'failed'; }
+        else { errMsg = (d && d.message) ? d.message : 'server error'; }
+      }
     }
   }catch(e){ errMsg = 'no connection'; }
   finally{

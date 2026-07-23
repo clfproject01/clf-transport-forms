@@ -499,7 +499,11 @@ function groupStations(invs){
     S.invs.push(v);
     if(!S.area && v.area) S.area=v.area;
     if(!S.customer && (v.customer||v.customerName)) S.customer=v.customer||v.customerName;
-    (v.photoUrls||[]).forEach(function(u){ if(u && !S._seen[u]){ S._seen[u]=1; S.photoUrls.push(u); if(!S.anchorInv) S.anchorInv=String(v.invoiceNo); } });
+    // bucket = DELIVERED photos only — a failed invoice's proof photo (closed shopfront etc.)
+    // belongs on its own row, not in the delivery bucket / the photos-vs-delivered ⚑ check
+    if(String(v.status).toLowerCase()==='delivered'){
+      (v.photoUrls||[]).forEach(function(u){ if(u && !S._seen[u]){ S._seen[u]=1; S.photoUrls.push(u); if(!S.anchorInv) S.anchorInv=String(v.invoiceNo); } });
+    }
   });
   return order.map(function(k){ var S=map[k]; delete S._seen; return S; });
 }
@@ -563,10 +567,20 @@ function efiCell(L, v){
 function invRow(L, v, idx){
   var st=String(v.status||'').toLowerCase();
   var cls = v.mismatch?'row-mismatch':(st==='delivered'?'row-done':(st==='failed'?'row-prob':'row-pend'));
+  // [FailProof] a failed invoice may carry a driver-taken evidence photo (closed shop etc.)
+  // — render it right next to the status badge; the standard .thumbs/data-inv delegation
+  // opens it in the lightbox.
+  var proof='';
+  if(st==='failed' && (v.photoUrls||[]).length){
+    proof='<span class="thumbs" data-inv="'+esc(String(v.invoiceNo))+'" style="display:inline-flex;vertical-align:middle;margin-left:6px;">'
+      +'<img class="thumb" src="'+esc(v.photoUrls[0])+'" alt="Proof" title="Driver proof photo" data-idx="0" loading="lazy" style="width:28px;height:28px;" '
+      +'onerror="this.onerror=null;var a=document.createElement(\'a\');a.href=this.src;a.target=\'_blank\';a.rel=\'noopener\';a.className=\'thumb-link\';a.textContent=\'📷\';this.replaceWith(a);">'
+      +'</span>';
+  }
   return '<tr class="'+cls+'">'
     +'<td class="inv-no">'+esc(v.invoiceNo)+srcTag(v)+'</td>'
     +'<td class="amt">'+(v.amount!=null?money(v.amount):'')+'</td>'
-    +'<td>'+statusBadge(v)+'</td>'
+    +'<td>'+statusBadge(v)+proof+'</td>'
     +'<td class="time">'+esc(fmtTime(v.deliveredDate||_boardData.date, v.deliveredAt))+'</td>'
     +'<td class="bc-cell">'+barcodeCell(v)+'</td>'
     +'<td>'+efiCell(L, v)+'</td>'
