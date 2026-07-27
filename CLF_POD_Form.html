@@ -1997,7 +1997,9 @@ function _smStore(){ try{ localStorage.setItem(SM_AUTH_KEY, JSON.stringify({ id:
 function _smRestore(){
   try{
     var a = JSON.parse(localStorage.getItem(SM_AUTH_KEY) || 'null');
-    if (a && a.id && a.pin && (Date.now() - (a.ts||0)) < 30*864e5){ _smId=a.id; _smPin=a.pin; _smName=a.name||''; return true; }
+    // [sec 2026-07-24] delivery-day TTL (was 30d): a raw PIN sitting in localStorage on a
+    // borrowed/shared phone is a takeover risk — keep the remember-window short.
+    if (a && a.id && a.pin && (Date.now() - (a.ts||0)) < 20*36e5){ _smId=a.id; _smPin=a.pin; _smName=a.name||''; return true; }
   }catch(e){}
   return false;
 }
