@@ -2148,19 +2148,10 @@ function _smUseShipment(key, quiet){
 }
 
 // boot: toggle link + deep-link (?sm=1&id=TER%20500 — the DSR "My Deliveries" button)
+// Salesman mode is reached ONLY via the DSR "My Deliveries" deep link (?sm=1&id=…) — there is
+// deliberately NO toggle on the driver-facing form, so drivers never see a salesman control.
 (function smBoot(){
   try{
-    var form = document.getElementById('podForm');
-    if (form){
-      var t = document.createElement('div');
-      t.style.cssText = 'text-align:right;margin:0 0 8px;';
-      t.innerHTML = '<a href="#" id="smToggleLink" style="font-size:12.5px;color:#6D28D9;font-weight:700;text-decoration:none;">Salesman &middot; Jurujual &rarr;</a>';
-      form.parentNode.insertBefore(t, form);
-      document.getElementById('smToggleLink').addEventListener('click', function(e){
-        e.preventDefault();
-        if (_smMode) smExit(); else { _smRestore(); smEnter(); }
-      });
-    }
     var q = new URLSearchParams(location.search);
     if (q.get('sm') === '1'){
       _smRestore();
