@@ -751,7 +751,10 @@ async function loadDay(){
     var invoices=[], noPhoto=[];
     function mkPhoto(fid){ return { fileId:fid, origBlob:null, fetchP:null, result:null, failedErr:'' }; }
     data.lorries.forEach(function(L){
-      var plate=String(L.vehicleNo||'UNKNOWN');
+      // [Salesman 2026-07-24] salesman-handled DL archives under SALESMAN_TER### instead of a plate
+      var plate=(L.handledBy && L.handledBy.type==='SALESMAN')
+        ? ('SALESMAN_'+String(L.handledBy.id||'').replace(/\s+/g,''))
+        : String(L.vehicleNo||'UNKNOWN');
       // Group this lorry's DELIVERED invoices by station (customer) — SAME key as the board.
       // The backend writes the whole photo bucket onto every invoice in a station, so we dedupe
       // the bucket and hand each invoice ONE photo (positional 1:1). That turns N invoices × N

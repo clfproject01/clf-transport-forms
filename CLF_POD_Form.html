@@ -445,14 +445,16 @@ async function fetchAndPopulateDrivers(isRetry) {
       throw new Error('Empty driver roster from server');
     }
     _applyRoster(data.drivers);
-    try{ localStorage.setItem(ROSTER_CACHE_KEY, JSON.stringify(data.drivers)); }catch(e){}
+    try{ localStorage.setItem(ROSTER_CACHE_KEY, JSON.stringify(data.drivers)); localStorage.setItem(ROSTER_CACHE_KEY + '_ts', String(Date.now())); }catch(e){}
   } catch (err) {
     console.error('fetchAndPopulateDrivers failed:', err);
     // Fall back to the cached roster (still lets the driver pick + submit at the depot dead zone)
     var usedCache = false;
     try{
       var cached = JSON.parse(localStorage.getItem(ROSTER_CACHE_KEY) || 'null');
-      if (Array.isArray(cached) && cached.length){ _applyRoster(cached); usedCache = true; }
+      var _cts = Number(localStorage.getItem(ROSTER_CACHE_KEY + '_ts') || 0);
+      var _fresh = !_cts || (Date.now() - _cts) < 14 * 864e5;   // [Roster-fix] 14-day cap on the offline roster
+      if (Array.isArray(cached) && cached.length && _fresh){ _applyRoster(cached); usedCache = true; }
     }catch(e){}
     if (!usedCache){
       var ds = document.getElementById('driverSearch');
@@ -539,7 +541,15 @@ window.onload = function() {
 // GUARD: skip while a photo flow is in progress (_deliverIdx >= 0) — returning FROM THE CAMERA
 // also fires this, and a refresh racing onShipPhoto could drop the just-taken photo.
 document.addEventListener('visibilitychange', function(){
-  if (!document.hidden && _deliverIdx < 0 && document.getElementById('vehicleNo').value) checkShipmentForVehicle(true);
+  if (document.hidden || _deliverIdx >= 0) return;
+  if (_smMode){ if (_smAuthed()) smLoadDeliveries(true); return; }   // [Salesman] re-sync my deliveries
+  if (document.getElementById('vehicleNo').value) checkShipmentForVehicle(true);
+  // [Roster-fix 2026-07-24] a tab left open kept its load-time roster forever — refetch on
+  // return-to-foreground, throttled to once per 5 minutes.
+  try {
+    var now = Date.now();
+    if (!window._rosterAt || now - window._rosterAt > 300000){ window._rosterAt = now; fetchAndPopulateDrivers(true); }
+  } catch (e) {}
 });
 
 // (old <select> change-listeners removed — driver picking is handled by wireDriverPicker)
@@ -1223,6 +1233,7 @@ function resetShipmentView(){
 
 // When vehicle + date are set, check if this lorry has a shipment today.
 async function checkShipmentForVehicle(keepListOnFail){
+  if (_smMode) return;   // [Salesman] deliveries load by staff ID, not by lorry
   var vehicle = document.getElementById('vehicleNo').value;
   var date = document.getElementById('deliveryDate').value;
   var sec = document.getElementById('shipmentSection');
@@ -1637,7 +1648,7 @@ function renderShipGroups(){
         + '</div>';
       // Optional pallet drop for THIS customer — hidden until the driver taps "Pallet?".
       // Only shown if the master loaded; fill only if there are pallets (per boss).
-      if (PALLET_MASTER.length){
+      if (!_smMode && PALLET_MASTER.length){
         var pSel = (g._pallet && g._pallet.palletKey) || '';
         var pQty = (g._pallet && g._pallet.qty) || '';
         var pCollect = (g._pallet && g._pallet.collectQty) || '';
@@ -1688,7 +1699,7 @@ function renderShipGroups(){
 
 // click delegation on the shipment section
 document.getElementById('shipmentSection').addEventListener('click', function(e){
-  if (e.target.closest('#shipRefresh')){ checkShipmentForVehicle(true); return; }   // B6: manual re-sync
+  if (e.target.closest('#shipRefresh')){ if (_smMode){ smLoadDeliveries(true); } else { checkShipmentForVehicle(true); } return; }   // B6: manual re-sync
   var xbtn = e.target.closest('.ship-photo-x');
   if (xbtn){
     var xg = parseInt(xbtn.getAttribute('data-g'),10), xp = parseInt(xbtn.getAttribute('data-p'),10);
@@ -1855,6 +1866,7 @@ async function saveDelivery(i){
       timestamp: now.toISOString(), photos: photos, clientToken: token,
       // [E5] true if ANY included photo was force-uploaded past the quality gate
       qualityFlag: g.photos.some(function(p){ return !!p.qualityFlag; }) };
+    if (_smMode){ payload.salesmanId = _smId; payload.pin = _smPin; payload.gps = _smGps || null; payload.driverName = ''; payload.secondDriver = ''; }   // [Salesman] server resolves identity
     var fd = new FormData(); fd.append('data', JSON.stringify(payload));
     // 90s upload timeout — on dead signal fetch can hang forever behind the overlay, and drivers
     // kill the tab (losing buffered photos). Abort → catch → photos kept + clear retry message.
@@ -1880,15 +1892,13 @@ async function saveDelivery(i){
     } else if (confirmed){
       g.invs.forEach(function(x){ if(!x._untag && String(x.status).toLowerCase()!=='delivered') x.status='delivered'; x._untag=false; });   // [untag] only tagged ones delivered; untagged stay pending
       g.photos = [];
-      firePalletDrop(g);
-      firePalletCollect(g);
+      if (!_smMode){ firePalletDrop(g); firePalletCollect(g); }   // [Salesman] private cars carry no pallets
       renderShipmentList();
     } else {
       // No confirmation (weak signal) — show as delivered but KEEP the photos; the read-back
       // below re-syncs with the server and only drops photos once it confirms delivered.
       g.invs.forEach(function(x){ x.status='delivered'; });
-      firePalletDrop(g);
-      firePalletCollect(g);
+      if (!_smMode){ firePalletDrop(g); firePalletCollect(g); }   // [Salesman] private cars carry no pallets
       renderShipmentList();
     }
   }catch(err){
@@ -1913,14 +1923,15 @@ async function failGroup(i, reason){
   overlay.classList.add('show');
   var errMsg = '';
   try{
-    if (g._failProof){
+    if (g._failProof || _smMode){
       // [FailProof] one batch POST: all pending invoices + the proof photo (uploaded ONCE).
       // no-cors hides the response, so poll the standard clientToken readback for the real result.
       var token = 'flp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
       var fd = new FormData();
       fd.append('data', JSON.stringify({ formType:'MARK_INVOICE_FAILED', shipmentKey:_shipKey,
         invoiceNos: pending.map(function(x){ return x.invoiceNo; }), reason: reason,
-        photo: g._failProof, branch: BRANCH,
+        photo: g._failProof || null, branch: BRANCH,
+        salesmanId: (_smMode ? _smId : undefined), pin: (_smMode ? _smPin : undefined), gps: (_smMode ? (_smGps || null) : undefined),
         driverName: document.getElementById('driverName').value || '', clientToken: token }));
       await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body: fd });
       var confirmed = null;
@@ -1968,6 +1979,196 @@ document.getElementById('vehicleNo').addEventListener('change', function(){
   checkShipmentForVehicle();
 });
 document.getElementById('deliveryDate').addEventListener('change', function(){ checkShipmentForVehicle(); });
+
+
+/* ============================================================================
+   SALESMAN MODE (A+B2)                                          [2026-07-24]
+   Office marks a DL "handled by salesman"; the rep opens this same form via the
+   DSR "My Deliveries" button (?sm=1&id=TER%20500) or the toggle below, signs in
+   with staff ID + personal PIN (Salesmen sheet), and gets ONLY his marked DLs —
+   station photos / untag / count-match / FailProof reused unchanged. Submits
+   carry salesmanId+pin+gps; the backend writes ZERO POD_Data rows (KPI walls).
+   ============================================================================ */
+var _smMode = false, _smId = '', _smPin = '', _smName = '', _smGps = null;
+var SM_AUTH_KEY = 'clf_sm_auth';
+
+function _smAuthed(){ return !!(_smId && _smPin); }
+function _smStore(){ try{ localStorage.setItem(SM_AUTH_KEY, JSON.stringify({ id:_smId, pin:_smPin, name:_smName, ts:Date.now() })); }catch(e){} }
+function _smRestore(){
+  try{
+    var a = JSON.parse(localStorage.getItem(SM_AUTH_KEY) || 'null');
+    if (a && a.id && a.pin && (Date.now() - (a.ts||0)) < 30*864e5){ _smId=a.id; _smPin=a.pin; _smName=a.name||''; return true; }
+  }catch(e){}
+  return false;
+}
+function _smSignOut(){ try{ localStorage.removeItem(SM_AUTH_KEY); }catch(e){} _smId=''; _smPin=''; _smName=''; smRenderGate(); }
+
+// generic no-cors POST + clientToken readback (same machinery the pallet/admin tools use)
+async function smPost(payload){
+  var token = 'sm_' + Date.now() + '_' + Math.random().toString(36).slice(2,10);
+  payload.clientToken = token;
+  var fd = new FormData(); fd.append('data', JSON.stringify(payload));
+  try{ await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body: fd }); }
+  catch(e){ return { status:'error', message:'No connection · Tiada sambungan' }; }
+  for (var t=0;t<8;t++){
+    await new Promise(function(r){ setTimeout(r,1500); });
+    try{
+      var rb = await fetch(SCRIPT_URL + '?action=getImportResult&token=' + encodeURIComponent(token));
+      var rd = await rb.json();
+      if (rd && rd.status && rd.status !== 'pending') return rd;
+    }catch(e){}
+  }
+  return { status:'error', message:'No confirmation · Tiada pengesahan' };
+}
+
+function _smRefreshGps(){
+  try{
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      function(p){ _smGps = { lat:p.coords.latitude, lng:p.coords.longitude, acc:p.coords.accuracy }; },
+      function(){}, { enableHighAccuracy:true, timeout:5000, maximumAge:120000 });
+  }catch(e){}
+}
+
+function _smFields(on){
+  ['driverSearch','secondSearch','vehicleNo'].forEach(function(id){
+    var el = document.getElementById(id);
+    var f = el && el.closest ? el.closest('.field') : null;
+    if (f) f.style.display = on ? 'none' : '';
+  });
+  var man = document.getElementById('manualPodSection');
+  if (on && man) man.style.display = 'none';
+}
+function _smBanner(on){
+  var b = document.getElementById('smBanner');
+  if (!on){ if (b) b.remove(); return; }
+  if (!b){
+    b = document.createElement('div'); b.id = 'smBanner';
+    b.style.cssText = 'background:#6D28D9;color:#fff;border-radius:10px;padding:12px 14px;margin:0 0 14px;font-weight:700;font-size:14px;display:flex;justify-content:space-between;align-items:center;gap:8px;';
+    var form = document.getElementById('podForm');
+    form.parentNode.insertBefore(b, form);
+  }
+  b.innerHTML = '<span>&#129333; SALESMAN MODE' + (_smName ? ' &middot; ' + _esc(_smName) : '') + (_smId ? ' (' + _esc(_smId) + ')' : '') + '</span>'
+    + '<span><button type="button" id="smSignOut" style="background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;">Sign out &middot; Keluar</button></span>';
+  var so = document.getElementById('smSignOut'); if (so) so.onclick = _smSignOut;
+}
+
+function smEnter(prefillId){
+  _smMode = true;
+  document.body.classList.add('sm-mode');
+  _smFields(true); _smBanner(true);
+  var tl = document.getElementById('smToggleLink'); if (tl) tl.textContent = 'Driver mode · Mod pemandu';
+  if (prefillId) _smId = String(prefillId).toUpperCase();
+  if (_smAuthed()){ smLoadDeliveries(); } else { smRenderGate(); }
+}
+function smExit(){
+  _smMode = false;
+  document.body.classList.remove('sm-mode');
+  _smFields(false); _smBanner(false);
+  var tl = document.getElementById('smToggleLink'); if (tl) tl.textContent = 'Salesman &middot; Jurujual &rarr;';
+  var sec = document.getElementById('shipmentSection');
+  if (sec){ sec.style.display = 'none'; sec.innerHTML = ''; }
+  _shipKey = ''; _shipGroups = [];
+}
+
+function smRenderGate(msg){
+  var sec = document.getElementById('shipmentSection');
+  if (!sec) return;
+  sec.style.display = 'block';
+  sec.innerHTML = '<div style="border:1.5px solid #C4B5FD;background:#F5F3FF;border-radius:12px;padding:16px;">'
+    + '<div style="font-weight:800;font-size:15px;color:#5B21B6;margin-bottom:10px;">Salesman sign in &middot; Log masuk jurujual</div>'
+    + '<label style="font-size:12px;font-weight:700;color:#4C1D95;">Staff ID</label>'
+    + '<input id="smIdInput" autocomplete="off" placeholder="e.g. TER 500" value="' + _esc(_smId) + '" style="width:100%;box-sizing:border-box;margin:4px 0 10px;padding:12px;font-size:16px;border:1.5px solid #C4B5FD;border-radius:9px;">'
+    + '<label style="font-size:12px;font-weight:700;color:#4C1D95;">PIN</label>'
+    + '<input id="smPinInput" type="password" inputmode="numeric" autocomplete="off" placeholder="6-digit PIN" style="width:100%;box-sizing:border-box;margin:4px 0 6px;padding:12px;font-size:16px;border:1.5px solid #C4B5FD;border-radius:9px;">'
+    + '<div id="smGateErr" style="min-height:16px;font-size:12px;color:#B91C1C;font-weight:600;">' + (msg ? _esc(msg) : '') + '</div>'
+    + '<button type="button" id="smLoadBtn" style="width:100%;margin-top:8px;background:#6D28D9;color:#fff;border:none;border-radius:10px;padding:14px;font-weight:800;font-size:15px;cursor:pointer;">Load my deliveries &middot; Muat penghantaran saya</button>'
+    + '</div>';
+  var btn = document.getElementById('smLoadBtn');
+  btn.onclick = function(){
+    var id = document.getElementById('smIdInput').value.trim().toUpperCase();
+    var pin = document.getElementById('smPinInput').value.trim();
+    if (!id || !pin){ document.getElementById('smGateErr').textContent = 'Enter Staff ID + PIN · Isi ID + PIN'; return; }
+    _smId = id; _smPin = pin;
+    smLoadDeliveries();
+  };
+  var pi = document.getElementById('smPinInput');
+  pi.addEventListener('keydown', function(e){ if (e.key === 'Enter') btn.onclick(); });
+}
+
+async function smLoadDeliveries(quiet){
+  var sec = document.getElementById('shipmentSection');
+  if (!sec) return;
+  var date = document.getElementById('deliveryDate').value || new Date().toISOString().slice(0,10);
+  if (!quiet){ sec.style.display='block'; sec.innerHTML = '<div style="padding:14px;text-align:center;color:#5B21B6;">Loading your deliveries&hellip; &middot; Memuatkan&hellip;</div>'; }
+  var rd = await smPost({ formType:'GET_SALESMAN_SHIPMENTS', salesmanId:_smId, pin:_smPin, date:date });
+  if (!rd || rd.status === 'error'){
+    _smPin = quiet ? _smPin : '';
+    smRenderGate((rd && rd.message) || 'Could not load — check connection · Semak talian');
+    return;
+  }
+  _smName = (rd.salesman && rd.salesman.name) || _smName;
+  _smStore(); _smBanner(true); _smRefreshGps();
+  if (!rd.found || !rd.shipments || !rd.shipments.length){
+    sec.style.display='block';
+    sec.innerHTML = '<div style="padding:18px 14px;text-align:center;color:#5B21B6;font-size:14px;line-height:1.6;border:1.5px solid #C4B5FD;background:#F5F3FF;border-radius:10px;">'
+      + '<div style="font-size:30px;margin-bottom:6px;">&#128230;</div>'
+      + '<b>No delivery marked to you for ' + _esc(date) + '.</b>'
+      + '<br><span style="font-size:12.5px;color:#6D5BA6;">Tiada penghantaran ditandakan kepada anda.</span>'
+      + '<br><br>Ask the office to mark the DL to you &middot; Minta pejabat tandakan DL kepada anda.'
+      + '</div>';
+    _shipKey=''; _shipGroups=[];
+    return;
+  }
+  // multiple marked DLs on one day: let the rep pick which one to work on
+  window._smShipments = rd.shipments; window._smItems = rd.items || [];
+  if (rd.shipments.length > 1 && !quiet){
+    sec.style.display='block';
+    sec.innerHTML = '<div style="border:1.5px solid #C4B5FD;background:#F5F3FF;border-radius:12px;padding:14px;">'
+      + '<div style="font-weight:800;font-size:14px;color:#5B21B6;margin-bottom:8px;">Pick a delivery order &middot; Pilih DL</div>'
+      + rd.shipments.map(function(s,i){
+          return '<button type="button" class="sm-pick-dl" data-k="' + _esc(s.shipmentKey) + '" style="display:block;width:100%;text-align:left;margin-bottom:6px;background:#fff;border:1.5px solid #C4B5FD;border-radius:9px;padding:11px 12px;font-size:14px;cursor:pointer;"><b>' + _esc(s.shipmentKey) + '</b> &middot; ' + (s.itemCount||'?') + ' invoice(s)</button>';
+        }).join('')
+      + '</div>';
+    sec.querySelectorAll('.sm-pick-dl').forEach(function(b){
+      b.onclick = function(){ _smUseShipment(b.getAttribute('data-k')); };
+    });
+    return;
+  }
+  _smUseShipment((window._smShipments[0] || {}).shipmentKey, quiet);
+}
+function _smUseShipment(key, quiet){
+  if (!key) return;
+  _shipKey = key;
+  var items = (window._smItems || []).filter(function(it){ return it.shipmentKey === key; });
+  _buildGroups(items);
+  var man = document.getElementById('manualPodSection'); if (man) man.style.display = 'none';
+  var sec = document.getElementById('shipmentSection'); if (sec) sec.style.display = 'block';
+  renderShipmentList();
+}
+
+// boot: toggle link + deep-link (?sm=1&id=TER%20500 — the DSR "My Deliveries" button)
+(function smBoot(){
+  try{
+    var form = document.getElementById('podForm');
+    if (form){
+      var t = document.createElement('div');
+      t.style.cssText = 'text-align:right;margin:0 0 8px;';
+      t.innerHTML = '<a href="#" id="smToggleLink" style="font-size:12.5px;color:#6D28D9;font-weight:700;text-decoration:none;">Salesman &middot; Jurujual &rarr;</a>';
+      form.parentNode.insertBefore(t, form);
+      document.getElementById('smToggleLink').addEventListener('click', function(e){
+        e.preventDefault();
+        if (_smMode) smExit(); else { _smRestore(); smEnter(); }
+      });
+    }
+    var q = new URLSearchParams(location.search);
+    if (q.get('sm') === '1'){
+      _smRestore();
+      smEnter(q.get('id') || '');
+    }
+  }catch(e){ console.warn('smBoot failed', e); }
+})();
+
 </script>
 </body>
 </html>

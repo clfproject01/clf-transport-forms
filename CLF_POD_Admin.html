@@ -435,8 +435,12 @@ function render(){
     var efid=invs.filter(function(v){return v.efiScanned;}).length;
     var lkey=String(L.shipmentKey||L.vehicleNo||'');
     var isOpen=_openKeys.has(lkey);
-    html+='<div class="lorry'+(isOpen?' open':'')+'"><div class="lorry-head" data-key="'+esc(lkey)+'">'
-      +'<div><span class="chev">'+(isOpen?'▾':'▸')+'</span> <span class="plate">'+esc(L.vehicleNo||'?')+'</span>'+(L.drivers?' <span class="crew">· '+esc(L.drivers)+'</span>':'')+'</div>'
+    // [Salesman 2026-07-24] salesman-handled DL renders as a purple card
+    var hb=L.handledBy && L.handledBy.type==='SALESMAN' ? L.handledBy : null;
+    html+='<div class="lorry'+(isOpen?' open':'')+'"'+(hb?' style="border-left:4px solid #6D28D9;"':'')+'><div class="lorry-head" data-key="'+esc(lkey)+'"'+(hb?' style="background:#F5F3FF;"':'')+'>'
+      +(hb
+        ? '<div><span class="chev">'+(isOpen?'▾':'▸')+'</span> <span class="plate" style="color:#5B21B6;">&#129333; SALESMAN</span> <span class="crew" style="color:#6D28D9;font-weight:700;">'+esc(hb.id||'')+' · '+esc(hb.name||'')+'</span>'+(L.vehicleNo&&L.vehicleNo!=='?'?' <span class="crew">('+esc(L.vehicleNo)+')</span>':'')+'</div>'
+        : '<div><span class="chev">'+(isOpen?'▾':'▸')+'</span> <span class="plate">'+esc(L.vehicleNo||'?')+'</span>'+(L.drivers?' <span class="crew">· '+esc(L.drivers)+'</span>':'')+'</div>')
       +'<div class="mini">EFI '+efid+'/'+ld+' · '+ld+' / '+invs.length+' delivered</div></div>';
     html+='<div class="lorry-body">';
     // One STATION (customer) = one photo bucket. The backend writes the same photo set to every

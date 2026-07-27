@@ -229,14 +229,39 @@ function wireCrewPickers(){
         return (d.staffId && _normId(d.staffId).indexOf(nq) >= 0) ||
                (d.name && d.name.toLowerCase().indexOf(nameq) >= 0);
       }).slice(0, 8);
-      panel.innerHTML = matches.length
-        ? matches.map(function(d){ return '<div class="dp-row" data-name="'+escHtml(d.name)+'" style="padding:10px 12px;border-bottom:1px solid #F3F4F6;cursor:pointer;font-size:13px;color:#111827;"><b>'+escHtml(d.staffId||'')+'</b> · '+escHtml(d.name)+'</div>'; }).join('')
-        : '<div style="padding:10px 12px;color:#9CA3AF;font-size:13px;">No match · Tiada padanan</div>';
+      var isPrimary = !!field.querySelector('.sel-primary');
+      var html2 = matches.length
+        ? '<div style="padding:6px 12px;background:#F9FAFB;color:#6B7280;font-size:11px;font-weight:700;text-transform:uppercase;">Driver · Pemandu</div>'
+          + matches.map(function(d){ return '<div class="dp-row" data-name="'+escHtml(d.name)+'" style="padding:10px 12px;border-bottom:1px solid #F3F4F6;cursor:pointer;font-size:13px;color:#111827;"><b>'+escHtml(d.staffId||'')+'</b> · '+escHtml(d.name)+'</div>'; }).join('')
+        : '';
+      // [Salesman] the primary slot also offers the Salesmen group — picking one MARKS the whole DL
+      if (isPrimary){
+        var smm = _salesmen.filter(function(d){
+          return (d.staffId && _normId(d.staffId).indexOf(nq) >= 0) ||
+                 (d.name && d.name.toLowerCase().indexOf(nameq) >= 0);
+        }).slice(0, 6);
+        if (_salesmen.length && smm.length){
+          html2 += '<div style="padding:6px 12px;background:#F5F3FF;color:#6D28D9;font-size:11px;font-weight:700;text-transform:uppercase;">Salesman · Jurujual</div>'
+            + smm.map(function(d){ return '<div class="sm-row" data-sm="'+escHtml(d.staffId)+'" data-smname="'+escHtml(d.name)+'" style="padding:10px 12px;border-bottom:1px solid #EDE9FE;cursor:pointer;font-size:13px;color:#5B21B6;background:#FCFAFF;"><b>'+escHtml(d.staffId||'')+'</b> · '+escHtml(d.name)+' <span style="font-size:10px;font-weight:700;background:#6D28D9;color:#fff;border-radius:999px;padding:1px 7px;margin-left:4px;">SALESMAN</span></div>'; }).join('');
+        } else if (!_salesmen.length){
+          html2 += '<div class="sm-load-hint" style="padding:9px 12px;border-top:1px solid #EDE9FE;color:#6D28D9;font-size:12px;cursor:pointer;background:#FCFAFF;">&#129333; Assign to a salesman&hellip; (tap to load list)</div>';
+        }
+      }
+      panel.innerHTML = html2 || '<div style="padding:10px 12px;color:#9CA3AF;font-size:13px;">No match · Tiada padanan</div>';
       panel.style.display = 'block';
     }
     search.addEventListener('input', function(){ hidden.value = ''; render(search.value); });
     search.addEventListener('focus', function(){ search.select(); if(search.value.trim() && !hidden.value) render(search.value); });
     panel.addEventListener('click', function(e){
+      var smRow = e.target.closest('.sm-row');
+      if (smRow){
+        panel.style.display = 'none';
+        var card = search.closest('.card');
+        markSalesman(card.getAttribute('data-ship'), smRow.getAttribute('data-sm'), smRow.getAttribute('data-smname'));
+        return;
+      }
+      var hint = e.target.closest('.sm-load-hint');
+      if (hint){ loadSalesmen().then(function(){ render(search.value); }); return; }
       var row = e.target.closest('.dp-row'); if(!row) return;
       var name = row.getAttribute('data-name');
       var d = _drivers.find(function(x){ return x.name === name; });
@@ -256,6 +281,7 @@ function renderShipments(ships){
   }
   let html = '<div class="grid">';
   ships.forEach(s => {
+    if (s.handledBy && s.handledBy.type === 'SALESMAN'){ html += smCardHtml(s); return; }   // [Salesman] purple card, no crew UI
     const planned = Number(s.planned) || 0;
     const delivered = Number(s.delivered) || 0;
     const failed = Number(s.failed) || 0;
@@ -321,6 +347,10 @@ function renderShipments(ships){
   });
 
   // attach combination-invoice print handlers — open the print page for THIS lorry + date + branch
+  list.querySelectorAll('.unmark-sm').forEach(btn => {
+    btn.addEventListener('click', () => { unmarkSalesman(btn.closest('.card').getAttribute('data-ship')); });
+  });
+
   list.querySelectorAll('.print-cmb').forEach(btn => {
     btn.addEventListener('click', () => {
       const lorry = btn.getAttribute('data-lorry') || '';
@@ -571,6 +601,106 @@ document.getElementById('dateInput').addEventListener('change', e => { _date = e
   await loadDrivers();
   await loadShipments(true);   // cached: initial load
 })();
+
+
+/* ============================================================================
+   HANDLE-BY-SALESMAN (office side)                              [2026-07-24]
+   Pick a salesman in the PRIMARY crew slot -> the whole DL is marked handled-by-
+   salesman (crew cleared server-side, DL vanishes from the driver form, purple
+   card here + on the POD board, archives under SALESMAN_TER###). Marking needs
+   the shared office PIN session (same unlock as POD Admin / Pallet Store).
+   ============================================================================ */
+let _salesmen = [];
+const SM_AUTH_KEY = 'clf_pallet_auth';
+function _smAuth(){ try{ return JSON.parse(localStorage.getItem(SM_AUTH_KEY)||'null'); }catch(e){ return null; } }
+function _smToken(){ var a=_smAuth(); return (a&&a.token)?a.token:''; }
+
+async function smPost(payload){
+  var token = 'shm_' + Date.now() + '_' + Math.random().toString(36).slice(2,10);
+  payload.clientToken = token;
+  var fd = new FormData(); fd.append('data', JSON.stringify(payload));
+  try{ await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body: fd }); }
+  catch(e){ return { status:'error', message:'No connection' }; }
+  for (var t=0;t<8;t++){
+    await new Promise(function(r){ setTimeout(r,1500); });
+    try{
+      var rb = await fetch(SCRIPT_URL + '?action=getImportResult&token=' + encodeURIComponent(token));
+      var rd = await rb.json();
+      if (rd && rd.status && rd.status !== 'pending') return rd;
+    }catch(e){}
+  }
+  return { status:'error', message:'No confirmation - refresh and check' };
+}
+
+async function ensureOfficeSession(){
+  if (_smToken()) return true;
+  var emp = prompt('Office unlock - Staff ID (e.g. TER282):'); if (!emp) return false;
+  var pin = prompt('PIN:'); if (!pin) return false;
+  var rd = await smPost({ formType:'PALLET_UNLOCK', empNo: emp.trim().toUpperCase(), pin: pin.trim() });
+  if (rd && rd.status === 'success' && rd.authToken){
+    localStorage.setItem(SM_AUTH_KEY, JSON.stringify({ token: rd.authToken, empNo: rd.empNo, name: rd.name }));
+    showToast('Unlocked - ' + (rd.name || rd.empNo), 'success');
+    return true;
+  }
+  showToast((rd && rd.message) || 'Unlock failed', 'warning');
+  return false;
+}
+
+async function loadSalesmen(){
+  if (!(await ensureOfficeSession())) return;
+  var rd = await smPost({ formType:'SALESMAN_LIST', authToken:_smToken() });
+  if (rd && rd.status === 'success' && Array.isArray(rd.salesmen)){
+    _salesmen = rd.salesmen;
+    if (!_salesmen.length) showToast('Salesmen sheet is empty - run setupV10Once in Apps Script first.', 'warning');
+  } else if (rd && /session expired/i.test(rd.message||'')){
+    localStorage.removeItem(SM_AUTH_KEY);
+    showToast('Session expired - try again to unlock.', 'warning');
+  } else {
+    showToast((rd && rd.message) || 'Could not load salesmen', 'warning');
+  }
+}
+
+async function markSalesman(shipmentNo, staffId, name){
+  if (!confirm('Hand this DL to the salesman?\n\n' + shipmentNo + '\n' + staffId + ' - ' + (name || '')
+    + '\n\nThe DL disappears from the driver form; the salesman submits POD himself. Driver KPI is untouched.')) return;
+  if (!(await ensureOfficeSession())) return;
+  showToast('Marking...', 'info');
+  var rd = await smPost({ formType:'MARK_SALESMAN_HANDLING', authToken:_smToken(), shipmentKey: shipmentNo, staffId: staffId });
+  if (rd && rd.status === 'success'){ showToast('Marked: ' + (rd.salesman || staffId) + ' handles ' + shipmentNo, 'success'); loadShipments(); }
+  else if (rd && /session expired/i.test(rd.message||'')){ localStorage.removeItem(SM_AUTH_KEY); showToast('Session expired - try again.', 'warning'); }
+  else showToast((rd && rd.message) || 'Mark failed', 'warning');
+}
+
+async function unmarkSalesman(shipmentNo){
+  if (!confirm('Remove the salesman from ' + shipmentNo + '?\nThe previous driver crew (if any) is restored and the DL returns to the lorry flow.')) return;
+  if (!(await ensureOfficeSession())) return;
+  var rd = await smPost({ formType:'UNMARK_SALESMAN_HANDLING', authToken:_smToken(), shipmentKey: shipmentNo });
+  if (rd && rd.status === 'success'){ showToast('Unmarked ' + shipmentNo, 'success'); loadShipments(); }
+  else showToast((rd && rd.message) || 'Unmark failed', 'warning');
+}
+
+// purple card for a salesman-handled DL (no crew pickers - backend rejects them anyway)
+function smCardHtml(s){
+  const planned = Number(s.planned) || 0, delivered = Number(s.delivered) || 0;
+  const failed = Number(s.failed) || 0, pending = Number(s.pending) || 0;
+  const pct = (s.pct == null) ? 0 : Number(s.pct);
+  const hb = s.handledBy || {};
+  return '<div class="card" data-ship="'+escHtml(s.shipmentNo)+'" style="border-top:3px solid #6D28D9;">'
+    + '<div class="card-head"><div><div class="card-lorry" style="color:#5B21B6;">&#129333; '+escHtml(hb.name || hb.id || 'SALESMAN')+'</div>'
+    + '<div class="card-ship mono">'+escHtml(s.shipmentNo)+(s.lorryNo ? ' · '+escHtml(s.lorryNo) : '')+'</div></div>'
+    + '<span class="badge" style="background:#EDE9FE;color:#5B21B6;">SALESMAN'+(hb.id ? ' · '+escHtml(hb.id) : '')+'</span></div>'
+    + '<div class="prog"><div class="prog-row"><span class="prog-num">'+delivered+' / '+planned+' delivered</span>'
+    + '<span class="prog-sub">'+pct+'%</span></div>'
+    + '<div class="prog-bar"><div class="prog-fill" style="width:'+pct+'%;background:#6D28D9;"></div></div>'
+    + (failed > 0 ? '<span class="pill-warn">'+failed+' failed</span>' : '')
+    + (pending > 0 ? ' <span class="prog-sub" style="font-size:11px">'+pending+' pending</span>' : '')
+    + '</div>'
+    + '<div class="crew-actions">'
+    + '<button class="btn btn-ghost btn-sm unmark-sm">Unmark salesman</button>'
+    + '<button class="btn btn-danger btn-sm del-ship">Delete</button>'
+    + '</div></div>';
+}
+
 </script>
 </body>
 </html>
