@@ -408,7 +408,7 @@ async function doUnlock(){
 }
 function signOut(){
   localStorage.removeItem(AUTH_KEY);
-  _adminOk=false; _drivers=[]; _roster=[]; _salesmen=[]; _rosterLoaded=false; _leaveLoaded=false;
+  _adminOk=false; _sessionOk=false; _drivers=[]; _roster=[]; _salesmen=[]; _rosterLoaded=false; _leaveLoaded=false;
   _tabLoaded={ drivers:false, leave:false, salesmen:false };
   showGate('');   // hide both gate panels
   $('app').style.display='none';
@@ -426,9 +426,17 @@ function showGate(which){
   $('gateRestricted').classList.toggle('show', which==='restricted');
 }
 function showRestricted(){
-  _adminOk=false;
+  _adminOk=false; _sessionOk=false;
   $('app').style.display='none';
   showGate('restricted');
+}
+// Role model: ADMIN sees all three tabs; any other unlocked operator sees the Leave tab only
+// (leave is a daily supervisor task — driver/salesman roster management stays ADMIN-only, and
+// the server enforces both). _adminOk gates the ADMIN-only tabs; _sessionOk gates Leave.
+var _sessionOk = false;
+function _applyRoleTabs(){
+  // hide the ADMIN-only tabs for non-admins
+  ['drivers','salesmen'].forEach(function(t){ var b=$('tab-'+t); if(b) b.style.display=_adminOk?'':'none'; });
 }
 async function checkAdminRole(){
   if(!_authToken()){ showLock(); return; }
@@ -437,10 +445,16 @@ async function checkAdminRole(){
   var tok=_newToken('chk');
   var rd=await postWithToken({ formType:'STAFF_ADMIN_CHECK', authToken:_authToken(), clientToken:tok }, tok);
   if(rd && rd.status==='success' && rd.role==='ADMIN'){
-    _adminOk=true;
-    showGate('');
-    $('app').style.display='block';
+    _adminOk=true; _sessionOk=true;
+    showGate(''); $('app').style.display='block';
+    _applyRoleTabs();
     switchTab(currentTab(), false);
+  } else if(rd && rd.status==='success' && rd.role){
+    // valid session but not ADMIN -> Leave tab only
+    _adminOk=false; _sessionOk=true;
+    showGate(''); $('app').style.display='block';
+    _applyRoleTabs();
+    switchTab('leave', false);
   } else if(rd && /session expired/i.test(rd.message||'')){
     localStorage.removeItem(AUTH_KEY); showGate(''); showLock(rd.message);
   } else {
@@ -481,6 +495,7 @@ function currentTab(){
 }
 function switchTab(name, setHash){
   if(TABS.indexOf(name)<0) name='drivers';
+  if(!_adminOk && (name==='drivers'||name==='salesmen')) name='leave';   // non-admins: Leave only
   TABS.forEach(function(t){
     $('tab-'+t).classList.toggle('on', t===name);
     $('pane-'+t).classList.toggle('on', t===name);
@@ -489,7 +504,7 @@ function switchTab(name, setHash){
   if(setHash!==false && location.hash!=='#'+name){
     try{ history.replaceState(null,'','#'+name); }catch(e){ location.hash=name; }
   }
-  if(_adminOk && !_tabLoaded[name]) loadTab(name);
+  if(!_tabLoaded[name] && (_adminOk || (_sessionOk && name==='leave'))) loadTab(name);
 }
 function loadTab(name){
   _tabLoaded[name]=true;
@@ -498,7 +513,7 @@ function loadTab(name){
   if(name==='salesmen') loadSalesmen();
 }
 function refreshCurrent(){
-  if(!_adminOk){ if(_authToken()) checkAdminRole(); else showLock(); return; }
+  if(!_sessionOk){ if(_authToken()) checkAdminRole(); else showLock(); return; }
   loadTab(currentTab());
 }
 window.addEventListener('hashchange', function(){ switchTab(currentTab(), false); });
