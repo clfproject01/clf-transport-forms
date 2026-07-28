@@ -1,12 +1,15 @@
 # Manuals — REMARK
 
-**状态 / Status: PENDING(暂定)**
+**Status: PUBLISHED (2026-07-20)**
 
-全部 manuals(Fuel / Leave / POD / Shipment,各 HTML + PDF)暂时 **pending**,还没上线、也还没链接到任何地方。
+All manuals in this folder are now LIVE and reachable by staff via the
+**Pilot Board → "Manuals / Panduan" card** (pilot.clftrading.com/manuals/),
+which links every manual here by its GitHub Pages URL.
 
-**暂定计划 / Plan (tentative):**
-之后在 **pilot board** 那边找一个空位置,把**全部 manuals** 放上去给司机/用户取用。
-- 空位置未定(slot TBD — 还没找到放在哪)
-- 先维持 pending,暂定
+Rules going forward (boss decisions, 2026-07-20):
+- **Language: English and/or Bahasa Malaysia only.** No Chinese in any user manual.
+- **HTML is the only maintained format.** The old PDFs (pre-KTN generation) are
+  retired in `_archive_pdf/` and will NOT be updated — always link the HTML.
+- Manuals are updated together with the app whenever a feature changes.
 
-_记于 2026-06-24_
+_First recorded 2026-06-24 (pending) · Published + PDF retired 2026-07-20_
