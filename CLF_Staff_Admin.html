@@ -126,7 +126,7 @@
   <div class="gate" id="gateRestricted">
     <div class="big">&#128683;</div>
     <h2>Staff Admin is restricted</h2>
-    <p>Ask the boss to set your Role to <b>ADMIN</b> in Pallet_Access.</p>
+    <p>Ask the boss to set your Role in Pallet_Access: <b>ADMIN</b> for driver/salesman management, or <b>LEAVE</b> for leave only.</p>
     <button class="btn" id="gateSignOutBtn">Sign out</button>
   </div>
 
@@ -449,8 +449,8 @@ async function checkAdminRole(){
     showGate(''); $('app').style.display='block';
     _applyRoleTabs();
     switchTab(currentTab(), false);
-  } else if(rd && rd.status==='success' && rd.role){
-    // valid session but not ADMIN -> Leave tab only
+  } else if(rd && rd.status==='success' && rd.role==='LEAVE'){
+    // Leave permission only -> just the Leave tab (roster tabs stay hidden + server-blocked)
     _adminOk=false; _sessionOk=true;
     showGate(''); $('app').style.display='block';
     _applyRoleTabs();
