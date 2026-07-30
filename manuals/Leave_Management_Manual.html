@@ -61,7 +61,7 @@
 </head>
 <body>
 
-<h1>Leave Management — Staff Manual</h1>
+<h1>Leave — Staff Manual (Staff Admin &rarr; Leave tab)</h1>
 
 <blockquote style="border-left:4px solid #1A56DB;background:#EBF5FF;">
   <p><strong>Where this tool lives now (updated 2026-07-27):</strong> leave management moved into
@@ -70,12 +70,11 @@
   The old stand-alone Leave page is retired (it needed no login, so anyone with the link could edit
   attendance). You now sign in once with your Staff ID + PIN; your Role must be
   <strong>LEAVE</strong> or <strong>ADMIN</strong>.</p>
-  <p>The <em>process</em> below is unchanged &mdash; a driver tells the office, the office records it so
-  the dashboard does not false-alarm on his fuel/POD for those days. The Leave tab also adds two things
-  the old page could not do: record a <strong>single day</strong>, and <strong>remove</strong> a leave
-  record. Whoever is signed in is stamped as the recorder automatically.</p>
+  <p>This guide was rewritten on 2026-07-30 against the new tab, so the steps below match what you
+  actually see. The <em>process</em> is unchanged &mdash; a driver tells the office, the office records it
+  so the dashboard does not false-alarm on his fuel/POD for those days.</p>
 </blockquote>
-<p class="lede">For the office / admin person who records driver leave. This guide uses the exact field names and buttons shown on the <strong>Leave Management</strong> page.</p>
+<p class="lede">For the office person who records driver leave. Updated 2026-07-30 for the <strong>Staff Admin &rarr; Leave</strong> tab, which replaced the old stand-alone Leave page.</p>
 
 <blockquote>
   <p><strong>Two branches · Dua cawangan:</strong> each branch is managed separately. Open <strong>YOUR branch's link</strong> — you will see and manage only your own branch's drivers · Buka pautan cawangan <strong>ANDA</strong> — anda hanya melihat dan menguruskan pemandu cawangan anda sendiri. <strong>MTK (Mentakab)</strong> and <strong>KTN (Kuantan)</strong> are kept separate · MTK dan KTN diasingkan.</p>
@@ -83,143 +82,112 @@
 
 <hr>
 
-<h2>1. What this page is for</h2>
+<h2>1. Where this lives and what it does</h2>
 
-<p>The page is titled <strong>Leave Management</strong>, with the subtitle <em>"Mark driver leave &amp; toggle holidays"</em>. You use it to do two main jobs:</p>
+<p>Leave is recorded in <strong>Staff Admin</strong> &rarr; the <strong>Leave</strong> tab
+(<a href="../CLF_Staff_Admin.html#leave">open it here</a>). You sign in once with your
+<strong>Staff ID + PIN</strong>; your Role in <code>Pallet_Access</code> must be
+<strong>LEAVE</strong> or <strong>ADMIN</strong>. The old stand-alone Leave page is retired.</p>
 
-<ol>
-  <li><strong>Record a driver's leave</strong> for a single day or a range of days, using the <strong>Mark Leave (Range)</strong> form.</li>
-  <li><strong>Turn company-wide rest days and public holidays on or off</strong>, using the <strong>Holiday Calendar</strong>.</li>
-</ol>
-
-<p>At the top of the page there are three summary tiles that update automatically:</p>
+<p>The Leave tab has four cards:</p>
 
 <table>
-  <thead>
-    <tr><th>Tile</th><th>What it shows</th></tr>
-  </thead>
+  <thead><tr><th>Card</th><th>What it does</th></tr></thead>
   <tbody>
-    <tr><td><strong>On Leave Today</strong></td><td>How many drivers are off today (e.g. "All drivers on duty" or "2 drivers off").</td></tr>
-    <tr><td><strong>Next Holiday</strong></td><td>The date and label of the next active holiday / rest day.</td></tr>
-    <tr><td><strong>Active Drivers</strong></td><td>The number of drivers currently in the roster ("In roster").</td></tr>
+    <tr><td><strong>&#128197; Mark leave</strong></td><td>Record leave for one driver &mdash; a single day or a date range.</td></tr>
+    <tr><td><strong>&#10060; Remove leave</strong></td><td>Delete a leave record (pick the driver + the exact date).</td></tr>
+    <tr><td><strong>&#127958;&#65039; Company holiday</strong></td><td>Turn a company-wide holiday / rest day on or off for ALL drivers.</td></tr>
+    <tr><td><strong>&#128203; Today on leave</strong></td><td>Read-only list of who is off today.</td></tr>
   </tbody>
 </table>
 
-<p>To leave this page, click <strong>Back to Dashboard</strong> in the top-right corner.</p>
-
 <blockquote>
-  <p>These tiles are read-only. They are a quick check, not buttons. If the numbers look wrong, refresh the page.</p>
+  <p><strong>Why it matters:</strong> the driver tells you verbally, you record it here, and the
+  dashboard then stops counting his missing fuel / POD for those days. If you do not record it, the
+  16:00 alert and the compliance figures treat him as if he simply did not submit.</p>
 </blockquote>
 
 <hr>
 
 <h2>2. How to record a driver's leave</h2>
 
-<p>Use the <strong>Mark Leave (Range)</strong> card on the left. Its subtitle is <em>"Bulk register driver leave across multiple days"</em>. The same form is used whether the leave is one day or several days.</p>
+<p>Use the <strong>&#128197; Mark leave</strong> card.</p>
 
 <h3>Step by step</h3>
 
 <ol>
-  <li>
-    <strong>Driver</strong> — open the dropdown (it starts on <em>"— Select driver —"</em>) and pick the driver. Each driver appears as <strong>staff ID — name</strong> (for example <code>TER 448 — MUHAMMAD ZULKIFLI BIN</code>), so you can tell apart drivers who share the same first name.
+  <li><strong>Driver</strong> &mdash; pick the driver from the dropdown. It lists the live roster as
+  <strong>staff ID &mdash; name</strong>, so drivers who share a first name are easy to tell apart.</li>
+  <li><strong>Leave type</strong> &mdash; choose from the five options in the table below.</li>
+  <li><strong>Mode</strong> &mdash; this is the important one:
+    <ul>
+      <li><strong>Single day</strong> &rarr; only one <strong>Date</strong> box appears.</li>
+      <li><strong>Date range</strong> &rarr; a <strong>Date</strong> and an <strong>End date</strong> box appear;
+      every working day in between is recorded.</li>
+    </ul>
   </li>
-  <li>
-    <strong>Leave Type</strong> — choose the reason for the leave from the dropdown (the five options are listed in the table below).
-  </li>
-  <li>
-    <strong>Start Date</strong> — pick the first day of leave. When the page opens, both date boxes are already filled in with <strong>today's date</strong> (Malaysia time), so for a single day off today you can leave them as they are.
-  </li>
-  <li>
-    <strong>End Date</strong> — pick the last day of leave. For one day only, set <strong>End Date</strong> the same as <strong>Start Date</strong>. For several days, set it to the final day; the page records every day in the range.
-  </li>
-  <li>
-    <strong>Remarks (optional)</strong> — type a short note if useful, for example <code>Family event</code> (this matches the placeholder text on the page). You can leave this blank.
-  </li>
-  <li>
-    Click the blue <strong>Mark Leave</strong> button.
-  </li>
-  <li>
-    A confirmation pop-up appears, e.g. <em>"Mark [driver] on [type] for 3 day(s) (start → end)?"</em>. Click <strong>OK</strong> to save, or <strong>Cancel</strong> to stop.
-  </li>
-  <li>
-    Wait for the result. The button shows <em>"Saving…"</em>, then a message appears under the button and a notice pops up in the top-right. A successful save reads like <em>"Saved 3 day(s) for TER 448 — …"</em>.
-  </li>
+  <li><strong>Date</strong> (and <strong>End date</strong> in range mode) &mdash; pick the day(s) off.</li>
+  <li><strong>Remarks</strong> &mdash; optional, e.g. a clinic name or who called in.</li>
+  <li>Press <strong>Mark leave</strong>. A toast confirms it and the <strong>Today on leave</strong>
+  list refreshes if the date is today.</li>
 </ol>
 
-<h3>The exact leave types the page offers</h3>
+<blockquote>
+  <p><strong>You are recorded as the person who did it.</strong> There is no "marked by" box to fill &mdash;
+  whoever is signed in is stamped automatically by the server.</p>
+</blockquote>
+
+<h3>The exact leave types the tab offers</h3>
 
 <table>
-  <thead>
-    <tr><th>Option shown in dropdown</th><th>Meaning</th></tr>
-  </thead>
+  <thead><tr><th>Code</th><th>Meaning</th></tr></thead>
   <tbody>
-    <tr><td><strong>AL · Annual</strong></td><td>Annual leave</td></tr>
-    <tr><td><strong>MC · Medical</strong></td><td>Medical / sick leave</td></tr>
-    <tr><td><strong>EL · Emergency</strong></td><td>Emergency leave</td></tr>
-    <tr><td><strong>UL · Unpaid</strong></td><td>Unpaid leave</td></tr>
-    <tr><td><strong>OFF · Rest</strong></td><td>Rest day (off duty)</td></tr>
+    <tr><td><strong>AL</strong></td><td>Annual leave</td></tr>
+    <tr><td><strong>MC</strong></td><td>Medical certificate</td></tr>
+    <tr><td><strong>EL</strong></td><td>Emergency leave</td></tr>
+    <tr><td><strong>PH</strong></td><td>Public holiday (for ONE driver &mdash; for the whole company use the Company holiday card)</td></tr>
+    <tr><td><strong>OTHER</strong></td><td>Anything else &mdash; put the reason in Remarks</td></tr>
   </tbody>
 </table>
 
-<h3>What the page checks before saving</h3>
-
-<p>If something is missing or wrong, a red message appears under the button and nothing is saved. The page enforces:</p>
-
-<ul>
-  <li><em>"✗ Select a driver"</em> — you did not choose a driver.</li>
-  <li><em>"✗ Pick start and end dates"</em> — one of the date boxes is empty.</li>
-  <li><em>"✗ End must be ≥ start"</em> — the End Date is before the Start Date.</li>
-</ul>
-
 <blockquote>
-  <p><strong>Already-marked days are handled for you.</strong> If some days in the range were already recorded, the result line says how many were saved and how many were "already marked" (skipped). You do not get duplicates, so it is safe to re-run a range. If any day fails, the message shows how many "failed" and turns into a warning.</p>
+  <p>These five are the whole list. If you were used to an <strong>Unpaid (UL)</strong> option on the old
+  page: it is not in the new tab &mdash; use <strong>OTHER</strong> and write "unpaid" in Remarks.</p>
 </blockquote>
 
 <hr>
 
 <h2>3. Recording a public holiday or rest day for ALL drivers</h2>
 
-<p>Company-wide days off are handled in the <strong>Holiday Calendar</strong> card on the right. Its subtitle is <em>"Next 30 days — click toggle to enable / disable a holiday"</em>.</p>
-
-<p>Each line in the list is one date and shows:</p>
-
-<ul>
-  <li>the <strong>day of week and date</strong> (e.g. WED · 11 Jun);</li>
-  <li>a coloured <strong>label badge</strong> — one of <strong>Public Holiday</strong>, <strong>Saturday Rest</strong>, or <strong>Sunday Rest</strong>;</li>
-  <li>the holiday's name; and</li>
-  <li>a <strong>toggle button</strong> on the right showing either <strong>✓ Active</strong> or <strong>✕ Disabled</strong>.</li>
-</ul>
-
-<h3>How to turn a holiday / rest day on or off</h3>
+<p>Use the <strong>&#127958;&#65039; Company holiday</strong> card &mdash; not the Mark leave card. This
+covers every driver at once, so you do not record 59 separate entries.</p>
 
 <ol>
-  <li>Find the date in the <strong>Holiday Calendar</strong> list.</li>
-  <li>Click its toggle button. A button reading <strong>✓ Active</strong> will switch the day off; a button reading <strong>✕ Disabled</strong> will switch it on.</li>
-  <li>A confirmation pop-up appears, e.g. <em>"Set 2026-06-11 (PH) to DISABLED?"</em>. Click <strong>OK</strong> to confirm.</li>
-  <li>The button shows <em>"Saving…"</em>, then a notice confirms the change, e.g. <em>"Holiday 2026-06-11 → DISABLED"</em>, and the list refreshes.</li>
+  <li><strong>Date</strong> &mdash; the holiday date.</li>
+  <li><strong>Holiday name</strong> &mdash; a short label, e.g. <em>Hari Raya</em> or <em>Sunday off</em>.</li>
+  <li>Press <strong>Toggle holiday</strong>.</li>
 </ol>
 
 <blockquote>
-  <p><strong>Important — what this card can and cannot do.</strong> You can only switch <em>existing</em> calendar entries on or off. The list is generated for the next 30 days; there is <strong>no button on this page to create a brand-new holiday date from scratch</strong>. If a holiday you expect is not in the list, raise it with whoever maintains the system — do not try to force it through the leave form.</p>
+  <p><strong>It is a toggle.</strong> Pressing it on a date that is already a holiday turns it back OFF.
+  So if you press it twice you have undone it &mdash; press once and check.</p>
 </blockquote>
-
-<p><strong>When to use this instead of the leave form:</strong> use the <strong>Holiday Calendar</strong> for days that apply to <em>everyone</em> (a public holiday, a Saturday/Sunday rest day). Use the <strong>Mark Leave (Range)</strong> form for one specific driver's time off.</p>
 
 <hr>
 
-<h2>4. Viewing, editing, or cancelling an existing leave record</h2>
+<h2>4. Removing a leave record</h2>
 
-<p>Be aware of what this page does <strong>not</strong> have, so you record things correctly the first time:</p>
+<p>Use the <strong>&#10060; Remove leave</strong> card &mdash; this is new; the old page could not delete.</p>
 
-<ul>
-  <li>There is <strong>no list of individual leave records</strong> on this page, and <strong>no edit or delete / cancel button for a driver's leave</strong>. Once you click <strong>Mark Leave</strong> and confirm, the leave is written to the system.</li>
-  <li>The only "existing records" you can change here are <strong>holiday / rest days</strong>, by toggling them <strong>✓ Active</strong> / <strong>✕ Disabled</strong> in the <strong>Holiday Calendar</strong> (see Section 3).</li>
-  <li>To check how many drivers are off <em>today</em>, read the <strong>On Leave Today</strong> tile at the top of the page.</li>
-</ul>
+<ol>
+  <li><strong>Driver</strong> &mdash; pick the driver.</li>
+  <li><strong>Leave date</strong> &mdash; type the exact date of the record you want gone.</li>
+  <li>Press <strong>Remove leave</strong>.</li>
+</ol>
 
-<blockquote>
-  <p>Because there is no "undo" for driver leave on this screen, <strong>double-check the driver, leave type, and dates in the confirmation pop-up before clicking OK</strong>. If you record leave by mistake, contact your system administrator to correct it in the back-end — it cannot be removed from this page.</p>
-</blockquote>
+<p>Use it when leave was entered by mistake, on the wrong date, or the driver came in after all. To
+change a leave <em>type</em> or <em>date</em>, remove the old record and mark a new one &mdash; there is no
+edit-in-place.</p>
 
 <hr>
 
@@ -254,12 +222,12 @@
   <li><strong>Do</strong> set <strong>End Date</strong> equal to <strong>Start Date</strong> for a single day off.</li>
   <li><strong>Do</strong> use the <strong>staff ID — name</strong> shown in the dropdown to pick the right person when two drivers share a first name.</li>
   <li><strong>Do</strong> wait for the green success message / notice before assuming the leave was saved.</li>
-  <li><strong>Do</strong> use the <strong>Holiday Calendar</strong> (not the leave form) for company-wide rest days and public holidays.</li>
+  <li><strong>Do</strong> use the <strong>Company holiday</strong> card (not the leave form) for company-wide rest days and public holidays.</li>
 </ul>
 
 <h3>Don't</h3>
 <ul>
-  <li><strong>Don't</strong> use the leave form for a holiday that affects everyone — toggle it in the <strong>Holiday Calendar</strong> instead.</li>
+  <li><strong>Don't</strong> use the leave form for a holiday that affects everyone — toggle it in the <strong>Company holiday</strong> card instead.</li>
   <li><strong>Don't</strong> assume you can edit or cancel a driver's leave on this page — you can't. Get the driver and dates right before confirming.</li>
   <li><strong>Don't</strong> worry about re-running a date range — days already recorded are skipped, not duplicated.</li>
   <li><strong>Don't</strong> ignore a red error message under the <strong>Mark Leave</strong> button; nothing is saved until it clears.</li>
