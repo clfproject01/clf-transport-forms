@@ -739,13 +739,15 @@ function freePhoto(p){
   p.origBlob=null; p.result=null; p.fetchP=null;
 }
 async function loadDay(){
+   // [ReadAuth 2026-07-30] make sure this office session holds a read grant before fetching
+  await _rgEnsure();
   if(_running) return;
   resetDay();
   var date=$('date').value;
   if(!date){ toast('err','Pick a date first'); return; }
   $('loadBtn').disabled=true; $('summaryLine').textContent='Loading '+date+' ('+BRANCH+') ...';
   try{
-    var res=await fetch(SCRIPT_URL+'?action=getPodAdminBoard&date='+encodeURIComponent(date)+'&branch='+encodeURIComponent(BRANCH));
+    var res=await fetch(_rgUrl(SCRIPT_URL+'?action=getPodAdminBoard&date='+encodeURIComponent(date)+'&branch='+encodeURIComponent(BRANCH)));   // [ReadAuth 2026-07-30]
     var data=await res.json();
     if(!data || data.status!=='ok' || !Array.isArray(data.lorries)) throw new Error((data&&data.message)||'unexpected response');
     var invoices=[], noPhoto=[];
@@ -1421,6 +1423,54 @@ renderSession();
 if(!_auth()) showLock();
 pollCv();
 updateGates();
+
+/* ============================================================================
+   READ GRANT (management reads)                                  [2026-07-30]
+   The analytics reads used to answer any anonymous caller — all 59 drivers'
+   compliance rankings and company fuel spend were world-readable. They now need
+   a short-lived grant: POST the office session once, get a 6h grant, append it
+   to the read URLs. The 30-day session token itself never rides in a URL.
+   ============================================================================ */
+var RG_KEY = 'clf_read_grant';
+function _rgCached(){
+  try{
+    var g = JSON.parse(localStorage.getItem(RG_KEY) || 'null');
+    if (g && g.grant && (Date.now() - (g.ts||0)) < 5.5*3600e3) return g.grant;   // refresh before the 6h server TTL
+  }catch(e){}
+  return '';
+}
+function _rgClear(){ try{ localStorage.removeItem(RG_KEY); }catch(e){} }
+function _rgUrl(url){
+  var g = _rgCached();
+  return g ? (url + (url.indexOf('?') >= 0 ? '&' : '?') + 'grant=' + encodeURIComponent(g)) : url;
+}
+async function _rgEnsure(){
+  var g = _rgCached();
+  if (g) return g;
+  var a = _rgAuth();
+  if (!a || !a.token) return '';
+  var tok = 'rg_' + Date.now() + '_' + Math.random().toString(36).slice(2,10);
+  var fd = new FormData();
+  fd.append('data', JSON.stringify({ formType:'GET_READ_GRANT', authToken:a.token, clientToken:tok }));
+  try{ await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body:fd }); }catch(e){ return ''; }
+  for (var t=0; t<8; t++){
+    await new Promise(function(r){ setTimeout(r, 1200); });
+    try{
+      var rb = await fetch(SCRIPT_URL + '?action=getImportResult&token=' + encodeURIComponent(tok));
+      var rd = await rb.json();
+      if (rd && rd.status && rd.status !== 'pending'){
+        if (rd.status === 'success' && rd.grant){
+          try{ localStorage.setItem(RG_KEY, JSON.stringify({ grant:rd.grant, ts:Date.now() })); }catch(e){}
+          return rd.grant;
+        }
+        return '';
+      }
+    }catch(e){}
+  }
+  return '';
+}
+function _rgAuth(){ try{ return JSON.parse(localStorage.getItem('clf_pallet_auth') || 'null'); }catch(e){ return null; } }
+
 </script>
 </body>
 </html>
