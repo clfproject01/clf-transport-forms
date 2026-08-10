@@ -374,11 +374,17 @@
   var LOAD_SEQ = 0;        // discard out-of-order responses (fast Daily→Weekly clicks can cross)
   var LAST_UPDATED = null; // ms timestamp of the last successful render — drives the staleness label
   var _curAbort = null;    // AbortController of the in-flight load; a newer load aborts it (FN-3)
+  var _lastLoadAt = 0;     // ms of the last load() start — floors the visibilitychange retry (2026-08-10)
   var _SNAP_KEY = 'clfDash_snap_v1', _STAFF_KEY = 'clfDash_staff_v1';
 
   // A backend {status:'error'} comes back as HTTP 200 (Apps Script can't set status codes), so treat
   // anything that isn't status:'ok' as missing — never render an error payload as a green "all good" day.
   function okData(r){ return (r && r.status==='ok') ? r : null; }
+  // [ReadAuth self-heal 2026-08-10] A dead grant makes every gated read answer
+  // {status:'error',code:'READ_AUTH'}, which okData() flattens to null — indistinguishable from
+  // "server unreachable". _rgIsDenied() was written for exactly this but never called, so the board
+  // could stay broken for up to 5.5h and Refresh could not fix it. Flag the refusal for load().
+  function _rgSeen(box){ return function(r){ if(_rgIsDenied(r)) box.denied = true; return okData(r); }; }
 
   // localStorage snapshot (FN-4) + staff-id cache (FN-5). The snapshot lets a re-open paint instantly
   // from the last good data; the staff map (changes rarely) keeps worker IDs visible even when the
@@ -429,14 +435,16 @@
     if(!STAFF || !Object.keys(STAFF).length){ var cs=loadStaff(); if(cs) STAFF=cs; }
 
     var cur = { ship:null, fuel:null, dash:null, leave:null };
+    var authBox = { denied:false };   // _rgSeen() sets this if any read came back READ_AUTH
     function fresh(){ return seq === LOAD_SEQ; }   // a newer load started → this one's late arrivals are ignored
     function draw(fn){ try{ fn(); }catch(e){ if(window.console)console.error('render failed', e); } }
 
     if (!_rgAuth()) { _rgShowLock(); return; }
-    var pDash  = api(['action=getDashboardData','view='+selectedView + periodParam + bp + fp], sig).then(okData, function(){return null;});
-    var pShip  = api(['action=getShipmentsForDate','date='+encodeURIComponent(selectedDate) + bp + fp], sig).then(okData, function(){return null;});
-    var pFuel  = api(['action=getFuelOps','view='+selectedView + periodParam + bp + fp], sig).then(okData, function(){return null;});
-    var pLeave = api(['action=getLeaveToday' + bp], sig).then(okData, function(){return null;});
+    _lastLoadAt = Date.now();   // stamped only where requests are actually issued (see visibilitychange)
+    var pDash  = api(['action=getDashboardData','view='+selectedView + periodParam + bp + fp], sig).then(_rgSeen(authBox), function(){return null;});
+    var pShip  = api(['action=getShipmentsForDate','date='+encodeURIComponent(selectedDate) + bp + fp], sig).then(_rgSeen(authBox), function(){return null;});
+    var pFuel  = api(['action=getFuelOps','view='+selectedView + periodParam + bp + fp], sig).then(_rgSeen(authBox), function(){return null;});
+    var pLeave = api(['action=getLeaveToday' + bp], sig).then(_rgSeen(authBox), function(){return null;});
 
     // Progressive render (FN-2/FR-1): paint each ZONE the instant ITS OWN primary source lands, rather
     // than waiting for the slowest of the four. Each zone is rendered by exactly one primary source so a
@@ -466,6 +474,11 @@
     Promise.all([pDash,pShip,pFuel,pLeave]).then(function(){
       if(!fresh()) return;
       var dash=cur.dash, ship=cur.ship, fuel=cur.fuel, leave=cur.leave;
+      // [2026-08-10] A READ_AUTH refusal is an AUTH problem, not a network one. Recover instead of
+      // sending the office to look at the router. Guarded on "nothing loaded" so a (theoretically
+      // impossible, all four carry the same grant) partial refusal still falls through to the
+      // normal partial-failure banner rather than throwing away good data.
+      if(authBox.denied && !ship && !fuel && !dash){ paintUpdated(); _rgOnDenied(forceFresh); return; }
       if(!ship && !fuel){ showErr('Cannot reach server. Please check connection and Refresh.'); $('dashMeta').textContent=''; }
       else if(!ship || !fuel || !dash){ showErr('Some data failed to load — sections marked "unavailable" are NOT empty, just not loaded. Refresh to retry.'); }
       if(ship || fuel){
@@ -1038,12 +1051,19 @@
     document.addEventListener('visibilitychange', function(){
       // Retry on return to the tab if the data is stale OR if we never got any (FN-11: previously this
       // required LAST_UPDATED, so a first load that failed while offline would never auto-retry).
-      if(!document.hidden && (!LAST_UPDATED || Date.now()-LAST_UPDATED > 2*60000)) load();
+      // [2026-08-10] Floor it at 20s. When the FIRST load fails LAST_UPDATED stays null, so every
+      // single tab switch fired another 4 requests, and aborting the client request does not cancel
+      // the server round-trip. 20s kills the storm while keeping FN-11's "alt-tab back once the wifi
+      // returns" recovery responsive — 60s was long enough to swallow exactly that case.
+      if(!document.hidden && (!LAST_UPDATED || Date.now()-LAST_UPDATED > 2*60000) && Date.now()-_lastLoadAt > 20000) load();
       paintUpdated();
     });
-    paintSnapshot();   // instant open from the cached snapshot (FN-4), then fetch fresh below
+    var _hadSnap = paintSnapshot();   // instant open from the cached snapshot (FN-4), then fetch fresh below
     // [ReadAuth 2026-07-30] this page shows every driver's compliance ranking and the company's
     // fuel spend — it now requires the office session before it fetches anything.
+    // [2026-08-10] Say so out loud: minting a grant takes a few seconds and the page used to sit on
+    // a bare "Loading…" the whole time, which reads as "the dashboard is broken".
+    if(!_hadSnap) $('dashMeta').textContent = 'Checking access… · ' + branchLabel();
     _rgBoot().then(function(ok){ if (ok) load(); });
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
@@ -1068,15 +1088,48 @@ function _rgUrl(url){
   var g = _rgCached();
   return g ? (url + (url.indexOf('?') >= 0 ? '&' : '?') + 'grant=' + encodeURIComponent(g)) : url;
 }
-async function _rgEnsure(){
-  var g = _rgCached();
-  if (g) return g;
+var _rgPending = null;   // in-flight handshake — two triggers must not mint two grants (2026-08-10)
+async function _rgEnsure(force){
+  if (!force){ var g = _rgCached(); if (g) return g; }
+  if (_rgPending) return _rgPending;
+  _rgPending = _rgMint();
+  try { return await _rgPending; } finally { _rgPending = null; }
+}
+async function _rgMint(){
   var a = _rgAuth();
   if (!a || !a.token) return '';
   var tok = 'rg_' + Date.now() + '_' + Math.random().toString(36).slice(2,10);
-  var fd = new FormData();
-  fd.append('data', JSON.stringify({ formType:'GET_READ_GRANT', authToken:a.token, clientToken:tok }));
-  try{ await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body:fd }); }catch(e){ return ''; }
+  function _body(withToken){
+    // clientToken makes doPost stash the WHOLE reply — the grant included — under
+    // ?action=getImportResult&token=..., which is an UNGATED read for 10 minutes. Only the legacy
+    // poll fallback needs that stash; the fast path reads the reply directly, so it must not ask
+    // for it. (Backend treats clientToken as optional: doPost only stashes "if (payload.clientToken)".)
+    var p = { formType:'GET_READ_GRANT', authToken:a.token };
+    if (withToken) p.clientToken = tok;
+    var f = new FormData();
+    f.append('data', JSON.stringify(p));
+    return f;
+  }
+  function _keep(gr){ try{ localStorage.setItem(RG_KEY, JSON.stringify({ grant:gr, ts:Date.now() })); }catch(e){} return gr; }
+  // [2026-08-10] Fast path. /exec answers with Access-Control-Allow-Origin:* on BOTH the 302 and the
+  // final 200 (verified), so a plain CORS POST can read the reply directly — about 4s. The no-cors +
+  // getImportResult poll below costs up to ~27s of dead "Loading…" for the same answer; it stays
+  // only as a fallback in case a future deployment stops sending the CORS header. 12s abort, because
+  // every other fetch on this page is time-boxed (FN-3) and a hung one here parks the whole board.
+  try{
+    var ctl = (window.AbortController ? new AbortController() : null);
+    var to  = ctl ? setTimeout(function(){ try{ ctl.abort(); }catch(e){} }, 12000) : null;
+    var opt = { method:'POST', body:_body(false) }; if (ctl) opt.signal = ctl.signal;
+    var pr = await fetch(SCRIPT_URL, opt);
+    if (to) clearTimeout(to);
+    var pj = await pr.json();
+    if (pj && pj.status === 'success' && pj.grant) return _keep(pj.grant);
+    // Only a genuinely dead SESSION means "stop and ask for the PIN". status:'error' is also the
+    // backend's generic shape for a JSON parse failure or a Sheets/quota blip — those must fall
+    // through to the legacy handshake, not throw an unlock box at the office mid-morning.
+    if (pj && pj.status === 'error' && /session|unlock/i.test(String(pj.message || ''))) return '';
+  }catch(e){ /* CORS blocked, aborted, or a network blip → fall through to the legacy handshake */ }
+  try{ await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body:_body(true) }); }catch(e){ return ''; }
   for (var t=0; t<8; t++){
     await new Promise(function(r){ setTimeout(r, 1200); });
     try{
@@ -1157,6 +1210,41 @@ async function _rgUnlock(){
 }
 // A READ_AUTH refusal means "unlock", not "no data".
 function _rgIsDenied(d){ return !!(d && d.status === 'error' && d.code === 'READ_AUTH'); }
+
+/* [2026-08-10] Self-heal on a dead grant.
+   The grant lives in the backend's CacheService, which does NOT guarantee it survives its 6h TTL —
+   an Apps Script redeploy or a cache eviction drops it early. The page kept re-sending the dead
+   grant (localStorage only checks its own 5.5h timestamp), so every gated read failed, Refresh
+   re-sent the same dead grant, and even F5 did not help: the board stayed broken for up to 5.5h
+   while blaming the network. Now: drop it, mint a fresh one, reload once. If that is refused too
+   (the 30-day session itself expired) ask for Staff ID + PIN.
+   _rgRetryAt floors the silent recovery at one per minute so it can never become a re-mint loop. */
+var _rgRecovering = false, _rgRetryAt = 0;
+function _rgOnDenied(forceFresh){
+  var now = Date.now();
+  if (_rgRecovering) return;
+  if (now < _rgRetryAt){ _rgShowLock('Session expired - please unlock again'); return; }
+  _rgRecovering = true; _rgRetryAt = now + 60000;
+  _rgClear();
+  var _m = $('dashMeta'); if (_m) _m.textContent = 'Renewing access…';
+  var settled = false;
+  function finish(g){
+    if (settled) return; settled = true;
+    _rgRecovering = false;
+    if (g){
+      _rgRetryAt = Date.now() + 10000;   // recovered — drop the floor to 10s so a genuine SECOND
+      _rgHideLock();                     // eviction minutes later self-heals instead of demanding a
+      load(forceFresh);                  // PIN, while still refusing to spin on an instant re-denial
+    } else {
+      _rgShowLock('Session expired - please unlock again');
+    }
+  }
+  // Hard bound: an un-settling handshake must never strand _rgRecovering=true, or every later
+  // denial hits the early return above and the page shows nothing at all.
+  setTimeout(function(){ finish(''); }, 45000);
+  _rgEnsure(true).then(finish, function(){ finish(''); });
+}
+
 async function _rgBoot(){
   if (!_rgAuth()){ _rgShowLock(); return false; }
   await _rgEnsure();
