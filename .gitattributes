@@ -1,0 +1,7 @@
+# [2026-08-11] This repo is edited from both Windows and macOS. Without this file the Windows
+# working copies carry CRLF while the repo stores LF, so `git status` showed 15 files as fully
+# rewritten (12,609 "insertions" == 12,609 "deletions") when not a single character had changed.
+# A phantom diff that big hides a real one, and `git add .` would commit it.
+# Normalise to LF in the repo; binaries opt out so git never touches their bytes.
+* text=auto eol=lf
+*.pdf binary
