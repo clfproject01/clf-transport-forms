@@ -458,7 +458,7 @@ async function fetchAndPopulateDrivers(isRetry) {
     }catch(e){}
     if (!usedCache){
       var ds = document.getElementById('driverSearch');
-      if (ds) ds.placeholder = '⚠ Failed to load — tap to retry · Ketik untuk cuba lagi';
+      if (ds) ds.placeholder = '⚠ Failed to load — tap to retry · Tekan untuk cuba lagi';
       if (ds && !ds._retryWired){ ds._retryWired = true; ds.addEventListener('focus', function(){ if (!ROSTER.length) fetchAndPopulateDrivers(true); }); }
     }
     if (!isRetry) setTimeout(function(){ if (!ROSTER.length) fetchAndPopulateDrivers(true); }, 5000);   // one auto-retry
@@ -474,26 +474,76 @@ const VEHICLE_KEY = 'clf_pod_vehicle_' + BRANCH;   // B5: cheap Androids evict t
 // This ONLY populates the option list — restoring the remembered vehicle (and firing the shipment
 // check + crew auto-fill) is owned by window.onload below, so it runs AFTER the options exist.
 // Mirrors the Fuel form's fetchVehicles() fetch/error style.
-async function fetchVehicles() {
+// [Veh-fix 2026-08-13] plates get the same rescue kit the roster already has: a 14-day per-branch
+// cache, one 5s auto-retry, and tap-to-retry on the select. Some phones persistently cannot reach
+// script.googleusercontent.com (the /exec redirect target) while GitHub Pages loads fine — on those
+// a full reload never helps, so the ⚠ state must be recoverable in-page and offline-survivable.
+const VEH_CACHE_KEY = 'clf_vehicle_cache_' + BRANCH;
+
+function _vehiclesLoaded(){
+  var sel = document.getElementById('vehicleNo');
+  return !!(sel && sel.options.length > 1);
+}
+
+function _applyVehicles(sel, plates){
+  var prev = sel.value;   // never clobber a pick the driver already made
+  sel.innerHTML = '<option value="">— Select vehicle · Pilih kenderaan —</option>';
+  plates.forEach(function(plate){
+    var o = document.createElement('option');
+    o.value = plate; o.textContent = plate;
+    sel.appendChild(o);
+  });
+  if (prev) sel.value = prev;                            // sticks only if the plate is still in the list
+  if (sel.selectedIndex < 0) sel.selectedIndex = 0;      // a vanished plate must land on the placeholder, not a blank box
+}
+
+async function fetchVehicles(isRetry) {
   var sel = document.getElementById('vehicleNo');
   if (!sel) return;
+  // 15s abort keeps a dead-zone fetch from hanging forever (same idiom as saveDelivery)
+  var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
+  var timer = ctrl ? setTimeout(function(){ ctrl.abort(); }, 15000) : null;
   try {
-    const res = await fetch(SCRIPT_URL + '?action=getVehicles&branch=' + encodeURIComponent(BRANCH), { method: 'GET' });
-    const data = await res.json();
+    const res = await fetch(SCRIPT_URL + '?action=getVehicles&branch=' + encodeURIComponent(BRANCH), { method: 'GET', signal: ctrl ? ctrl.signal : undefined });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();   // an HTML error body lands here as SyntaxError
     if (!data || data.status !== 'ok' || !Array.isArray(data.vehicles) || data.vehicles.length === 0) {
       throw new Error('Empty vehicle list from server');
     }
-    // Keep the placeholder, append the branch's plates.
-    sel.innerHTML = '<option value="">— Select vehicle · Pilih kenderaan —</option>';
-    data.vehicles.forEach(function(plate){
-      var o = document.createElement('option');
-      o.value = plate; o.textContent = plate;
-      sel.appendChild(o);
-    });
+    _applyVehicles(sel, data.vehicles);
+    try{ localStorage.setItem(VEH_CACHE_KEY, JSON.stringify(data.vehicles)); localStorage.setItem(VEH_CACHE_KEY + '_ts', String(Date.now())); }catch(e){}
+    // A retry that succeeds after the onload restore already ran still owes the driver
+    // the remembered plate + shipment check (onload only restores once, in .finally).
+    if (isRetry && !sel.value){
+      try{
+        var savedVeh = localStorage.getItem(VEHICLE_KEY);
+        if (savedVeh){ sel.value = savedVeh; if (sel.value === savedVeh) checkShipmentForVehicle(); }
+      }catch(e){}
+    }
   } catch (err) {
     console.error('fetchVehicles failed:', err);
-    // No hardcoded fallback — show a clear refresh state rather than a silently-empty dropdown.
-    sel.innerHTML = '<option value="">⚠ Refresh · Sila muat semula</option>';
+    _dbgToast_('fetchVehicles: ' + (err && err.name) + ' — ' + (err && err.message));   // visible with ?debug=1
+    if (_vehiclesLoaded()) return;   // a late-failing duplicate must never clobber a working list
+    // Fall back to the cached plates (same rescue as the driver roster).
+    var usedCache = false;
+    try{
+      var cached = JSON.parse(localStorage.getItem(VEH_CACHE_KEY) || 'null');
+      var _ts = Number(localStorage.getItem(VEH_CACHE_KEY + '_ts') || 0);
+      var _fresh = !_ts || (Date.now() - _ts) < 14 * 864e5;   // 14-day cap, matching the roster cache
+      if (Array.isArray(cached) && cached.length && _fresh){ _applyVehicles(sel, cached); usedCache = true; }
+    }catch(e){}
+    if (!usedCache){
+      // A reload gets exactly one new attempt, so don't send drivers there — retry in-page instead.
+      // err.name lets the office triage a screenshot: TypeError = network/blocked, SyntaxError = HTML body.
+      sel.innerHTML = '<option value="">⚠ Tap to retry · Tekan untuk cuba lagi' + (err && err.name ? ' (' + err.name + ')' : '') + '</option>';
+      if (!sel._retryWired){ sel._retryWired = true;
+        sel.addEventListener('mousedown', function(){ if (!_vehiclesLoaded()) fetchVehicles(true); });
+        sel.addEventListener('focus',     function(){ if (!_vehiclesLoaded()) fetchVehicles(true); });
+      }
+    }
+    if (!isRetry) setTimeout(function(){ if (!_vehiclesLoaded()) fetchVehicles(true); }, 5000);   // one auto-retry
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
 
@@ -550,6 +600,9 @@ document.addEventListener('visibilitychange', function(){
     var now = Date.now();
     if (!window._rosterAt || now - window._rosterAt > 300000){ window._rosterAt = now; fetchAndPopulateDrivers(true); }
   } catch (e) {}
+  // [Veh-fix 2026-08-13] a stranded plate dropdown heals itself when the driver returns to the tab
+  // (guarded: only fires while the list is still empty, so it never churns a working dropdown).
+  try { if (!_vehiclesLoaded()) fetchVehicles(true); } catch (e) {}
 });
 
 // (old <select> change-listeners removed — driver picking is handled by wireDriverPicker)
