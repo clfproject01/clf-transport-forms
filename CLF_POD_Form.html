@@ -1281,44 +1281,146 @@ function resetShipmentView(){
   var man = document.getElementById('manualPodSection');
   if (sec) { sec.style.display='none'; sec.innerHTML=''; }
   if (man) man.style.display='none';   // manual POD disabled — every delivery goes through the office-issued shipment checklist
-  _shipKey=''; _shipGroups=[]; _deliverIdx=-1;
+  _shipKey=''; _shipGroups=[]; _deliverIdx=-1; _shipStale=false;
 }
 
 // When vehicle + date are set, check if this lorry has a shipment today.
-async function checkShipmentForVehicle(keepListOnFail){
+// [Ship-fix 2026-08-19] A failed READ used to render the SAME screen as a genuine empty answer,
+// so a 10-second blip told the driver - and through him the office - that the delivery order was
+// missing or the plate mis-typed. A lorry hit exactly that at 12:35 on 2026-08-19 while a healthy
+// 48-stop DL sat in the sheet - that same phone had filed POD photos at 12:13 and again at 12:44.
+// Errors and empties
+// are now different screens, and this read gets the plate dropdown's rescue kit: 15s abort, one
+// auto-retry, tap-to-retry, and a same-day cache so a blip cannot wipe a list the driver is
+// standing in front of a customer with.
+const SHIP_CACHE_KEY = 'clf_ship_cache_' + BRANCH;
+var _shipReq = 0;        // request counter
+var _shipPainted = 0;    // seq of the answer that last painted
+var _shipStale = false;  // true while the list on screen is the offline copy
+
+// An answer may paint only if it is newer than whatever is on screen AND still describes the lorry
+// and date the driver is looking at. Guarding on the REQUEST instead (a plain "newest request wins")
+// let a background visibilitychange re-sync cancel the very first read and leave a dead spinner.
+function _shipMayPaint(seq, v, d){
+  if (seq <= _shipPainted) return false;
+  var el = document.getElementById('vehicleNo'), dl = document.getElementById('deliveryDate');
+  return !!el && !!dl && el.value === v && dl.value === d;
+}
+
+function _shipCacheWrite(vehicle, date, shipments, items){
+  try{ localStorage.setItem(SHIP_CACHE_KEY, JSON.stringify({ v: vehicle, d: date, ts: Date.now(), shipments: shipments, items: items })); }catch(e){}
+}
+// The read-back that would refresh the cache is exactly what fails in a dead zone, so fold the
+// driver's own progress back into it after every stop: a rewound checklist is how a stop gets
+// delivered - and its pallets counted - twice. Keeps the original ts (freshness = last SERVER read).
+function _shipCacheSync(){
+  if (_smMode || !_shipKey || !_shipGroups.length) return;
+  var vehicle = document.getElementById('vehicleNo').value, date = document.getElementById('deliveryDate').value;
+  if (!vehicle || !date) return;
+  var prev = null; try{ prev = JSON.parse(localStorage.getItem(SHIP_CACHE_KEY) || 'null'); }catch(e){}
+  if (!prev || prev.v !== vehicle || prev.d !== date || !prev.shipments) return;   // never invent a header - the restore needs its shipmentNo
+  var items = []; _shipGroups.forEach(function(g){ g.invs.forEach(function(x){ items.push(x); }); });
+  try{ localStorage.setItem(SHIP_CACHE_KEY, JSON.stringify({ v: vehicle, d: date, ts: Number(prev.ts) || Date.now(), shipments: prev.shipments, items: items })); }catch(e){}
+}
+function _shipCacheRead(vehicle, date){
+  try{
+    var c = JSON.parse(localStorage.getItem(SHIP_CACHE_KEY) || 'null');
+    if (!c || c.v !== vehicle || c.d !== date) return null;           // another lorry / another day is not this driver's list
+    if (!c.items || !c.items.length) return null;
+    if (Date.now() - Number(c.ts || 0) > 20 * 3600e3) return null;    // one working day - never resurrect yesterday's route
+    return c;
+  }catch(e){ return null; }
+}
+
+async function checkShipmentForVehicle(keepListOnFail, isRetry){
   if (_smMode) return;   // [Salesman] deliveries load by staff ID, not by lorry
   var vehicle = document.getElementById('vehicleNo').value;
   var date = document.getElementById('deliveryDate').value;
   var sec = document.getElementById('shipmentSection');
   var man = document.getElementById('manualPodSection');
   if (!sec || !man) return;
-  // Office always issues the delivery order first, so "no list" = not imported yet / wrong lorry or date.
-  // Manual POD is disabled (it wouldn't count on the dashboard), so we tell the driver to contact the office.
-  function fallManual(){ if (keepListOnFail) return; man.style.display='none'; sec.style.display='block';
-    sec.innerHTML = '<div style="padding:18px 14px;text-align:center;color:#9A3412;font-size:14px;line-height:1.6;border:1.5px solid #F0C9A8;background:#FFF7ED;border-radius:10px;">'
-      + '<div style="font-size:30px;margin-bottom:6px;">&#9888;&#65039;</div>'
+  // Manual POD stays disabled either way - it would not count on the dashboard.
+  function _box(html){ man.style.display='none'; sec.style.display='block';
+    sec.innerHTML = '<div style="padding:18px 14px;text-align:center;color:#9A3412;font-size:14px;line-height:1.6;border:1.5px solid #F0C9A8;background:#FFF7ED;border-radius:10px;">' + html + '</div>'; }
+  var _retryBtn = '<button type="button" id="shipRetry" style="margin-top:14px;background:#fff;color:#854F0B;border:1.5px solid #E0C68A;border-radius:8px;padding:11px 18px;font-weight:700;font-size:14px;cursor:pointer;">&#8635; Tap to retry &middot; Tekan untuk cuba lagi</button>';
+
+  // The server ANSWERED and this lorry genuinely has nothing today - the office's problem to fix.
+  function fallEmpty(){ if (_shipGroups.length && !_shipStale) return;   // a live list stands (re-import race); a stale one does not
+    _shipKey=''; _shipGroups=[]; _shipStale=false;
+    _box('<div style="font-size:30px;margin-bottom:6px;">&#9888;&#65039;</div>'
       + '<b>No delivery order matches this lorry' + (vehicle ? ' (' + _esc(vehicle) + ')' : '') + '.</b>'
       + '<br><span style="font-size:12.5px;color:#6b5836;">Tiada senarai penghantaran sepadan untuk lori ini.</span>'
-      + '<br><br>Check the <b>lorry number</b> &amp; <b>date</b> are correct. If they are, the order may be under a <b>different / mis-typed lorry number</b> — ask the <b>office</b> to check &amp; re-import.'
-      + '<br><span style="font-size:12.5px;color:#6b5836;">Semak nombor lori &amp; tarikh. Jika betul, pesanan mungkin guna nombor lori salah taip — hubungi pejabat.</span>'
-      + '</div>'; }
-  if (!vehicle || !date){ fallManual(); return; }
-  if (!keepListOnFail){ sec.style.display='block'; sec.innerHTML = '<div style="padding:14px;text-align:center;color:#854F0B;">Checking delivery list… · Menyemak…</div>'; }
+      + '<br><br>Check the <b>lorry number</b> &amp; <b>date</b> are correct. If they are, the order may be under a <b>different / mis-typed lorry number</b> &mdash; ask the <b>office</b> to check &amp; re-import.'
+      + '<br><span style="font-size:12.5px;color:#6b5836;">Semak nombor lori &amp; tarikh. Jika betul, pesanan mungkin guna nombor lori salah taip &mdash; hubungi pejabat.</span>'
+      + _retryBtn); }
+
+  // We never GOT an answer. That is not the same thing as an empty list, so it must never say so:
+  // blaming the office for a dead signal sends the whole branch hunting a DL that was there all along.
+  function fallError(err){
+    if (_shipGroups.length) return;                    // a list is already on screen - a failed refresh must not take it away
+    var cached = _shipCacheRead(vehicle, date);
+    if (cached){                                       // keep the route running on the last good copy
+      _shipKey = (cached.shipments && cached.shipments[0]) ? cached.shipments[0].shipmentNo : '';
+      if (cached.shipments && cached.shipments[0]) _autoFillAssignedDrivers(cached.shipments[0]);
+      _buildGroups(cached.items);
+      _shipStale = true;
+      sec.style.display='block'; man.style.display='none';
+      renderShipmentList();
+      return;
+    }
+    _box('<div style="font-size:30px;margin-bottom:6px;">&#128246;</div>'
+      + '<b>Cannot load the delivery list right now.</b>'
+      + '<br><span style="font-size:12.5px;color:#6b5836;">Senarai penghantaran tidak dapat dimuat sekarang.</span>'
+      + '<br><br>This is a <b>connection problem</b>, not a missing order. Move to better signal, then tap retry.'
+      + '<br><span style="font-size:12.5px;color:#6b5836;">Ini masalah <b>sambungan</b>, bukan pesanan hilang. Cari liputan lebih baik, kemudian tekan cuba lagi.</span>'
+      + _retryBtn
+      + (err && err.name ? '<div style="font-size:11px;color:#9a8050;margin-top:9px;">(' + _esc(err.name) + ')</div>' : ''));
+  }
+
+  if (!vehicle || !date){ if (!keepListOnFail) resetShipmentView(); return; }   // nothing picked yet is not an error
+  var _seq = ++_shipReq;
+  // A hard check = the driver switched lorry/date or the page just loaded: drop the old lorry's
+  // groups BEFORE fetching, so fallError's "is a list on screen" test cannot be fooled by them.
+  if (!keepListOnFail){ _shipKey=''; _shipGroups=[]; _shipStale=false;
+    sec.style.display='block'; man.style.display='none';
+    sec.innerHTML = '<div style="padding:14px;text-align:center;color:#854F0B;">Checking delivery list&hellip; &middot; Menyemak&hellip;</div>'; }
+  // 15s abort keeps a dead-zone fetch from hanging forever (same idiom as fetchVehicles/saveDelivery)
+  var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
+  var timer = ctrl ? setTimeout(function(){ ctrl.abort(); }, 15000) : null;
   try{
-    var res = await fetch(SCRIPT_URL + '?action=getShipmentForLorry&vehicleNo=' + encodeURIComponent(vehicle) + '&date=' + encodeURIComponent(date));
-    var data = await res.json();
+    var res = await fetch(SCRIPT_URL + '?action=getShipmentForLorry&vehicleNo=' + encodeURIComponent(vehicle) + '&date=' + encodeURIComponent(date), { signal: ctrl ? ctrl.signal : undefined });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var data = await res.json();          // an HTML error body lands here as SyntaxError
+    if (!_shipMayPaint(_seq, vehicle, date)) return;   // driver moved on, or a newer answer already painted
     if (data && data.status==='ok' && data.shipments && data.shipments.length && data.items && data.items.length){
+      _shipPainted = _seq;
       _shipKey = data.shipments[0].shipmentNo;
+      _shipStale = false;
+      _shipCacheWrite(vehicle, date, data.shipments, data.items);
       fetchPalletOnboard();   // pallets-on-board banner (default-accept; driver only acts on a wrong count)
       _autoFillAssignedDrivers(data.shipments[0]);
       _buildGroups(data.items);
-      sec.style.display='block'; man.style.display='none';   // has a list → use it (manual reachable via walk-in link)
+      sec.style.display='block'; man.style.display='none';   // has a list -> use it (manual reachable via walk-in link)
       renderShipmentList();
+    } else if (data && data.status === 'ok'){
+      _shipPainted = _seq;
+      try{ localStorage.removeItem(SHIP_CACHE_KEY); }catch(e){}   // the server has disowned this lorry+date - never serve it from cache again
+      fallEmpty();                        // a real, server-confirmed "nothing for this lorry today"
     } else {
-      fallManual();   // no list → manual flow (read-back keeps current view)
+      throw new Error((data && data.message) || 'Unexpected response');   // status:'error' is a failure, NOT an empty list
     }
-  }catch(e){
-    fallManual();     // error → manual fallback (read-back keeps current view)
+  }catch(err){
+    if (!_shipMayPaint(_seq, vehicle, date)) return;
+    _shipPainted = _seq;
+    console.error('checkShipmentForVehicle failed:', err);
+    _dbgToast_('shipment: ' + (err && err.name) + ' - ' + (err && err.message));   // visible with ?debug=1
+    fallError(err);
+    // one auto-retry, then it is on the driver's tap-to-retry (a full reload buys nothing here)
+    if (!isRetry) setTimeout(function(){
+      if (_shipMayPaint(_shipPainted + 1, vehicle, date) && (!_shipGroups.length || _shipStale)) checkShipmentForVehicle(true, true);
+    }, 5000);
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
 
@@ -1372,6 +1474,7 @@ function _buildGroups(items){
 var _shipFilter = '';   // B4: live customer search (kept across re-renders)
 
 function renderShipmentList(){
+  _shipCacheSync();   // [Ship-fix] fold local progress into the offline copy
   var sec = document.getElementById('shipmentSection');
   var all = []; _shipGroups.forEach(function(g){ g.invs.forEach(function(i){ all.push(i); }); });
   var total = all.length;
@@ -1385,6 +1488,11 @@ function renderShipmentList(){
     + '<b>'+_esc(vehicle)+'</b> · '+done+' / '+total+' delivered'+(failed?' · '+failed+' problem':'')
     + (remaining>0 ? ' · <b>'+remaining+' to go · lagi</b>' : '')
     + '<div style="height:8px;background:#F0D9A8;border-radius:99px;margin-top:7px;overflow:hidden;"><div style="height:100%;width:'+pct+'%;background:#2E7D32;border-radius:99px;transition:width .3s;"></div></div></div>'
+    // [Ship-fix 2026-08-19] the list can now be the cached copy - say so, loudly, instead of
+    // letting a stale checklist pass for live server truth.
+    + (_shipStale ? '<div style="background:#FFF7ED;border:1.5px solid #F0C9A8;border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:12.5px;color:#9A3412;line-height:1.5;">'
+        + '<b>&#128246; Offline copy &mdash; not synced yet.</b> Tap &#8635; when you have signal.'
+        + '<br><span style="color:#6b5836;">Salinan luar talian &mdash; belum disegerak. Tekan &#8635; bila ada liputan.</span></div>' : '')
     // B4/B6: search + manual refresh (44-stop routes need both)
     + '<div style="display:flex;gap:8px;margin-bottom:12px;">'
     + '<input type="text" id="shipFilter" value="'+_esc(_shipFilter)+'" placeholder="🔍 Find customer · Cari pelanggan" autocomplete="off" '
@@ -1752,6 +1860,7 @@ function renderShipGroups(){
 
 // click delegation on the shipment section
 document.getElementById('shipmentSection').addEventListener('click', function(e){
+  if (e.target.closest('#shipRetry')){ checkShipmentForVehicle(); return; }   // [Ship-fix] retry straight from the error screen
   if (e.target.closest('#shipRefresh')){ if (_smMode){ smLoadDeliveries(true); } else { checkShipmentForVehicle(true); } return; }   // B6: manual re-sync
   var xbtn = e.target.closest('.ship-photo-x');
   if (xbtn){
