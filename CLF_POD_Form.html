@@ -1027,9 +1027,14 @@ function _qGateBuild_(){
   ov.innerHTML =
       '<div style="background:#fff;border-radius:14px;max-width:340px;width:100%;padding:22px 18px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.35);">'
     + '<div style="font-size:19px;font-weight:700;color:#0B1F3A;margin-bottom:10px;">&#9888;&#65039; Photo not clear &middot; Gambar tidak jelas</div>'
-    + '<div id="qGateReasons" style="font-size:14px;color:#1A3A5C;line-height:1.7;margin-bottom:16px;"></div>'
+    + '<div id="qGateReasons" style="font-size:14px;color:#1A3A5C;line-height:1.7;margin-bottom:10px;"></div>'
+    // [Gate-hint 2026-09-09] multi-invoice stops: drivers laid 2 invoices side by side in ONE shot,
+    // which trips the cut check AND only counts as 1 photo. Say the rule right where they get stuck.
+    + '<div style="font-size:13px;color:#854F0B;background:#FFF8E1;border:1px solid #F0D9A8;border-radius:8px;padding:8px 10px;margin-bottom:14px;line-height:1.6;">&#128444;&#65039; <b>1 invoice = 1 photo</b> &middot; 1 invois = 1 foto<br>Lay it flat, whole page in frame, leave a white border &middot; Ratakan, satu muka penuh, tinggalkan ruang putih</div>'
     + '<button type="button" id="qGateRetake" style="width:100%;padding:15px;background:#1D4ED8;color:#fff;border:none;border-radius:10px;font-family:\'DM Sans\',sans-serif;font-size:16px;font-weight:700;cursor:pointer;">&#128247; Retake · Ambil semula</button>'
-    + '<button type="button" id="qGateAnyway" style="display:none;margin-top:10px;background:none;border:none;color:#8A9BB0;font-size:13px;text-decoration:underline;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Upload anyway · Tetap hantar</button>'
+    // [Gate-hint 2026-09-09] was a grey underlined 13px link that drivers never noticed after 7-8 retakes;
+    // now a full-width outlined button. WHEN it appears is unchanged (3rd consecutive fail, see showQualityGate_).
+    + '<button type="button" id="qGateAnyway" style="display:none;width:100%;margin-top:10px;padding:13px;background:#fff;color:#854F0B;border:1.5px solid #E0C68A;border-radius:10px;font-family:\'DM Sans\',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">&#9888;&#65039; Upload anyway &middot; Tetap hantar</button>'
     + '</div>';
   document.body.appendChild(ov);
   _qGateEls = { ov: ov, reasons: ov.querySelector('#qGateReasons'), retake: ov.querySelector('#qGateRetake'), anyway: ov.querySelector('#qGateAnyway') };
@@ -1043,7 +1048,7 @@ function showQualityGate_(reasons, allowAnyway){
     exposure: 'Too bright/dark · Terlalu cerah/gelap'
   };
   _qGateEls.reasons.innerHTML = (reasons || []).map(function(r){ return '&bull; ' + (TXT[r] || _esc(r)); }).join('<br>');
-  _qGateEls.anyway.style.display = allowAnyway ? 'inline-block' : 'none';
+  _qGateEls.anyway.style.display = allowAnyway ? 'block' : 'none';   // [Gate-hint 2026-09-09] full-width button
   _qGateEls.ov.style.display = 'flex';
   return new Promise(function(resolve){
     _qGateEls.retake.onclick = function(){ _qGateEls.ov.style.display = 'none'; resolve('retake'); };
@@ -1777,7 +1782,9 @@ function renderShipGroups(){
       html += '<div style="font-size:12px;font-weight:700;margin-bottom:8px;color:'+(matchCount?'#2E7D32':'#C62828')+';">'
         + toDeliver+' to deliver &middot; '+photos.length+' photo'+(photos.length===1?'':'s')
         + (matchCount ? ' &#10003;' : (photos.length<toDeliver ? ' &mdash; take '+(toDeliver-photos.length)+' more &middot; ambil '+(toDeliver-photos.length)+' lagi' : ' &mdash; remove '+(photos.length-toDeliver)+' &middot; buang '+(photos.length-toDeliver)))
-        + '</div>';
+        + '</div>'
+        // [Gate-hint 2026-09-09] 2+ invoice stops: spell out the 1-photo-per-invoice rule on the card itself
+        + (toDeliver > 1 && photos.length < toDeliver ? '<div style="font-size:11.5px;color:#854F0B;margin:-4px 0 8px;">1 invoice = 1 photo &middot; 1 invois = 1 foto &mdash; do not put 2 invoices in one shot &middot; jangan 2 invois dalam satu gambar</div>' : '');
       if (photos.length){
         html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">'
           + photos.map(function(p, pi){
@@ -1872,7 +1879,10 @@ document.getElementById('shipmentSection').addEventListener('click', function(e)
     return;
   }
   var ph = e.target.closest('.ship-photo');
-  if (ph){ _deliverIdx = parseInt(ph.getAttribute('data-i'),10); document.getElementById('shipPhoto').click(); return; }
+  if (ph){ _deliverIdx = parseInt(ph.getAttribute('data-i'),10);
+    // [AutoCap 2026-09-09] in-page camera (guide frame + auto shutter); OS camera when unsupported / after a fallback
+    if (_acSupported() && !_acOff){ openAutoCapture(_deliverIdx); } else { document.getElementById('shipPhoto').click(); }
+    return; }
   var pp = e.target.closest('.pallet-photo');
   if (pp){
     var pi = parseInt(pp.getAttribute('data-i'), 10);
@@ -1952,6 +1962,29 @@ document.getElementById('shipmentSection').addEventListener('click', function(e)
   if (pt){ var pf = document.querySelector('.pallet-fields[data-i="'+pt.getAttribute('data-i')+'"]'); if (pf) pf.style.display = (pf.style.display==='none'?'flex':'none'); return; }   // FIX: this branch was dropped in the KTN merge — the Pallet? button did nothing
 });
 
+// [AutoCap 2026-09-09] one place that lands a photo on a stop — used by the OS-camera path
+// (onShipPhoto) and the in-page camera (_acAccept). Re-resolves the group by key because a
+// background re-sync may replace _shipGroups while a photo is being compressed.
+// [untag+count] cap = this station's pending-invoice count (1 photo per invoice; the Save gate
+// requires exact equality anyway). The old hard 10 silently dropped photo #11+ at big stops —
+// the limit follows the stop size and the driver is told when it is reached.
+function _addPhotoToGroup(gKey, entry, fallbackGroup){
+  var cur = null;
+  for (var ci=0; ci<_shipGroups.length; ci++){ if (_shipGroups[ci].key === gKey){ cur = _shipGroups[ci]; break; } }
+  if (!cur) cur = fallbackGroup;
+  if (!cur) return { added: false, group: null };
+  if (!cur.photos) cur.photos = [];
+  var _cap = (cur.invs && cur.invs.length)
+    ? cur.invs.filter(function(x){ return String(x.status).toLowerCase() !== 'delivered'; }).length
+    : 99;
+  if (cur.photos.length >= _cap){
+    _palletToast('err', 'Limit reached: ' + _cap + ' photo(s) = ' + _cap + ' invoice(s) at this stop &middot; Had: ' + _cap + ' foto = ' + _cap + ' invois di hentian ini');
+    return { added: false, group: cur };
+  }
+  cur.photos.push({ dataUrl: entry.dataUrl, name: entry.name, type: entry.type, qualityFlag: !!entry.qualityFlag });
+  return { added: true, group: cur };
+}
+
 // photo taken for a customer → submit delivery for that customer's pending invoices
 // STEP 1: take photo(s) for a customer → buffer + show thumbnails (does NOT submit yet)
 async function onShipPhoto(input){
@@ -1976,26 +2009,306 @@ async function onShipPhoto(input){
       }
       _qGateTries = 0;   // pass or flagged-add both reset the streak
     } catch (gateErr) { console.warn('gate failed open:', gateErr); }
-    var cur = null;
-    for (var ci=0; ci<_shipGroups.length; ci++){ if (_shipGroups[ci].key === gKey){ cur = _shipGroups[ci]; break; } }
-    if (!cur) cur = g;
-    if (!cur.photos) cur.photos = [];
-    // [untag+count] cap = this station's pending-invoice count (1 photo per invoice; the Save
-    // gate requires exact equality anyway). The old hard 10 silently dropped photo #11+ at big
-    // stops — now the limit follows the stop size and the driver gets told when it is reached.
-    var _cap = (cur.invs && cur.invs.length)
-      ? cur.invs.filter(function(x){ return String(x.status).toLowerCase() !== 'delivered'; }).length
-      : 99;
-    if (cur.photos.length >= _cap){
-      _palletToast('err', 'Limit reached: ' + _cap + ' photo(s) = ' + _cap + ' invoice(s) at this stop &middot; Had: ' + _cap + ' foto = ' + _cap + ' invois di hentian ini');
-      break;
-    }
-    cur.photos.push({ dataUrl: entry.dataUrl, name: entry.name, type: entry.type, qualityFlag: !!entry.qualityFlag });
-    g = cur;
+    var _r = _addPhotoToGroup(gKey, entry, g);   // [AutoCap] shared with the in-page camera path
+    if (!_r.added) break;
+    g = _r.group;
   }
   input.value=''; _deliverIdx=-1;
   renderShipmentList();   // shows thumbnails + the green "Save — Delivered" button
 }
+
+// ══════════════════════════════════════════════════════════════════════════════════════
+// [AutoCap 2026-09-09] In-page camera: guide frame + LIVE quality check + auto shutter.
+// Why: at 2-invoice stops drivers laid both invoices in one shot; the after-the-fact quality
+// gate discarded it ("Photo not clear") and even a passing shot only counted as 1 photo, so the
+// card sat at "0 photos — take 2 more" after 7-8 retakes. Now the SAME checks (checkPhotoQuality_)
+// run on the live preview 5×/s and the shutter fires by itself once the invoice is flat, lit,
+// inside the frame and still for ~1 s — one invoice at a time, "Invoice 1 of 2 → 2 of 2".
+// The captured frame still goes through compressImage() + the gate, so what reaches the server
+// is byte-for-byte the same shape as an OS-camera photo. Backend unchanged.
+// Fallback: no getUserMedia / permission denied / camera never ready → OS camera (<input capture>),
+// remembered for the rest of the session (_acOff). Problem/proof photos still use the OS camera.
+// Every async continuation holds its OWN session object `s` and bails when `_ac !== s` — a
+// close + re-open while a promise is in flight must never leak a stream or land a photo on
+// another stop (review F2).
+// ══════════════════════════════════════════════════════════════════════════════════════
+var _acOff = false;      // true after any fallback: this session uses the OS camera from then on
+var _ac = null;          // live capture session state (null when the overlay is closed)
+var AC_INTERVAL_MS = 200;        // analysis cadence (5 fps) — checkPhotoQuality_ on a ≤640px copy is cheap
+var AC_STABLE_FRAMES = 5;        // consecutive passing+still frames before auto shutter (~1 s)
+var AC_MOTION_MAX = 6;           // mean |Δluminance| per pixel (0-255) on a 48px map: below = "still"
+var AC_CHANGE_MIN = 12;          // mean |Δ| vs the frame we just SHOT before re-arming (stops double-shooting the same page)
+var AC_COOLDOWN_MS = 1500;
+var AC_MANUAL_HINT_MS = 8000;    // no auto shot after this → remind the driver the big button works too
+var AC_READY_TIMEOUT_MS = 6000;  // camera stream not ready in time → fallback
+
+function _acSupported(){
+  try{ return !!(window.isSecureContext && navigator.mediaDevices && navigator.mediaDevices.getUserMedia); }catch(e){ return false; }
+}
+function _acPending(g){ return (g && g.invs ? g.invs : []).filter(function(x){ return String(x.status).toLowerCase() !== 'delivered' && !x._untag; }); }
+function _acGroupOf(s){ if (!s) return null; for (var i=0;i<_shipGroups.length;i++){ if (_shipGroups[i].key === s.gKey) return _shipGroups[i]; } return null; }
+function _acLive(s){ return !!(s && _ac === s && !s.closed); }   // this session is still the one on screen
+
+function _acBuild(){
+  var ov = document.createElement('div');
+  ov.id = 'acOverlay';
+  // top/left/right/bottom instead of `inset` and no `aspect-ratio`: older Safari (<14.5 / <15) still passes _acSupported (review F6)
+  ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:9500;background:#000;display:flex;flex-direction:column;font-family:\'DM Sans\',sans-serif;color:#fff;';
+  ov.innerHTML =
+      '<div id="acStage" style="position:relative;flex:1;overflow:hidden;background:#000;">'
+    +   '<video id="acVideo" playsinline muted autoplay style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;background:#000;"></video>'
+    +   '<div id="acGuide" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(86%, 56vh);height:min(74%, 73vh);border:3px solid rgba(255,255,255,.92);border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);pointer-events:none;transition:border-color .2s;"></div>'
+    +   '<div id="acFlash" style="position:absolute;top:0;left:0;right:0;bottom:0;background:#2E7D32;opacity:0;pointer-events:none;transition:opacity .15s;"></div>'
+    +   '<div style="position:absolute;top:0;left:0;right:0;padding:12px 14px 10px;background:linear-gradient(rgba(0,0,0,.75),rgba(0,0,0,0));display:flex;align-items:flex-start;gap:10px;">'
+    +     '<div style="flex:1;min-width:0;"><div id="acTitle" style="font-size:17px;font-weight:800;line-height:1.25;"></div><div id="acSub" style="font-size:12px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;"></div></div>'
+    +     '<button type="button" id="acTorch" style="display:none;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:8px;padding:8px 10px;font-size:15px;line-height:1;cursor:pointer;">&#128294;</button>'
+    +     '<button type="button" id="acClose" aria-label="Close" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:8px;padding:8px 13px;font-size:18px;line-height:1;cursor:pointer;">&times;</button>'
+    +   '</div>'
+    +   '<div id="acStatus" style="position:absolute;left:14px;right:14px;bottom:26px;text-align:center;font-size:14.5px;font-weight:700;line-height:1.4;padding:9px 12px;border-radius:10px;background:rgba(0,0,0,.6);"></div>'
+    +   '<div style="position:absolute;left:14px;right:14px;bottom:14px;height:5px;border-radius:3px;background:rgba(255,255,255,.25);overflow:hidden;"><div id="acBarFill" style="height:100%;width:0;background:#4ADE80;transition:width .18s;"></div></div>'
+    + '</div>'
+    + '<div id="acAnywayRow" style="display:none;padding:8px 16px 0;background:#0B1F3A;"><button type="button" id="acAnyway" style="width:100%;padding:12px;background:#fff;color:#854F0B;border:1.5px solid #E0C68A;border-radius:10px;font-family:\'DM Sans\',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">&#9888;&#65039; Upload anyway &middot; Tetap hantar</button></div>'
+    + '<div style="padding:12px 16px 14px;background:#0B1F3A;display:flex;align-items:center;justify-content:space-between;gap:12px;">'
+    +   '<button type="button" id="acFallback" style="background:none;border:none;color:#9FB3C8;font-size:12px;line-height:1.35;text-decoration:underline;text-align:left;width:34%;padding:0;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Use phone camera<br>Guna kamera telefon</button>'
+    +   '<button type="button" id="acShutter" aria-label="Take photo" style="width:70px;height:70px;border-radius:50%;background:#fff;border:5px solid #C9D6E3;cursor:pointer;flex:none;"></button>'
+    +   '<div id="acCount" style="width:34%;text-align:right;font-size:13px;line-height:1.35;color:#C9D6E3;"></div>'
+    + '</div>';
+  document.body.appendChild(ov);
+  ov.querySelector('#acClose').onclick = function(){ closeAutoCapture(); renderShipmentList(); };
+  ov.querySelector('#acShutter').onclick = function(){ if (_ac) _acCapture(_ac, true); };
+  ov.querySelector('#acFallback').onclick = function(){ if (_ac) _acFallback(_ac, 'driver chose OS camera', true); };
+  ov.querySelector('#acAnyway').onclick = function(){
+    var s = _ac;
+    if (s && s.pendingEntry){ var e = s.pendingEntry; s.pendingEntry = null; e.qualityFlag = true; _acShowAnyway(false); _acAccept(s, e); }
+    else _acShowAnyway(false);
+  };
+  ov.querySelector('#acTorch').onclick = function(){ if (_ac) _acTorch(_ac, !_ac.torchOn); };
+  return ov;
+}
+function _acEl(id){ return document.getElementById(id); }
+function _acStatus(text, frac, tone){
+  var s = _acEl('acStatus'), b = _acEl('acBarFill'), g = _acEl('acGuide');
+  if (s && s.innerHTML !== text) s.innerHTML = text;
+  if (b) b.style.width = Math.round(Math.max(0, Math.min(1, frac || 0)) * 100) + '%';
+  if (g) g.style.borderColor = tone === 'ok' ? '#4ADE80' : (tone === 'warn' ? '#FBBF24' : 'rgba(255,255,255,.92)');
+}
+function _acShowAnyway(show){ var r = _acEl('acAnywayRow'); if (r) r.style.display = show ? 'block' : 'none'; }
+function _acHeader(s){
+  var g = _acGroupOf(s); if (!g) return;
+  var pend = _acPending(g), have = (g.photos || []).length, need = pend.length;
+  var next = pend[Math.min(have, pend.length - 1)];
+  var t = _acEl('acTitle'), sub = _acEl('acSub'), c = _acEl('acCount');
+  if (t) t.textContent = 'Invoice ' + Math.min(have + 1, need) + ' of ' + need + (next ? ' · ' + next.invoiceNo : '');
+  if (sub) sub.textContent = g.name || '';
+  if (c) c.innerHTML = have + ' / ' + need + ' photo' + (need === 1 ? '' : 's') + '<br>1 invoice = 1 photo';
+}
+var AC_HINT = '<br><span style="font-weight:500;opacity:.85;">or tap the round button · atau tekan butang bulat</span>';
+
+async function openAutoCapture(i){
+  var g = _shipGroups[i];
+  if (!g){ _deliverIdx = -1; return; }
+  if (_ac) closeAutoCapture(true);
+  var pend = _acPending(g);
+  if (!pend.length){ _deliverIdx = -1; alert('Select at least one invoice to deliver · Pilih sekurang-kurangnya satu invois'); return; }
+  if ((g.photos || []).length >= pend.length){ _deliverIdx = -1; _palletToast('err', 'Limit reached: ' + pend.length + ' photo(s) = ' + pend.length + ' invoice(s) at this stop'); return; }
+  var ov = _acEl('acOverlay') || _acBuild();
+  ov.style.display = 'flex';
+  _acShowAnyway(false);
+  var s = { gKey: g.key, video: _acEl('acVideo'), stream: null, raf: 0, lastTick: 0, stable: 0, prevLum: null, capturedLum: null,
+            cooldownUntil: 0, cooldownMsg: null, changedSinceCapture: true, busy: false, fails: 0, pendingEntry: null, closed: false,
+            openedAt: Date.now(), lastShotAt: 0, captures: 0, torchOn: false, track: null, audio: null,
+            canvas: document.createElement('canvas'), mini: document.createElement('canvas') };
+  s.ctx = s.canvas.getContext('2d', { willReadFrequently: true });
+  s.minictx = s.mini.getContext('2d', { willReadFrequently: true });
+  _ac = s;
+  // AudioContext must be born inside the tap or iOS keeps it suspended (no shutter beep) — review F6
+  try{ var ACtor = window.AudioContext || window.webkitAudioContext; if (ACtor){ s.audio = new ACtor(); if (s.audio.resume) s.audio.resume().catch(function(){}); } }catch(e){}
+  _acHeader(s);
+  _acStatus('Starting camera… · Membuka kamera…', 0);
+  var stream = null;
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({ audio: false,
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } });
+    if (!_acLive(s)){ try{ stream.getTracks().forEach(function(t){ t.stop(); }); }catch(e){} return; }   // closed / re-opened meanwhile
+    s.stream = stream;
+    s.video.srcObject = stream;
+    try{ await s.video.play(); }catch(e){ /* autoplay attr covers most; ready check below */ }
+    var t0 = Date.now();
+    while (_acLive(s) && !(s.video.videoWidth > 0) && Date.now() - t0 < AC_READY_TIMEOUT_MS){
+      await new Promise(function(r){ setTimeout(r, 100); });
+    }
+    if (!_acLive(s)) return;   // closeAutoCapture already stopped s.stream
+    if (!(s.video.videoWidth > 0)) throw new Error('camera not ready');
+    try{
+      var track = stream.getVideoTracks()[0];
+      var caps = (track && track.getCapabilities) ? track.getCapabilities() : {};
+      if (caps && caps.torch){ s.track = track; _acEl('acTorch').style.display = 'inline-block'; }
+    }catch(e){}
+    _acStatus('Put the invoice inside the frame · Letak invois dalam bingkai', 0);
+    s.lastTick = 0;
+    s.raf = requestAnimationFrame(function(){ _acTick(s); });
+  }catch(err){
+    console.warn('AutoCap unavailable:', err);
+    if (stream){ try{ stream.getTracks().forEach(function(t){ t.stop(); }); }catch(e){} }
+    if (_acLive(s)) _acFallback(s, (err && err.name) || 'error', false);   // a stale rejection must not touch a newer session
+  }
+}
+
+function _acTorch(s, on){
+  if (!s || !s.track) return;
+  try{ s.track.applyConstraints({ advanced: [{ torch: !!on }] }).then(function(){ s.torchOn = !!on; var b = _acEl('acTorch'); if (b && _acLive(s)) b.style.background = on ? '#FBBF24' : 'rgba(255,255,255,.15)'; }).catch(function(){}); }catch(e){}
+}
+
+function _acTick(s){
+  if (!_acLive(s)) return;
+  s.raf = requestAnimationFrame(function(){ _acTick(s); });
+  var now = Date.now();
+  if (now - s.lastTick < AC_INTERVAL_MS || s.busy) return;
+  s.lastTick = now;
+  var v = s.video;
+  if (!(v.videoWidth > 0)) return;
+  try{
+    // 1) working copy ≤640px (same scale class the after-the-fact gate uses)
+    var c = s.canvas, ctx = s.ctx, W = v.videoWidth, H = v.videoHeight, sc = 640 / Math.max(W, H);
+    c.width = Math.max(8, Math.round(W * sc)); c.height = Math.max(8, Math.round(H * sc));
+    ctx.drawImage(v, 0, 0, c.width, c.height);
+    // 2) 48px luminance map → mean brightness, motion vs previous frame, and distance from the frame we last SHOT
+    var m = s.mini, mx = s.minictx; m.width = 48; m.height = Math.max(8, Math.round(48 * c.height / c.width));
+    mx.drawImage(c, 0, 0, m.width, m.height);
+    var d = mx.getImageData(0, 0, m.width, m.height).data, n = m.width * m.height, lum = new Float32Array(n), sum = 0;
+    for (var i = 0, p = 0; p < n; i += 4, p++){ lum[p] = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; sum += lum[p]; }
+    var mean = sum / n, motion = 999, hasPrev = !!(s.prevLum && s.prevLum.length === n);
+    if (hasPrev){ var md = 0; for (var q = 0; q < n; q++) md += Math.abs(lum[q] - s.prevLum[q]); motion = md / n; }
+    s.prevLum = lum;
+    // distance from the captured frame accumulates over a slow paper swap and returns to ~0 after a bump-and-settle (review F4)
+    var fromShot = 0;
+    if (s.capturedLum){
+      if (s.capturedLum.length === n){ var cd = 0; for (var q2 = 0; q2 < n; q2++) cd += Math.abs(lum[q2] - s.capturedLum[q2]); fromShot = cd / n; }
+      else fromShot = 999;   // stream resized (rotation) after the shot — cannot compare, treat as changed (review N3)
+    }
+    // 3) after a shot: cool down, then insist the scene really changed (next invoice) before re-arming
+    if (s.cooldownUntil > now){ s.stable = 0; if (s.cooldownMsg) _acStatus(s.cooldownMsg, 0, 'ok'); return; }   // after a FAILED shot the "Not clear" text stays (review N1)
+    if (s.pendingEntry){ s.stable = 0; return; }   // "Upload anyway" is waiting for the driver — no auto re-shoot, manual shutter still works (review N2)
+    if (!s.changedSinceCapture){
+      if (fromShot > AC_CHANGE_MIN){ s.changedSinceCapture = true; s.capturedLum = null; }
+      else { s.stable = 0; _acStatus('Put the NEXT invoice in the frame · Letak invois SETERUSNYA' + (now - s.lastShotAt > AC_MANUAL_HINT_MS ? AC_HINT : ''), 0, 'warn'); return; }
+    }
+    // 4) the very same three checks as the upload gate
+    var qr = checkPhotoQuality_(c, ctx), r = qr.reasons || [], msg = null;
+    if (r.indexOf('exposure') >= 0) msg = mean < 40 ? 'Too dark — more light · Terlalu gelap' : 'Too bright / glare · Terlalu cerah / silau';
+    else if (r.indexOf('cut') >= 0) msg = 'Whole invoice inside the frame · Seluruh invois dalam bingkai';
+    else if (r.indexOf('blur') >= 0) msg = mean < 90 ? 'Put the invoice inside the frame · Letak invois dalam bingkai' : 'Move closer / hold steady · Dekat sikit / pegang stabil';
+    else if (motion > AC_MOTION_MAX) msg = 'Hold still… · Pegang stabil…';
+    if (msg){
+      s.stable = 0;
+      if (now - Math.max(s.openedAt, s.lastShotAt) > AC_MANUAL_HINT_MS) msg += AC_HINT;
+      _acStatus(msg, 0, r.length ? 'warn' : null);
+      return;
+    }
+    s.stable++;
+    _acStatus('Hold… · Tahan…', s.stable / AC_STABLE_FRAMES, 'ok');
+    if (s.stable >= AC_STABLE_FRAMES){ s.stable = 0; _acCapture(s, false); }
+  }catch(e){
+    console.warn('AutoCap tick failed:', e);   // fail-open: the manual shutter and the OS-camera link still work
+  }
+}
+
+async function _acCapture(s, manual){
+  if (!_acLive(s) || s.busy) return;
+  s.busy = true;
+  s.pendingEntry = null; _acShowAnyway(false);   // a new attempt always supersedes a stale "Upload anyway" candidate (review F3)
+  try{
+    var v = s.video;
+    if (!(v.videoWidth > 0)) throw new Error('no frame');
+    var fc = document.createElement('canvas'); fc.width = v.videoWidth; fc.height = v.videoHeight;
+    fc.getContext('2d').drawImage(v, 0, 0);
+    var shotLum = s.prevLum;   // the analysed frame closest to this shot — the "did the scene change" reference
+    var blob = await new Promise(function(res){ fc.toBlob(res, 'image/jpeg', 0.92); });
+    if (!blob) throw new Error('toBlob failed');
+    var entry;
+    try{ entry = await compressImage(blob); }catch(e){ entry = await readFileAsDataUrl(blob); }
+    if (!_acLive(s)) return;   // overlay closed / re-opened while compressing — drop, never land on another stop (review F2)
+    if (entry.quality && !entry.quality.ok){
+      // Auto mode can get here too (full-res vs 640px resample near a threshold) — count it, say why, and
+      // offer "Upload anyway" at 3 either way, instead of silently re-shooting every second (review F5).
+      var TXT = { cut: 'not fully in frame · terpotong', blur: 'blurry · kabur', exposure: 'too bright/dark · terlalu cerah/gelap' };
+      var why = entry.quality.reasons.map(function(x){ return TXT[x] || x; }).join(', ');
+      s.fails++;
+      if (s.fails >= 3){ s.pendingEntry = entry; _acShowAnyway(true); _acStatus('Not clear: ' + why + '<br>Retake, or Upload anyway below', 0, 'warn'); }
+      else if (manual || s.fails >= 2) _acStatus('Not clear: ' + why + ' — retake · ambil semula', 0, 'warn');
+      s.cooldownMsg = null; s.cooldownUntil = Date.now() + 800;   // brief pause so the loop does not re-fire on the very next frame
+      return;
+    }
+    s.capturedLum = shotLum;
+    _acAccept(s, entry);
+  }catch(e){
+    console.warn('AutoCap capture failed:', e);
+    if (_acLive(s)) _acStatus('Capture failed — try again · Gagal, cuba lagi', 0, 'warn');
+  }finally{ s.busy = false; }
+}
+
+function _acAccept(s, entry){
+  if (!_acLive(s)) return;
+  var g = _acGroupOf(s);
+  var res = _addPhotoToGroup(s.gKey, entry, g);
+  if (!res.added){ closeAutoCapture(); renderShipmentList(); return; }
+  s.fails = 0; s.captures++; s.pendingEntry = null; _acShowAnyway(false); _qGateTries = 0;
+  try{ var f = _acEl('acFlash'); if (f){ f.style.opacity = '.55'; setTimeout(function(){ f.style.opacity = '0'; }, 160); } }catch(e){}
+  try{ if (navigator.vibrate) navigator.vibrate(60); }catch(e){}
+  try{
+    if (s.audio){ var o = s.audio.createOscillator(), gn = s.audio.createGain();
+      o.frequency.value = 1200; gn.gain.value = 0.08; o.connect(gn); gn.connect(s.audio.destination); o.start(); o.stop(s.audio.currentTime + 0.07); }
+  }catch(e){}
+  g = res.group;
+  var need = _acPending(g).length, have = (g.photos || []).length;
+  if (have >= need){
+    closeAutoCapture();
+    renderShipmentList();
+    _palletToast('ok', '<b>' + have + ' photo' + (have === 1 ? '' : 's') + ' ready &#10003;</b> Tap <b>Save — Delivered</b> · Tekan Simpan');
+    try{ var card = document.querySelector('.ship-save[data-i="' + _shipGroups.indexOf(g) + '"]'); if (card) card.scrollIntoView({ block: 'center', behavior: 'smooth' }); }catch(e){}
+    return;
+  }
+  s.cooldownMsg = '&#10003; Saved · Next invoice · Invois seterusnya';
+  s.cooldownUntil = Date.now() + AC_COOLDOWN_MS;
+  s.lastShotAt = Date.now();
+  s.changedSinceCapture = false; s.stable = 0;
+  _acHeader(s);
+}
+
+function _acFallback(s, reason, userGesture){
+  console.warn('AutoCap fallback:', reason);
+  var gKey = s ? s.gKey : null;
+  closeAutoCapture(true);
+  _acOff = true;
+  var idx = -1;
+  for (var i = 0; i < _shipGroups.length; i++){ if (_shipGroups[i].key === gKey){ idx = i; break; } }   // by key, not by stale index
+  if (userGesture && idx >= 0){
+    _deliverIdx = idx;   // keep the stop selected so the OS-camera path lands the photo on the same card
+    document.getElementById('shipPhoto').click();   // inside the tap → allowed; onShipPhoto resets _deliverIdx (also on cancel)
+    return;
+  }
+  // Permission denied / camera-not-ready arrive outside a tap; browsers refuse a programmatic file-input click
+  // there, so do NOT leave _deliverIdx armed (it would silence the visibilitychange re-sync all day — review F1).
+  _deliverIdx = -1;
+  _palletToast('warn', 'In-page camera unavailable — tap <b>Take photo</b> again to use the phone camera. · Tekan <b>Ambil foto</b> sekali lagi untuk guna kamera telefon');
+}
+
+function closeAutoCapture(keepDeliverIdx){
+  var s = _ac;
+  if (!s) return;
+  s.closed = true;
+  try{ if (s.raf) cancelAnimationFrame(s.raf); }catch(e){}
+  try{ if (s.torchOn) _acTorch(s, false); }catch(e){}
+  try{ if (s.stream) s.stream.getTracks().forEach(function(t){ t.stop(); }); }catch(e){}
+  try{ s.video.srcObject = null; }catch(e){}
+  try{ if (s.audio && s.audio.close) s.audio.close(); }catch(e){}
+  var ov = _acEl('acOverlay'); if (ov) ov.style.display = 'none';
+  _ac = null;
+  if (!keepDeliverIdx) _deliverIdx = -1;
+}
+// The camera must never keep running behind a backgrounded tab (battery, privacy) or across navigation.
+document.addEventListener('visibilitychange', function(){ if (document.hidden && _ac){ closeAutoCapture(); renderShipmentList(); } });
+window.addEventListener('pagehide', function(){ if (_ac) closeAutoCapture(); });
 
 // STEP 2: Save → submit the buffered photos → mark this customer's invoices delivered
 async function saveDelivery(i){
