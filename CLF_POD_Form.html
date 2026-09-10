@@ -705,8 +705,9 @@ function checkPhotoQuality_(canvas, ctx) {
     var dw, dh;
     if (W >= H) { dw = Math.min(512, W); dh = Math.max(8, Math.round(H * dw / W)); }
     else        { dh = Math.min(512, H); dw = Math.max(8, Math.round(W * dh / H)); }
-    var tc = document.createElement('canvas'); tc.width = dw; tc.height = dh;
-    var tx = tc.getContext('2d'); tx.drawImage(canvas, 0, 0, dw, dh);
+    // [AutoCap v2] reuse scratch canvases — the live camera loop calls this 5x/s; setting width/height clears them
+    var tc = window._qTc || (window._qTc = document.createElement('canvas')); tc.width = dw; tc.height = dh;
+    var tx = tc.getContext('2d', { willReadFrequently: true }); tx.drawImage(canvas, 0, 0, dw, dh);
     var d = tx.getImageData(0, 0, dw, dh).data;
     var n = dw * dh, lum = new Float32Array(n);
     var sum = 0, hot = 0;
@@ -733,8 +734,8 @@ function checkPhotoQuality_(canvas, ctx) {
     // COMPLETENESS ('cut'): 128px-wide luminance map, bright mask = paper (thr = mean + 0.5*std);
     // a border row/col that is >30% bright means the paper runs off-frame. Only clear violations.
     var cw = Math.min(128, dw), ch = Math.max(8, Math.round(dh * cw / dw));
-    var cc = document.createElement('canvas'); cc.width = cw; cc.height = ch;
-    var ccx = cc.getContext('2d'); ccx.drawImage(tc, 0, 0, cw, ch);
+    var cc = window._qCc || (window._qCc = document.createElement('canvas')); cc.width = cw; cc.height = ch;
+    var ccx = cc.getContext('2d', { willReadFrequently: true }); ccx.drawImage(tc, 0, 0, cw, ch);
     var cd = ccx.getImageData(0, 0, cw, ch).data;
     var cn = cw * ch, cl = new Float32Array(cn), cSum = 0;
     for (var i2 = 0, p2 = 0; p2 < cn; i2 += 4, p2++) {
@@ -1537,7 +1538,7 @@ async function _palletGetWrite(action, params){
 
 // Lightweight non-blocking toast (POD form uses alert()/none; pallet failures must NOT block the POD result)
 var _palletToastTmr = null;
-function _palletToast(kind, html){
+function _palletToast(kind, html, pos){   // [AutoCap v2] pos 'top' = show at the top so it never covers the button it points at
   var t = document.getElementById('palletToast');
   if (!t){
     t = document.createElement('div');
@@ -1546,6 +1547,7 @@ function _palletToast(kind, html){
     document.body.appendChild(t);
   }
   t.style.background = (kind === 'ok') ? '#2E7D32' : (kind === 'err' ? '#C62828' : '#854F0B');
+  if (pos === 'top'){ t.style.top = '16px'; t.style.bottom = 'auto'; } else { t.style.top = 'auto'; t.style.bottom = '24px'; }
   t.innerHTML = html;
   t.style.opacity = '1';
   if (_palletToastTmr) clearTimeout(_palletToastTmr);
@@ -2031,8 +2033,15 @@ async function onShipPhoto(input){
 // Every async continuation holds its OWN session object `s` and bails when `_ac !== s` — a
 // close + re-open while a promise is in flight must never leak a stream or land a photo on
 // another stop (review F2).
+// [AutoCap v2 2026-09-10] after the mobile-emulation + compatibility audit: no hang when the camera
+// never delivers a frame (play() is no longer awaited; readiness = frame size AND live track; watchdog on the
+// permission prompt), status row moved OUT of the preview so it can never cover the guide frame, landscape
+// layout, toasts on top so they never cover the button they point at, only definitive errors (permission /
+// no camera) disable the in-page camera for the session, min() fallback for old Safari/WebView, FB/IG in-app
+// browsers go straight to the OS camera, page scroll locked while the camera is open.
 // ══════════════════════════════════════════════════════════════════════════════════════
-var _acOff = false;      // true after any fallback: this session uses the OS camera from then on
+var _acOff = false;      // true after a DEFINITIVE fallback (permission denied / no camera / driver chose): OS camera for the session
+var _acFails = 0;        // soft failures (camera busy, never got a frame, closed while still starting): 2 in a row → _acOff
 var _ac = null;          // live capture session state (null when the overlay is closed)
 var AC_INTERVAL_MS = 200;        // analysis cadence (5 fps) — checkPhotoQuality_ on a ≤640px copy is cheap
 var AC_STABLE_FRAMES = 5;        // consecutive passing+still frames before auto shutter (~1 s)
@@ -2043,13 +2052,28 @@ var AC_MANUAL_HINT_MS = 8000;    // no auto shot after this → remind the drive
 var AC_READY_TIMEOUT_MS = 6000;  // camera stream not ready in time → fallback
 
 function _acSupported(){
-  try{ return !!(window.isSecureContext && navigator.mediaDevices && navigator.mediaDevices.getUserMedia); }catch(e){ return false; }
+  try{
+    // Facebook / Messenger / Instagram in-app browsers (and bare Android WebView) either reject getUserMedia
+    // without a prompt or never answer — the OS camera works there, so skip the in-page camera (audit M5).
+    if (/FBAN|FBAV|FB_IAB|Instagram|Messenger|;\s?wv\)/i.test(navigator.userAgent || '')) return false;
+    return !!(window.isSecureContext && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+  }catch(e){ return false; }
+}
+// a stream is usable only when it delivers real frames AND the track is still live (a stopped track can
+// still report videoWidth 2 on Chromium — emulation finding D1)
+function _acReady(s){
+  try{ return !!(s && s.video && s.video.videoWidth > 4 && s.video.videoHeight > 4 && s.track && s.track.readyState === 'live'); }catch(e){ return false; }
 }
 function _acPending(g){ return (g && g.invs ? g.invs : []).filter(function(x){ return String(x.status).toLowerCase() !== 'delivered' && !x._untag; }); }
 function _acGroupOf(s){ if (!s) return null; for (var i=0;i<_shipGroups.length;i++){ if (_shipGroups[i].key === s.gKey) return _shipGroups[i]; } return null; }
 function _acLive(s){ return !!(s && _ac === s && !s.closed); }   // this session is still the one on screen
 
 function _acBuild(){
+  if (!_acEl('acStyle')){   // landscape: the stage is short, so a portrait-shaped frame cannot fit — use a wide frame and a slimmer header (D4)
+    var st = document.createElement('style'); st.id = 'acStyle';
+    st.textContent = '@media (orientation: landscape){ #acGuide{ width:72% !important; height:64% !important; top:60% !important; } #acHeader{ padding:6px 12px 4px !important; } #acTitle{ font-size:14px !important; } #acSub{ display:none !important; } #acStatus{ font-size:13px !important; padding:6px 10px !important; } }';
+    document.head.appendChild(st);
+  }
   var ov = document.createElement('div');
   ov.id = 'acOverlay';
   // top/left/right/bottom instead of `inset` and no `aspect-ratio`: older Safari (<14.5 / <15) still passes _acSupported (review F6)
@@ -2057,15 +2081,20 @@ function _acBuild(){
   ov.innerHTML =
       '<div id="acStage" style="position:relative;flex:1;overflow:hidden;background:#000;">'
     +   '<video id="acVideo" playsinline muted autoplay style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;background:#000;"></video>'
-    +   '<div id="acGuide" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(86%, 56vh);height:min(74%, 73vh);border:3px solid rgba(255,255,255,.92);border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);pointer-events:none;transition:border-color .2s;"></div>'
+    // width/height are declared twice on purpose: plain % first as the fallback for browsers without CSS min()
+    // (iOS 13.0-13.3, old Huawei/WebView), then the min() form which wins where supported (audit M1).
+    +   '<div id="acGuide" style="position:absolute;left:50%;top:54%;transform:translate(-50%,-50%);width:86%;height:70%;width:min(86%, 56vh);height:min(70%, 66vh);border:3px solid rgba(255,255,255,.92);border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);pointer-events:none;transition:border-color .2s;"></div>'
     +   '<div id="acFlash" style="position:absolute;top:0;left:0;right:0;bottom:0;background:#2E7D32;opacity:0;pointer-events:none;transition:opacity .15s;"></div>'
-    +   '<div style="position:absolute;top:0;left:0;right:0;padding:12px 14px 10px;background:linear-gradient(rgba(0,0,0,.75),rgba(0,0,0,0));display:flex;align-items:flex-start;gap:10px;">'
+    +   '<div id="acHeader" style="position:absolute;top:0;left:0;right:0;padding:12px 14px 10px;background:linear-gradient(rgba(0,0,0,.75),rgba(0,0,0,0));display:flex;align-items:flex-start;gap:10px;">'
     +     '<div style="flex:1;min-width:0;"><div id="acTitle" style="font-size:17px;font-weight:800;line-height:1.25;"></div><div id="acSub" style="font-size:12px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;"></div></div>'
     +     '<button type="button" id="acTorch" style="display:none;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:8px;padding:8px 10px;font-size:15px;line-height:1;cursor:pointer;">&#128294;</button>'
     +     '<button type="button" id="acClose" aria-label="Close" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:8px;padding:8px 13px;font-size:18px;line-height:1;cursor:pointer;">&times;</button>'
     +   '</div>'
-    +   '<div id="acStatus" style="position:absolute;left:14px;right:14px;bottom:26px;text-align:center;font-size:14.5px;font-weight:700;line-height:1.4;padding:9px 12px;border-radius:10px;background:rgba(0,0,0,.6);"></div>'
-    +   '<div style="position:absolute;left:14px;right:14px;bottom:14px;height:5px;border-radius:3px;background:rgba(255,255,255,.25);overflow:hidden;"><div id="acBarFill" style="height:100%;width:0;background:#4ADE80;transition:width .18s;"></div></div>'
+    + '</div>'
+    // status + progress live BELOW the preview, never on top of the guide frame (emulation finding D3)
+    + '<div id="acStatusRow" style="padding:8px 14px 6px;background:#0B1F3A;">'
+    +   '<div id="acStatus" style="text-align:center;font-size:14.5px;font-weight:700;line-height:1.4;padding:8px 12px;border-radius:10px;background:rgba(255,255,255,.08);min-height:2.8em;"></div>'
+    +   '<div style="margin-top:6px;height:5px;border-radius:3px;background:rgba(255,255,255,.25);overflow:hidden;"><div id="acBarFill" style="height:100%;width:0;background:#4ADE80;transition:width .18s;"></div></div>'
     + '</div>'
     + '<div id="acAnywayRow" style="display:none;padding:8px 16px 0;background:#0B1F3A;"><button type="button" id="acAnyway" style="width:100%;padding:12px;background:#fff;color:#854F0B;border:1.5px solid #E0C68A;border-radius:10px;font-family:\'DM Sans\',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">&#9888;&#65039; Upload anyway &middot; Tetap hantar</button></div>'
     + '<div style="padding:12px 16px 14px;background:#0B1F3A;display:flex;align-items:center;justify-content:space-between;gap:12px;">'
@@ -2114,7 +2143,8 @@ async function openAutoCapture(i){
   var ov = _acEl('acOverlay') || _acBuild();
   ov.style.display = 'flex';
   _acShowAnyway(false);
-  var s = { gKey: g.key, video: _acEl('acVideo'), stream: null, raf: 0, lastTick: 0, stable: 0, prevLum: null, capturedLum: null,
+  try{ document.documentElement.style.overflow = 'hidden'; document.body.style.overflow = 'hidden'; }catch(e){}   // no page scroll behind the camera (audit M7)
+  var s = { gKey: g.key, video: _acEl('acVideo'), stream: null, raf: 0, lastTick: 0, stable: 0, prevLum: null, capturedLum: null, ready: false,
             cooldownUntil: 0, cooldownMsg: null, changedSinceCapture: true, busy: false, fails: 0, pendingEntry: null, closed: false,
             openedAt: Date.now(), lastShotAt: 0, captures: 0, torchOn: false, track: null, audio: null,
             canvas: document.createElement('canvas'), mini: document.createElement('canvas') };
@@ -2126,36 +2156,43 @@ async function openAutoCapture(i){
   _acHeader(s);
   _acStatus('Starting camera… · Membuka kamera…', 0);
   var stream = null;
+  // the permission prompt / a wedged WebView can leave getUserMedia pending forever — tell the driver the way out (audit M6)
+  var wd = setTimeout(function(){ if (_acLive(s) && !s.stream) _acStatus('Camera not responding — tap <u>Use phone camera</u> below · Kamera tidak respon — tekan <u>Guna kamera telefon</u>', 0, 'warn'); }, 15000);
   try{
     stream = await navigator.mediaDevices.getUserMedia({ audio: false,
       video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } });
+    clearTimeout(wd);
     if (!_acLive(s)){ try{ stream.getTracks().forEach(function(t){ t.stop(); }); }catch(e){} return; }   // closed / re-opened meanwhile
     s.stream = stream;
+    try{ s.track = stream.getVideoTracks()[0] || null; }catch(e){ s.track = null; }
     s.video.srcObject = stream;
-    try{ await s.video.play(); }catch(e){ /* autoplay attr covers most; ready check below */ }
+    // NOT awaited: on a stream that never delivers a frame play() stays pending forever and the timeout below
+    // would never run (emulation finding D1). The readiness loop is the only gate.
+    try{ var pp = s.video.play(); if (pp && pp.catch) pp.catch(function(){}); }catch(e){}
     var t0 = Date.now();
-    while (_acLive(s) && !(s.video.videoWidth > 0) && Date.now() - t0 < AC_READY_TIMEOUT_MS){
+    while (_acLive(s) && !_acReady(s) && Date.now() - t0 < AC_READY_TIMEOUT_MS){
       await new Promise(function(r){ setTimeout(r, 100); });
     }
     if (!_acLive(s)) return;   // closeAutoCapture already stopped s.stream
-    if (!(s.video.videoWidth > 0)) throw new Error('camera not ready');
+    if (!_acReady(s)) throw new Error('camera not ready');
+    s.ready = true;
     try{
-      var track = stream.getVideoTracks()[0];
-      var caps = (track && track.getCapabilities) ? track.getCapabilities() : {};
-      if (caps && caps.torch){ s.track = track; _acEl('acTorch').style.display = 'inline-block'; }
+      var caps = (s.track && s.track.getCapabilities) ? s.track.getCapabilities() : {};
+      if (caps && caps.torch){ s.torchOK = true; _acEl('acTorch').style.display = 'inline-block'; }
     }catch(e){}
     _acStatus('Put the invoice inside the frame · Letak invois dalam bingkai', 0);
     s.lastTick = 0;
     s.raf = requestAnimationFrame(function(){ _acTick(s); });
   }catch(err){
+    clearTimeout(wd);
     console.warn('AutoCap unavailable:', err);
     if (stream){ try{ stream.getTracks().forEach(function(t){ t.stop(); }); }catch(e){} }
-    if (_acLive(s)) _acFallback(s, (err && err.name) || 'error', false);   // a stale rejection must not touch a newer session
+    if (_acLive(s)) _acFallback(s, (err && err.name) || (err && err.message) || 'error', false);   // a stale rejection must not touch a newer session
   }
 }
 
 function _acTorch(s, on){
-  if (!s || !s.track) return;
+  if (!s || !s.track || !s.torchOK) return;
   try{ s.track.applyConstraints({ advanced: [{ torch: !!on }] }).then(function(){ s.torchOn = !!on; var b = _acEl('acTorch'); if (b && _acLive(s)) b.style.background = on ? '#FBBF24' : 'rgba(255,255,255,.15)'; }).catch(function(){}); }catch(e){}
 }
 
@@ -2166,6 +2203,7 @@ function _acTick(s){
   if (now - s.lastTick < AC_INTERVAL_MS || s.busy) return;
   s.lastTick = now;
   var v = s.video;
+  if (s.track && s.track.readyState !== 'live'){ _acFallback(s, 'camera stopped', false); return; }   // another app took the camera
   if (!(v.videoWidth > 0)) return;
   try{
     // 1) working copy ≤640px (same scale class the after-the-fact gate uses)
@@ -2240,6 +2278,7 @@ async function _acCapture(s, manual){
       return;
     }
     s.capturedLum = shotLum;
+    try{ entry.name = 'autocap_' + Date.now() + ((entry.name || '').match(/_scan[CF]/) || [''])[0] + '.jpg'; }catch(e){}   // office can tell auto shots apart; keeps compressImage's _scanC/_scanF marker
     _acAccept(s, entry);
   }catch(e){
     console.warn('AutoCap capture failed:', e);
@@ -2264,7 +2303,7 @@ function _acAccept(s, entry){
   if (have >= need){
     closeAutoCapture();
     renderShipmentList();
-    _palletToast('ok', '<b>' + have + ' photo' + (have === 1 ? '' : 's') + ' ready &#10003;</b> Tap <b>Save — Delivered</b> · Tekan Simpan');
+    _palletToast('ok', '<b>' + have + ' photo' + (have === 1 ? '' : 's') + ' ready &#10003;</b> Tap <b>Save — Delivered</b> · Tekan Simpan', 'top');   // top: never covers the Save button (D5)
     try{ var card = document.querySelector('.ship-save[data-i="' + _shipGroups.indexOf(g) + '"]'); if (card) card.scrollIntoView({ block: 'center', behavior: 'smooth' }); }catch(e){}
     return;
   }
@@ -2278,8 +2317,12 @@ function _acAccept(s, entry){
 function _acFallback(s, reason, userGesture){
   console.warn('AutoCap fallback:', reason);
   var gKey = s ? s.gKey : null;
+  if (s) s.fellBack = true;   // closeAutoCapture must not count this close a second time
   closeAutoCapture(true);
-  _acOff = true;
+  // Only DEFINITIVE reasons switch this session to the OS camera for good. Camera busy / slow start /
+  // stream died are retried on the next tap; two soft failures in a row also switch (audit M3).
+  if (/NotAllowed|NotFound|Security|OverconstrainedError|driver chose/i.test(String(reason || ''))){ _acOff = true; }
+  else { _acFails++; if (_acFails >= 2) _acOff = true; }
   var idx = -1;
   for (var i = 0; i < _shipGroups.length; i++){ if (_shipGroups[i].key === gKey){ idx = i; break; } }   // by key, not by stale index
   if (userGesture && idx >= 0){
@@ -2290,13 +2333,23 @@ function _acFallback(s, reason, userGesture){
   // Permission denied / camera-not-ready arrive outside a tap; browsers refuse a programmatic file-input click
   // there, so do NOT leave _deliverIdx armed (it would silence the visibilitychange re-sync all day — review F1).
   _deliverIdx = -1;
-  _palletToast('warn', 'In-page camera unavailable — tap <b>Take photo</b> again to use the phone camera. · Tekan <b>Ambil foto</b> sekali lagi untuk guna kamera telefon');
+  renderShipmentList();   // photos captured before the camera died must show on the card (review S1)
+  _palletToast('warn', _acOff
+    ? 'In-page camera unavailable — tap <b>Take photo</b> again to use the phone camera. · Tekan <b>Ambil foto</b> sekali lagi untuk guna kamera telefon'
+    : 'Camera stopped — tap <b>Take photo</b> to try again. · Kamera terhenti — tekan <b>Ambil foto</b> untuk cuba lagi', 'top');
 }
 
 function closeAutoCapture(keepDeliverIdx){
   var s = _ac;
   if (!s) return;
   s.closed = true;
+  try{ document.documentElement.style.overflow = ''; document.body.style.overflow = ''; }catch(e){}
+  // closed with × while the camera never got going (D2): count it, so a phone whose camera never
+  // delivers frames ends up on the OS camera after the second try instead of stalling every stop
+  if (!s.fellBack){
+    if (!s.ready && Date.now() - s.openedAt > 2500){ _acFails++; if (_acFails >= 2) _acOff = true; }
+    else if (s.ready) _acFails = 0;
+  }
   try{ if (s.raf) cancelAnimationFrame(s.raf); }catch(e){}
   try{ if (s.torchOn) _acTorch(s, false); }catch(e){}
   try{ if (s.stream) s.stream.getTracks().forEach(function(t){ t.stop(); }); }catch(e){}
@@ -2307,8 +2360,8 @@ function closeAutoCapture(keepDeliverIdx){
   if (!keepDeliverIdx) _deliverIdx = -1;
 }
 // The camera must never keep running behind a backgrounded tab (battery, privacy) or across navigation.
-document.addEventListener('visibilitychange', function(){ if (document.hidden && _ac){ closeAutoCapture(); renderShipmentList(); } });
-window.addEventListener('pagehide', function(){ if (_ac) closeAutoCapture(); });
+document.addEventListener('visibilitychange', function(){ if (document.hidden && _ac){ _ac.fellBack = true; closeAutoCapture(); renderShipmentList(); } });   // fellBack: a call/app-switch is not a camera failure (review N1)
+window.addEventListener('pagehide', function(){ if (_ac){ _ac.fellBack = true; closeAutoCapture(); } });
 
 // STEP 2: Save → submit the buffered photos → mark this customer's invoices delivered
 async function saveDelivery(i){
