@@ -62,7 +62,7 @@
   .in{width:100%;height:48px;border:1.5px solid var(--line);border-radius:10px;padding:0 12px;font:inherit;font-size:16px;color:var(--ink);background:#fff}
   .in:focus{outline:none;border-color:var(--navy)}
   .note{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--ink-2);margin:12px 2px 0}
-  .note svg{width:16px;height:16px;margin-top:1px;color:var(--amber)}
+  .note svg{width:16px;height:16px;margin-top:1px;color:var(--navy)}
 
   /* progress */
   .prog{display:flex;align-items:flex-end;justify-content:space-between;margin:18px 2px 6px}
@@ -245,7 +245,7 @@ function render(){
         + '<label><div class="fl">' + T('Second driver (only if two)', 'Pemandu kedua (jika dua)') + '</div><input class="in" placeholder="' + T('Staff ID or name', 'ID staf atau nama') + '"></label>'
         + '<label><div class="fl">' + T('Lorry', 'Lori') + '</div><select class="in"><option>' + esc(TRIP.lorry) + '</option></select></label></div>' : '')
     + '</section>'
-    + '<div class="note">' + ic('info') + '<span>' + T('Upload the signed invoice on the same day. Late or missing = penalty.', 'Muat naik invois bertandatangan pada hari yang sama. Lewat atau tiada = penalti.') + '</span></div>'
+    + '<div class="note">' + ic('info') + '<span>' + T('Please upload the signed invoice on the same day. Thank you!', 'Sila muat naik invois bertandatangan pada hari yang sama. Terima kasih!') + '</span></div>'
     // progress + search
     + '<div class="prog"><div class="n">' + done + '<span> / ' + STOPS.length + ' ' + T('stops done', 'kedai siap') + '</span></div><div class="s">'
     + (fail ? fail + ' ' + T('problem', 'masalah') + ' · ' : '') + left + ' ' + T('to go', 'lagi') + '</div></div>'
