@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ms" translate="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="google" content="notranslate">
+<meta name="theme-color" content="#141C77">
+<title>CLF POD · Draf reka bentuk</title>
+<!--
+  Round 2 DESIGN DRAFT (2026-10-23) — sample data only, talks to no server, saves nothing.
+  Palette from the official logo: navy #141C77, red #FC091B, green #87C329 (sampled from the PNGs).
+  The logo is the one place Chinese may appear (as an image); page text stays BM / EN only.
+-->
+<style>
+  :root{
+    --navy:#141C77; --navy-2:#0E1458; --navy-50:#EEF0FA;
+    --red:#FC091B; --red-700:#C8101E; --red-50:#FEF2F2;
+    --green:#15803D; --green-50:#ECFDF3;          /* Save / done (the logo's lime is too light for white text) */
+    --lime:#87C329;                                /* logo green: online dot only */
+    --amber:#B45309; --amber-50:#FFFBEB;
+    --ink:#0F172A; --ink-2:#475569; --ink-3:#94A3B8;
+    --line:#E2E8F0; --bg:#FFFFFF; --bg-2:#F4F6FA;
+    --r:12px;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg-2)}
+  body{font:15px/1.45 var(--font);color:var(--ink);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+  button{font:inherit;color:inherit;cursor:pointer}
+  [hidden]{display:none!important}
+  .app{max-width:480px;margin:0 auto;min-height:100vh;background:var(--bg);padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+  svg.i{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+  /* draft marker — this page is a design preview, never the real form */
+  .draft{background:#FEF3C7;color:#92400E;font-size:12px;font-weight:700;text-align:center;padding:4px 10px;letter-spacing:.3px}
+
+  /* app bar: official logo · POD · branch · online · language */
+  .bar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:10px;min-height:56px;padding:8px 12px;
+       padding-top:max(8px,env(safe-area-inset-top));background:var(--navy);color:#fff}
+  .bar img{height:30px;width:auto;display:block}
+  .bar .sep{width:1px;height:26px;background:rgba(255,255,255,.28)}
+  .bar .ttl{font-size:17px;font-weight:800;letter-spacing:.6px}
+  .bar .br{font-size:12px;font-weight:700;padding:3px 8px;border-radius:999px;background:rgba(255,255,255,.16);white-space:nowrap}
+  .bar .sp{flex:1}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--lime);box-shadow:0 0 0 3px rgba(135,195,41,.28)}
+  .seg{display:inline-flex;padding:2px;border-radius:999px;border:1px solid rgba(255,255,255,.5)}
+  .seg button{border:0;background:none;color:#fff;font-weight:800;font-size:13px;min-width:40px;height:32px;border-radius:999px}
+  .seg button.on{background:#fff;color:var(--navy)}
+
+  .wrap{padding:12px 14px 0}
+  /* trip: folds into one line once date / lorry / driver are set */
+  .trip{border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;background:var(--bg)}
+  .trip-row{display:flex;align-items:center;gap:12px}
+  .trip-ic{width:40px;height:40px;border-radius:10px;background:var(--navy-50);color:var(--navy);display:flex;align-items:center;justify-content:center;flex:none}
+  .trip-main{flex:1;min-width:0}
+  .trip-l1{font-size:17px;font-weight:800}
+  .trip-l2{font-size:13px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .link{border:0;background:none;color:var(--navy);font-weight:700;font-size:15px;min-height:44px;padding:0 6px}
+  .form{margin-top:12px;display:grid;gap:12px}
+  .fl{font-size:13px;font-weight:700;color:var(--ink-2);margin-bottom:4px}
+  .in{width:100%;height:48px;border:1.5px solid var(--line);border-radius:10px;padding:0 12px;font:inherit;font-size:16px;color:var(--ink);background:#fff}
+  .in:focus{outline:none;border-color:var(--navy)}
+  .note{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--ink-2);margin:12px 2px 0}
+  .note svg{width:16px;height:16px;margin-top:1px;color:var(--amber)}
+
+  /* progress */
+  .prog{display:flex;align-items:flex-end;justify-content:space-between;margin:18px 2px 6px}
+  .prog .n{font-size:22px;font-weight:800;line-height:1}
+  .prog .n span{font-size:15px;font-weight:600;color:var(--ink-2)}
+  .prog .s{font-size:13px;color:var(--ink-2)}
+  .track{height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin:0 2px 12px}
+  .track i{display:block;height:100%;background:var(--green);border-radius:99px;transition:width .3s}
+  .search{display:flex;align-items:center;gap:8px;height:48px;border:1.5px solid var(--line);border-radius:10px;padding:0 12px;color:var(--ink-3);margin-bottom:12px}
+  .search input{flex:1;border:0;font:inherit;font-size:16px;color:var(--ink);background:none;outline:none;min-width:0}
+
+  /* stop cards */
+  .card{border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px;background:var(--bg)}
+  .card.done{background:var(--bg-2);border-color:transparent}
+  .c-top{display:flex;align-items:flex-start;gap:10px}
+  .c-name{flex:1;font-size:17px;font-weight:800;line-height:1.25}
+  .c-meta{font-size:13px;color:var(--ink-2);margin-top:2px}
+  .pill{font-size:12px;font-weight:800;padding:4px 9px;border-radius:999px;white-space:nowrap}
+  .p-wait{background:var(--amber-50);color:var(--amber)}
+  .p-done{background:var(--green-50);color:var(--green)}
+  .p-fail{background:var(--red-50);color:var(--red-700)}
+  .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px;margin:12px 0 10px}
+  .chip{height:34px;border-radius:8px;border:1.5px solid var(--navy);background:var(--navy-50);color:var(--navy);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:4px;padding:0 6px;white-space:nowrap;overflow:hidden}
+  .chip svg{width:14px;height:14px}
+  .chip.off{border:1.5px dashed var(--ink-3);background:#fff;color:var(--ink-3);text-decoration:line-through}
+  .count{font-size:13px;font-weight:700;margin-bottom:10px}
+  .count.ok{color:var(--green)} .count.no{color:var(--ink-2)}
+  .count em{font-style:normal;font-weight:600;color:var(--ink-3)}
+  .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .th{position:relative;width:56px;height:56px;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:#fff}
+  .th img{width:100%;height:100%;object-fit:cover}
+  .th button{position:absolute;top:2px;right:2px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(15,23,42,.72);color:#fff;font-size:15px;line-height:1}
+  .acts{display:flex;gap:8px}
+  .btn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:54px;border-radius:12px;border:0;font-weight:800;font-size:15px;padding:0 16px}
+  .btn svg{width:24px;height:24px}
+  .b-pri{flex:1;background:var(--navy);color:#fff}
+  .b-save{flex:1;background:var(--green);color:#fff}
+  .b-ghost{background:#fff;color:var(--ink);border:1.5px solid var(--line)}
+  .b-ghost svg{width:20px;height:20px;color:var(--red-700)}
+  .b-full{flex:1}
+  .pallet{display:flex;align-items:center;justify-content:space-between;width:100%;border:0;background:none;color:var(--ink-2);font-size:13px;font-weight:700;min-height:40px;margin-top:6px;padding:0 2px}
+  .pallet svg{width:18px;height:18px}
+  .pfields{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+  .pfields .in{height:44px}
+  .done-line{font-size:13px;color:var(--green);font-weight:700;margin-top:6px}
+  .done-inv{font-size:12px;color:var(--ink-3);margin-top:4px;word-break:break-all}
+
+  /* problem mode */
+  .prob{border:1.5px solid #F5C2C7;background:var(--red-50);border-radius:10px;padding:12px;margin-top:12px}
+  .prob-h{display:flex;align-items:center;gap:8px;font-weight:800;color:var(--red-700);margin-bottom:10px}
+  .prob-h svg{width:20px;height:20px}
+  .reasons{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+  .reason{min-height:50px;border-radius:10px;border:1.5px solid var(--line);background:#fff;font-weight:800;font-size:15px}
+  .proof{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;min-height:50px;border-radius:10px;border:1.5px dashed var(--red-700);background:#fff;color:var(--red-700);font-weight:800}
+  .proof-ok{display:flex;align-items:center;gap:12px;font-size:13px;font-weight:700;color:var(--green)}
+  .back{width:100%;display:flex;align-items:center;justify-content:center;gap:6px;min-height:46px;margin-top:6px;border:0;background:none;color:var(--ink-2);font-weight:800}
+
+  /* full-screen layers: camera, scan check */
+  .layer{position:fixed;top:0;left:0;right:0;bottom:0;z-index:60;display:flex;flex-direction:column;background:#000;color:#fff}
+  .cam-head{position:absolute;top:0;left:0;right:0;z-index:2;display:flex;gap:10px;align-items:flex-start;padding:12px 14px;
+            padding-top:max(12px,env(safe-area-inset-top));background:linear-gradient(rgba(0,0,0,.7),rgba(0,0,0,0))}
+  .cam-t{font-size:18px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cam-s{font-size:13px;opacity:.85}
+  .x{flex:none;width:44px;height:44px;border-radius:10px;border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.14);color:#fff;font-size:22px;line-height:1}
+  .stage{position:relative;flex:1;overflow:hidden;background:radial-gradient(120% 90% at 50% 60%,#8d7f62 0%,#5b5141 55%,#2a251d 100%)}
+  .paper{position:absolute;left:50%;top:56%;width:62%;transform:translate(-50%,-50%) rotate(-2.5deg);box-shadow:0 18px 30px rgba(0,0,0,.45)}
+  .guide{position:absolute;left:50%;top:56%;transform:translate(-50%,-50%);border:3px solid #fff;border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.42);transition:border-color .2s}
+  .guide.ok{border-color:#4ADE80}
+  .flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .15s}
+  .dock{background:var(--navy-2);padding:8px 14px 0}
+  .status{height:52px;border-radius:10px;background:rgba(255,255,255,.09);display:flex;align-items:center;justify-content:center;text-align:center;font-weight:800;font-size:15px;padding:0 12px}
+  .pbar{height:5px;border-radius:3px;background:rgba(255,255,255,.22);margin-top:6px;overflow:hidden}
+  .pbar i{display:block;height:100%;width:0;background:#4ADE80;transition:width .2s}
+  .shutrow{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:12px 2px 24px;padding-bottom:max(24px,calc(env(safe-area-inset-bottom) + 12px))}
+  .torch{justify-self:start;width:48px;height:48px;border-radius:50%;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.1);color:#fff;display:flex;align-items:center;justify-content:center}
+  .shutter{width:72px;height:72px;border-radius:50%;border:5px solid #C9D6E3;background:#fff}
+  .cnt{justify-self:end;min-width:58px;text-align:center;padding:7px 12px;border-radius:999px;background:rgba(255,255,255,.14);font-weight:800}
+  .chk{background:var(--navy-2)}
+  .chk-h{display:flex;align-items:center;gap:10px;padding:12px 14px 8px;padding-top:max(12px,env(safe-area-inset-top))}
+  .chk-t{flex:1;font-size:18px;font-weight:800}
+  .tag{display:inline-block;margin-top:4px;font-size:12px;font-weight:800;padding:3px 9px;border-radius:999px;background:var(--green);color:#fff}
+  .chk-stage{flex:1;min-height:0;margin:0 12px;border-radius:12px;background:#1d2a5e;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .chk-stage svg{max-height:100%;max-width:92%;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+  .chk-hint{text-align:center;font-size:14px;color:#D5DCF0;padding:10px 14px 0}
+  .chk-acts{display:flex;gap:8px;padding:10px 12px 24px;padding-bottom:max(24px,calc(env(safe-area-inset-bottom) + 12px))}
+  .chk-acts button{flex:1;min-height:54px;border-radius:12px;border:0;font-weight:800;font-size:14px;line-height:1.2;padding:0 8px;background:#fff;color:var(--ink)}
+  .chk-acts .use{flex:1.3;background:var(--green);color:#fff}
+
+  /* bottom sheet + toast + saving */
+  .scrim{position:fixed;top:0;left:0;right:0;bottom:0;z-index:70;background:rgba(15,23,42,.55);display:flex;align-items:flex-end;justify-content:center}
+  .sheet{width:100%;max-width:480px;background:#fff;border-radius:18px 18px 0 0;padding:20px 18px;padding-bottom:max(20px,calc(env(safe-area-inset-bottom) + 14px))}
+  .sheet h3{font-size:17px;font-weight:800;line-height:1.35}
+  .sheet p{font-size:15px;color:var(--red-700);margin-top:6px}
+  .sheet .row{display:flex;gap:10px;margin-top:16px}
+  .sheet .row button{flex:1;min-height:52px;border-radius:12px;font-weight:800;font-size:15px}
+  .sheet .no{background:#fff;border:1.5px solid var(--line)}
+  .sheet .yes{flex:1.3!important;background:var(--red-700);color:#fff;border:0}
+  .toast{position:fixed;left:0;right:0;margin:0 auto;width:fit-content;max-width:calc(100% - 32px);top:calc(92px + env(safe-area-inset-top));z-index:80;padding:12px 16px;border-radius:12px;background:var(--ink);color:#fff;font-size:15px;font-weight:700;box-shadow:0 10px 24px rgba(15,23,42,.3);display:flex;gap:8px;align-items:center}
+  .toast svg{color:#4ADE80}
+  .saving{position:fixed;top:0;left:0;right:0;bottom:0;z-index:75;background:rgba(20,28,119,.92);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;font-weight:800;font-size:17px}
+  .spin{width:42px;height:42px;border-radius:50%;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;animation:sp .8s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.6)}50%{box-shadow:0 0 0 14px rgba(255,255,255,0)}}
+  .shutter.pulse{animation:pulse 1.3s ease-in-out infinite}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+// ═══════════ Round 2 design draft — sample data, no server, nothing saved ═══════════
+var LANG = 'bm';
+function T(en, bm){ return LANG === 'en' ? en : bm; }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); }
+
+// icons (stroke style, 24px grid)
+var I = {
+  cam:   '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
+  warn:  '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  check: '<polyline points="20 6 9 17 4 12"/>',
+  back:  '<polyline points="15 18 9 12 15 6"/>',
+  down:  '<polyline points="6 9 12 15 18 9"/>',
+  search:'<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+  truck: '<rect x="1" y="3" width="15" height="13" rx="1"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>',
+  info:  '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>',
+  torch: '<path d="M8 2h8l-2 6v12a2 2 0 0 1-4 0V8z"/><line x1="12" y1="12" x2="12" y2="14"/>',
+  box:   '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/>'
+};
+function ic(k, cls){ return '<svg class="i' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" aria-hidden="true">' + I[k] + '</svg>'; }
+
+// a drawn A4 invoice — no real customer, no real text
+var PAPER = '<svg viewBox="0 0 210 297" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">'
+  + '<rect width="210" height="297" fill="#fff"/>'
+  + '<rect x="58" y="16" width="94" height="7" rx="1" fill="#1f2937"/><rect x="72" y="27" width="66" height="3" fill="#9ca3af"/><rect x="80" y="33" width="50" height="3" fill="#9ca3af"/>'
+  + '<rect x="14" y="52" width="38" height="4" fill="#374151"/>' + [60,66,72,78].map(function(y,i){ return '<rect x="14" y="' + y + '" width="' + [72,64,58,46][i] + '" height="3" fill="#9ca3af"/>'; }).join('')
+  + '<rect x="122" y="48" width="74" height="40" fill="none" stroke="#374151" stroke-width=".8"/>' + [56,63,70,77].map(function(y){ return '<rect x="126" y="' + y + '" width="28" height="3" fill="#9ca3af"/><rect x="160" y="' + y + '" width="30" height="3" fill="#6b7280"/>'; }).join('')
+  + '<g fill="#111">' + [0,2,3,5,8,9,11,14,15,17,19,22,23,26,28,29,31,34,36,37,40,42,45,46,48,51,53,56,57,60,62,64,67,68].map(function(x){ return '<rect x="' + (124 + x) + '" y="92" width="1.3" height="11"/>'; }).join('') + '</g>'
+  + '<rect x="14" y="112" width="182" height="8" fill="#e5e7eb"/>' + [124,133,142,151,160,169,178,187].map(function(y){ return '<rect x="16" y="' + y + '" width="22" height="3" fill="#9ca3af"/><rect x="44" y="' + y + '" width="86" height="3" fill="#cbd5e1"/><rect x="150" y="' + y + '" width="18" height="3" fill="#9ca3af"/><rect x="176" y="' + y + '" width="18" height="3" fill="#6b7280"/>'; }).join('')
+  + '<rect x="14" y="204" width="182" height="16" fill="none" stroke="#374151" stroke-width=".8"/><rect x="18" y="210" width="40" height="4" fill="#374151"/><rect x="160" y="210" width="32" height="4" fill="#111"/>'
+  + '<circle cx="66" cy="252" r="14" fill="none" stroke="#2563eb" stroke-width="1.3" opacity=".6"/><circle cx="66" cy="252" r="9.5" fill="none" stroke="#2563eb" stroke-width=".8" opacity=".6"/>'
+  + '<path d="M26 258c7-12 13 7 19-2s9-12 15 1 7 5 13-6" stroke="#1e3a8a" fill="none" stroke-width="1.5" stroke-linecap="round"/>'
+  + '<rect x="14" y="268" width="66" height=".8" fill="#374151"/><rect x="128" y="268" width="66" height=".8" fill="#374151"/><rect x="128" y="258" width="44" height="3" fill="#9ca3af"/>'
+  + '</svg>';
+var PAPER_URL = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(PAPER);
+
+// ── sample route (fictional shops) ──
+function inv(n, from){ var a = []; for (var k = 0; k < n; k++) a.push({ no: 'DO-' + (from + k), on: true }); return a; }
+var TRIP = { date: '2026-10-23', lorry: 'VHT 4642', driver: 'Ali Bin Ahmad', staff: 'TER 507' };
+var STOPS = [
+  { name: 'KEDAI RUNCIT AMAN',        area: 'Temerloh', invs: inv(2, 10021),  photos: 0, st: 'wait' },
+  { name: 'PASARAYA MAJU JAYA',       area: 'Mentakab', invs: inv(3, 10031),  photos: 3, st: 'wait' },
+  { name: 'AGRO MART BENTONG',        area: 'Bentong',  invs: inv(12, 10061), photos: 0, st: 'wait' },
+  { name: 'KEDAI SERBANEKA HARAPAN',  area: 'Karak',    invs: inv(2, 10051),  photos: 0, st: 'fail', reason: 'Shop closed' },
+  { name: 'MINI MARKET SRI PAHANG',   area: 'Lanchang', invs: inv(1, 10041),  photos: 1, st: 'done', at: '10:42' }
+];
+var REASONS = [['Shop closed', 'Kedai tutup'], ['Rejected', 'Ditolak'], ['Partial', 'Sebahagian'], ['Reschedule', 'Jadual semula']];
+function rlabel(v){ for (var k = 0; k < REASONS.length; k++) if (REASONS[k][0] === v) return T(REASONS[k][0], REASONS[k][1]); return v; }
+var UI = { tripOpen: false, prob: {}, proof: {}, pallet: {}, q: '' };
+
+function need(s){ return s.invs.filter(function(x){ return x.on; }).length; }
+function dateLabel(){ var d = new Date(TRIP.date + 'T00:00:00'); return d.toLocaleDateString(LANG === 'en' ? 'en-GB' : 'ms-MY', { weekday: 'long', day: 'numeric', month: 'short' }); }
+
+function render(){
+  document.documentElement.lang = LANG === 'en' ? 'en' : 'ms';
+  document.title = 'CLF POD · ' + T('Design draft', 'Draf reka bentuk');
+  var done = STOPS.filter(function(s){ return s.st === 'done'; }).length, fail = STOPS.filter(function(s){ return s.st === 'fail'; }).length;
+  var left = STOPS.length - done - fail;
+  var h = '<div class="draft">' + T('DESIGN DRAFT · sample data · nothing is saved', 'DRAF REKA BENTUK · data contoh · tiada apa disimpan') + '</div>'
+    + '<header class="bar"><img src="brand/clf-logo-horizontal-white.png" alt="CLF Trading"><span class="sep"></span><span class="ttl">POD</span><span class="br">Mentakab</span><span class="sp"></span>'
+    + '<span class="dot" title="' + T('Online', 'Dalam talian') + '"></span>'
+    + '<span class="seg" role="group" aria-label="Bahasa / Language"><button data-l="bm" class="' + (LANG === 'bm' ? 'on' : '') + '">BM</button><button data-l="en" class="' + (LANG === 'en' ? 'on' : '') + '">EN</button></span></header>'
+    + '<main class="wrap">'
+    // trip (folded)
+    + '<section class="trip"><div class="trip-row"><div class="trip-ic">' + ic('truck') + '</div>'
+    + '<div class="trip-main"><div class="trip-l1">' + esc(TRIP.lorry) + '</div><div class="trip-l2">' + esc(dateLabel()) + '</div><div class="trip-l2">' + esc(TRIP.driver) + ' · ' + esc(TRIP.staff) + '</div></div>'
+    + '<button class="link" data-a="trip">' + (UI.tripOpen ? T('Done', 'Siap') : T('Change', 'Ubah')) + '</button></div>'
+    + (UI.tripOpen ? '<div class="form">'
+        + '<label><div class="fl">' + T('Delivery date', 'Tarikh penghantaran') + '</div><input class="in" type="date" value="' + TRIP.date + '"></label>'
+        + '<label><div class="fl">' + T('Driver', 'Pemandu') + '</div><input class="in" value="' + esc(TRIP.driver + ' · ' + TRIP.staff) + '"></label>'
+        + '<label><div class="fl">' + T('Second driver (only if two)', 'Pemandu kedua (jika dua)') + '</div><input class="in" placeholder="' + T('Staff ID or name', 'ID staf atau nama') + '"></label>'
+        + '<label><div class="fl">' + T('Lorry', 'Lori') + '</div><select class="in"><option>' + esc(TRIP.lorry) + '</option></select></label></div>' : '')
+    + '</section>'
+    + '<div class="note">' + ic('info') + '<span>' + T('Upload the signed invoice on the same day. Late or missing = penalty.', 'Muat naik invois bertandatangan pada hari yang sama. Lewat atau tiada = penalti.') + '</span></div>'
+    // progress + search
+    + '<div class="prog"><div class="n">' + done + '<span> / ' + STOPS.length + ' ' + T('stops done', 'kedai siap') + '</span></div><div class="s">'
+    + (fail ? fail + ' ' + T('problem', 'masalah') + ' · ' : '') + left + ' ' + T('to go', 'lagi') + '</div></div>'
+    + '<div class="track"><i style="width:' + Math.round(done / STOPS.length * 100) + '%"></i></div>'
+    + '<label class="search">' + ic('search') + '<input data-a="q" value="' + esc(UI.q) + '" placeholder="' + T('Find shop or invoice', 'Cari kedai atau invois') + '"></label>';
+  var order = STOPS.map(function(s, i){ return i; }).sort(function(a, b){ var r = { wait: 0, fail: 1, done: 2 }; return r[STOPS[a].st] - r[STOPS[b].st] || a - b; });
+  var q = UI.q.trim().toLowerCase();
+  order.forEach(function(i){
+    var s = STOPS[i];
+    if (q && (s.name + ' ' + s.area + ' ' + s.invs.map(function(x){ return x.no; }).join(' ')).toLowerCase().indexOf(q) < 0) return;
+    h += card(s, i);
+  });
+  h += '</main>';
+  document.getElementById('app').innerHTML = h;
+}
+
+function card(s, i){
+  var n = s.invs.length, pill;
+  if (s.st === 'done') pill = '<span class="pill p-done">' + T('Delivered', 'Dihantar') + '</span>';
+  else if (s.st === 'fail') pill = '<span class="pill p-fail">' + rlabel(s.reason) + '</span>';
+  else pill = '<span class="pill p-wait">' + T('Not yet', 'Belum') + '</span>';
+  var h = '<article class="card' + (s.st === 'done' ? ' done' : '') + '"><div class="c-top"><div style="flex:1;min-width:0"><div class="c-name">' + esc(s.name) + '</div>'
+    + '<div class="c-meta">' + esc(s.area) + ' · ' + n + ' ' + T(n === 1 ? 'invoice' : 'invoices', 'invois') + '</div></div>' + pill + '</div>';
+  if (s.st === 'done'){
+    return h + '<div class="done-line">' + ic('check') + ' ' + T('Saved at', 'Disimpan pukul') + ' ' + s.at + '</div><div class="done-inv">' + s.invs.map(function(x){ return esc(x.no); }).join(' · ') + '</div></article>';
+  }
+  if (UI.prob[i]){
+    var pr = UI.proof[i];
+    return h + '<div class="prob"><div class="prob-h">' + ic('warn') + T('What went wrong?', 'Apa masalahnya?') + '</div>'
+      + (pr ? '<div class="proof-ok"><span class="th"><img src="' + PAPER_URL + '" alt=""><button data-a="proofx" data-i="' + i + '" aria-label="' + T('Remove', 'Buang') + '">&times;</button></span>' + ic('check') + T('Proof photo added', 'Foto bukti ada') + '</div>'
+            : '<button class="proof" data-a="proof" data-i="' + i + '">' + ic('cam') + T('Proof photo', 'Foto bukti') + '</button>')
+      + '<div class="reasons">' + REASONS.map(function(r){ return '<button class="reason" data-a="reason" data-i="' + i + '" data-r="' + esc(r[0]) + '">' + esc(T(r[0], r[1])) + '</button>'; }).join('') + '</div>'
+      + '<button class="back" data-a="back" data-i="' + i + '">' + ic('back') + T('Back', 'Kembali') + '</button></div></article>';
+  }
+  var nd = need(s), ok = s.photos === nd && nd > 0;
+  h += '<div class="chips">' + s.invs.map(function(x, k){ return '<button class="chip' + (x.on ? '' : ' off') + '" data-a="chip" data-i="' + i + '" data-k="' + k + '">' + (x.on ? ic('check') : '') + esc(x.no) + '</button>'; }).join('') + '</div>'
+    + '<div class="count ' + (ok ? 'ok' : 'no') + '">' + T('Photos', 'Foto') + ' ' + s.photos + '/' + nd + (ok ? ' ✓' : '') + (nd > 1 && !ok ? ' <em>· ' + T('1 invoice = 1 photo', '1 invois = 1 foto') + '</em>' : '') + '</div>';
+  if (s.photos){ h += '<div class="thumbs">'; for (var p = 0; p < s.photos; p++) h += '<span class="th"><img src="' + PAPER_URL + '" alt=""><button data-a="photox" data-i="' + i + '" aria-label="' + T('Remove', 'Buang') + '">&times;</button></span>'; h += '</div>'; }
+  h += '<div class="acts">'
+    + (s.photos < nd ? '<button class="btn b-pri" data-a="cam" data-i="' + i + '" aria-label="' + T('Take photo', 'Ambil foto') + '">' + ic('cam') + '</button>'
+       : ok ? '<button class="btn b-save" data-a="save" data-i="' + i + '">' + ic('check') + T('Save', 'Simpan') + '</button>' : '')
+    + '<button class="btn b-ghost' + (s.photos >= nd && !ok ? ' b-full' : '') + '" data-a="prob" data-i="' + i + '">' + ic('warn') + T('Problem', 'Masalah') + '</button></div>'
+    + '<button class="pallet" data-a="pallet" data-i="' + i + '"><span>' + ic('box') + ' ' + T('Pallets at this stop?', 'Ada pallet di kedai ini?') + '</span>' + ic('down') + '</button>'
+    + (UI.pallet[i] ? '<div class="pfields"><label><div class="fl">' + T('Drop', 'Beri') + '</div><input class="in" inputmode="numeric" placeholder="0"></label><label><div class="fl">' + T('Collect', 'Ambil') + '</div><input class="in" inputmode="numeric" placeholder="0"></label></div>' : '');
+  return h + '</article>';
+}
+
+// ── camera (sample: auto shutter after the invoice "holds still") ──
+var cam = null;
+function openCam(i, mode){
+  var s = STOPS[i], nd = need(s), ev = mode === 'proof';
+  var el = document.createElement('div'); el.className = 'layer'; el.id = 'cam';
+  el.innerHTML = '<div class="stage">'
+    + '<img class="paper" src="' + PAPER_URL + '" alt="" style="' + (ev ? 'width:46%;top:58%;transform:translate(-50%,-50%) rotate(4deg)' : '') + '">'
+    + (ev ? '' : '<div class="guide" id="guide"></div>') + '<div class="flash" id="flash"></div>'
+    + '<div class="cam-head"><div style="flex:1;min-width:0"><div class="cam-t">' + (ev ? T('Proof photo', 'Foto bukti') : (s.photos + 1) + '/' + nd + ' · ' + esc(s.invs.filter(function(x){ return x.on; })[s.photos].no)) + '</div><div class="cam-s">' + esc(s.name) + '</div></div>'
+    + '<button class="x" data-c="close" aria-label="' + T('Close', 'Tutup') + '">&times;</button></div></div>'
+    + '<div class="dock"><div class="status" id="cst">' + (ev ? T('Take a photo of the shop or the problem', 'Ambil gambar kedai atau masalah') : T('Put the invoice in the frame', 'Letak invois dalam bingkai')) + '</div><div class="pbar"><i id="cbar"></i></div>'
+    + '<div class="shutrow"><button class="torch" aria-label="' + T('Torch', 'Lampu suluh') + '">' + ic('torch') + '</button><button class="shutter" id="shut" data-c="shoot" aria-label="' + T('Take photo', 'Ambil foto') + '"></button>'
+    + '<span class="cnt" style="' + (ev ? 'visibility:hidden' : '') + '">' + s.photos + '/' + nd + '</span></div></div>';
+  document.body.appendChild(el);
+  fitGuide();
+  cam = { i: i, ev: ev, timers: [] };
+  if (!ev){   // the auto shutter: frame found → hold → shot
+    cam.timers.push(setTimeout(function(){ var g = document.getElementById('guide'); if (g) g.className = 'guide ok'; setStatus(T('Hold…', 'Tahan…')); bar(35); }, 1300));
+    cam.timers.push(setTimeout(function(){ bar(75); }, 1900));
+    cam.timers.push(setTimeout(function(){ shoot(); }, 2600));
+  }
+}
+function fitGuide(){   // A4 frame (1 : 1.414) that fits the camera area below the title
+  var g = document.getElementById('guide'), st = document.querySelector('#cam .stage'); if (!g || !st) return;
+  var W = st.clientWidth, H = st.clientHeight, top = 78, avH = H - top - 12, avW = W * 0.9;
+  var land = window.innerWidth > window.innerHeight, gw, gh;
+  if (land){ gw = Math.min(avW, avH * Math.SQRT2); gh = gw / Math.SQRT2; } else { gh = Math.min(avH, avW * Math.SQRT2); gw = gh / Math.SQRT2; }
+  g.style.width = Math.round(gw) + 'px'; g.style.height = Math.round(gh) + 'px'; g.style.top = Math.round(top + avH / 2) + 'px';
+  var p = document.querySelector('#cam .paper');   // only invoice mode has a frame, so only it gets here
+  if (p){ p.style.width = Math.round(gw * 0.9) + 'px'; p.style.top = Math.round(top + avH / 2) + 'px'; }
+}
+window.addEventListener('resize', fitGuide);
+function setStatus(t){ var s = document.getElementById('cst'); if (s) s.textContent = t; }
+function bar(p){ var b = document.getElementById('cbar'); if (b) b.style.width = p + '%'; }
+function closeCam(){ if (!cam) return; cam.timers.forEach(clearTimeout); var el = document.getElementById('cam'); if (el) el.remove(); cam = null; }
+function shoot(){
+  if (!cam) return; var c = cam, f = document.getElementById('flash');
+  if (f){ f.style.opacity = '.7'; setTimeout(function(){ f.style.opacity = '0'; }, 160); }
+  bar(100);
+  setTimeout(function(){
+    closeCam();
+    if (c.ev){ UI.proof[c.i] = true; render(); toast(T('Proof photo added. Now choose the reason.', 'Foto bukti ditambah. Sekarang pilih sebab.')); }
+    else openCheck(c.i);
+  }, 260);
+}
+
+// ── scan check ──
+function openCheck(i){
+  var el = document.createElement('div'); el.className = 'layer chk'; el.id = 'chk';
+  el.innerHTML = '<div class="chk-h"><div style="flex:1"><div class="chk-t">' + T('Check the scan', 'Semak imbasan') + '</div><span class="tag">✓ ' + T('Scanned', 'Diimbas') + '</span></div>'
+    + '<button class="x" data-k="orig" style="width:auto;padding:0 12px;font-size:14px;font-weight:700">' + T('Original', 'Asal') + '</button></div>'
+    + '<div class="chk-stage">' + PAPER + '</div>'
+    + '<div class="chk-hint">' + T('All clear? Tap <b>Use</b>. Edges cut off? Tap <b>Adjust</b>.', 'Semua jelas? Tekan <b>Guna</b>. Tepi terpotong? Tekan <b>Laras</b>.') + '</div>'
+    + '<div class="chk-acts"><button data-k="retake">' + T('Retake', 'Ambil semula') + '</button><button data-k="adjust">' + T('Adjust', 'Laras') + '</button><button class="use" data-k="use">✓ ' + T('Use', 'Guna') + '</button></div>';
+  el.addEventListener('click', function(e){
+    var b = e.target.closest('[data-k]'); if (!b) return;
+    var k = b.getAttribute('data-k');
+    if (k === 'use'){ el.remove(); var s = STOPS[i]; s.photos++; render();
+      if (s.photos < need(s)) openCam(i); else toast(T('All photos taken. Tap Save.', 'Semua foto siap. Tekan Simpan.')); }
+    if (k === 'retake'){ el.remove(); openCam(i); }
+    if (k === 'adjust' || k === 'orig') toast(T('In the real app: drag the 4 corners / see the original photo', 'Dalam aplikasi sebenar: tarik 4 sudut / lihat foto asal'));
+  });
+  document.body.appendChild(el);
+}
+
+// ── confirm sheet, saving, toast ──
+function confirmSheet(title, note, yes, no, cb){
+  var el = document.createElement('div'); el.className = 'scrim';
+  el.innerHTML = '<div class="sheet"><h3>' + esc(title) + '</h3>' + (note ? '<p>' + esc(note) + '</p>' : '') + '<div class="row"><button class="no">' + esc(no) + '</button><button class="yes">' + esc(yes) + '</button></div></div>';
+  el.addEventListener('click', function(e){ if (e.target.closest('.yes')){ el.remove(); cb(); } else if (e.target.closest('.no') || e.target === el) el.remove(); });
+  document.body.appendChild(el);
+}
+var toastT = 0;
+function toast(msg){
+  var t = document.getElementById('toast'); if (!t){ t = document.createElement('div'); t.id = 'toast'; t.className = 'toast'; document.body.appendChild(t); }
+  t.innerHTML = ic('check') + '<span>' + msg + '</span>'; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(function(){ t.hidden = true; }, 2600);
+}
+function saving(cb){
+  var el = document.createElement('div'); el.className = 'saving'; el.innerHTML = '<div class="spin"></div><div>' + T('Saving…', 'Menyimpan…') + '</div>';
+  document.body.appendChild(el); setTimeout(function(){ el.remove(); cb(); }, 1100);
+}
+
+// ── taps ──
+document.addEventListener('click', function(e){
+  var l = e.target.closest('.seg button'); if (l){ LANG = l.getAttribute('data-l'); render(); return; }
+  var c = e.target.closest('[data-c]'); if (c){ var a0 = c.getAttribute('data-c'); if (a0 === 'close') closeCam(); if (a0 === 'shoot') shoot(); return; }
+  var b = e.target.closest('[data-a]'); if (!b) return;
+  var a = b.getAttribute('data-a'), i = +b.getAttribute('data-i'), s = STOPS[i];
+  if (a === 'trip'){ UI.tripOpen = !UI.tripOpen; render(); }
+  else if (a === 'cam') openCam(i);
+  else if (a === 'chip'){ var x = s.invs[+b.getAttribute('data-k')]; x.on = !x.on; if (s.photos > need(s)) s.photos = need(s); render(); }
+  else if (a === 'photox'){ s.photos = Math.max(0, s.photos - 1); render(); }
+  else if (a === 'prob'){ UI.prob[i] = true; render(); }
+  else if (a === 'back'){ delete UI.prob[i]; render(); }
+  else if (a === 'proof') openCam(i, 'proof');
+  else if (a === 'proofx'){ delete UI.proof[i]; render(); }
+  else if (a === 'pallet'){ UI.pallet[i] = !UI.pallet[i]; render(); }
+  else if (a === 'reason'){
+    var r = b.getAttribute('data-r'), n = s.invs.length;
+    confirmSheet(T('Mark ' + n + (n === 1 ? ' invoice' : ' invoices') + ' as “' + rlabel(r) + '”?', 'Tandakan ' + n + ' invois sebagai “' + rlabel(r) + '”?'),
+      UI.proof[i] ? '' : T('No proof photo added.', 'Tiada foto bukti.'), T('Yes, mark', 'Ya, tandakan'), T('Cancel', 'Batal'),
+      function(){ saving(function(){ s.st = 'fail'; s.reason = r; delete UI.prob[i]; render(); toast(T('Marked', 'Ditandakan') + ': ' + rlabel(r)); }); });
+  }
+  else if (a === 'save'){
+    saving(function(){ s.st = 'done'; s.at = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); render(); toast(T('Saved', 'Disimpan') + ' · ' + need(s) + ' ' + T('invoices', 'invois')); });
+  }
+});
+document.addEventListener('input', function(e){
+  if (e.target.getAttribute('data-a') === 'q'){ UI.q = e.target.value; var pos = e.target.selectionStart; render(); var q = document.querySelector('[data-a="q"]'); if (q){ q.focus(); try{ q.setSelectionRange(pos, pos); }catch(err){} } }
+});
+render();
+</script>
+</body>
+</html>
