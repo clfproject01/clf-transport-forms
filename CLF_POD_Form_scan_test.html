@@ -2,378 +2,264 @@
 <html lang="ms" translate="no">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#141C77">
 <meta name="google" content="notranslate">
 <meta name="robots" content="noindex,nofollow">
 <title>[TEST SCANNER] CLF Trading — POD Submission</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+  /* [Round2 2026-10-23] professional version, approved by the boss as the design draft CLF_POD_Design_R2.html.
+     Palette from the official logo: navy #141C77, red #FC091B, green #87C329 (the online dot only; Save uses a
+     darker green so white text stays readable). Phone system fonts, 4 sizes (13/15/17/22). */
+  :root{
+    --navy:#141C77; --navy-2:#0E1458; --navy-50:#EEF0FA;
+    --red:#FC091B; --red-700:#C8101E; --red-50:#FEF2F2;
+    --green:#15803D; --green-50:#ECFDF3;
+    --lime:#87C329;
+    --amber:#B45309; --amber-50:#FFFBEB;
+    --ink:#0F172A; --ink-2:#475569; --ink-3:#94A3B8;
+    --line:#E2E8F0; --bg:#FFFFFF; --bg-2:#F4F6FA;
+    --r:12px;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{touch-action:manipulation;-webkit-text-size-adjust:100%}   /* pinch zoom yes, double-tap zoom no */
+  html,body{background:var(--bg-2)}
+  body{font:15px/1.45 var(--font);color:var(--ink);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;min-height:100vh}
+  button,input,select,textarea{font:inherit;color:inherit}
+  button{cursor:pointer}
+  [hidden]{display:none!important}
+  .app{max-width:480px;margin:0 auto;min-height:100vh;background:var(--bg);padding-bottom:24px;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+  svg.i{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  svg.i.s{width:18px;height:18px}
+  svg.i.xs{width:13px;height:13px;stroke-width:2.6}
 
-  :root {
-    --navy: #0B1F3A;
-    --navy-mid: #1A3A5C;
-    --navy-light: #1E4976;
-    --orange: #FF6B35;
-    --orange-dark: #E85A2A;
-    --orange-light: #FFA37A;
-    --orange-pale: #FFF1EB;
-    --teal: #0E7490;
-    --teal-light: #22D3EE;
-    --gold: #C9A84C;
-    --gold-light: #E8C97A;
-    --white: #FFFFFF;
-    --off-white: #FAFAFA;
-    --gray: #8A9BB0;
-    --gray-light: #E5E7EB;
-    --success: #22C55E;
-    --error: #EF4444;
-    --radius: 14px;
-    --radius-sm: 8px;
-  }
+  /* app bar: official logo · POD · branch · online · language */
+  .bar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:10px;min-height:56px;padding:8px 12px;padding-top:max(8px, env(safe-area-inset-top));background:var(--navy);color:#fff}
+  .bar img{height:30px;width:auto;display:block}
+  .bar .sep{width:1px;height:26px;background:rgba(255,255,255,.28)}
+  .bar .ttl{font-size:17px;font-weight:800;letter-spacing:.6px}
+  .bar .br{font-size:12px;font-weight:700;padding:3px 8px;border-radius:999px;background:rgba(255,255,255,.16);white-space:nowrap}
+  .bar .sp{flex:1}
+  @media (max-width:359px){ .bar{gap:8px} .bar .sep{display:none} }
+  .dot{flex:none;width:9px;height:9px;border-radius:50%;background:var(--lime);box-shadow:0 0 0 3px rgba(135,195,41,.28)}
+  .dot.off{background:#94A3B8;box-shadow:0 0 0 3px rgba(148,163,184,.3)}
+  .seg{flex:none;display:inline-flex;padding:2px;border-radius:999px;border:1px solid rgba(255,255,255,.5)}
+  .seg button{border:0;background:none;color:#fff;font-weight:800;font-size:13px;min-width:40px;height:32px;padding:0 8px;border-radius:999px}
+  .seg button.on{background:#fff;color:var(--navy)}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  .wrap{padding:12px 14px 0}
+  /* trip: date / driver / lorry fold into three lines once all three are set */
+  .trip{border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;background:var(--bg)}
+  .trip-row{display:flex;align-items:center;gap:12px}
+  .trip-ic{width:40px;height:40px;border-radius:10px;background:var(--navy-50);color:var(--navy);display:flex;align-items:center;justify-content:center;flex:none}
+  .trip-main{flex:1;min-width:0}
+  .trip-l1{font-size:17px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .trip-l2{font-size:13px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .trip-l2.warn{color:var(--amber);font-weight:700}
+  .link{flex:none;border:0;background:none;color:var(--navy);font-weight:700;font-size:15px;min-height:44px;padding:0 6px}
+  .form{margin-top:12px;display:grid;gap:12px}
+  .field{position:relative}
+  .fl{display:block;font-size:13px;font-weight:700;color:var(--ink-2);margin-bottom:4px}
+  .req{color:var(--red-700)}
+  .in{display:block;width:100%;height:48px;border:1.5px solid var(--line);border-radius:10px;padding:0 12px;font-size:16px;color:var(--ink);background:#fff;-webkit-appearance:none;appearance:none}
+  .in:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(20,28,119,.12)}
+  .in::placeholder{color:var(--ink-3)}
+  input[type="date"].in::-webkit-date-and-time-value{text-align:left}
+  select.in{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23475569' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px}
+  .error-msg{display:none;font-size:13px;font-weight:600;color:var(--red-700);margin-top:4px}
+  .error-msg.show{display:block}
+  .remembered-badge{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;background:var(--green-50);color:var(--green);font-size:11px;font-weight:700;vertical-align:middle}
+  .picked{margin-top:6px;font-size:13px;font-weight:700;color:var(--green)}
+  .dp-panel{position:absolute;left:0;right:0;z-index:20;border:1.5px solid var(--line);border-top:0;border-radius:0 0 10px 10px;max-height:240px;overflow-y:auto;background:#fff;box-shadow:0 8px 20px rgba(15,23,42,.12)}
+  .dp-row{padding:13px 14px;border-bottom:1px solid #F1F5F9;cursor:pointer;font-size:15px}
+  .dp-none{padding:13px 14px;color:var(--ink-3);font-size:13px}
+  .note{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--ink-2);margin:12px 2px 0}
+  .note svg{width:16px;height:16px;margin-top:1px;color:var(--navy)}
 
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--off-white);
-    min-height: 100vh;
-    color: var(--navy);
-    -webkit-font-smoothing: antialiased;
-  }
+  /* list header: progress + search */
+  .prog{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin:18px 2px 6px}
+  .prog .n{font-size:22px;font-weight:800;line-height:1}
+  .prog .n span{font-size:15px;font-weight:600;color:var(--ink-2)}
+  .prog .s{font-size:13px;color:var(--ink-2);text-align:right}
+  .track{height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin:0 2px 12px}
+  .track i{display:block;height:100%;background:var(--green);border-radius:99px;transition:width .3s}
+  .find{display:flex;gap:8px;margin-bottom:12px}
+  .search{flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:48px;border:1.5px solid var(--line);border-radius:10px;padding:0 12px;color:var(--ink-3);background:#fff}
+  .search input{flex:1;min-width:0;border:0;font-size:16px;color:var(--ink);background:none;outline:none}
+  .icon-btn{flex:none;width:48px;height:48px;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--navy);display:flex;align-items:center;justify-content:center}
+  .stale{display:flex;gap:8px;align-items:flex-start;margin-top:14px;padding:10px 12px;border-radius:10px;background:var(--amber-50);color:var(--amber);font-size:13px;line-height:1.45}
+  .stale svg{margin-top:1px}
+  .state{margin-top:16px;padding:18px 14px;text-align:center;border:1px solid var(--line);border-radius:var(--r);background:var(--bg-2);color:var(--ink-2);font-size:14px;line-height:1.55}
+  .state b{color:var(--ink)}
+  .state .big{color:var(--amber);margin-bottom:6px}
+  .state .big svg{width:30px;height:30px}
+  .state-sub{font-size:12px;color:var(--ink-3);margin-top:8px}
+  .state.quiet{display:flex;align-items:center;justify-content:center;gap:10px}
+  .spin-s{width:18px;height:18px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--navy);animation:sp .8s linear infinite}
+  .retry{display:inline-flex;align-items:center;gap:6px;margin-top:14px;min-height:46px;padding:0 18px;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--navy);font-weight:800;font-size:14px}
+  .foot{text-align:center;color:var(--ink-3);font-size:13px;margin:8px 0 4px}
 
-  .app { max-width: 480px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; background: var(--white); }
+  /* stop cards */
+  .card{border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px;background:var(--bg)}
+  .card.done{background:var(--bg-2);border-color:transparent}
+  .c-top{display:flex;align-items:flex-start;gap:10px}
+  .c-main{flex:1;min-width:0}
+  .c-name{font-size:17px;font-weight:800;line-height:1.25;overflow-wrap:anywhere}
+  .c-meta{font-size:13px;color:var(--ink-2);margin-top:2px}
+  .pill{flex:none;font-size:12px;font-weight:800;padding:4px 9px;border-radius:999px;white-space:nowrap}
+  .p-wait{background:var(--amber-50);color:var(--amber)}
+  .p-done{background:var(--green-50);color:var(--green)}
+  .p-fail{background:var(--red-50);color:var(--red-700)}
+  .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px;margin:12px 0 10px}
+  .chip{min-width:0;height:34px;border-radius:8px;border:1.5px solid var(--navy);background:var(--navy-50);color:var(--navy);font-size:12.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:3px;padding:0 4px;white-space:nowrap;overflow:hidden}
+  .chip .t{overflow:hidden;text-overflow:ellipsis}
+  .chip.off{border-style:dashed;border-color:var(--ink-3);background:#fff;color:var(--ink-3);text-decoration:line-through}
+  .chip.dv{border-color:#A7D7B8;background:var(--green-50);color:var(--green)}
+  .count{font-size:13px;font-weight:700;margin-bottom:10px}
+  .count.ok{color:var(--green)} .count.no{color:var(--ink-2)} .count.bad{color:var(--red-700)}
+  .count em{font-style:normal;font-weight:600;color:var(--ink-3)}
+  .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .th{position:relative;flex:none;width:56px;height:56px;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:#fff}
+  .th img{width:100%;height:100%;object-fit:cover;display:block}
+  .th button{position:absolute;top:2px;right:2px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(15,23,42,.72);color:#fff;font-size:15px;line-height:1;padding:0}
+  .th .flag{position:absolute;left:2px;bottom:2px;width:16px;height:16px;border-radius:50%;background:var(--red-700);color:#fff;font-size:11px;font-weight:800;line-height:16px;text-align:center}
+  .acts{display:flex;gap:8px}
+  .btn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:54px;border-radius:12px;border:0;font-weight:800;font-size:15px;padding:0 16px}
+  .btn svg{width:24px;height:24px}
+  .b-pri{flex:1;background:var(--navy);color:#fff}
+  .b-save{flex:1;background:var(--green);color:#fff}
+  .b-ghost{background:#fff;color:var(--ink);border:1.5px solid var(--line)}
+  .b-ghost svg{width:20px;height:20px;color:var(--red-700)}
+  .b-full{flex:1}
+  .pallet{display:flex;align-items:center;justify-content:space-between;width:100%;border:0;background:none;color:var(--ink-2);font-size:13px;font-weight:700;min-height:44px;margin:0 0 8px;padding:0 2px}
+  .pallet span{display:flex;align-items:center;gap:6px}
+  .pallet svg{width:18px;height:18px;transition:transform .2s}
+  .pallet[aria-expanded="true"] .dn{transform:rotate(180deg)}
+  .pbox{flex-direction:column;gap:8px;margin-bottom:12px}
+  .pfields{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .pfields .in{height:44px}
+  .pphoto{display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;border-radius:10px;border:1.5px dashed var(--line);background:#fff;color:var(--ink-2);font-size:14px;font-weight:700}
+  .pphoto.ok{border-style:solid;border-color:#A7D7B8;color:var(--green)}
+  .done-inv{font-size:12px;color:var(--ink-3);margin-top:8px;word-break:break-all}
 
-  .header {
-    background: linear-gradient(135deg, var(--orange) 0%, var(--orange-dark) 100%);
-    padding: 28px 24px 24px;
-    border-bottom: 1px solid rgba(255,255,255,0.2);
-    position: relative; overflow: hidden;
-  }
-  /* form identity — big icon + name so drivers instantly know which app this is */
-  .form-identity { display: flex; align-items: center; gap: 14px; position: relative; z-index: 1; margin-top: 4px; }
-  .form-icon {
-    width: 54px; height: 54px; flex-shrink: 0;
-    background: rgba(255,255,255,0.16); border: 1.5px solid rgba(255,255,255,0.55);
-    border-radius: 14px; display: flex; align-items: center; justify-content: center;
-  }
-  .form-icon svg { width: 30px; height: 30px; stroke: var(--white); fill: none; }
+  /* problem mode */
+  .prob{border:1.5px solid #F5C2C7;background:var(--red-50);border-radius:10px;padding:12px;margin-top:12px}
+  .prob-h{display:flex;align-items:center;gap:8px;font-weight:800;color:var(--red-700);margin-bottom:10px}
+  .reasons{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+  .reason{min-height:50px;border-radius:10px;border:1.5px solid var(--line);background:#fff;font-weight:800;font-size:15px;padding:4px 8px}
+  .proof{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;min-height:50px;border-radius:10px;border:1.5px dashed var(--red-700);background:#fff;color:var(--red-700);font-weight:800}
+  .proof-ok{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;color:var(--green)}
+  .back{width:100%;display:flex;align-items:center;justify-content:center;gap:6px;min-height:46px;margin-top:6px;border:0;background:none;color:var(--ink-2);font-weight:800}
 
-  .logo-row { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; position: relative; z-index: 1; }
-  .logo-box {
-    width: 52px; height: 52px; background: var(--white);
-    border-radius: 12px; display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0; overflow: hidden; border: 2px solid rgba(255,255,255,0.5);
-  }
-  .logo-text-clf { font-size: 13px; font-weight: 600; color: var(--orange-dark); line-height: 1; text-align: center; }
-  .logo-text-clf span { display: block; font-size: 9px; color: var(--orange); font-weight: 500; margin-top: 2px; }
-  .company-name { font-size: 16px; font-weight: 600; color: var(--white); line-height: 1.2; }
-  .company-reg { font-size: 11px; color: rgba(255,255,255,0.85); margin-top: 2px; font-weight: 400; }
+  /* pallets on the lorry (store-assigned; correct = do nothing) */
+  .onboard{margin-top:14px;border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;background:var(--bg)}
+  .ob-h{display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px}
+  .ob-h svg{color:var(--navy)}
+  .ob-s{font-size:15px;margin:6px 0 2px}
+  .ob-n{font-size:13px;color:var(--ink-2)}
+  .ob-fix{margin-top:8px;min-height:44px;padding:0 12px;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--red-700);font-size:13px;font-weight:800}
+  .ob-row{display:flex;align-items:center;gap:8px;margin-top:8px}
+  .ob-row .nm{flex:1;min-width:0;font-size:15px}
+  .ob-row .nm small{display:block;color:var(--ink-2);font-size:13px}
+  .ob-row .in{width:88px;height:44px}
+  .ob-send{width:100%;margin-top:10px;min-height:48px;border-radius:10px;border:0;background:var(--navy);color:#fff;font-weight:800;font-size:15px}
 
-  .form-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.4);
-    border-radius: 20px; padding: 6px 14px; position: relative; z-index: 1;
-  }
-  .form-badge-dot { width: 7px; height: 7px; background: var(--white); border-radius: 50%; animation: pulse 2s infinite; }
-  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
-  .form-badge-text { font-size: 12px; font-weight: 600; color: var(--white); letter-spacing: 0.4px; }
-
-  .form-title { font-size: 30px; font-weight: 600; color: var(--white); letter-spacing: 1px; line-height: 1; margin: 0; position: relative; z-index: 1; }
-  .form-subtitle { font-size: 12px; color: rgba(255,255,255,0.85); position: relative; z-index: 1; line-height: 1.5; }
-  /* branch label — prominent so a driver on the wrong link notices (label, not a control) */
-  .branch-label {
-    display: inline-block;
-    font-size: 14px; font-weight: 600;
-    color: var(--navy);
-    background: var(--white);
-    border-radius: 8px;
-    padding: 2px 10px;
-    margin-left: 6px;
-    letter-spacing: 0.5px;
-    vertical-align: middle;
-  }
-
-  .form-body { flex: 1; background: var(--white); padding: 24px 20px 32px; }
-
-  .notice {
-    background: var(--orange-pale); border: 1px solid rgba(255,107,53,0.2);
-    border-left: 3px solid var(--orange); border-radius: var(--radius-sm);
-    padding: 10px 14px; margin-bottom: 20px;
-    font-size: 12px; color: var(--navy-mid); line-height: 1.5;
-  }
-  .notice b { color: var(--orange-dark); }
-
-  .section-label {
-    font-size: 10px; font-weight: 600; letter-spacing: 1.2px;
-    text-transform: uppercase; color: var(--orange-dark); margin: 20px 0 10px;
-  }
-
-  .field { margin-bottom: 14px; }
-  .field label { display: block; font-size: 13px; font-weight: 500; color: var(--navy); margin-bottom: 6px; }
-  .field label .bm { display: block; font-size: 11px; font-weight: 400; color: var(--gray); margin-top: 1px; }
-  .field label .req { color: var(--orange); margin-left: 2px; }
-
-  input[type="text"], input[type="number"], input[type="date"], select, textarea {
-    width: 100%; padding: 13px 16px;
-    background: var(--white); border: 1.5px solid var(--gray-light);
-    border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif;
-    font-size: 15px; color: var(--navy); outline: none;
-    transition: border-color 0.2s; -webkit-appearance: none; appearance: none;
-  }
-  input:focus, select:focus, textarea:focus {
-    border-color: var(--orange);
-    box-shadow: 0 0 0 3px rgba(255,107,53,0.15);
-  }
-  input::placeholder { color: var(--gray); font-size: 14px; }
-  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238A9BB0' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; padding-right: 40px; }
-
-  .photo-btn {
-    width: 100%; padding: 20px; background: var(--white);
-    border: 2px dashed var(--gray-light); border-radius: var(--radius);
-    display: flex; flex-direction: column; align-items: center; gap: 8px;
-    cursor: pointer; transition: all 0.2s; position: relative;
-  }
-  .photo-btn:active { transform: scale(0.98); }
-  .photo-btn.has-photo { border-style: solid; border-color: var(--success); background: rgba(34,197,94,0.06); }
-  .photo-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-  .photo-icon {
-    width: 44px; height: 44px; background: var(--orange);
-    border-radius: 12px; display: flex; align-items: center; justify-content: center;
-  }
-  .photo-icon svg { width: 22px; height: 22px; stroke: var(--white); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-  .photo-label { font-size: 14px; font-weight: 600; color: var(--navy); }
-  .photo-sublabel { font-size: 12px; color: var(--gray); }
-  .photo-preview { width: 100%; max-height: 200px; object-fit: cover; border-radius: var(--radius-sm); display: none; margin-top: 8px; }
-  .photo-preview.visible { display: block; }
-  .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 6px; margin-top: 10px; }
-  .photo-thumb { position: relative; padding-top: 100%; border-radius: var(--radius-sm); overflow: hidden; background: var(--off-white); border: 1px solid var(--gray-light); }
-  .photo-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-  .photo-thumb .remove-x { position: absolute; top: 2px; right: 2px; width: 22px; height: 22px; background: rgba(0,0,0,0.7); color: white; border: 0; border-radius: 50%; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; padding: 0; }
-  .photo-counter { font-size: 11px; color: var(--gray); margin-top: 6px; text-align: center; }
-
-  .confirm-row {
-    display: flex; gap: 12px; align-items: flex-start;
-    background: var(--orange-pale); border: 1px solid rgba(255,107,53,0.2);
-    border-radius: var(--radius-sm); padding: 14px; margin: 20px 0; cursor: pointer;
-  }
-  .confirm-row input[type="checkbox"] { width: 20px; height: 20px; flex-shrink: 0; margin-top: 1px; accent-color: var(--orange); cursor: pointer; }
-  .confirm-text { font-size: 12px; color: var(--navy-mid); line-height: 1.6; }
-  .confirm-text b { color: var(--orange-dark); }
-
-  .btn-wrap { position: relative; }
-  .submit-btn {
-    width: 100%; padding: 17px; background: var(--orange);
-    color: var(--white); border: none; border-radius: var(--radius);
-    font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600;
-    cursor: pointer; transition: all 0.2s;
-    display: flex; align-items: center; justify-content: center; gap: 8px; letter-spacing: 0.3px;
-    box-shadow: 0 4px 12px rgba(255,107,53,0.25);
-  }
-  .submit-btn:active { transform: scale(0.98); opacity: 0.9; }
-  .teal-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: var(--orange-dark); border-radius: 0 0 var(--radius) var(--radius); }
-
-  .success-screen {
-    display: none; position: fixed; inset: 0; background: linear-gradient(135deg, var(--orange) 0%, var(--orange-dark) 100%);
-    z-index: 100; flex-direction: column; align-items: center; justify-content: center;
-    padding: 40px 32px; text-align: center;
-  }
-  .success-screen.show { display: flex; }
-  .success-icon {
-    width: 80px; height: 80px; background: rgba(34,197,94,0.15);
-    border: 2px solid var(--success); border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    margin-bottom: 24px; animation: pop 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
-  }
-  @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
-  .success-icon svg { width: 36px; height: 36px; stroke: var(--success); fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
-  .success-title { font-size: 26px; font-weight: 600; color: var(--white); margin-bottom: 8px; }
-  .success-subtitle { font-size: 15px; color: var(--gray); margin-bottom: 24px; line-height: 1.5; }
-  .success-time {
-    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
-    border-radius: var(--radius-sm); padding: 12px 20px; margin-bottom: 20px;
-  }
-  .success-time-label { font-size: 11px; color: rgba(255,255,255,0.85); font-weight: 500; letter-spacing: 0.8px; text-transform: uppercase; }
-  .success-time-val { font-family: 'DM Mono', monospace; font-size: 18px; color: var(--white); margin-top: 4px; }
-  .success-info { font-size: 13px; color: rgba(255,255,255,0.85); margin-bottom: 6px; }
-  .success-info b { color: var(--white); }
-  .new-btn {
-    width: 100%; padding: 16px; background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.15); border-radius: var(--radius);
-    color: var(--white); font-family: 'DM Sans', sans-serif;
-    font-size: 15px; font-weight: 500; cursor: pointer; margin-top: 12px;
-  }
-
-  .loading-overlay {
-    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(232,90,42,0.92);   /* not `inset`: iOS < 14.5 ignores it */
-    z-index: 99; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
-  }
-  .loading-overlay.show { display: flex; }
-  .spinner { width: 44px; height: 44px; border: 3px solid rgba(255,255,255,0.25); border-top-color: var(--white); border-radius: 50%; animation: spin 0.8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-text { color: var(--white); font-size: 14px; }
-
-  .error-msg { font-size: 12px; color: var(--error); margin-top: 4px; display: none; }
-  .error-msg.show { display: block; }
-
-  .remembered-badge {
-    display: inline-flex; align-items: center; gap: 4px;
-    background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25);
-    border-radius: 20px; padding: 2px 8px;
-    font-size: 10px; color: var(--success); font-weight: 500;
-    margin-left: 6px; vertical-align: middle;
-  }
-  /* [Lang 2026-10-23] BM | EN switch: one language on screen at a time, BM by default */
-  .lang-switch { margin-left:auto; flex-shrink:0; display:inline-flex; gap:2px; padding:3px; position:relative; z-index:1;
-    background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.55); border-radius:999px; }
-  .lang-switch button { border:0; background:transparent; color:#fff; font:700 13px/1 'DM Sans',sans-serif; letter-spacing:.5px;
-    min-width:46px; min-height:36px; padding:0 12px; border-radius:999px; cursor:pointer; }
-  .lang-switch button.on { background:#fff; color:var(--orange-dark); }
+  /* yes / cancel sheet, saving overlay */
+  .scrim{position:fixed;top:0;left:0;right:0;bottom:0;z-index:10050;background:rgba(15,23,42,.55);display:flex;align-items:flex-end;justify-content:center}
+  .sheet{width:100%;max-width:480px;background:#fff;border-radius:18px 18px 0 0;padding:20px 18px;padding-bottom:max(20px, calc(env(safe-area-inset-bottom) + 14px))}
+  .sheet h3{font-size:17px;font-weight:800;line-height:1.35}
+  .sheet p{font-size:15px;color:var(--red-700);margin-top:6px}
+  .sheet .row{display:flex;gap:10px;margin-top:16px}
+  .sheet .row button{flex:1;min-height:52px;border-radius:12px;font-weight:800;font-size:15px}
+  .sheet .row .no{background:#fff;border:1.5px solid var(--line)}
+  .sheet .row .yes{flex:1.3;background:var(--red-700);color:#fff;border:0}
+  .loading-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:99;background:rgba(20,28,119,.92);flex-direction:column;align-items:center;justify-content:center;gap:14px}   /* not `inset`: iOS < 14.5 ignores it */
+  .loading-overlay.show{display:flex}
+  .spinner{width:42px;height:42px;border-radius:50%;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;animation:sp .8s linear infinite}
+  .loading-text{color:#fff;font-size:17px;font-weight:800}
+  @keyframes sp{to{transform:rotate(360deg)}}
   /* [Round1 2026-10-23] in-page camera: after a few seconds without an auto shot the shutter pulses (replaces a hint sentence) */
   @keyframes acPulse { 0%,100% { box-shadow:0 0 0 0 rgba(255,255,255,.6); } 50% { box-shadow:0 0 0 14px rgba(255,255,255,0); } }
   #acShutter.pulse { animation: acPulse 1.3s ease-in-out infinite; }
 </style>
 </head>
 <body>
-<div style="position:sticky;top:0;z-index:9000;background:#B91C1C;color:#fff;text-align:center;font:700 13px/1.35 'DM Sans',sans-serif;padding:7px 10px;" data-en="TEST &amp;mdash; nothing is saved">UJIAN &mdash; tiada apa disimpan</div>
-<div id="scanDebug" style="position:fixed;left:0;right:0;bottom:0;z-index:9400;background:rgba(11,31,58,.92);color:#C9D6E3;font:11px/1.3 monospace;padding:3px 8px;padding-bottom:calc(3px + env(safe-area-inset-bottom));pointer-events:none;">scanner: idle</div>
-<style>html[lang="ms"] #acSub::before{content:"UJIAN · ";color:#FCA5A5;font-weight:800;}html[lang="en"] #acSub::before{content:"TEST · ";color:#FCA5A5;font-weight:800;}</style>
+<div style="position:sticky;top:0;z-index:9000;background:#B91C1C;color:#fff;text-align:center;font-weight:700;font-size:13px;height:30px;line-height:30px;padding:0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" data-en="TEST &amp;mdash; nothing is saved">UJIAN &mdash; tiada apa disimpan</div>
+<div id="scanDebug" style="position:fixed;left:0;right:0;bottom:0;z-index:9400;background:rgba(14,20,88,.92);color:#C9D6E3;font:11px/1.3 monospace;padding:3px 8px;padding-bottom:calc(3px + env(safe-area-inset-bottom));pointer-events:none;">scanner: idle</div>
+<style>.bar{top:30px}html[lang="ms"] #acSub::before{content:"UJIAN · ";color:#FCA5A5;font-weight:800;}html[lang="en"] #acSub::before{content:"TEST · ";color:#FCA5A5;font-weight:800;}</style>
 
 <div class="app">
-  <div class="header">
-    <div class="logo-row">
-      <div class="logo-box">
-        <div class="logo-text-clf">CLF<span>Trading</span></div>
-      </div>
-      <div>
-        <div class="company-name">CLF Trading Sdn. Bhd.</div>
-        <div class="company-reg" id="companyReg">557522-A · Mentakab, Pahang</div>
-      </div>
-    </div>
-    <div class="form-identity">
-      <div>
-        <div class="form-title">POD <span id="branchLabel" class="branch-label">Mentakab</span></div>
-        <div class="form-subtitle" data-en="Proof of Delivery">Bukti Penghantaran</div>
-      </div>
-      <div class="lang-switch" id="langSwitch" role="group" aria-label="Bahasa / Language"><button type="button" data-l="bm">BM</button><button type="button" data-l="en">EN</button></div>
-    </div>
-  </div>
+  <header class="bar">
+    <img src="brand/clf-logo-horizontal-white.png" alt="CLF Trading" width="72" height="30" decoding="async">
+    <span class="sep" aria-hidden="true"></span>
+    <span class="ttl">POD</span>
+    <span class="br" id="branchLabel">Mentakab</span>
+    <span class="sp"></span>
+    <span class="dot" id="netDot" role="img" aria-label="Dalam talian"></span>
+    <span class="seg" id="langSwitch" role="group" aria-label="Bahasa / Language"><button type="button" data-l="bm">BM</button><button type="button" data-l="en">EN</button></span>
+  </header>
 
-  <div class="form-body">
-    <div class="notice" data-en="Please upload the &lt;b&gt;signed&lt;/b&gt; invoice on the &lt;b&gt;same day&lt;/b&gt;. Thank you!">Sila muat naik invois yang <b>ditandatangani</b> pada <b>hari yang sama</b>. Terima kasih!</div>
-
+  <main class="wrap">
     <form id="podForm" novalidate>
 
-      <div class="section-label" data-en="Delivery info">Maklumat penghantaran</div>
+      <!-- [Round2] trip card: folds to lorry / date / driver once all three are set (see _tripRender) -->
+      <section class="trip" id="tripCard">
+        <div class="trip-row">
+          <div class="trip-ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="3" width="15" height="13" rx="1"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>
+          <div class="trip-main"><div class="trip-l1" id="tripL1"></div><div class="trip-l2" id="tripL2"></div><div class="trip-l2" id="tripL3" hidden></div></div>
+          <button type="button" class="link" id="tripToggle" hidden></button>
+        </div>
+        <div class="form" id="tripForm">
+          <div class="field">
+            <label class="fl" for="deliveryDate"><span data-en="Delivery date">Tarikh penghantaran</span> <span class="req">*</span></label>
+            <input class="in" type="date" id="deliveryDate" required>
+            <div class="error-msg" id="err-date" data-en="Please select a date">Sila pilih tarikh</div>
+          </div>
 
-      <div class="field">
-        <label><span data-en="Delivery date">Tarikh penghantaran</span> <span class="req">*</span></label>
-        <input type="date" id="deliveryDate" required>
-        <div class="error-msg" id="err-date" data-en="Please select a date">Sila pilih tarikh</div>
-      </div>
+          <div class="field">
+            <label class="fl" for="driverSearch"><span data-en="Driver">Pemandu</span> <span class="req">*</span> <span id="rememberedBadge" class="remembered-badge" style="display:none;" data-en="&#10003; Remembered">&#10003; Diingati</span></label>
+            <input class="in" type="text" id="driverSearch" autocomplete="off" placeholder="ID staf (cth. 448) atau nama" data-en-ph="Staff ID (e.g. 448) or name">
+            <input type="hidden" id="driverName" required>
+            <div id="driverPanel" class="dp-panel" style="display:none;"></div>
+            <div class="error-msg" id="err-driver" data-en="Please select your name">Sila pilih nama anda</div>
+            <div id="staffIdBadge" class="picked" style="display:none;"></div>
+          </div>
 
-      <div class="field" style="position:relative;">
-        <label>
-          <span data-en="Driver">Pemandu</span> <span class="req">*</span>
-          <span id="rememberedBadge" class="remembered-badge" style="display:none;" data-en="✓ Remembered">✓ Diingati</span>
-        </label>
-        <input type="text" id="driverSearch" autocomplete="off" placeholder="ID staf (cth. 448) atau nama" data-en-ph="Staff ID (e.g. 448) or name" style="width:100%;box-sizing:border-box;padding:13px 16px;font-size:16px;border:1.5px solid #C7D0DC;border-radius:10px;background:#fff;">
-        <input type="hidden" id="driverName" required>
-        <div id="driverPanel" style="display:none;position:absolute;left:0;right:0;z-index:20;border:1.5px solid #C7D0DC;border-top:none;border-radius:0 0 10px 10px;max-height:240px;overflow-y:auto;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,.12);"></div>
-        <div class="error-msg" id="err-driver" data-en="Please select your name">Sila pilih nama anda</div>
-        <div id="staffIdBadge" style="display:none;margin-top:8px;padding:8px 12px;background:#FFF1E6;color:#9A3412;border-radius:8px;font-size:14px;font-weight:600;"></div>
-      </div>
+          <!-- SECOND DRIVER (optional) -->
+          <div class="field">
+            <label class="fl" for="secondSearch"><span data-en="Second driver (only if two)">Pemandu kedua (jika dua)</span></label>
+            <input class="in" type="text" id="secondSearch" autocomplete="off" placeholder="ID staf atau nama" data-en-ph="Staff ID or name">
+            <input type="hidden" id="secondDriver">
+            <div id="secondPanel" class="dp-panel" style="display:none;"></div>
+            <div id="staffIdBadge2" class="picked" style="display:none;"></div>
+          </div>
 
-      <!-- SECOND DRIVER (optional) -->
-      <div class="field" style="position:relative;">
-        <label>
-          <span data-en="Second driver">Pemandu kedua</span>
-          <span class="bm" style="display:block;font-size:11px;color:#6B7A8D;margin-top:2px;" data-en="Only if there are two drivers">Hanya jika ada dua pemandu</span>
-        </label>
-        <input type="text" id="secondSearch" autocomplete="off" placeholder="ID staf atau nama" data-en-ph="Staff ID or name" style="width:100%;box-sizing:border-box;padding:13px 16px;font-size:16px;border:1.5px solid #C7D0DC;border-radius:10px;background:#fff;">
-        <input type="hidden" id="secondDriver">
-        <div id="secondPanel" style="display:none;position:absolute;left:0;right:0;z-index:20;border:1.5px solid #C7D0DC;border-top:none;border-radius:0 0 10px 10px;max-height:240px;overflow-y:auto;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,.12);"></div>
-        <div id="staffIdBadge2" style="display:none;margin-top:8px;padding:8px 12px;background:#FFF1E6;color:#9A3412;border-radius:8px;font-size:14px;font-weight:600;"></div>
-      </div>
+          <div class="field">
+            <label class="fl" for="vehicleNo"><span data-en="Lorry">Lori</span> <span class="req">*</span></label>
+            <select class="in" id="vehicleNo" required>
+              <option value="" data-en="&mdash; Select lorry &mdash;">&mdash; Pilih lori &mdash;</option>
+            </select>
+            <div class="error-msg" id="err-vehicle" data-en="Please select a lorry">Sila pilih lori</div>
+          </div>
+        </div>
+      </section>
 
-      <div class="field">
-        <label><span data-en="Vehicle number">Nombor kenderaan</span> <span class="req">*</span></label>
-        <select id="vehicleNo" required>
-          <option value="" data-en="— Select vehicle —">— Pilih kenderaan —</option>
-        </select>
-        <div class="error-msg" id="err-vehicle" data-en="Please select a vehicle">Sila pilih kenderaan</div>
-      </div>
+      <div class="note"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span data-en="Please upload the signed invoice on the same day. Thank you!">Sila muat naik invois bertandatangan pada hari yang sama. Terima kasih!</span></div>
 
       <!-- B4: shipment-aware delivery checklist (auto-shows when this lorry has a shipment today) -->
       <div id="shipmentSection" style="display:none;"></div>
       <input type="file" id="shipPhoto" accept="image/*" capture="environment" multiple style="display:none;" onchange="onShipPhoto(this)">
-
-      <div id="manualPodSection" style="display:none;">
-      <div class="section-label">Signed Invoice Photo · Foto Invois Ditandatangani</div>
-
-      <div class="notice">
-        <b>Up to 30 photos · 30 foto:</b> Multiple invoices? Snap each, tap <b>+ Add</b>.<br>
-        <span style="opacity:.75;">Banyak invois? Ambil setiap satu, ketik <b>+ Add</b>.</span>
-      </div>
-
-      <div class="field">
-        <label>Upload Signed Invoice(s) · Muat Naik Invois <span class="req">*</span></label>
-        <div class="photo-btn" id="photoBtn">
-          <input type="file" id="invoicePhoto" accept="image/*" capture="environment" multiple onchange="handlePhoto(this)">
-          <div class="photo-icon">
-            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-          </div>
-          <div class="photo-label" id="photoLabel">+ Tap to add invoice photo<br>Ketik untuk tambah foto invois</div>
-          <div class="photo-sublabel" id="photoSub">Up to 10 · Each must be SIGNED by customer</div>
-        </div>
-        <div class="photo-grid" id="photoGrid"></div>
-        <div class="photo-counter" id="photoCounter"></div>
-        <div class="error-msg" id="err-photo">Please take at least 1 photo · Sila ambil sekurang-kurangnya 1 foto</div>
-      </div>
-
-      <label class="confirm-row" for="confirmCheck">
-        <input type="checkbox" id="confirmCheck">
-        <div class="confirm-text">
-          <b>I confirm · Saya sahkan</b> the delivery is done and the invoice is <b>signed by the customer</b>.<br>
-          <span style="opacity:.75;">Penghantaran selesai dan invois ditandatangani pelanggan.</span>
-        </div>
-      </label>
-      <div class="error-msg" id="err-confirm">Please confirm the declaration · Sila sahkan perisytiharan</div>
-
-      <div class="btn-wrap">
-        <button type="button" class="submit-btn" onclick="submitForm()">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-          Submit POD · Hantar Bukti Penghantaran
-        </button>
-        <div class="teal-bar"></div>
-      </div>
-      </div><!-- /manualPodSection -->
+      <!-- manual POD retired 2026-10-23 (hidden since the shipment checklist went live); the empty box stays because the checklist code looks it up -->
+      <div id="manualPodSection" style="display:none;"></div>
 
     </form>
-  </div>
+  </main>
 </div>
 
 <div class="loading-overlay" id="loadingOverlay">
   <div class="spinner"></div>
-  <div class="loading-text">Menghantar…</div>
-</div>
-
-<div class="success-screen" id="successScreen">
-  <div class="success-icon">
-    <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-  </div>
-  <div class="success-title">POD Submitted! · POD Berjaya!</div>
-  <div class="success-subtitle">Proof of delivery recorded successfully.<br>Bukti penghantaran berjaya direkodkan.</div>
-  <div class="success-time">
-    <div class="success-time-label">Submission Time · Masa Penghantaran</div>
-    <div class="success-time-val" id="successTime"></div>
-  </div>
-  <div class="success-info">Driver · Pemandu: <b id="successDriver"></b></div>
-  <div class="success-info">Vehicle · Kenderaan: <b id="successVehicle"></b></div>
-  <div class="success-subtitle" style="margin-top:12px;font-size:12px;color:#854F0B;background:#FFF8E1;border:1px solid #F0D9A8;border-radius:6px;padding:8px 10px;">
-    ⓘ Photos uploaded — please verify they appear in the supervisor dashboard within 1 minute.<br>
-    Foto dimuat naik — sila sahkan ia muncul dalam papan pemuka penyelia dalam 1 minit.
-  </div>
-  <button class="new-btn" onclick="resetForm()">Submit Another POD · Hantar POD Lagi</button>
+  <div class="loading-text">Menyimpan&hellip;</div>
 </div>
 
 <script>
@@ -464,6 +350,78 @@ document.addEventListener('click', function(e){
 applyLang();
 var BRANCH_DISPLAY = { MTK: 'Mentakab', KTN: 'Kuantan' };
 
+// [Round2 2026-10-23] stroke icons (24px grid) instead of emoji: same look on every phone, sized by CSS (svg.i)
+var ICO_PATHS = {
+  cam:    '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
+  warn:   '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  check:  '<polyline points="20 6 9 17 4 12"/>',
+  back:   '<polyline points="15 18 9 12 15 6"/>',
+  down:   '<polyline points="6 9 12 15 18 9"/>',
+  search: '<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+  refresh:'<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>',
+  box:    '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/>',
+  torch:  '<path d="M8 2h8l-2 6v12a2 2 0 0 1-4 0V8z"/><line x1="12" y1="12" x2="12" y2="14"/>',
+  wifiOff:'<line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/>'
+};
+function _ico(k, cls){ return '<svg class="i' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" aria-hidden="true">' + (ICO_PATHS[k] || '') + '</svg>'; }
+var ICO = { cam: _ico('cam'), camS: _ico('cam', 's'), warn: _ico('warn'), back: _ico('back'), check: _ico('check'), checkS: _ico('check', 'xs'), box: _ico('box'), down: _ico('down', 'dn') };
+
+// [Round2 2026-10-23] trip card: date, driver and lorry fold into a 3-line summary once all three are set, so the
+// delivery list starts high on the screen. Touching a field means "editing": the card then stays open until the
+// driver taps Siap, so it never folds away under a finger. "Ubah" opens it again; nothing is cleared.
+var _tripOpen = false;
+function _todayMYT(){ return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' }); }
+function _dateLabel(iso){
+  var p = String(iso || '').split('-');
+  if (p.length !== 3) return String(iso || '');
+  var d = new Date(+p[0], +p[1] - 1, +p[2]);
+  var day = (LANG === 'en' ? ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+                           : ['Ahad', 'Isnin', 'Selasa', 'Rabu', 'Khamis', 'Jumaat', 'Sabtu'])[d.getDay()];
+  var mon = (LANG === 'en' ? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+                           : ['Jan', 'Feb', 'Mac', 'Apr', 'Mei', 'Jun', 'Jul', 'Ogo', 'Sep', 'Okt', 'Nov', 'Dis'])[d.getMonth()];
+  var s = day + ', ' + d.getDate() + ' ' + mon;
+  return iso === _todayMYT() ? L('Today', 'Hari ini') + ' · ' + s : s;
+}
+function _tripRender(){
+  var card = document.getElementById('tripCard');
+  if (!card) return;
+  var v = document.getElementById('vehicleNo').value, dt = document.getElementById('deliveryDate').value,
+      dn = document.getElementById('driverName').value, sd = document.getElementById('secondDriver').value;
+  [['err-date', dt], ['err-driver', dn], ['err-vehicle', v]].forEach(function(p){ var e = document.getElementById(p[0]); if (e && p[1]) e.classList.remove('show'); });
+  var done = !!(v && dt && dn);
+  var l1 = document.getElementById('tripL1'), l2 = document.getElementById('tripL2'), l3 = document.getElementById('tripL3'), tg = document.getElementById('tripToggle');
+  if (_smMode || !done){   // salesman mode: only the date applies (the other fields are hidden), no summary
+    l1.textContent = L('Trip details', 'Maklumat perjalanan');
+    l2.textContent = _smMode ? _dateLabel(dt) : L('Date, driver and lorry', 'Tarikh, pemandu dan lori');
+    l2.className = 'trip-l2'; l3.hidden = true; tg.hidden = true;
+  } else {
+    var sid = STAFF_IDS[dn];
+    l1.textContent = v;
+    l2.textContent = _dateLabel(dt);
+    l2.className = 'trip-l2' + (dt === _todayMYT() ? '' : ' warn');   // not today: amber, easy to spot
+    l3.textContent = dn + (sid ? ' · ' + sid : '') + (sd && sd !== dn ? ' + ' + sd : '');
+    l3.hidden = false; tg.hidden = false;
+    tg.textContent = _tripOpen ? L('Done', 'Siap') : L('Change', 'Ubah');
+  }
+  document.getElementById('tripForm').hidden = !(_smMode || !done || _tripOpen);
+}
+(function(){
+  var tg = document.getElementById('tripToggle'), fm = document.getElementById('tripForm');
+  if (tg) tg.addEventListener('click', function(){ _tripOpen = !_tripOpen; _tripRender(); });
+  if (fm) fm.addEventListener('focusin', function(){ if (!_tripOpen){ _tripOpen = true; _tripRender(); } });
+})();
+// online dot in the app bar: grey while the phone is offline or the list on screen is the offline copy
+function _netRender(){
+  var d = document.getElementById('netDot');
+  if (!d) return;
+  var on = navigator.onLine !== false && !_shipStale, t = on ? L('Online', 'Dalam talian') : L('Offline', 'Luar talian');
+  d.className = 'dot' + (on ? '' : ' off');
+  d.setAttribute('aria-label', t); d.title = t;
+}
+window.addEventListener('online', _netRender);
+window.addEventListener('offline', _netRender);
+_netRender();
+
 // V17: Dynamically loaded from backend /getDrivers — empty until fetchDrivers() resolves
 let STAFF_IDS = {};
 let ROSTER = [];   // [{name, staffId}] — drives the searchable Staff-ID picker
@@ -487,10 +445,10 @@ function wireDriverPicker(searchId, hiddenId, panelId, badgeId, onPick){
     }).slice(0, 8);
     panel.innerHTML = matches.length
       ? matches.map(function(d){
-          return '<div class="dp-row" data-name="' + _esc(d.name) + '" style="padding:13px 14px;border-bottom:1px solid #F0F0F0;cursor:pointer;font-size:15px;">' +
+          return '<div class="dp-row" data-name="' + _esc(d.name) + '">' +
                  '<b>' + _esc(d.staffId || '') + '</b> &middot; ' + _esc(d.name) + '</div>';
         }).join('')
-      : '<div style="padding:13px 14px;color:#8A9BB0;font-size:13px;">' + L('No match', 'Tiada padanan') + '</div>';
+      : '<div class="dp-none">' + L('No match', 'Tiada padanan') + '</div>';
     panel.style.display = 'block';
   }
   function pick(name, silent){
@@ -499,9 +457,10 @@ function wireDriverPicker(searchId, hiddenId, panelId, badgeId, onPick){
     search.value = (d && d.staffId ? d.staffId + ' · ' : '') + name;
     if (badge){ badge.textContent = '✓ ' + name; badge.style.display = 'block'; }
     panel.style.display = 'none';
+    try{ _tripRender(); }catch(e){}
     if (!silent && onPick) onPick(name);   // silent=true for auto-fill: fill the field but don't persist/badge as "Remembered"
   }
-  search.addEventListener('input', function(){ hidden.value = ''; if (badge) badge.style.display = 'none'; render(search.value); });
+  search.addEventListener('input', function(){ hidden.value = ''; if (badge) badge.style.display = 'none'; render(search.value); try{ _tripRender(); }catch(e){} });
   search.addEventListener('focus', function(){ search.select(); if (search.value.trim() && !hidden.value) render(search.value); });
   panel.addEventListener('click', function(e){ var row = e.target.closest('.dp-row'); if (row) pick(row.getAttribute('data-name')); });
   document.addEventListener('click', function(e){ if (e.target !== search && !panel.contains(e.target)) panel.style.display = 'none'; });
@@ -582,7 +541,7 @@ function _vehiclesLoaded(){
 
 function _applyVehicles(sel, plates){
   var prev = sel.value;   // never clobber a pick the driver already made
-  sel.innerHTML = '<option value="" data-en="— Select vehicle —" data-bm="— Pilih kenderaan —">' + L('— Select vehicle —', '— Pilih kenderaan —') + '</option>';
+  sel.innerHTML = '<option value="" data-en="— Select lorry —" data-bm="— Pilih lori —">' + L('— Select lorry —', '— Pilih lori —') + '</option>';
   plates.forEach(function(plate){
     var o = document.createElement('option');
     o.value = plate; o.textContent = plate;
@@ -590,6 +549,7 @@ function _applyVehicles(sel, plates){
   });
   if (prev) sel.value = prev;                            // sticks only if the plate is still in the list
   if (sel.selectedIndex < 0) sel.selectedIndex = 0;      // a vanished plate must land on the placeholder, not a blank box
+  try{ _tripRender(); }catch(e){}
 }
 
 async function fetchVehicles(isRetry) {
@@ -654,12 +614,12 @@ window.onload = function() {
   // Branch label in the header — prominent so a driver on the wrong link notices.
   var branchName = BRANCH_DISPLAY[BRANCH] || BRANCH;
   var bl = document.getElementById('branchLabel'); if (bl) bl.textContent = branchName;
-  var cr = document.getElementById('companyReg'); if (cr) cr.textContent = '557522-A · ' + branchName + ', Pahang';
 
   // Kuala Lumpur timezone — fixes early-morning bug
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
   document.getElementById('deliveryDate').value = today;
   document.getElementById('deliveryDate').max = today;
+  _tripRender();
 
   // V17: Fetch driver list from backend; this also restores remembered driver.
   // Branch-scoped lorry list (replaces the old hardcoded plates) loads in parallel.
@@ -679,6 +639,7 @@ window.onload = function() {
         if (vs.value === savedVeh) checkShipmentForVehicle();   // value sticks only if the option exists
       }
     }catch(e){ /* localStorage unavailable — fine */ }
+    _tripRender();
   });
 };
 
@@ -704,90 +665,9 @@ document.addEventListener('visibilitychange', function(){
 
 // (old <select> change-listeners removed — driver picking is handled by wireDriverPicker)
 
-// Multi-photo state (max 10)
-const MAX_PHOTOS = 30;   // manual-flow flood guard only; the shipment flow caps at the stop's invoice count
+// every photo the form sends goes through compressImage()
 const COMPRESS_MAX_DIM = 2400;   // longest side, in pixels (raised 1600→2400: office scan tool needs the detail)
 const COMPRESS_QUALITY = 0.85;   // JPEG quality (0–1) (raised 0.8→0.85 with the dim bump)
-let collectedPhotos = []; // [{dataUrl, name, type}]  — already compressed JPEG
-
-// ── [E1 Tier A 2026-07-13] scan-look whitening — colour-preserving, expert-panel design ──
-// Runs INSIDE compressImage's existing try/catch: any failure = today's exact plain-compress output.
-// Never blocks submission. Kill switch: ENHANCE_SCAN=false → byte-identical behaviour to the old form.
-// PARKED 2026-07-14: the office-side scan tool now does scan-look — code kept as a kill-switched fallback.
-const ENHANCE_SCAN = false;
-const ENH_MAX_MS   = 1500;              // watchdog: a slower device quarantines itself to plain compress
-const ENH_QUAR_KEY = 'clf_enh_quarantine_v2';   // versioned: a faster future build can un-quarantine the fleet by bumping to _v2
-// Calibrated on real signed ACCOUNT-COPY invoices (2026-07-13): stamp ink is FADED PURPLE, so
-// whitening must be conservative — only truly-neutral AND very-bright pixels are pushed to white
-// (sat<0.08 & lum>225); any pixel with visible chroma (faded stamp) is never touched beyond the
-// equal-channel gain, which mathematically cannot shift hue. Ballpoint signatures fall in the
-// neutral-dark branch and get gently darkened (crisper), never lightened.
-function enhanceScanCanvas_(canvas, ctx) {
-  var t0 = (window.performance && performance.now) ? performance.now() : Date.now();
-  var w = canvas.width, h = canvas.height;
-  var im = ctx.getImageData(0, 0, w, h), d = im.data;
-
-  // 1) coarse background map: per-32px block p90 luminance (bright = paper), subsampled 1/16
-  var bs = 32, bw = Math.ceil(w / bs), bh = Math.ceil(h / bs);
-  var bg = new Float32Array(bw * bh);
-  for (var by = 0; by < bh; by++) {
-    for (var bx = 0; bx < bw; bx++) {
-      var x1 = bx * bs, y1 = by * bs, x2 = Math.min(x1 + bs, w), y2 = Math.min(y1 + bs, h);
-      var s = [];
-      for (var y = y1; y < y2; y += 4) for (var x = x1; x < x2; x += 4) {
-        var i = (y * w + x) * 4;
-        s.push(0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]);
-      }
-      s.sort(function (a, b) { return a - b; });
-      bg[by * bw + bx] = s.length ? s[Math.floor(s.length * 0.9)] : 255;
-    }
-  }
-  // 2) 3x3 box-smooth the block map (2 passes) so block seams never show
-  for (var pass = 0; pass < 2; pass++) {
-    var sm = new Float32Array(bw * bh);
-    for (var sy = 0; sy < bh; sy++) for (var sx = 0; sx < bw; sx++) {
-      var acc = 0, n = 0;
-      for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) {
-        var ny = sy + dy, nx = sx + dx;
-        if (ny >= 0 && ny < bh && nx >= 0 && nx < bw) { acc += bg[ny * bw + nx]; n++; }
-      }
-      sm[sy * bw + sx] = acc / n;
-    }
-    bg = sm;
-  }
-  // 3) per-pixel: bilinear background sample → equal-channel gain [1.0,1.6] → gated soft whiten/darken
-  // (block values sit at block CENTERS — sample with a half-block offset so the gain map is aligned)
-  for (var py = 0; py < h; py++) {
-    var fy = Math.min(Math.max((py - bs / 2) / bs, 0), bh - 1), y0 = Math.floor(fy), yA = Math.min(y0 + 1, bh - 1), wy = fy - y0;
-    for (var px = 0; px < w; px++) {
-      var fx = Math.min(Math.max((px - bs / 2) / bs, 0), bw - 1), x0 = Math.floor(fx), xA = Math.min(x0 + 1, bw - 1), wx = fx - x0;
-      var B = bg[y0 * bw + x0] * (1 - wx) * (1 - wy) + bg[y0 * bw + xA] * wx * (1 - wy)
-            + bg[yA * bw + x0] * (1 - wx) * wy       + bg[yA * bw + xA] * wx * wy;
-      var gain = 245 / Math.max(B, 40);
-      if (gain < 1) gain = 1; else if (gain > 1.6) gain = 1.6;   // equal per-channel → hue cannot shift
-      var i2 = (py * w + px) * 4;
-      var r = d[i2] * gain, g = d[i2 + 1] * gain, b = d[i2 + 2] * gain;
-      if (r > 255) r = 255; if (g > 255) g = 255; if (b > 255) b = 255;
-      var mx = r > g ? (r > b ? r : b) : (g > b ? g : b);
-      var mn = r < g ? (r < b ? r : b) : (g < b ? g : b);
-      var sat = (mx - mn) / (mx > 1 ? mx : 1);
-      var lum = 0.299 * r + 0.587 * g + 0.114 * b;
-      if (sat < 0.08) {                       // truly neutral only — chroma (even faded stamp) untouched
-        if (lum > 218) {                      // flattened paper → FEATHERED soft-push to clean white
-          var wS = ((lum - 218) / 14); if (wS > 1) wS = 1; wS *= 0.85;   // 0 at 218 → 0.85 at 232+ (no banding cliff)
-          r += (255 - r) * wS; g += (255 - g) * wS; b += (255 - b) * wS;
-        } else if (lum < 138) {               // printed text / ballpoint signature → FEATHERED gentle darken
-          var dS = ((138 - lum) / 16); if (dS > 1) dS = 1;               // 0 at 138 → 1 at 122- (smooth ramp)
-          var df = 1 - 0.25 * dS;                                        // 1.0 → 0.75
-          r *= df; g *= df; b *= df;
-        }                                      // neutral midtones: leave (safety band for faded ink)
-      }
-      d[i2] = r; d[i2 + 1] = g; d[i2 + 2] = b;
-    }
-  }
-  ctx.putImageData(im, 0, 0);
-  return ((window.performance && performance.now) ? performance.now() : Date.now()) - t0;
-}
 
 // ── [E5 2026-07-14] photo QUALITY GATES — cheap advisory checks on a ≤512px copy ──
 // Returns { ok, reasons[] } with reasons drawn from 'cut' | 'blur' | 'exposure'.
@@ -857,181 +737,6 @@ function checkPhotoQuality_(canvas, ctx) {
   }
 }
 
-// ── [E1 Tier B 2026-07-13] auto-crop + perspective correction ("paper fills the page") ──
-// Detection runs on a FLATTENED 256px luminance map (body-shadow can't bisect the paper blob);
-// SAFETY GATES: any doubt → return null → caller keeps the full frame (whiten-only). A wrong crop
-// is worse than no crop — these gates deliberately refuse white-on-white, edge-out-of-frame,
-// two-documents and low-confidence shots.
-const ENHANCE_CROP = false;   // PARKED 2026-07-14 with ENHANCE_SCAN — office-side tool handles crop now
-function scanCropCanvas_(src) {
-  var W = src.width, H = src.height;
-  // 1) downscale to ≤256px luminance map
-  var dw, dh;
-  if (W >= H) { dw = 256; dh = Math.max(8, Math.round(H * 256 / W)); }
-  else        { dh = 256; dw = Math.max(8, Math.round(W * 256 / H)); }
-  var sc = document.createElement('canvas'); sc.width = dw; sc.height = dh;
-  var scx = sc.getContext('2d'); scx.drawImage(src, 0, 0, dw, dh);
-  var sd = scx.getImageData(0, 0, dw, dh).data;
-  var n = dw * dh, lum = new Float32Array(n);
-  for (var i = 0, p = 0; p < n; i += 4, p++) lum[p] = 0.299 * sd[i] + 0.587 * sd[i + 1] + 0.114 * sd[i + 2];
-  // 2) flatten-first: 16px-block p90 map (nearest-block divide) so shadows don't split the paper
-  var bs = 16, bw = Math.ceil(dw / bs), bh = Math.ceil(dh / bs);
-  var bmap = new Float32Array(bw * bh);
-  for (var by = 0; by < bh; by++) for (var bx = 0; bx < bw; bx++) {
-    var s = [], x2 = Math.min((bx + 1) * bs, dw), y2 = Math.min((by + 1) * bs, dh);
-    for (var y = by * bs; y < y2; y += 2) for (var x = bx * bs; x < x2; x += 2) s.push(lum[y * dw + x]);
-    s.sort(function (a, b) { return a - b; });
-    bmap[by * bw + bx] = s.length ? s[Math.floor(s.length * 0.9)] : 255;
-  }
-  var flat = new Float32Array(n), mean = 0;
-  for (var p2 = 0; p2 < n; p2++) {
-    var fb = bmap[Math.min(Math.floor((p2 / dw) / bs), bh - 1) * bw + Math.min(Math.floor((p2 % dw) / bs), bw - 1)];
-    flat[p2] = lum[p2] / Math.max(fb, 30) * 200; mean += flat[p2];
-  }
-  mean /= n;
-  var sq = 0; for (var p3 = 0; p3 < n; p3++) { var dv = flat[p3] - mean; sq += dv * dv; }
-  var thr = mean + 0.6 * Math.sqrt(sq / n);
-  // 3) largest bright connected component (BFS, 4-neigh) + track 2nd-largest (two-documents gate)
-  var mask = new Uint8Array(n), seen = new Uint8Array(n);
-  for (var p4 = 0; p4 < n; p4++) mask[p4] = flat[p4] > thr ? 1 : 0;
-  var best = null, bestSize = 0, secondSize = 0, q = new Int32Array(n);
-  for (var st = 0; st < n; st += 4) {
-    if (!mask[st] || seen[st]) continue;
-    var head = 0, tail = 0; q[tail++] = st; seen[st] = 1;
-    var comp = [];
-    while (head < tail) {
-      var c = q[head++]; comp.push(c);
-      var cy = (c / dw) | 0, cx = c % dw;
-      if (cx > 0 && mask[c - 1] && !seen[c - 1]) { seen[c - 1] = 1; q[tail++] = c - 1; }
-      if (cx < dw - 1 && mask[c + 1] && !seen[c + 1]) { seen[c + 1] = 1; q[tail++] = c + 1; }
-      if (cy > 0 && mask[c - dw] && !seen[c - dw]) { seen[c - dw] = 1; q[tail++] = c - dw; }
-      if (cy < dh - 1 && mask[c + dw] && !seen[c + dw]) { seen[c + dw] = 1; q[tail++] = c + dw; }
-    }
-    if (comp.length > bestSize) { secondSize = bestSize; bestSize = comp.length; best = comp; }
-    else if (comp.length > secondSize) secondSize = comp.length;
-  }
-  if (!best) return null;
-  var areaPct = bestSize / n;
-  if (areaPct < 0.25 || areaPct > 0.97) return null;                     // gate: paper share of frame
-  if (secondSize > bestSize * 0.20) return null;                         // gate: two documents → refuse
-  // 4) corners via diagonal projections (TL/TR/BR/BL)
-  var tl = -1, tr = -1, br = -1, bl = -1, vTL = 1e9, vTR = 1e9, vBR = -1e9, vBL = -1e9;
-  for (var k = 0; k < best.length; k++) {
-    var c2 = best[k], yy = (c2 / dw) | 0, xx = c2 % dw;
-    if (xx + yy < vTL) { vTL = xx + yy; tl = c2; }
-    if (yy - xx < vTR) { vTR = yy - xx; tr = c2; }
-    if (xx + yy > vBR) { vBR = xx + yy; br = c2; }
-    if (yy - xx > vBL) { vBL = yy - xx; bl = c2; }
-  }
-  var sx = W / dw, sy = H / dh;
-  var quad = [tl, tr, br, bl].map(function (c3) { return [(c3 % dw) * sx, ((c3 / dw) | 0) * sy]; });
-  // 5) geometry gates: convexity, opposite sides within 25%, aspect band
-  function d2(a, b) { return Math.hypot(a[0] - b[0], a[1] - b[1]); }
-  var wT = d2(quad[0], quad[1]), wB = d2(quad[3], quad[2]), hL = d2(quad[0], quad[3]), hR = d2(quad[1], quad[2]);
-  if (Math.abs(wT - wB) / Math.max(wT, wB) > 0.25) return null;
-  if (Math.abs(hL - hR) / Math.max(hL, hR) > 0.25) return null;
-  var aspect = (wT + wB) / Math.max(hL + hR, 1);
-  if (aspect < 0.4 || aspect > 2.5) return null;
-  var convSign = 0;
-  for (var e = 0; e < 4; e++) {
-    var A = quad[e], B = quad[(e + 1) % 4], C = quad[(e + 2) % 4];
-    var cr = (B[0] - A[0]) * (C[1] - B[1]) - (B[1] - A[1]) * (C[0] - B[0]);
-    if (e === 0) convSign = cr > 0 ? 1 : -1;
-    else if ((cr > 0 ? 1 : -1) !== convSign) return null;                // gate: not convex
-  }
-  // 6) outward 2.5% padding from centroid; if a padded corner leaves the safe border band → the
-  //    page may extend past the photo edge → REFUSE (never guess-crop legal evidence)
-  var cxm = (quad[0][0] + quad[1][0] + quad[2][0] + quad[3][0]) / 4;
-  var cym = (quad[0][1] + quad[1][1] + quad[2][1] + quad[3][1]) / 4;
-  for (var g2 = 0; g2 < 4; g2++) {
-    quad[g2][0] = cxm + (quad[g2][0] - cxm) * 1.025;
-    quad[g2][1] = cym + (quad[g2][1] - cym) * 1.025;
-    if (quad[g2][0] < -W * 0.01 || quad[g2][0] > W * 1.01 || quad[g2][1] < -H * 0.01 || quad[g2][1] > H * 1.01) return null;
-    quad[g2][0] = Math.min(Math.max(quad[g2][0], 0), W - 1);
-    quad[g2][1] = Math.min(Math.max(quad[g2][1], 0), H - 1);
-  }
-  // 7) output size from the quad, longest side ≤1600
-  var outW = Math.round(Math.max(wT, wB)), outH = Math.round(Math.max(hL, hR));
-  var mxSide = Math.max(outW, outH);
-  if (mxSide > 1600) { outW = Math.round(outW * 1600 / mxSide); outH = Math.round(outH * 1600 / mxSide); }
-  if (outW < 300 || outH < 300) return null;
-  // 8) true perspective warp on the GPU (WebGL); no WebGL → refuse (whiten-only tier still applies)
-  return _warpQuadWebGL_(src, quad, outW, outH);
-}
-
-// Solve the 8 perspective coeffs mapping output-normalized (u,v [0..1], v=0 top) → source uv.
-function _homographyCoeffs_(srcQuadUv) {
-  var dst = [[0, 0], [1, 0], [1, 1], [0, 1]];                            // TL TR BR BL in v-down space
-  var A = [], Bv = [];
-  for (var i = 0; i < 4; i++) {
-    var u = dst[i][0], v = dst[i][1], X = srcQuadUv[i][0], Y = srcQuadUv[i][1];
-    A.push([u, v, 1, 0, 0, 0, -X * u, -X * v]); Bv.push(X);
-    A.push([0, 0, 0, u, v, 1, -Y * u, -Y * v]); Bv.push(Y);
-  }
-  for (var c = 0; c < 8; c++) {                                          // Gaussian elimination w/ partial pivot
-    var piv = c;
-    for (var r = c + 1; r < 8; r++) if (Math.abs(A[r][c]) > Math.abs(A[piv][c])) piv = r;
-    if (Math.abs(A[piv][c]) < 1e-12) return null;
-    var t = A[c]; A[c] = A[piv]; A[piv] = t; var tb = Bv[c]; Bv[c] = Bv[piv]; Bv[piv] = tb;
-    for (var r2 = 0; r2 < 8; r2++) {
-      if (r2 === c) continue;
-      var f = A[r2][c] / A[c][c];
-      for (var c2 = c; c2 < 8; c2++) A[r2][c2] -= f * A[c][c2];
-      Bv[r2] -= f * Bv[c];
-    }
-  }
-  var out = [];
-  for (var s = 0; s < 8; s++) out.push(Bv[s] / A[s][s]);
-  return out;                                                            // [a,b,c,d,e,f,g,h]
-}
-
-function _warpQuadWebGL_(src, quadPx, outW, outH) {
-  var glc = document.createElement('canvas'); glc.width = outW; glc.height = outH;
-  var gl = glc.getContext('webgl') || glc.getContext('experimental-webgl');
-  if (!gl) return null;
-  var srcUv = quadPx.map(function (q) { return [q[0] / src.width, q[1] / src.height]; });
-  var hc = _homographyCoeffs_(srcUv);
-  if (!hc) return null;
-  function sh(type, code) {
-    var s = gl.createShader(type); gl.shaderSource(s, code); gl.compileShader(s);
-    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error('shader: ' + gl.getShaderInfoLog(s));
-    return s;
-  }
-  var prog = gl.createProgram();
-  gl.attachShader(prog, sh(gl.VERTEX_SHADER,
-    'attribute vec2 aP; varying vec2 vUv; void main(){ vUv = vec2(aP.x*0.5+0.5, 0.5-aP.y*0.5); gl_Position = vec4(aP,0.,1.); }'));
-  gl.attachShader(prog, sh(gl.FRAGMENT_SHADER,
-    'precision highp float; varying vec2 vUv; uniform sampler2D uT; uniform mat3 uH;' +
-    'void main(){ vec3 s = uH * vec3(vUv, 1.0); vec2 suv = s.xy / s.z;' +
-    ' if (suv.x < 0.0 || suv.x > 1.0 || suv.y < 0.0 || suv.y > 1.0) { gl_FragColor = vec4(1.0); }' +
-    ' else { gl_FragColor = texture2D(uT, suv); } }'));
-  gl.linkProgram(prog);
-  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
-  gl.useProgram(prog);
-  var buf = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-  var loc = gl.getAttribLocation(prog, 'aP');
-  gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-  var tex = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, tex);
-  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);                          // uv v=0 = image top (matches shader)
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.uniformMatrix3fv(gl.getUniformLocation(prog, 'uH'), false,
-    new Float32Array([hc[0], hc[3], hc[6], hc[1], hc[4], hc[7], hc[2], hc[5], 1]));  // column-major
-  gl.uniform1i(gl.getUniformLocation(prog, 'uT'), 0);
-  gl.viewport(0, 0, outW, outH);
-  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  // copy into a 2D canvas (browser handles orientation) so the whiten pass can getImageData it
-  var out = document.createElement('canvas'); out.width = outW; out.height = outH;
-  var octx = out.getContext('2d'); octx.drawImage(glc, 0, 0);
-  return { canvas: out, ctx: octx };
-}
-
 // viewer caption lookup: dataUrl tail → produced filename (tells the boss/driver what was applied)
 window._photoNameByUrl = {};
 
@@ -1064,31 +769,12 @@ function compressImage(file) {
           canvas.height = h;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, w, h);
-          // [E1 Tier A+B] crop (safety-gated) then whiten. Each step in its own try/catch: any failure
-          // falls back one tier (crop fail → whiten-only; whiten fail → plain compress = old output).
-          // A device that once ran slow (> ENH_MAX_MS total) self-quarantines and skips both forever.
-          let enhApplied = false, cropApplied = false;
-          let outCanvas = canvas, outCtx = ctx;
-          const _enhT0 = (window.performance && performance.now) ? performance.now() : Date.now();
-          try {
-            if (ENHANCE_CROP && ENHANCE_SCAN && !localStorage.getItem(ENH_QUAR_KEY)) {
-              const cropped = scanCropCanvas_(canvas);        // null = a safety gate refused → keep full frame
-              if (cropped) { outCanvas = cropped.canvas; outCtx = cropped.ctx; cropApplied = true; }
-            }
-          } catch (cropErr) { console.warn('crop skipped:', cropErr); outCanvas = canvas; outCtx = ctx; cropApplied = false; }
-          try {
-            if (ENHANCE_SCAN && !localStorage.getItem(ENH_QUAR_KEY)) {
-              enhanceScanCanvas_(outCanvas, outCtx);
-              enhApplied = true;
-              const _enhMs = ((window.performance && performance.now) ? performance.now() : Date.now()) - _enhT0;
-              if (_enhMs > ENH_MAX_MS) { try { localStorage.setItem(ENH_QUAR_KEY, String(Math.round(_enhMs))); } catch (qe) {} }
-            }
-          } catch (enhErr) { console.warn('enhance skipped:', enhErr); outCanvas = canvas; outCtx = ctx; cropApplied = false; }
           // [E5] quality gate — advisory result rides on the entry; fail-open inside the gate
-          const q = checkPhotoQuality_(outCanvas, outCtx);
-          const dataUrl = outCanvas.toDataURL('image/jpeg', COMPRESS_QUALITY);
-          const name = (file.name || 'invoice.jpg').replace(/\.[^.]+$/, '')
-            + (cropApplied ? '_scanC' : (enhApplied ? '_scanF' : '')) + '.jpg';
+          // (round 2: the July whiten / crop experiments that sat here were removed — off since 2026-07-14,
+          //  replaced by the capture-time scanner; the output is byte-identical to what they produced while off)
+          const q = checkPhotoQuality_(canvas, ctx);
+          const dataUrl = canvas.toDataURL('image/jpeg', COMPRESS_QUALITY);
+          const name = (file.name || 'invoice.jpg').replace(/\.[^.]+$/, '') + '.jpg';
           try { window._photoNameByUrl[dataUrl.slice(-64)] = name; } catch (me) {}
           resolve({ dataUrl, name, type: 'image/jpeg', quality: q });
         } catch (err) {
@@ -1121,18 +807,18 @@ var _qGateEls = null;   // DOM built once, reused
 function _qGateBuild_(){
   var ov = document.createElement('div');
   ov.id = 'qGateOverlay';
-  ov.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(11,31,58,.93);flex-direction:column;align-items:center;justify-content:center;padding:28px 22px;';
+  ov.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(14,20,88,.93);flex-direction:column;align-items:center;justify-content:center;padding:28px 22px;';
   ov.innerHTML =
       '<div style="background:#fff;border-radius:14px;max-width:340px;width:100%;padding:22px 18px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.35);">'
-    + '<div style="font-size:19px;font-weight:700;color:#0B1F3A;margin-bottom:10px;">&#9888;&#65039; ' + Lspan('Photo not clear', 'Foto tidak jelas') + '</div>'
-    + '<div id="qGateReasons" style="font-size:14px;color:#1A3A5C;line-height:1.7;margin-bottom:10px;"></div>'
+    + '<div style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:19px;font-weight:800;color:#0F172A;margin-bottom:10px;"><span style="display:flex;color:#C8101E;">' + _ico('warn') + '</span>' + Lspan('Photo not clear', 'Foto tidak jelas') + '</div>'
+    + '<div id="qGateReasons" style="font-size:14px;color:#475569;line-height:1.7;margin-bottom:10px;"></div>'
     // [Gate-hint 2026-09-09] multi-invoice stops: drivers laid 2 invoices side by side in ONE shot,
     // which trips the cut check AND only counts as 1 photo. Say the rule right where they get stuck.
-    + '<div style="font-size:13px;color:#854F0B;background:#FFF8E1;border:1px solid #F0D9A8;border-radius:8px;padding:8px 10px;margin-bottom:14px;line-height:1.6;">&#128444;&#65039; ' + Lspan('<b>1 invoice = 1 photo</b><br>Lay it flat, whole page in the frame, white border around it.', '<b>1 invois = 1 foto</b><br>Ratakan, seluruh muka dalam bingkai, ada ruang putih di tepi.') + '</div>'
-    + '<button type="button" id="qGateRetake" style="width:100%;padding:15px;background:#1D4ED8;color:#fff;border:none;border-radius:10px;font-family:\'DM Sans\',sans-serif;font-size:16px;font-weight:700;cursor:pointer;">&#128247; ' + Lspan('Retake', 'Ambil semula') + '</button>'
+    + '<div style="font-size:13px;color:#B45309;background:#FFFBEB;border:1px solid #FCD9A8;border-radius:8px;padding:8px 10px;margin-bottom:14px;line-height:1.6;">' + Lspan('<b>1 invoice = 1 photo</b><br>Lay it flat, whole page in the frame, white border around it.', '<b>1 invois = 1 foto</b><br>Ratakan, seluruh muka dalam bingkai, ada ruang putih di tepi.') + '</div>'
+    + '<button type="button" id="qGateRetake" style="width:100%;padding:15px;background:#141C77;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">' + _ico('cam', 's') + Lspan('Retake', 'Ambil semula') + '</button>'
     // [Gate-hint 2026-09-09] was a grey underlined 13px link that drivers never noticed after 7-8 retakes;
     // now a full-width outlined button. WHEN it appears is unchanged (3rd consecutive fail, see showQualityGate_).
-    + '<button type="button" id="qGateAnyway" style="display:none;width:100%;margin-top:10px;padding:13px;background:#fff;color:#854F0B;border:1.5px solid #E0C68A;border-radius:10px;font-family:\'DM Sans\',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">&#9888;&#65039; ' + Lspan('Upload anyway', 'Hantar juga') + '</button>'
+    + '<button type="button" id="qGateAnyway" style="display:none;width:100%;margin-top:10px;padding:13px;background:#fff;color:#B45309;border:1.5px solid #FCD9A8;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;align-items:center;justify-content:center;gap:8px;">' + _ico('warn', 's') + Lspan('Upload anyway', 'Hantar juga') + '</button>'
     + '</div>';
   document.body.appendChild(ov);
   _qGateEls = { ov: ov, reasons: ov.querySelector('#qGateReasons'), retake: ov.querySelector('#qGateRetake'), anyway: ov.querySelector('#qGateAnyway') };
@@ -1146,56 +832,12 @@ function showQualityGate_(reasons, allowAnyway){
     exposure: L('Too bright or too dark', 'Terlalu terang atau gelap')
   };
   _qGateEls.reasons.innerHTML = (reasons || []).map(function(r){ return '&bull; ' + (TXT[r] || _esc(r)); }).join('<br>');
-  _qGateEls.anyway.style.display = allowAnyway ? 'block' : 'none';   // [Gate-hint 2026-09-09] full-width button
+  _qGateEls.anyway.style.display = allowAnyway ? 'flex' : 'none';   // [Gate-hint 2026-09-09] full-width button
   _qGateEls.ov.style.display = 'flex';
   return new Promise(function(resolve){
     _qGateEls.retake.onclick = function(){ _qGateEls.ov.style.display = 'none'; resolve('retake'); };
     _qGateEls.anyway.onclick = function(){ _qGateEls.ov.style.display = 'none'; resolve('anyway'); };
   });
-}
-
-async function handlePhoto(input) {
-  if (!input.files || !input.files.length) return;
-  const inputEl = input;
-  inputEl.disabled = true;
-  for (const file of input.files) {
-    if (collectedPhotos.length >= MAX_PHOTOS) break;
-    let entry;
-    try {
-      entry = await compressImage(file);
-    } catch (err) {
-      console.warn('Compression failed, using original:', err);
-      try {
-        entry = await readFileAsDataUrl(file);
-      } catch (e2) {
-        console.error('File read failed:', e2);
-        continue;
-      }
-    }
-    // [E5] quality gate: fail → dialog. Attempts 1-2 the shot is DISCARDED (input resets below,
-    // so tapping the button re-opens the camera); attempt >=3 may "Upload anyway" → flagged.
-    // FAIL-OPEN: any error inside the gate/dialog accepts the photo ungated — a gate bug must
-    // never make a photo silently vanish (boss field-test 2026-07-14).
-    try {
-      if (entry.quality && !entry.quality.ok) {
-        _qGateTries++;
-        const act = await showQualityGate_(entry.quality.reasons, _qGateTries >= 3);
-        if (act !== 'anyway') continue;   // discarded — not added
-        entry.qualityFlag = true;
-      }
-      _qGateTries = 0;   // pass or flagged-add both reset the streak
-    } catch (gateErr) { console.warn('gate failed open:', gateErr); }
-    collectedPhotos.push(entry);
-    renderPhotoGrid();
-  }
-  // reset input so user can pick same file again later if removed
-  input.value = '';
-  inputEl.disabled = collectedPhotos.length >= MAX_PHOTOS;
-}
-
-function removePhoto(idx) {
-  collectedPhotos.splice(idx, 1);
-  renderPhotoGrid();
 }
 
 // ── [E1 Tier A] tap a thumbnail → full-screen viewer (inspect the scan result before submitting).
@@ -1238,141 +880,6 @@ function removePhoto(idx) {
     ov.style.display = 'flex';
   });
 })();
-
-function renderPhotoGrid() {
-  const grid = document.getElementById('photoGrid');
-  const counter = document.getElementById('photoCounter');
-  grid.innerHTML = collectedPhotos.map((p, i) =>
-    `<div class="photo-thumb">
-       <img src="${p.dataUrl}" alt="Invoice ${i+1}">
-       ${p.qualityFlag ? '<span style="position:absolute;bottom:2px;left:2px;font-size:13px;line-height:1;z-index:1;">&#128681;</span>' : ''}
-       <button type="button" class="remove-x" onclick="removePhoto(${i})" aria-label="Remove">×</button>
-     </div>`
-  ).join('');
-  counter.textContent = collectedPhotos.length
-    ? `${collectedPhotos.length} / ${MAX_PHOTOS} photos · ${collectedPhotos.length === MAX_PHOTOS ? 'Max reached' : 'Tap above to add more'}`
-    : '';
-  const btn = document.getElementById('photoBtn');
-  if (collectedPhotos.length > 0) {
-    btn.classList.add('has-photo');
-    document.getElementById('photoLabel').textContent = `+ Add another photo (${collectedPhotos.length}/${MAX_PHOTOS})`;
-    document.getElementById('photoSub').textContent = 'Tap to take another invoice photo';
-  } else {
-    btn.classList.remove('has-photo');
-    document.getElementById('photoLabel').innerHTML = '+ Tap to add invoice photo<br>Ketik untuk tambah foto invois';
-    document.getElementById('photoSub').textContent = 'Up to 10 · Each must be SIGNED by customer';
-  }
-  if (collectedPhotos.length >= MAX_PHOTOS) {
-    document.getElementById('invoicePhoto').disabled = true;
-  } else {
-    document.getElementById('invoicePhoto').disabled = false;
-  }
-}
-
-function validate() {
-  let valid = true;
-  const fields = [
-    { id: 'deliveryDate', err: 'err-date' },
-    { id: 'driverName', err: 'err-driver', focusId: 'driverSearch' },
-    { id: 'vehicleNo', err: 'err-vehicle' },
-  ];
-  fields.forEach(f => {
-    const el = document.getElementById(f.id);
-    const err = document.getElementById(f.err);
-    if (!el.value) { err.classList.add('show'); if (valid) { var fe = document.getElementById(f.focusId || f.id); if (fe) fe.focus(); } valid = false; }
-    else { err.classList.remove('show'); }
-  });
-  if (!collectedPhotos.length) {
-    document.getElementById('err-photo').classList.add('show'); valid = false;
-  } else { document.getElementById('err-photo').classList.remove('show'); }
-  if (!document.getElementById('confirmCheck').checked) {
-    document.getElementById('err-confirm').classList.add('show'); valid = false;
-  } else { document.getElementById('err-confirm').classList.remove('show'); }
-  // B18 fix: driver and secondDriver must not be the same person (would double-count credit)
-  const dr = document.getElementById('driverName').value;
-  const sd = document.getElementById('secondDriver').value;
-  if (dr && sd && dr === sd) {
-    alert('Driver and Second Driver cannot be the same person.\nPemandu dan Pemandu Kedua tidak boleh sama.');
-    var _ss = document.getElementById('secondSearch'); if (_ss) _ss.focus();
-    valid = false;
-  }
-  return valid;
-}
-
-async function submitForm() {
-  if (!validate()) return;
-  if (SCAN_TEST){ alert('TEST — nothing saved. The real form would upload ' + collectedPhotos.length + ' photo(s) here.\n\nUJIAN — tiada apa disimpan.'); return; }
-  document.getElementById('loadingOverlay').classList.add('show');
-  document.querySelector('.loading-text').textContent =
-    `Uploading ${collectedPhotos.length} photo(s)... · Memuat naik ${collectedPhotos.length} foto...`;
-  try {
-    // Photos are pre-compressed in handlePhoto() — just strip the data URL prefix.
-    const photos = collectedPhotos.map(p => ({
-      base64: p.dataUrl.split(',')[1],
-      name: p.name,
-      type: p.type,
-    }));
-    const now = new Date();
-    const payload = {
-      formType: 'POD',
-      branch: BRANCH,
-      timestamp: now.toISOString(),
-      deliveryDate: document.getElementById('deliveryDate').value,
-      driverName: document.getElementById('driverName').value,
-      secondDriver: document.getElementById('secondDriver').value || '',
-      vehicleNo: document.getElementById('vehicleNo').value,
-
-      // Multi-photo array (V11+)
-      photos: photos,
-
-      // [E5] true if ANY included photo was force-uploaded past the quality gate
-      qualityFlag: collectedPhotos.some(p => !!p.qualityFlag),
-
-      // Backwards-compat single fields (first photo, for old WebApp.gs that doesn't know about photos[])
-      photoBase64: photos[0].base64,
-      photoName: photos[0].name,
-      photoType: photos[0].type,
-    };
-    const formData = new FormData();
-    formData.append('data', JSON.stringify(payload));
-    await fetch(SCRIPT_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      body: formData
-    });
-    document.getElementById('loadingOverlay').classList.remove('show');
-    const timeStr = now.toLocaleDateString('en-MY', { day:'2-digit', month:'short', year:'numeric' })
-      + ' · ' + now.toLocaleTimeString('en-MY', { hour:'2-digit', minute:'2-digit' });
-    document.getElementById('successTime').textContent = timeStr;
-    document.getElementById('successDriver').textContent = payload.driverName;
-    document.getElementById('successVehicle').textContent = payload.vehicleNo + ' · ' + photos.length + ' photo(s)';
-
-    document.getElementById('successScreen').classList.add('show');
-  } catch (err) {
-    document.getElementById('loadingOverlay').classList.remove('show');
-    alert('Submission failed. Please check your connection and try again.\nPenghantaran gagal. Sila semak sambungan anda dan cuba lagi.');
-  }
-}
-
-function resetForm() {
-  document.getElementById('successScreen').classList.remove('show');
-  document.getElementById('podForm').reset();
-  collectedPhotos = [];
-  renderPhotoGrid();
-  if (typeof resetShipmentView === 'function') resetShipmentView();
-  // Kuala Lumpur timezone
-  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
-  document.getElementById('deliveryDate').value = today;
-  // reset driver pickers, then restore the remembered primary driver
-  ['staffIdBadge','staffIdBadge2'].forEach(function(id){ var b=document.getElementById(id); if(b) b.style.display='none'; });
-  var dsearch = document.getElementById('driverSearch'); if (dsearch) dsearch.value = '';
-  var ssearch = document.getElementById('secondSearch'); if (ssearch) ssearch.value = '';
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved && dsearch && dsearch._pick) {
-    dsearch._pick(saved);
-    document.getElementById('rememberedBadge').style.display = 'inline-flex';
-  }
-}
 
 // ===================== B4: Shipment-aware delivery checklist =====================
 function _esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
@@ -1445,13 +952,13 @@ async function checkShipmentForVehicle(keepListOnFail, isRetry){
   if (!sec || !man) return;
   // Manual POD stays disabled either way - it would not count on the dashboard.
   function _box(html){ man.style.display='none'; sec.style.display='block';
-    sec.innerHTML = '<div style="padding:18px 14px;text-align:center;color:#9A3412;font-size:14px;line-height:1.6;border:1.5px solid #F0C9A8;background:#FFF7ED;border-radius:10px;">' + html + '</div>'; }
-  var _retryBtn = '<button type="button" id="shipRetry" style="margin-top:14px;background:#fff;color:#854F0B;border:1.5px solid #E0C68A;border-radius:8px;padding:11px 18px;font-weight:700;font-size:14px;cursor:pointer;">&#8635; ' + L('Tap to retry', 'Tekan untuk cuba lagi') + '</button>';
+    sec.innerHTML = '<div class="state">' + html + '</div>'; }
+  var _retryBtn = '<button type="button" id="shipRetry" class="retry">' + _ico('refresh', 's') + L('Tap to retry', 'Tekan untuk cuba lagi') + '</button>';
 
   // The server ANSWERED and this lorry genuinely has nothing today - the office's problem to fix.
   function fallEmpty(){ if (_shipGroups.length && !_shipStale) return;   // a live list stands (re-import race); a stale one does not
     _shipKey=''; _shipGroups=[]; _shipStale=false;
-    _box('<div style="font-size:30px;margin-bottom:6px;">&#9888;&#65039;</div>'
+    _box('<div class="big">' + _ico('warn') + '</div>'
       + '<b>' + L('No delivery list for this lorry', 'Tiada senarai penghantaran untuk lori ini') + (vehicle ? ' (' + _esc(vehicle) + ')' : '') + '</b>'
       + '<br><br>' + L('Check the lorry number and the date. If both are right, ask the office to check the order.',
                       'Semak nombor lori dan tarikh. Jika kedua-duanya betul, minta pejabat semak pesanan.')
@@ -1471,12 +978,12 @@ async function checkShipmentForVehicle(keepListOnFail, isRetry){
       renderShipmentList();
       return;
     }
-    _box('<div style="font-size:30px;margin-bottom:6px;">&#128246;</div>'
+    _box('<div class="big">' + _ico('wifiOff') + '</div>'
       + '<b>' + L('Cannot load the delivery list right now', 'Senarai penghantaran tidak dapat dimuat sekarang') + '</b>'
       + '<br><br>' + L('This is a <b>connection problem</b>, not a missing order. Find better signal, then tap retry.',
                       'Ini masalah <b>sambungan</b>, bukan pesanan hilang. Cari liputan lebih baik, kemudian tekan cuba lagi.')
       + _retryBtn
-      + (err && err.name ? '<div style="font-size:11px;color:#9a8050;margin-top:9px;">(' + _esc(err.name) + ')</div>' : ''));
+      + (err && err.name ? '<div class="state-sub">(' + _esc(err.name) + ')</div>' : ''));
   }
 
   if (!vehicle || !date){ if (!keepListOnFail) resetShipmentView(); return; }   // nothing picked yet is not an error
@@ -1485,7 +992,7 @@ async function checkShipmentForVehicle(keepListOnFail, isRetry){
   // groups BEFORE fetching, so fallError's "is a list on screen" test cannot be fooled by them.
   if (!keepListOnFail){ _shipKey=''; _shipGroups=[]; _shipStale=false;
     sec.style.display='block'; man.style.display='none';
-    sec.innerHTML = '<div style="padding:14px;text-align:center;color:#854F0B;">' + L('Checking delivery list…', 'Menyemak senarai…') + '</div>'; }
+    sec.innerHTML = '<div class="state quiet"><span class="spin-s"></span>' + L('Checking delivery list…', 'Menyemak senarai…') + '</div>'; }
   // 15s abort keeps a dead-zone fetch from hanging forever (same idiom as fetchVehicles/saveDelivery)
   var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
   var timer = ctrl ? setTimeout(function(){ ctrl.abort(); }, 15000) : null;
@@ -1585,36 +1092,34 @@ var _shipFilter = '';   // B4: live customer search (kept across re-renders)
 function renderShipmentList(){
   _shipCacheSync();   // [Ship-fix] fold local progress into the offline copy
   var sec = document.getElementById('shipmentSection');
-  var all = []; _shipGroups.forEach(function(g){ g.invs.forEach(function(i){ all.push(i); }); });
-  var total = all.length;
-  var done = all.filter(function(i){ return String(i.status).toLowerCase()==='delivered'; }).length;
-  var failed = all.filter(function(i){ return String(i.status).toLowerCase()==='failed'; }).length;
-  var remaining = total - done - failed;
-  var pct = total ? Math.round(done/total*100) : 0;
-  var vehicle = document.getElementById('vehicleNo').value;
-  var html = '<div class="section-label">📋 ' + L('Today\'s deliveries', 'Penghantaran hari ini') + '</div>'
-    + '<div style="background:#FFF8E1;border:1px solid #F0D9A8;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:#412402;">'
-    + '<b>'+_esc(vehicle)+'</b> · '+done+'/'+total+' '+L('delivered','dihantar')+(failed?' · '+failed+' '+L('problem','masalah'):'')
-    + (remaining>0 ? ' · <b>'+remaining+' '+L('to go','lagi')+'</b>' : '')
-    + '<div style="height:8px;background:#F0D9A8;border-radius:99px;margin-top:7px;overflow:hidden;"><div style="height:100%;width:'+pct+'%;background:#2E7D32;border-radius:99px;transition:width .3s;"></div></div></div>'
-    // [Ship-fix 2026-08-19] the list can now be the cached copy - say so, loudly, instead of
-    // letting a stale checklist pass for live server truth.
-    + (_shipStale ? '<div style="background:#FFF7ED;border:1.5px solid #F0C9A8;border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:12.5px;color:#9A3412;line-height:1.5;">'
-        + '<b>&#128246; ' + L('Offline copy, not synced yet.', 'Salinan luar talian, belum disegerak.') + '</b> '
-        + L('Tap &#8635; when you have signal.', 'Tekan &#8635; bila ada liputan.') + '</div>' : '')
+  // [Round2] progress counts STOPS (what the driver works through), not invoices
+  var stops = _shipGroups.length, sDone = 0, sFail = 0;
+  _shipGroups.forEach(function(g){
+    if (g.invs.every(function(x){ return String(x.status).toLowerCase() === 'delivered'; })) sDone++;
+    else if (g.invs.some(function(x){ return String(x.status).toLowerCase() === 'failed'; })) sFail++;
+  });
+  var sLeft = stops - sDone - sFail, pct = stops ? Math.round(sDone / stops * 100) : 0;
+  // [Ship-fix 2026-08-19] the list can be the cached copy - say so, instead of letting a stale
+  // checklist pass for live server truth.
+  var html = (_shipStale ? '<div class="stale">' + _ico('wifiOff', 's') + '<span><b>' + L('Offline copy, not synced yet.', 'Salinan luar talian, belum disegerak.') + '</b> '
+        + L('Tap &#8635; when you have signal.', 'Tekan &#8635; bila ada liputan.') + '</span></div>' : '')
+    + '<div class="prog"><div class="n">' + sDone + '<span> / ' + stops + ' ' + L('stops done', 'kedai siap') + '</span></div>'
+    + '<div class="s">' + (sFail ? sFail + ' ' + L('problem', 'masalah') + ' &middot; ' : '') + sLeft + ' ' + L('to go', 'lagi') + '</div></div>'
+    + '<div class="track"><i style="width:' + pct + '%"></i></div>'
     // B4/B6: search + manual refresh (44-stop routes need both)
-    + '<div style="display:flex;gap:8px;margin-bottom:12px;">'
-    + '<input type="text" id="shipFilter" value="'+_esc(_shipFilter)+'" placeholder="🔍 ' + _escA(L('Find customer', 'Cari pelanggan')) + '" autocomplete="off" '
-    +   'style="flex:1;box-sizing:border-box;padding:11px 14px;font-size:15px;border:1.5px solid #E0C68A;border-radius:8px;background:#fff;color:#412402;">'
-    + '<button type="button" id="shipRefresh" aria-label="' + _escA(L('Refresh list', 'Muat semula senarai')) + '" style="background:#fff;color:#854F0B;border:1.5px solid #E0C68A;border-radius:8px;padding:0 14px;font-weight:700;font-size:14px;cursor:pointer;">&#8635;</button>'
-    + '</div><div id="shipGroupsWrap"></div>'
-    + '<div style="text-align:center;color:#9a8050;font-size:11.5px;margin-top:6px;">' + L('Not on the list? Ask the office to add it.', 'Tiada dalam senarai? Minta pejabat tambah.') + '</div>';
+    + '<div class="find"><label class="search">' + _ico('search') + '<input type="text" id="shipFilter" value="' + _esc(_shipFilter) + '" placeholder="' + _escA(L('Find shop or invoice', 'Cari kedai atau invois')) + '" autocomplete="off"></label>'
+    + '<button type="button" class="icon-btn" id="shipRefresh" aria-label="' + _escA(L('Refresh list', 'Muat semula senarai')) + '">' + _ico('refresh') + '</button></div>'
+    + '<div id="shipGroupsWrap"></div>'
+    + '<div class="foot">' + L('Not on the list? Ask the office to add it.', 'Tiada dalam senarai? Minta pejabat tambah.') + '</div>';
   sec.innerHTML = html;
   renderShipGroups();
+  try{ renderPalletOnboard(); }catch(e){}   // [Round2] the pallets-on-lorry box used to vanish on every redraw until the next re-sync
+  _netRender();
 }
 
 // [Lang 2026-10-23] after BM <-> EN: redraw whatever JS drew in the old language
 function _langRefresh_(){
+  try{ _tripRender(); _netRender(); }catch(e){}
   var sec = document.getElementById('shipmentSection');
   if (_smMode) _smBanner(true);
   if (_shipGroups.length && sec && sec.style.display !== 'none'){ renderShipmentList(); try{ renderPalletOnboard(); }catch(e){} return; }
@@ -1655,11 +1160,15 @@ function _palletToast(kind, html, pos){   // [AutoCap v2] pos 'top' = show at th
   if (!t){
     t = document.createElement('div');
     t.id = 'palletToast';
-    t.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:120;max-width:90%;padding:12px 16px;border-radius:10px;font-size:13px;line-height:1.4;color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.25);opacity:0;transition:opacity .2s;pointer-events:none;';
+    t.style.cssText = 'position:fixed;left:0;right:0;margin:0 auto;width:-webkit-fit-content;width:fit-content;max-width:calc(100% - 32px);bottom:24px;z-index:120;padding:12px 16px;border-radius:12px;font-size:15px;font-weight:600;line-height:1.4;color:#fff;box-shadow:0 10px 24px rgba(15,23,42,.3);opacity:0;transition:opacity .2s;pointer-events:none;';
     document.body.appendChild(t);
   }
-  t.style.background = (kind === 'ok') ? '#2E7D32' : (kind === 'err' ? '#C62828' : '#854F0B');
-  if (pos === 'top'){ t.style.top = '16px'; t.style.top = 'calc(16px + env(safe-area-inset-top))'; t.style.bottom = 'auto'; }
+  t.style.background = (kind === 'ok') ? '#15803D' : (kind === 'err' ? '#C8101E' : '#B45309');
+  if (pos === 'top'){   // just below the (sticky) app bar, so it never covers the logo / language switch
+    var _bar = document.querySelector('.bar'), _bb = 0;
+    try{ _bb = _bar ? Math.max(0, _bar.getBoundingClientRect().bottom) : 0; }catch(e){}
+    t.style.top = Math.round(_bb + 12) + 'px'; t.style.bottom = 'auto';
+  }
   else { t.style.top = 'auto'; t.style.bottom = '24px'; t.style.bottom = 'calc(24px + env(safe-area-inset-bottom))'; }   // first value = fallback where env() is unknown
   t.innerHTML = html;
   t.style.opacity = '1';
@@ -1796,13 +1305,13 @@ function renderPalletOnboard(){
   var box = document.getElementById('palletOnboard');
   if (!PALLET_ONBOARD.length){ if (box) box.remove(); return; }
   if (!box){ box = document.createElement('div'); box.id = 'palletOnboard'; sec.insertBefore(box, sec.firstChild); }
-  var summary = PALLET_ONBOARD.map(function(l){ return _esc(l.displayName || l.palletKey) + ' ×' + l.assigned; }).join(' · ');
-  box.innerHTML = '<div style="border:1.5px solid #E0C68A;background:#FFF9EE;border-radius:10px;padding:11px 12px;margin-bottom:10px;">'
-    + '<div style="font-weight:700;font-size:13px;color:#5C3A1E;">&#128230; ' + L('Pallets on lorry', 'Pallet atas lori') + '</div>'
-    + '<div style="font-size:13px;color:#412402;margin:4px 0 6px;">' + summary + '</div>'
-    + '<div style="font-size:11.5px;color:#854F0B;">' + L('Correct? Do nothing.', 'Betul? Tak perlu buat apa-apa.') + '</div>'
-    + '<button type="button" onclick="togglePalletFix()" style="margin-top:7px;background:#fff;color:#C62828;border:1px solid #E8B4B4;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:700;cursor:pointer;">' + L('Wrong count? Fix here', 'Jumlah salah? Betulkan') + '</button>'
-    + '<div id="palletFixRows" style="display:none;margin-top:8px;"></div>'
+  var summary = PALLET_ONBOARD.map(function(l){ return _esc(l.displayName || l.palletKey) + ' &times;' + l.assigned; }).join(' &middot; ');
+  box.innerHTML = '<div class="onboard">'
+    + '<div class="ob-h">' + ICO.box + L('Pallets on lorry', 'Pallet atas lori') + '</div>'
+    + '<div class="ob-s">' + summary + '</div>'
+    + '<div class="ob-n">' + L('Correct? Do nothing.', 'Betul? Tak perlu buat apa-apa.') + '</div>'
+    + '<button type="button" class="ob-fix" onclick="togglePalletFix()">' + L('Wrong count? Fix here', 'Jumlah salah? Betulkan') + '</button>'
+    + '<div id="palletFixRows" style="display:none;"></div>'
     + '</div>';
 }
 function togglePalletFix(){
@@ -1810,12 +1319,10 @@ function togglePalletFix(){
   if (!rows) return;
   if (rows.style.display === 'none'){
     rows.innerHTML = PALLET_ONBOARD.map(function(l, i){
-      return '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;">'
-        + '<div style="flex:1;font-size:12.5px;color:#412402;">' + _esc(l.displayName || l.palletKey) + '<br><span style="color:#854F0B;font-size:11px;">' + L('assigned ', 'diberi ') + l.assigned + '</span></div>'
-        + '<input type="number" id="palletFix-' + i + '" inputmode="numeric" min="0" value="' + l.assigned + '" style="width:80px;padding:9px;font-size:14px;border:1.5px solid #E0C68A;border-radius:8px;">'
-        + '</div>';
+      return '<div class="ob-row"><div class="nm">' + _esc(l.displayName || l.palletKey) + '<small>' + L('assigned ', 'diberi ') + l.assigned + '</small></div>'
+        + '<input type="number" class="in" id="palletFix-' + i + '" inputmode="numeric" min="0" value="' + l.assigned + '"></div>';
     }).join('')
-    + '<button type="button" onclick="sendPalletFix()" style="width:100%;margin-top:8px;background:#5C3A1E;color:#fff;border:none;border-radius:8px;padding:11px;font-weight:700;font-size:13px;cursor:pointer;">' + L('Send the count you received', 'Hantar jumlah sebenar') + '</button>';
+    + '<button type="button" class="ob-send" onclick="sendPalletFix()">' + L('Send the count you received', 'Hantar jumlah sebenar') + '</button>';
     rows.style.display = 'block';
   } else {
     rows.style.display = 'none';
@@ -1845,17 +1352,13 @@ async function sendPalletFix(){
 // [Round1 2026-10-23] stop cards: icons instead of sentences, one language at a time, and Problem as its own
 // mode — while the driver picks a reason there is no invoice camera, no Save and no pallet section, only the
 // proof photo, the 4 reasons and Back. Classes and data-i / data-x are unchanged, so every click path works as before.
-var _shipProblem = {};   // g.key → true while that stop's Problem panel is open (survives re-renders and re-syncs)
+// [Round2 2026-10-23] the approved design: status pill (Belum / Dihantar / reason), invoice chips, one count line,
+// thumbnails, pallets, then the big buttons. The ship-* classes the click handler uses are all still there.
+var _shipProblem = {};      // g.key → true while that stop's Problem panel is open (survives re-renders and re-syncs)
+var _shipFailReason = {};   // g.key → the reason marked on this phone (the delivery list itself does not carry it)
 var SHIP_REASONS = [ ['Shop closed', 'Kedai tutup'], ['Rejected', 'Ditolak'], ['Partial', 'Sebahagian'], ['Reschedule', 'Jadual semula'] ];   // [0] = the value the server stores, never translated
 function _reasonLabel(v){ for (var k = 0; k < SHIP_REASONS.length; k++){ if (SHIP_REASONS[k][0] === v) return L(SHIP_REASONS[k][0], SHIP_REASONS[k][1]); } return v; }
 function _groupByKey(k){ for (var gi = 0; gi < _shipGroups.length; gi++){ if (_shipGroups[gi].key === k) return _shipGroups[gi]; } return null; }
-var ICO = {
-  cam:   '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>',
-  camS:  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>',
-  warn:  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
-  back:  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>',
-  check: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>'
-};
 function renderShipGroups(){
   var wrap = document.getElementById('shipGroupsWrap');
   if (!wrap) return;
@@ -1868,106 +1371,94 @@ function renderShipGroups(){
           || d.g.invs.some(function(x){ return String(x.invoiceNo||'').toLowerCase().indexOf(q)>=0; });
     });
   }
-  function rank(g){ return g.invs.every(function(x){ return String(x.status).toLowerCase()==='delivered'; }) ? 1 : 0; }
+  function rank(g){   // [Round2] still to do first, then problems, delivered at the bottom
+    if (g.invs.every(function(x){ return String(x.status).toLowerCase()==='delivered'; })) return 2;
+    return g.invs.some(function(x){ return String(x.status).toLowerCase()==='failed'; }) ? 1 : 0;
+  }
   disp.sort(function(a,b){ return rank(a.g)-rank(b.g) || a.i-b.i; });
   var html = '';
-  if (!disp.length){ html = '<div style="text-align:center;color:#9a8050;font-size:13px;padding:14px;">' + L('No match', 'Tiada padanan') + '</div>'; }
+  if (!disp.length){ html = '<div class="foot">' + L('No match', 'Tiada padanan') + '</div>'; }
   disp.forEach(function(d){
-    var g = d.g, i = d.i;
+    var g = d.g, i = d.i, n = g.invs.length;
     var gDone = g.invs.every(function(x){ return String(x.status).toLowerCase()==='delivered'; });
     var gFail = !gDone && g.invs.some(function(x){ return String(x.status).toLowerCase()==='failed'; });
-    var color = gDone ? '#2E7D32' : (gFail ? '#C62828' : '#C9A227');
-    var badge = gDone ? '<span style="color:#2E7D32;font-weight:700;font-size:13px;white-space:nowrap;">&#10003; ' + L('Delivered', 'Dihantar') + '</span>'
-              : (gFail ? '<span style="color:#C62828;font-weight:700;font-size:13px;white-space:nowrap;">&#10007; ' + L('Problem', 'Masalah') + '</span>' : '');
-    html += '<div style="border:1px solid #E0C68A;border-left:5px solid '+color+';border-radius:10px;padding:12px;margin-bottom:10px;'+(gDone?'opacity:.55;':'')+'">'
-      + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;"><div style="font-weight:700;font-size:15px;color:#412402;">'+_esc(g.name)+'</div>'+badge+'</div>'
-      + '<div style="font-size:12.5px;color:#854F0B;margin:3px 0 8px;">'+_esc(g.area)+' · '+g.invs.length+' '+L(g.invs.length === 1 ? 'invoice' : 'invoices', 'invois')+'</div>';
+    var pill = gDone ? '<span class="pill p-done">' + L('Delivered', 'Dihantar') + '</span>'
+             : gFail ? '<span class="pill p-fail">' + _esc(_shipFailReason[g.key] ? _reasonLabel(_shipFailReason[g.key]) : L('Problem', 'Masalah')) + '</span>'
+             : '<span class="pill p-wait">' + L('Not yet', 'Belum') + '</span>';
+    html += '<article class="card' + (gDone ? ' done' : '') + '"><div class="c-top"><div class="c-main"><div class="c-name">' + _esc(g.name) + '</div>'
+      + '<div class="c-meta">' + (g.area ? _esc(g.area) + ' &middot; ' : '') + n + ' ' + L(n === 1 ? 'invoice' : 'invoices', 'invois') + '</div></div>' + pill + '</div>';
     if (gDone){
-      html += '<div style="font-size:11px;color:#6b5836;word-break:break-all;">'+ g.invs.map(function(x){ return String(x.invoiceNo); }).sort(function(a,b){ return a.localeCompare(b); }).map(_esc).join(' · ') +'</div>';
+      html += '<div class="done-inv">' + g.invs.map(function(x){ return String(x.invoiceNo); }).sort(function(a,b){ return a.localeCompare(b); }).map(_esc).join(' &middot; ') + '</div></article>';
+      return;
     }
-    if (!gDone && _shipProblem[g.key]){
+    if (_shipProblem[g.key]){
       // ── Problem mode: proof photo first (the office looks for the closed shop front), then the reason ──
-      html += '<div style="padding:10px;border:1.5px solid #F0C9A8;background:#FFF7ED;border-radius:10px;">'
-        + '<div style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:#9A3412;margin-bottom:10px;">' + ICO.warn + ' ' + L('Problem at this stop', 'Masalah di kedai ini') + '</div>'
+      html += '<div class="prob"><div class="prob-h">' + ICO.warn + L('What went wrong?', 'Apa masalahnya?') + '</div>'
         + (g._failProof
-            ? '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;"><span style="position:relative;display:inline-block;">'
-              + '<img src="data:' + _escA(g._failProof.type || 'image/jpeg') + ';base64,' + g._failProof.base64 + '" style="width:60px;height:60px;object-fit:cover;border-radius:8px;border:1px solid #F0C9A8;">'
-              + '<button type="button" class="ship-proof-x" data-i="'+i+'" aria-label="' + _escA(L('Remove', 'Buang')) + '" style="position:absolute;top:-7px;right:-7px;width:26px;height:26px;background:rgba(0,0,0,.75);color:#fff;border:0;border-radius:50%;font-size:15px;line-height:1;cursor:pointer;padding:0;">&times;</button></span>'
-              + '<span style="font-size:13px;font-weight:700;color:#2E7D32;">&#10003; ' + L('Proof photo added', 'Foto bukti ada') + '</span></div>'
-            : '<button type="button" class="ship-proof" data-i="'+i+'" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;margin-bottom:10px;background:#fff;color:#9A3412;border:1.5px solid #E8B4A0;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;">' + ICO.cam + ' ' + L('Proof photo', 'Foto bukti') + '</button>')
-        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
-        + SHIP_REASONS.map(function(r){ return '<button type="button" class="ship-reason" data-i="'+i+'" data-r="'+_esc(r[0])+'" style="min-height:48px;padding:6px 8px;background:#FFF3CD;color:#854F0B;border:1px solid #E0C68A;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">' + _esc(L(r[0], r[1])) + '</button>'; }).join('')
+            ? '<div class="proof-ok"><span class="th"><img src="data:' + _escA(g._failProof.type || 'image/jpeg') + ';base64,' + g._failProof.base64 + '" alt="">'
+              + '<button type="button" class="ship-proof-x" data-i="'+i+'" aria-label="' + _escA(L('Remove', 'Buang')) + '">&times;</button></span>'
+              + ICO.check + L('Proof photo added', 'Foto bukti ada') + '</div>'
+            : '<button type="button" class="proof ship-proof" data-i="'+i+'">' + ICO.cam + L('Proof photo', 'Foto bukti') + '</button>')
+        + '<div class="reasons">' + SHIP_REASONS.map(function(r){ return '<button type="button" class="reason ship-reason" data-i="'+i+'" data-r="'+_esc(r[0])+'">' + _esc(L(r[0], r[1])) + '</button>'; }).join('') + '</div>'
+        + '<button type="button" class="back ship-problem-back" data-i="'+i+'">' + ICO.back + L('Back', 'Kembali') + '</button>'
+        + '</div></article>';
+      return;
+    }
+    // [untag+count 2026-07-15] each pending invoice is a tap-to-toggle chip (default = to deliver).
+    // Untag the ones not delivered; photo count MUST equal the to-deliver count (no-missing / no-duplicate at source).
+    // [tidy 2026-07-18] chips sorted by invoice number + uniform grid. data-x keeps the ORIGINAL g.invs index,
+    // so the untag toggle and every count/save path are untouched; only the display order changes.
+    var _ord = g.invs.map(function(_x, _xi){ return _xi; }).sort(function(a, b){
+      return String(g.invs[a].invoiceNo).localeCompare(String(g.invs[b].invoiceNo));
+    });
+    html += '<div class="chips">' + _ord.map(function(xi){
+        var x = g.invs[xi];
+        if (String(x.status).toLowerCase()==='delivered') return '<span class="chip dv">' + ICO.checkS + '<span class="t">' + _esc(x.invoiceNo) + '</span></span>';
+        var ut = !!x._untag;
+        return '<button type="button" class="chip ship-untag' + (ut ? ' off' : '') + '" data-i="'+i+'" data-x="'+xi+'" aria-pressed="' + (ut ? 'false' : 'true') + '">'
+          + (ut ? '' : ICO.checkS) + '<span class="t">' + _esc(x.invoiceNo) + '</span></button>';
+      }).join('') + '</div>';
+    var toDeliver = g.invs.filter(function(x){ return String(x.status).toLowerCase()!=='delivered' && !x._untag; }).length;
+    var photos = g.photos || [];
+    var matchCount = (photos.length===toDeliver && toDeliver>0);
+    // one short line: photos taken / needed (and the 1-invoice-1-photo rule while it still matters)
+    html += '<div class="count ' + (matchCount ? 'ok' : (photos.length > toDeliver ? 'bad' : 'no')) + '">'
+      + L('Photos', 'Foto') + ' ' + photos.length + '/' + toDeliver + (matchCount ? ' &#10003;' : '')
+      + (photos.length > toDeliver ? ' &middot; ' + L('remove ' + (photos.length - toDeliver), 'buang ' + (photos.length - toDeliver)) : '')
+      + (toDeliver > 1 && photos.length < toDeliver ? ' <em>&middot; ' + L('1 invoice = 1 photo', '1 invois = 1 foto') + '</em>' : '')
+      + '</div>';
+    if (photos.length){
+      html += '<div class="thumbs">' + photos.map(function(p, pi){
+          return '<span class="th"><img src="' + p.dataUrl + '" alt="">'
+            + (p.qualityFlag ? '<span class="flag" title="' + _escA(L('Sent although not clear', 'Dihantar walaupun tidak jelas')) + '">!</span>' : '')
+            + '<button type="button" class="ship-photo-x" data-g="'+i+'" data-p="'+pi+'" aria-label="' + _escA(L('Remove', 'Buang')) + '">&times;</button></span>';
+        }).join('') + '</div>';
+    }
+    // pallets come BEFORE Save: they are sent together with the Save, so a driver who saves first loses them
+    if (!_smMode && PALLET_MASTER.length){
+      var pSel = (g._pallet && g._pallet.palletKey) || '';
+      var pQty = (g._pallet && g._pallet.qty) || '';
+      var pCollect = (g._pallet && g._pallet.collectQty) || '';
+      var openPallet = !!(pSel || pQty || pCollect);   // keep open across re-render if partially filled
+      var hasPP = !!(g._pallet && g._pallet.photo);
+      html += '<button type="button" class="pallet pallet-toggle" data-i="'+i+'" aria-expanded="' + (openPallet ? 'true' : 'false') + '"><span>' + ICO.box + L('Pallets at this stop?', 'Ada pallet di kedai ini?') + '</span>' + ICO.down + '</button>'
+        + '<div class="pallet-fields pbox" data-i="'+i+'" style="display:'+(openPallet?'flex':'none')+';">'
+        + '<select class="in pallet-type" data-i="'+i+'">'+_palletOptions(pSel)+'</select>'
+        + '<div class="pfields">'
+        +   '<label><span class="fl">' + L('Drop', 'Beri') + '</span><input type="number" class="in pallet-qty" data-i="'+i+'" inputmode="numeric" min="0" value="'+_esc(pQty)+'" placeholder="0"></label>'
+        +   '<label><span class="fl">' + L('Collect', 'Ambil') + '</span><input type="number" class="in pallet-collect" data-i="'+i+'" inputmode="numeric" min="0" value="'+_esc(pCollect)+'" placeholder="0"></label>'
         + '</div>'
-        + '<button type="button" class="ship-problem-back" data-i="'+i+'" style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;margin-top:8px;background:none;color:#854F0B;border:0;font-size:14px;font-weight:700;cursor:pointer;">' + ICO.back + ' ' + L('Back', 'Kembali') + '</button>'
-        + '</div>';
-    } else if (!gDone){
-      // [untag+count 2026-07-15] each pending invoice is a tap-to-toggle chip (default = to deliver).
-      // Untag the ones not delivered; photo count MUST equal the to-deliver count (no-missing / no-duplicate at source).
-      // [tidy 2026-07-18] chips sorted by invoice number + uniform grid. data-x keeps the ORIGINAL g.invs index,
-      // so the untag toggle and every count/save path are untouched; only the display order changes.
-      var _ord = g.invs.map(function(_x, _xi){ return _xi; }).sort(function(a, b){
-        return String(g.invs[a].invoiceNo).localeCompare(String(g.invs[b].invoiceNo));
-      });
-      html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(106px,1fr));gap:5px;margin:2px 0 8px;">'
-        + _ord.map(function(xi){
-            var x = g.invs[xi];
-            var dv = String(x.status).toLowerCase()==='delivered';
-            if (dv) return '<span style="font-size:11px;color:#2E7D32;border:1px solid #A5D6A7;border-radius:6px;padding:4px 6px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">&#10003; '+_esc(x.invoiceNo)+'</span>';
-            var ut = !!x._untag;
-            return '<button type="button" class="ship-untag" data-i="'+i+'" data-x="'+xi+'" style="font-size:11px;cursor:pointer;border-radius:6px;padding:4px 6px;width:100%;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'
-              + (ut ? 'color:#9a8050;background:#F4EEDF;border:1px dashed #C9A227;text-decoration:line-through;' : 'color:#412402;background:#fff;border:1.5px solid #2E7D32;')
-              + '">'+(ut?'&#9711; ':'&#10003; ')+_esc(x.invoiceNo)+'</button>';
-          }).join('')
-        + '</div>';
-      var toDeliver = g.invs.filter(function(x){ return String(x.status).toLowerCase()!=='delivered' && !x._untag; }).length;
-      var photos = g.photos || [];
-      var matchCount = (photos.length===toDeliver && toDeliver>0);
-      // one short line: photos taken / needed (and the 1-invoice-1-photo rule while it still matters)
-      html += '<div style="font-size:13px;font-weight:700;margin-bottom:8px;color:'+(matchCount?'#2E7D32':'#C62828')+';">'
-        + L('Photos', 'Foto') + ' ' + photos.length + '/' + toDeliver + (matchCount ? ' &#10003;' : '')
-        + (photos.length > toDeliver ? ' &middot; ' + L('remove ' + (photos.length - toDeliver), 'buang ' + (photos.length - toDeliver)) : '')
-        + (toDeliver > 1 && photos.length < toDeliver ? '<span style="font-weight:600;color:#854F0B;"> &middot; ' + L('1 invoice = 1 photo', '1 invois = 1 foto') + '</span>' : '')
-        + '</div>';
-      if (photos.length){
-        html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">'
-          + photos.map(function(p, pi){
-              var t = '<img src="'+p.dataUrl+'" style="width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid #E0C68A;">';
-              var x = '<button type="button" class="ship-photo-x" data-g="'+i+'" data-p="'+pi+'" aria-label="' + _escA(L('Remove', 'Buang')) + '" style="position:absolute;top:-6px;right:-6px;width:24px;height:24px;background:rgba(0,0,0,.72);color:#fff;border:0;border-radius:50%;font-size:14px;line-height:1;cursor:pointer;padding:0;">&times;</button>';
-              return '<span style="position:relative;display:inline-block;margin-top:4px;">' + t
-                + (p.qualityFlag ? '<span style="position:absolute;bottom:1px;left:1px;font-size:12px;line-height:1;">&#128681;</span>' : '')
-                + x + '</span>';
-            }).join('')
-          + '</div>';
-      }
-      // pallets come BEFORE Save: they are sent together with the Save, so a driver who saves first loses them
-      if (!_smMode && PALLET_MASTER.length){
-        var pSel = (g._pallet && g._pallet.palletKey) || '';
-        var pQty = (g._pallet && g._pallet.qty) || '';
-        var pCollect = (g._pallet && g._pallet.collectQty) || '';
-        var openPallet = !!(pSel || pQty || pCollect);   // keep open across re-render if partially filled
-        html += '<button type="button" class="pallet-toggle" data-i="'+i+'" style="width:100%;margin-bottom:8px;background:#fff;color:#854F0B;border:1px dashed #E0C68A;border-radius:10px;min-height:42px;padding:8px;font-weight:600;font-size:13px;cursor:pointer;">'
-          + '&#128230; ' + L('Pallets?', 'Ada pallet?') + '</button>'
-          + '<div class="pallet-fields" data-i="'+i+'" style="display:'+(openPallet?'flex':'none')+';flex-direction:column;gap:8px;margin-bottom:8px;">'
-          + '<select class="pallet-type" data-i="'+i+'" style="width:100%;padding:11px 12px;font-size:14px;border:1.5px solid #E0C68A;border-radius:8px;background:#fff;color:#412402;">'+_palletOptions(pSel)+'</select>'
-          + '<div style="display:flex;gap:8px;">'
-          + '<label style="flex:1;font-size:12px;font-weight:600;color:#854F0B;">&#128230;&#10145;&#65039; ' + L('Drop', 'Beri')
-          + '<input type="number" class="pallet-qty" data-i="'+i+'" inputmode="numeric" min="0" value="'+_esc(pQty)+'" placeholder="0" style="width:100%;margin-top:3px;padding:11px 12px;font-size:14px;border:1.5px solid #E0C68A;border-radius:8px;background:#fff;color:#412402;box-sizing:border-box;"></label>'
-          + '<label style="flex:1;font-size:12px;font-weight:600;color:#0E7C5A;">&#8617;&#65039;&#128230; ' + L('Collect', 'Ambil')
-          + '<input type="number" class="pallet-collect" data-i="'+i+'" inputmode="numeric" min="0" value="'+_esc(pCollect)+'" placeholder="0" style="width:100%;margin-top:3px;padding:11px 12px;font-size:14px;border:1.5px solid #E0C68A;border-radius:8px;background:#fff;color:#412402;box-sizing:border-box;"></label>'
-          + '</div>'
-          + '<button type="button" class="pallet-photo" data-i="'+i+'" style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px;min-height:42px;background:#fff;color:'+(g._pallet && g._pallet.photo ? '#2E7D32' : '#854F0B')+';border:1px '+(g._pallet && g._pallet.photo ? 'solid #2E7D32' : 'dashed #E0C68A')+';border-radius:8px;padding:8px;font-size:13px;font-weight:600;cursor:pointer;">'
-          + (g._pallet && g._pallet.photo ? '&#10003; ' + L('Pallet photo added', 'Foto pallet ada') : ICO.camS + ' ' + L('Pallet photo (optional)', 'Foto pallet (pilihan)')) + '</button>'
-          + '</div>';
-      }
-      // actions: the camera icon while photos are missing, Save once photos = invoices, Problem always
-      var primary = photos.length < toDeliver
-        ? '<button type="button" class="ship-photo" data-i="'+i+'" aria-label="' + _escA(L('Take photo', 'Ambil foto')) + '" style="flex:1;display:flex;align-items:center;justify-content:center;min-height:54px;background:#2E7D32;color:#fff;border:0;border-radius:12px;cursor:pointer;">' + ICO.cam + '</button>'
-        : (matchCount ? '<button type="button" class="ship-save" data-i="'+i+'" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;min-height:54px;background:#2E7D32;color:#fff;border:none;border-radius:12px;font-weight:800;font-size:16px;cursor:pointer;">' + ICO.check + ' ' + L('Save', 'Simpan') + '</button>' : '');
-      html += '<div style="display:flex;gap:8px;">' + primary
-        + '<button type="button" class="ship-fail" data-i="'+i+'" style="' + (primary ? '' : 'flex:1;') + 'display:flex;align-items:center;justify-content:center;gap:6px;min-height:54px;padding:0 14px;background:#fff;color:#9A3412;border:1.5px solid #E8B4A0;border-radius:12px;font-weight:700;font-size:14px;cursor:pointer;">' + ICO.warn + ' ' + L('Problem', 'Masalah') + '</button>'
+        + '<button type="button" class="pphoto pallet-photo' + (hasPP ? ' ok' : '') + '" data-i="'+i+'">'
+        +   (hasPP ? ICO.check + L('Pallet photo added', 'Foto pallet ada') : ICO.camS + L('Pallet photo (optional)', 'Foto pallet (pilihan)')) + '</button>'
         + '</div>';
     }
-    html += '</div>';
+    // actions: the camera icon while photos are missing, Save once photos = invoices, Problem always
+    var primary = photos.length < toDeliver
+      ? '<button type="button" class="btn b-pri ship-photo" data-i="'+i+'" aria-label="' + _escA(L('Take photo', 'Ambil foto')) + '">' + ICO.cam + '</button>'
+      : (matchCount ? '<button type="button" class="btn b-save ship-save" data-i="'+i+'">' + ICO.check + L('Save', 'Simpan') + '</button>' : '');
+    html += '<div class="acts">' + primary
+      + '<button type="button" class="btn b-ghost ship-fail' + (primary ? '' : ' b-full') + '" data-i="'+i+'">' + ICO.warn + L('Problem', 'Masalah') + '</button>'
+      + '</div></article>';
   });
   wrap.innerHTML = html;
 }
@@ -1977,15 +1468,11 @@ function renderShipGroups(){
 function _confirmSheet(title, note, yesTxt, noTxt){
   return new Promise(function(resolve){
     var ov = document.createElement('div');
-    ov.id = 'confirmSheet';
-    ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:10050;background:rgba(11,31,58,.6);display:flex;align-items:flex-end;justify-content:center;';
-    ov.innerHTML = '<div style="background:#fff;width:100%;max-width:480px;border-radius:16px 16px 0 0;padding:20px 18px;padding-bottom:max(20px, calc(env(safe-area-inset-bottom) + 14px));font-family:\'DM Sans\',sans-serif;">'
-      + '<div style="font-size:17px;font-weight:800;color:#0B1F3A;line-height:1.35;">' + _esc(title) + '</div>'
-      + (note ? '<div style="font-size:14px;color:#9A3412;margin-top:6px;">' + _esc(note) + '</div>' : '')
-      + '<div style="display:flex;gap:10px;margin-top:16px;">'
-      +   '<button type="button" data-a="no" style="flex:1;min-height:52px;background:#fff;color:#0B1F3A;border:1.5px solid #CBD5E1;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;">' + _esc(noTxt) + '</button>'
-      +   '<button type="button" data-a="yes" style="flex:1.3;min-height:52px;background:#C62828;color:#fff;border:0;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;">' + _esc(yesTxt) + '</button>'
-      + '</div></div>';
+    ov.id = 'confirmSheet'; ov.className = 'scrim';
+    ov.innerHTML = '<div class="sheet" role="dialog" aria-modal="true"><h3>' + _esc(title) + '</h3>'
+      + (note ? '<p>' + _esc(note) + '</p>' : '')
+      + '<div class="row"><button type="button" class="no" data-a="no">' + _esc(noTxt) + '</button>'
+      + '<button type="button" class="yes" data-a="yes">' + _esc(yesTxt) + '</button></div></div>';
     function done(v){ try{ ov.remove(); }catch(e){} resolve(v); }
     ov.addEventListener('click', function(e){ var b = e.target.closest('button'); if (b) done(b.getAttribute('data-a') === 'yes'); else if (e.target === ov) done(false); });
     document.body.appendChild(ov);
@@ -2128,7 +1615,7 @@ document.getElementById('shipmentSection').addEventListener('click', function(e)
     return;
   }
   var pt = e.target.closest('.pallet-toggle');
-  if (pt){ var pf = document.querySelector('.pallet-fields[data-i="'+pt.getAttribute('data-i')+'"]'); if (pf) pf.style.display = (pf.style.display==='none'?'flex':'none'); return; }   // FIX: this branch was dropped in the KTN merge — the Pallet? button did nothing
+  if (pt){ var pf = document.querySelector('.pallet-fields[data-i="'+pt.getAttribute('data-i')+'"]'); if (pf){ pf.style.display = (pf.style.display==='none'?'flex':'none'); pt.setAttribute('aria-expanded', pf.style.display === 'none' ? 'false' : 'true'); } return; }   // FIX: this branch was dropped in the KTN merge — the Pallet? button did nothing
 });
 
 // [AutoCap 2026-09-09] one place that lands a photo on a stop — used by the OS-camera path
@@ -2678,7 +2165,7 @@ function _srBuild_(){
   var ov = document.getElementById('srOverlay');
   if (ov) return ov;
   ov = document.createElement('div'); ov.id = 'srOverlay';
-  ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:9700;background:#0B1F3A;display:none;flex-direction:column;font-family:\'DM Sans\',sans-serif;color:#fff;';
+  ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:9700;background:#0E1458;display:none;flex-direction:column;color:#fff;';
   ov.innerHTML =
       '<div style="padding:12px 14px 8px;padding-top:max(12px, env(safe-area-inset-top));padding-left:max(14px, env(safe-area-inset-left));padding-right:max(14px, env(safe-area-inset-right));display:flex;align-items:center;gap:10px;">'
     +   '<div style="flex:1;min-width:0;"><div id="srTitle" style="font-size:17px;font-weight:800;">' + Lspan('Check the scan', 'Semak imbasan')
@@ -2686,17 +2173,17 @@ function _srBuild_(){
     +   '<div id="srTag" style="display:inline-block;margin-top:4px;font-size:12.5px;font-weight:700;padding:3px 9px;border-radius:999px;"></div></div>'
     +   '<button type="button" id="srToggle" style="background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:7px 10px;font-size:12.5px;line-height:1.25;cursor:pointer;min-height:40px;">' + L('Original', 'Asal') + '</button>'
     + '</div>'
-    + '<div id="srStage" style="position:relative;flex:1;min-height:0;margin:0 10px;border-radius:10px;overflow:hidden;background:#1d2f4a;display:flex;align-items:center;justify-content:center;">'
+    + '<div id="srStage" style="position:relative;flex:1;min-height:0;margin:0 10px;border-radius:10px;overflow:hidden;background:#1d2a5e;display:flex;align-items:center;justify-content:center;">'
     +   '<img id="srImg" alt="" style="max-width:100%;max-height:100%;object-fit:contain;background:#fff;display:none;">'
     +   '<div id="srBusy" style="text-align:center;font-size:15px;font-weight:700;line-height:1.5;padding:20px;">' + Lspan('Scanning…', 'Mengimbas…')
-    +     '<br><button type="button" id="srSkip" style="display:none;margin:18px auto 0;padding:12px 16px;background:#fff;color:#0B1F3A;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:700;line-height:1.3;cursor:pointer;">' + Lspan('Use the photo without scanning', 'Guna foto tanpa imbas') + '</button></div>'
+    +     '<br><button type="button" id="srSkip" style="display:none;margin:18px auto 0;padding:12px 16px;background:#fff;color:#0F172A;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:700;line-height:1.3;cursor:pointer;">' + Lspan('Use the photo without scanning', 'Guna foto tanpa imbas') + '</button></div>'
     +   '<div id="srEditor" style="position:absolute;top:0;left:0;right:0;bottom:0;display:none;background:#000;"></div>'
     + '</div>'
     + '<div id="srHint" style="padding:8px 14px 0;font-size:13.5px;line-height:1.4;color:#C9D6E3;text-align:center;"></div>'
     + '<div id="srBtns" style="padding:10px 12px 22px;padding-bottom:max(22px, calc(env(safe-area-inset-bottom) + 12px));padding-left:max(12px, env(safe-area-inset-left));padding-right:max(12px, env(safe-area-inset-right));display:flex;gap:8px;">'
-    +   '<button type="button" id="srRetake" style="flex:1;padding:13px 6px;background:#fff;color:#0B1F3A;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:700;line-height:1.25;cursor:pointer;min-height:52px;">&#8635; ' + Lspan('Retake', 'Ambil semula') + '</button>'
-    +   '<button type="button" id="srAdjust" style="flex:1;padding:13px 6px;background:#fff;color:#0B1F3A;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:700;line-height:1.25;cursor:pointer;min-height:52px;">&#8982; ' + Lspan('Adjust', 'Laras') + '</button>'
-    +   '<button type="button" id="srUse" style="flex:1.3;padding:13px 6px;background:#2E7D32;color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:15px;font-weight:800;line-height:1.25;cursor:pointer;min-height:52px;">&#10003; ' + Lspan('Use', 'Guna') + '</button>'
+    +   '<button type="button" id="srRetake" style="flex:1;padding:13px 6px;background:#fff;color:#0F172A;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:700;line-height:1.25;cursor:pointer;min-height:52px;">&#8635; ' + Lspan('Retake', 'Ambil semula') + '</button>'
+    +   '<button type="button" id="srAdjust" style="flex:1;padding:13px 6px;background:#fff;color:#0F172A;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:700;line-height:1.25;cursor:pointer;min-height:52px;">&#8982; ' + Lspan('Adjust', 'Laras') + '</button>'
+    +   '<button type="button" id="srUse" style="flex:1.3;padding:13px 6px;background:#15803D;color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:15px;font-weight:800;line-height:1.25;cursor:pointer;min-height:52px;">&#10003; ' + Lspan('Use', 'Guna') + '</button>'
     + '</div>';
   document.body.appendChild(ov);
   // Scanic's toolbar buttons are 34 px icons — too small for a driver's thumb in a moving lorry.
@@ -2712,7 +2199,7 @@ function _srTag_(entry){
   var t = document.getElementById('srTag'), h = document.getElementById('srHint'), sc = entry.scan || {};
   if (sc.ok && sc.cropped && sc.sure === false){ t.textContent = '⚠ ' + L('Check the edges', 'Semak tepi'); t.style.background = '#FBBF24'; t.style.color = '#412402';
     h.innerHTML = L('Is part of the invoice cut off? Tap <b>Adjust</b>.', 'Ada bahagian invois terpotong? Tekan <b>Laras</b>.'); }
-  else if (sc.ok && sc.cropped){ t.textContent = '✓ ' + L('Scanned', 'Diimbas'); t.style.background = '#2E7D32'; t.style.color = '#fff';
+  else if (sc.ok && sc.cropped){ t.textContent = '✓ ' + L('Scanned', 'Diimbas'); t.style.background = '#15803D'; t.style.color = '#fff';
     h.innerHTML = L('All clear? Tap <b>Use</b>. Edges cut off? Tap <b>Adjust</b>.', 'Semua jelas? Tekan <b>Guna</b>. Tepi terpotong? Tekan <b>Laras</b>.'); }
   else if (sc.ok){ t.textContent = '⚠ ' + L('Edges not found', 'Tepi tidak dikesan'); t.style.background = '#FBBF24'; t.style.color = '#412402';
     h.innerHTML = L('Tap <b>Adjust</b> and drag the 4 corners, or <b>Retake</b>.', 'Tekan <b>Laras</b> dan tarik 4 sudut, atau <b>Ambil semula</b>.'); }
@@ -2836,7 +2323,7 @@ async function onShipPhoto(input){
   for (var f=0; f<input.files.length; f++){
     var entry;
     try { entry = await compressImage(input.files[f]); } catch(err){ entry = await readFileAsDataUrl(input.files[f]); }
-    // [E5] quality gate — same rules as handlePhoto: 1-2 = retake only (shot discarded; the
+    // [E5] quality gate (same rules the retired manual upload had): 1-2 = retake only (shot discarded; the
     // input resets below so tapping re-opens the camera), >=3 may "Upload anyway" → flagged.
     try {
       if (entry.quality && !entry.quality.ok){
@@ -2893,6 +2380,28 @@ var AC_CHANGE_MIN = 12;          // mean |Δ| vs the frame we just SHOT before r
 var AC_COOLDOWN_MS = 1500;
 var AC_MANUAL_HINT_MS = 8000;    // no auto shot after this → remind the driver the big button works too
 var AC_READY_TIMEOUT_MS = 6000;  // camera stream not ready in time → fallback
+// [Round2 2026-10-23] a faint drawing of an invoice sits in the A4 frame while the camera starts and for a moment
+// after, then fades away so the driver aims at the real DO (boss: the paper may show, but must then disappear).
+// Drawn shapes only: no customer, no words. Invoice photos only; proof / pallet photos never show it.
+var AC_GHOST_MS = 1600;          // stays this long after the camera is ready (or until a real invoice is in the frame)
+var AC_GHOST_OPACITY = 0.5;
+var _acGhostSrc = '';
+function _acGhostUrl(){
+  if (_acGhostSrc) return _acGhostSrc;
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 297"><rect width="210" height="297" fill="#fff"/>'
+    + '<rect x="58" y="16" width="94" height="7" rx="1" fill="#1f2937"/><rect x="72" y="27" width="66" height="3" fill="#9ca3af"/><rect x="80" y="33" width="50" height="3" fill="#9ca3af"/>'
+    + '<rect x="14" y="52" width="38" height="4" fill="#374151"/>' + [60, 66, 72, 78].map(function(y, i){ return '<rect x="14" y="' + y + '" width="' + [72, 64, 58, 46][i] + '" height="3" fill="#9ca3af"/>'; }).join('')
+    + '<rect x="122" y="48" width="74" height="40" fill="none" stroke="#374151" stroke-width=".8"/>' + [56, 63, 70, 77].map(function(y){ return '<rect x="126" y="' + y + '" width="28" height="3" fill="#9ca3af"/><rect x="160" y="' + y + '" width="30" height="3" fill="#6b7280"/>'; }).join('')
+    + '<g fill="#111">' + [0, 2, 3, 5, 8, 9, 11, 14, 15, 17, 19, 22, 23, 26, 28, 29, 31, 34, 36, 37, 40, 42, 45, 46, 48, 51, 53, 56, 57, 60, 62, 64, 67, 68].map(function(x){ return '<rect x="' + (124 + x) + '" y="92" width="1.3" height="11"/>'; }).join('') + '</g>'
+    + '<rect x="14" y="112" width="182" height="8" fill="#e5e7eb"/>' + [124, 133, 142, 151, 160, 169, 178, 187].map(function(y){ return '<rect x="16" y="' + y + '" width="22" height="3" fill="#9ca3af"/><rect x="44" y="' + y + '" width="86" height="3" fill="#cbd5e1"/><rect x="150" y="' + y + '" width="18" height="3" fill="#9ca3af"/><rect x="176" y="' + y + '" width="18" height="3" fill="#6b7280"/>'; }).join('')
+    + '<rect x="14" y="204" width="182" height="16" fill="none" stroke="#374151" stroke-width=".8"/><rect x="18" y="210" width="40" height="4" fill="#374151"/><rect x="160" y="210" width="32" height="4" fill="#111"/>'
+    + '<circle cx="66" cy="252" r="14" fill="none" stroke="#2563eb" stroke-width="1.3" opacity=".6"/><circle cx="66" cy="252" r="9.5" fill="none" stroke="#2563eb" stroke-width=".8" opacity=".6"/>'
+    + '<path d="M26 258c7-12 13 7 19-2s9-12 15 1 7 5 13-6" stroke="#1e3a8a" fill="none" stroke-width="1.5" stroke-linecap="round"/>'
+    + '<rect x="14" y="268" width="66" height=".8" fill="#374151"/><rect x="128" y="268" width="66" height=".8" fill="#374151"/><rect x="128" y="258" width="44" height="3" fill="#9ca3af"/></svg>';
+  _acGhostSrc = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  return _acGhostSrc;
+}
+function _acGhost(op, fade){ var g = _acEl('acGhost'); if (!g) return; g.style.transition = fade ? 'opacity .8s' : 'none'; g.style.opacity = String(op); }
 
 function _acSupported(){
   try{
@@ -2920,7 +2429,7 @@ function _acBuild(){
   var ov = document.createElement('div');
   ov.id = 'acOverlay';
   // top/left/right/bottom instead of `inset` and no `aspect-ratio`: older Safari (<14.5 / <15) still passes _acSupported (review F6)
-  ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:9500;background:#000;display:flex;flex-direction:column;font-family:\'DM Sans\',sans-serif;color:#fff;';
+  ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:9500;background:#000;display:flex;flex-direction:column;color:#fff;';
   // [Round1 2026-10-23] field test on an iPhone: the bottom text touched the screen edge, too many words, the bottom
   // row did not line up. Now: safe-area padding on every edge, a one-line title (1/16 · invoice no.), a status box of
   // fixed height (so the A4 frame never jumps), and a 3-column bottom row: torch · shutter · photo count.
@@ -2932,25 +2441,26 @@ function _acBuild(){
     +   '<video id="acVideo" playsinline muted autoplay style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;background:#000;"></video>'
     // width/height are declared twice on purpose: plain % first as the fallback for browsers without CSS min()
     // (iOS 13.0-13.3, old Huawei/WebView), then the min() form; _acLayoutGuide() then sets the exact A4 size.
-    +   '<div id="acGuide" style="position:absolute;left:50%;top:54%;transform:translate(-50%,-50%);width:86%;height:70%;width:min(86%, 56vh);height:min(70%, 66vh);border:3px solid rgba(255,255,255,.92);border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);pointer-events:none;transition:border-color .2s;"></div>'
-    +   '<div id="acFlash" style="position:absolute;top:0;left:0;right:0;bottom:0;background:#2E7D32;opacity:0;pointer-events:none;transition:opacity .15s;"></div>'
+    +   '<div id="acGuide" style="position:absolute;left:50%;top:54%;transform:translate(-50%,-50%);width:86%;height:70%;width:min(86%, 56vh);height:min(70%, 66vh);border:3px solid rgba(255,255,255,.92);border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);pointer-events:none;transition:border-color .2s;"><div id="acGhost" style="position:absolute;left:50%;top:50%;width:80%;height:86%;transform:translate(-50%,-50%);background-position:center;background-size:contain;background-repeat:no-repeat;opacity:0;"></div></div>'
+    +   '<div id="acFlash" style="position:absolute;top:0;left:0;right:0;bottom:0;background:#15803D;opacity:0;pointer-events:none;transition:opacity .15s;"></div>'
     +   '<div id="acHeader" style="position:absolute;top:0;left:0;right:0;padding:12px 14px 10px;padding-top:max(12px, env(safe-area-inset-top));' + SA + 'background:linear-gradient(rgba(0,0,0,.75),rgba(0,0,0,0));display:flex;align-items:flex-start;gap:10px;">'
     +     '<div style="flex:1;min-width:0;"><div id="acTitle" style="font-size:18px;font-weight:800;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div><div id="acSub" style="font-size:13px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;"></div></div>'
     +     '<button type="button" id="acClose" aria-label="Close" style="flex:none;width:44px;height:44px;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:10px;font-size:22px;line-height:1;cursor:pointer;">&times;</button>'
     +   '</div>'
     + '</div>'
     // status + progress live BELOW the preview, never on top of the guide frame (emulation finding D3)
-    + '<div id="acStatusRow" style="padding:8px 14px 6px;' + SA + 'background:#0B1F3A;">'
+    + '<div id="acStatusRow" style="padding:8px 14px 6px;' + SA + 'background:#0E1458;">'
     +   '<div id="acStatus" style="display:flex;align-items:center;justify-content:center;text-align:center;box-sizing:border-box;height:52px;overflow:hidden;font-size:15px;font-weight:700;line-height:1.3;padding:5px 12px;border-radius:10px;background:rgba(255,255,255,.08);"></div>'
     +   '<div style="margin-top:6px;height:5px;border-radius:3px;background:rgba(255,255,255,.25);overflow:hidden;"><div id="acBarFill" style="height:100%;width:0;background:#4ADE80;transition:width .18s;"></div></div>'
     + '</div>'
-    + '<div id="acAnywayRow" style="display:none;padding:8px 16px 0;' + SA + 'background:#0B1F3A;"><button type="button" id="acAnyway" style="width:100%;min-height:48px;padding:10px;background:#fff;color:#854F0B;border:1.5px solid #E0C68A;border-radius:10px;font-family:\'DM Sans\',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">&#9888;&#65039; <span id="acAnywayTxt"></span></button></div>'
-    + '<div id="acBottom" style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:12px 16px 24px;padding-bottom:max(24px, calc(env(safe-area-inset-bottom) + 12px));' + SA + 'background:#0B1F3A;">'
-    +   '<div style="justify-self:start;"><button type="button" id="acTorch" aria-label="Torch" style="display:none;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.35);font-size:20px;line-height:1;cursor:pointer;">&#128294;</button></div>'
+    + '<div id="acAnywayRow" style="display:none;padding:8px 16px 0;' + SA + 'background:#0E1458;"><button type="button" id="acAnyway" style="width:100%;min-height:48px;padding:10px;background:#fff;color:#B45309;border:1.5px solid #FCD9A8;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">' + _ico('warn', 's') + '<span id="acAnywayTxt"></span></button></div>'
+    + '<div id="acBottom" style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:12px 16px 24px;padding-bottom:max(24px, calc(env(safe-area-inset-bottom) + 12px));' + SA + 'background:#0E1458;">'
+    +   '<div style="justify-self:start;"><button type="button" id="acTorch" aria-label="Torch" style="display:none;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.35);padding:0;align-items:center;justify-content:center;cursor:pointer;">' + _ico('torch') + '</button></div>'
     +   '<button type="button" id="acShutter" aria-label="Take photo" style="width:72px;height:72px;border-radius:50%;background:#fff;border:5px solid #C9D6E3;cursor:pointer;"></button>'
     +   '<div style="justify-self:end;"><span id="acCount" style="display:inline-block;min-width:58px;text-align:center;padding:7px 12px;border-radius:999px;background:rgba(255,255,255,.12);color:#fff;font-size:16px;font-weight:800;"></span></div>'
     + '</div>';
   document.body.appendChild(ov);
+  try{ ov.querySelector('#acGhost').style.backgroundImage = 'url("' + _acGhostUrl() + '")'; }catch(e){}
   // [Scanner] keep the A4 frame right when the phone turns, Safari's toolbars come and go, or a row under the camera
   // changes height ("Upload anyway" appears) — ResizeObserver catches the last one, a window resize does not
   window.addEventListener('resize', _acLayoutGuide);
@@ -2989,6 +2499,9 @@ function _acLayoutGuide(){
     g.style.width = Math.round(gw) + 'px'; g.style.height = Math.round(gh) + 'px';
     g.style.left = Math.round((W - gw) / 2) + 'px'; g.style.top = Math.round(top + (avH - gh) / 2) + 'px';
     g.style.transform = 'none';
+    var gs = _acEl('acGhost');
+    if (gs){ gs.style.width = Math.round(land ? gh * 0.9 : gw * 0.88) + 'px'; gs.style.height = Math.round(land ? gw * 0.88 : gh * 0.9) + 'px';
+      gs.style.transform = 'translate(-50%,-50%)' + (land ? ' rotate(90deg)' : ''); }
   }catch(e){}
 }
 function _acStatus(text, frac, tone){
@@ -3033,7 +2546,7 @@ async function openAutoCapture(i, opts){
   }
   var ov = _acEl('acOverlay') || _acBuild();
   ov.style.display = 'flex';
-  _acShowAnyway(false); _acPulse(false);
+  _acShowAnyway(false); _acPulse(false); _acGhost(ev ? 0 : AC_GHOST_OPACITY, false);
   try{
     _acEl('acGuide').style.display = ev ? 'none' : 'block';
     _acEl('acTorch').style.display = 'none';
@@ -3074,10 +2587,11 @@ async function openAutoCapture(i, opts){
     if (!_acLive(s)) return;   // closeAutoCapture already stopped s.stream
     if (!_acReady(s)) throw new Error('camera not ready');
     s.ready = true;
+    if (!ev) setTimeout(function(){ if (_acLive(s)) _acGhost(0, true); }, AC_GHOST_MS);
     try{ window._acCamRes = [s.video.videoWidth, s.video.videoHeight]; _scanDebug_(); }catch(e){}
     try{
       var caps = (s.track && s.track.getCapabilities) ? s.track.getCapabilities() : {};
-      if (caps && caps.torch){ s.torchOK = true; _acEl('acTorch').style.display = 'inline-block'; }
+      if (caps && caps.torch){ s.torchOK = true; _acEl('acTorch').style.display = 'inline-flex'; }
     }catch(e){}
     _acStatus(ev ? (s.kind === 'pallet' ? L('Take a photo of the pallets', 'Ambil gambar pallet') : L('Take a photo of the shop or the problem', 'Ambil gambar kedai atau masalah'))
                  : L('Put the invoice in the frame', 'Letak invois dalam bingkai'), 0);
@@ -3146,6 +2660,7 @@ function _acTick(s){
     }
     s.stable++;
     _acPulse(false);
+    if (s.stable === 1) _acGhost(0, true);
     _acStatus(L('Hold…', 'Tahan…'), s.stable / AC_STABLE_FRAMES, 'ok');
     if (s.stable >= AC_STABLE_FRAMES){ s.stable = 0; _acCapture(s, false); }
   }catch(e){
@@ -3286,21 +2801,21 @@ function _scanTestSummary_(g, photos, originals, invoiceNos){
     return '<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-top:1px solid #E2E8F0;">'
       + '<img src="' + p.dataUrl + '" style="width:84px;border:1px solid #CBD5E1;border-radius:4px;background:#fff;">'
       + (p.origDataUrl ? '<img src="' + p.origDataUrl + '" style="width:58px;border:1px solid #CBD5E1;border-radius:4px;opacity:.85;">' : '')
-      + '<div style="font-size:12px;line-height:1.45;color:#0B1F3A;"><b>' + _esc(invoiceNos[k] || ('#' + (k + 1))) + '</b><br>' + st
+      + '<div style="font-size:12px;line-height:1.45;color:#0F172A;"><b>' + _esc(invoiceNos[k] || ('#' + (k + 1))) + '</b><br>' + st
       + '<br>' + L('scan ', 'imbasan ') + kb(photos[k].base64) + ' KB' + (sc.out ? ' · ' + sc.out[0] + '×' + sc.out[1] : '')
       + (p.origDataUrl ? '<br>' + L('original ', 'asal ') + kb(p.origDataUrl.split(',')[1]) + ' KB' : '') + (sc.ms ? '<br>' + sc.ms + ' ms' : '') + '</div></div>';
   }).join('');
   var ov = document.createElement('div');
-  ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:9900;background:rgba(11,31,58,.6);display:flex;align-items:center;justify-content:center;padding:14px;font-family:\'DM Sans\',sans-serif;';
+  ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:9900;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:14px;';
   ov.innerHTML = '<div style="background:#fff;border-radius:12px;max-width:520px;width:100%;max-height:88vh;overflow:auto;padding:16px;">'
     + '<div style="font-size:16px;font-weight:800;color:#B91C1C;">' + L('TEST — nothing was saved', 'UJIAN — tiada apa disimpan') + '</div>'
     + '<div style="font-size:13px;color:#475569;margin:2px 0 10px;">' + L('A real Save would upload:', 'Simpan sebenar akan muat naik:') + '</div>'
-    + '<div style="font-size:13px;color:#0B1F3A;"><b>' + photos.length + '</b> ' + L(photos.length === 1 ? 'scan copy' : 'scan copies', 'salinan imbasan') + ' (' + sTot + ' KB)'
+    + '<div style="font-size:13px;color:#0F172A;"><b>' + photos.length + '</b> ' + L(photos.length === 1 ? 'scan copy' : 'scan copies', 'salinan imbasan') + ' (' + sTot + ' KB)'
     + ' + <b>' + originals.length + '</b> ' + L(originals.length === 1 ? 'backup original' : 'backup originals', 'foto asal simpanan') + ' (' + oTot + ' KB) = <b>' + (sTot + oTot) + ' KB</b></div>'
     + rows
     + '<div style="display:flex;gap:8px;margin-top:12px;">'
-    +   '<button type="button" id="stKeep" style="flex:1;padding:12px;background:#fff;color:#0B1F3A;border:1.5px solid #CBD5E1;border-radius:10px;font-weight:700;">' + L('Keep photos', 'Simpan foto') + '</button>'
-    +   '<button type="button" id="stClear" style="flex:1;padding:12px;background:#0B1F3A;color:#fff;border:none;border-radius:10px;font-weight:700;">' + L('Clear &amp; try again', 'Padam &amp; cuba lagi') + '</button>'
+    +   '<button type="button" id="stKeep" style="flex:1;padding:12px;background:#fff;color:#0F172A;border:1.5px solid #CBD5E1;border-radius:10px;font-weight:700;">' + L('Keep photos', 'Simpan foto') + '</button>'
+    +   '<button type="button" id="stClear" style="flex:1;padding:12px;background:#141C77;color:#fff;border:none;border-radius:10px;font-weight:700;">' + L('Clear &amp; try again', 'Padam &amp; cuba lagi') + '</button>'
     + '</div></div>';
   document.body.appendChild(ov);
   ov.querySelector('#stKeep').onclick = function(){ ov.remove(); };
@@ -3321,6 +2836,15 @@ async function saveDelivery(i){
   var _tagged = g.invs.filter(function(x){ return String(x.status).toLowerCase()!=='delivered' && !x._untag; }).map(function(x){ return x.invoiceNo; });
   if (!_tagged.length){ g._saving=false; alert(L('Select at least one invoice to deliver', 'Pilih sekurang-kurangnya satu invois')); return; }
   if (g.photos.length !== _tagged.length){ g._saving=false; alert(L('Photos must equal invoices: ' + g.photos.length + ' photos, ' + _tagged.length + ' invoices', 'Bilangan foto mesti sama dengan invois: ' + g.photos.length + ' foto, ' + _tagged.length + ' invois')); return; }
+  // [Round2] no driver picked = a POD that counts for nobody (KPI): send the driver to the trip card first
+  if (!_smMode && !document.getElementById('driverName').value){
+    g._saving = false;
+    _tripOpen = true; _tripRender();
+    var _ed = document.getElementById('err-driver'); if (_ed) _ed.classList.add('show');
+    try{ var _ds = document.getElementById('driverSearch'); _ds.focus(); _ds.scrollIntoView({ block: 'center' }); }catch(e){}
+    _palletToast('err', L('Choose the driver first, then tap Save again.', 'Pilih pemandu dulu, kemudian tekan Simpan semula.'), 'top');
+    return;
+  }
   var overlay = document.getElementById('loadingOverlay');
   document.querySelector('.loading-text').textContent = L('Saving…', 'Menyimpan…');
   overlay.classList.add('show');
@@ -3447,7 +2971,7 @@ async function failGroup(i, reason){
     g._saving = false;
     overlay.classList.remove('show');
     if (errMsg) alert(L('Some were NOT saved (' + errMsg + '). Please try again.', 'Sebahagian TIDAK disimpan (' + errMsg + '). Sila cuba lagi.'));
-    else delete _shipProblem[g.key];   // [Round1] stop marked: leave Problem mode
+    else { delete _shipProblem[g.key]; _shipFailReason[g.key] = reason; }   // [Round1] stop marked: leave Problem mode; [Round2] its pill shows the reason
     renderShipmentList();
   }
 }
@@ -3460,9 +2984,10 @@ document.getElementById('vehicleNo').addEventListener('change', function(){
   ['driverName','secondDriver'].forEach(function(id){ var h=document.getElementById(id); if(h) h.value=''; });
   ['driverSearch','secondSearch'].forEach(function(id){ var s=document.getElementById(id); if(s) s.value=''; });
   ['staffIdBadge','staffIdBadge2'].forEach(function(id){ var b=document.getElementById(id); if(b){ b.style.display='none'; b.textContent=''; } });
+  _tripRender();
   checkShipmentForVehicle();
 });
-document.getElementById('deliveryDate').addEventListener('change', function(){ checkShipmentForVehicle(); });
+document.getElementById('deliveryDate').addEventListener('change', function(){ _tripRender(); checkShipmentForVehicle(); });
 
 
 /* ============================================================================
@@ -3542,7 +3067,7 @@ function _smBanner(on){
 function smEnter(prefillId){
   _smMode = true;
   document.body.classList.add('sm-mode');
-  _smFields(true); _smBanner(true);
+  _smFields(true); _smBanner(true); _tripRender();
   var tl = document.getElementById('smToggleLink'); if (tl) tl.textContent = L('Driver mode', 'Mod pemandu');
   if (prefillId) _smId = String(prefillId).toUpperCase();
   if (_smAuthed()){ smLoadDeliveries(); } else { smRenderGate(); }
@@ -3550,7 +3075,7 @@ function smEnter(prefillId){
 function smExit(){
   _smMode = false;
   document.body.classList.remove('sm-mode');
-  _smFields(false); _smBanner(false);
+  _smFields(false); _smBanner(false); _tripRender();
   var tl = document.getElementById('smToggleLink'); if (tl) tl.textContent = L('Salesman →', 'Jurujual →');
   var sec = document.getElementById('shipmentSection');
   if (sec){ sec.style.display = 'none'; sec.innerHTML = ''; }
