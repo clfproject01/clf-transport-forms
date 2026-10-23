@@ -65,7 +65,18 @@
   .in{display:block;width:100%;height:48px;border:1.5px solid var(--line);border-radius:10px;padding:0 12px;font-size:16px;color:var(--ink);background:#fff;-webkit-appearance:none;appearance:none}
   .in:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(20,28,119,.12)}
   .in::placeholder{color:var(--ink-3)}
-  input[type="date"].in::-webkit-date-and-time-value{text-align:left}
+  /* date box. iPhone Safari lays its date value out with flex, so `display:block` above left the date stuck to the top
+     of the box (boss's iPhone, 2026-10-23). The phone also writes the date in ITS language ("23 Oct 2026" on a BM page),
+     so our own text (#dateTxt, page language) sits on top and the phone's text is hidden — only while that overlay is
+     live, so without the script the native date still shows. The real input stays underneath: a tap opens the picker. */
+  input[type="date"].in{position:relative;display:-webkit-flex;display:flex;align-items:center;padding-right:44px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cline x1='16' y1='2' x2='16' y2='6'/%3E%3Cline x1='8' y1='2' x2='8' y2='6'/%3E%3Cline x1='3' y1='10' x2='21' y2='10'/%3E%3C/svg%3E") no-repeat right 12px center;background-size:20px 20px}
+  input[type="date"].in::-webkit-date-and-time-value{text-align:left;margin:0}
+  input[type="date"].in::-webkit-calendar-picker-indicator{position:absolute;top:0;left:0;right:0;bottom:0;width:auto;height:auto;margin:0;padding:0;opacity:0;cursor:pointer}
+  .date-in{position:relative}
+  .date-txt{display:none;position:absolute;left:13.5px;right:44px;top:50%;transform:translateY(-50%);font-size:16px;line-height:22px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+  .date-txt.warn{color:var(--amber);font-weight:700}
+  .date-in.on .date-txt{display:block}
+  .date-in.on input[type="date"].in{color:transparent;-webkit-text-fill-color:transparent}
   select.in{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23475569' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px}
   .error-msg{display:none;font-size:13px;font-weight:600;color:var(--red-700);margin-top:4px}
   .error-msg.show{display:block}
@@ -213,7 +224,7 @@
         <div class="form" id="tripForm">
           <div class="field">
             <label class="fl" for="deliveryDate"><span data-en="Delivery date">Tarikh penghantaran</span> <span class="req">*</span></label>
-            <input class="in" type="date" id="deliveryDate" required>
+            <div class="date-in" id="dateWrap"><input class="in" type="date" id="deliveryDate" required><span class="date-txt" id="dateTxt" aria-hidden="true"></span></div>
             <div class="error-msg" id="err-date" data-en="Please select a date">Sila pilih tarikh</div>
           </div>
 
@@ -382,9 +393,19 @@ function _dateLabel(iso){
   var s = day + ', ' + d.getDate() + ' ' + mon;
   return iso === _todayMYT() ? L('Today', 'Hari ini') + ' · ' + s : s;
 }
+// the date box shows the date in the page language, like the folded summary (not today = amber)
+function _dateShow(){
+  var w = document.getElementById('dateWrap'), t = document.getElementById('dateTxt'), v = document.getElementById('deliveryDate').value;
+  if (!w || !t) return;
+  t.textContent = v ? _dateLabel(v) : '';
+  t.className = 'date-txt' + (v && v !== _todayMYT() ? ' warn' : '');
+  w.className = 'date-in' + (v ? ' on' : '');
+}
+document.getElementById('deliveryDate').addEventListener('input', _dateShow);   // live while the picker turns
 function _tripRender(){
   var card = document.getElementById('tripCard');
   if (!card) return;
+  _dateShow();
   var v = document.getElementById('vehicleNo').value, dt = document.getElementById('deliveryDate').value,
       dn = document.getElementById('driverName').value, sd = document.getElementById('secondDriver').value;
   [['err-date', dt], ['err-driver', dn], ['err-vehicle', v]].forEach(function(p){ var e = document.getElementById(p[0]); if (e && p[1]) e.classList.remove('show'); });
