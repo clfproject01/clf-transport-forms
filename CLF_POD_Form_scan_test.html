@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ms" translate="no">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="google" content="notranslate">
 <meta name="robots" content="noindex,nofollow">
 <title>[TEST SCANNER] CLF Trading — POD Submission</title>
 <style>
@@ -203,7 +204,7 @@
   }
 
   .loading-overlay {
-    display: none; position: fixed; inset: 0; background: rgba(232,90,42,0.92);
+    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(232,90,42,0.92);   /* not `inset`: iOS < 14.5 ignores it */
     z-index: 99; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
   }
   .loading-overlay.show { display: flex; }
@@ -221,12 +222,21 @@
     font-size: 10px; color: var(--success); font-weight: 500;
     margin-left: 6px; vertical-align: middle;
   }
+  /* [Lang 2026-10-23] BM | EN switch: one language on screen at a time, BM by default */
+  .lang-switch { margin-left:auto; flex-shrink:0; display:inline-flex; gap:2px; padding:3px; position:relative; z-index:1;
+    background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.55); border-radius:999px; }
+  .lang-switch button { border:0; background:transparent; color:#fff; font:700 13px/1 'DM Sans',sans-serif; letter-spacing:.5px;
+    min-width:46px; min-height:36px; padding:0 12px; border-radius:999px; cursor:pointer; }
+  .lang-switch button.on { background:#fff; color:var(--orange-dark); }
+  /* [Round1 2026-10-23] in-page camera: after a few seconds without an auto shot the shutter pulses (replaces a hint sentence) */
+  @keyframes acPulse { 0%,100% { box-shadow:0 0 0 0 rgba(255,255,255,.6); } 50% { box-shadow:0 0 0 14px rgba(255,255,255,0); } }
+  #acShutter.pulse { animation: acPulse 1.3s ease-in-out infinite; }
 </style>
 </head>
 <body>
-<div style="position:sticky;top:0;z-index:9000;background:#B91C1C;color:#fff;text-align:center;font:700 13px/1.35 'DM Sans',sans-serif;padding:7px 10px;">TEST SCANNER &mdash; nothing is saved &middot; UJIAN &mdash; tiada apa disimpan</div>
-<div id="scanDebug" style="position:fixed;left:0;right:0;bottom:0;z-index:9400;background:rgba(11,31,58,.92);color:#C9D6E3;font:11px/1.3 monospace;padding:3px 8px;pointer-events:none;">scanner: idle</div>
-<style>#acTitle::after{content:" · TEST · UJIAN";color:#FCA5A5;font-weight:800;}</style>
+<div style="position:sticky;top:0;z-index:9000;background:#B91C1C;color:#fff;text-align:center;font:700 13px/1.35 'DM Sans',sans-serif;padding:7px 10px;" data-en="TEST &amp;mdash; nothing is saved">UJIAN &mdash; tiada apa disimpan</div>
+<div id="scanDebug" style="position:fixed;left:0;right:0;bottom:0;z-index:9400;background:rgba(11,31,58,.92);color:#C9D6E3;font:11px/1.3 monospace;padding:3px 8px;padding-bottom:calc(3px + env(safe-area-inset-bottom));pointer-events:none;">scanner: idle</div>
+<style>html[lang="ms"] #acSub::before{content:"UJIAN · ";color:#FCA5A5;font-weight:800;}html[lang="en"] #acSub::before{content:"TEST · ";color:#FCA5A5;font-weight:800;}</style>
 
 <div class="app">
   <div class="header">
@@ -240,62 +250,57 @@
       </div>
     </div>
     <div class="form-identity">
-      <div class="form-icon">
-        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-      </div>
       <div>
         <div class="form-title">POD <span id="branchLabel" class="branch-label">Mentakab</span></div>
-        <div class="form-subtitle">Proof of Delivery · Bukti Penghantaran</div>
+        <div class="form-subtitle" data-en="Proof of Delivery">Bukti Penghantaran</div>
       </div>
+      <div class="lang-switch" id="langSwitch" role="group" aria-label="Bahasa / Language"><button type="button" data-l="bm">BM</button><button type="button" data-l="en">EN</button></div>
     </div>
   </div>
 
   <div class="form-body">
-    <div class="notice">
-      <b>Important · Penting:</b> Upload the <b>SIGNED</b> invoice on the <b>same delivery day</b>. Late or missing = penalty.<br>
-      <span style="opacity:.75;">Muat naik invois DITANDATANGANI pada hari sama. Lewat/hilang = penalti.</span>
-    </div>
+    <div class="notice" data-en="&lt;b&gt;Important:&lt;/b&gt; upload the &lt;b&gt;signed&lt;/b&gt; invoice on the &lt;b&gt;same day&lt;/b&gt;. Late or missing = penalty."><b>Penting:</b> muat naik invois yang <b>ditandatangani</b> pada <b>hari yang sama</b>. Lewat atau tiada = penalti.</div>
 
     <form id="podForm" novalidate>
 
-      <div class="section-label">Delivery Info · Maklumat Penghantaran</div>
+      <div class="section-label" data-en="Delivery info">Maklumat penghantaran</div>
 
       <div class="field">
-        <label>Delivery Date · Tarikh Penghantaran <span class="req">*</span></label>
+        <label><span data-en="Delivery date">Tarikh penghantaran</span> <span class="req">*</span></label>
         <input type="date" id="deliveryDate" required>
-        <div class="error-msg" id="err-date">Please select a date · Sila pilih tarikh</div>
+        <div class="error-msg" id="err-date" data-en="Please select a date">Sila pilih tarikh</div>
       </div>
 
       <div class="field" style="position:relative;">
         <label>
-          Driver · Pemandu <span class="req">*</span>
-          <span id="rememberedBadge" class="remembered-badge" style="display:none;">✓ Remembered</span>
+          <span data-en="Driver">Pemandu</span> <span class="req">*</span>
+          <span id="rememberedBadge" class="remembered-badge" style="display:none;" data-en="✓ Remembered">✓ Diingati</span>
         </label>
-        <input type="text" id="driverSearch" autocomplete="off" placeholder="Staff ID (e.g. 448) atau nama" style="width:100%;box-sizing:border-box;padding:13px 16px;font-size:16px;border:1.5px solid #C7D0DC;border-radius:10px;background:#fff;">
+        <input type="text" id="driverSearch" autocomplete="off" placeholder="ID staf (cth. 448) atau nama" data-en-ph="Staff ID (e.g. 448) or name" style="width:100%;box-sizing:border-box;padding:13px 16px;font-size:16px;border:1.5px solid #C7D0DC;border-radius:10px;background:#fff;">
         <input type="hidden" id="driverName" required>
         <div id="driverPanel" style="display:none;position:absolute;left:0;right:0;z-index:20;border:1.5px solid #C7D0DC;border-top:none;border-radius:0 0 10px 10px;max-height:240px;overflow-y:auto;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,.12);"></div>
-        <div class="error-msg" id="err-driver">Please select your name · Sila pilih nama</div>
+        <div class="error-msg" id="err-driver" data-en="Please select your name">Sila pilih nama anda</div>
         <div id="staffIdBadge" style="display:none;margin-top:8px;padding:8px 12px;background:#FFF1E6;color:#9A3412;border-radius:8px;font-size:14px;font-weight:600;"></div>
       </div>
 
       <!-- SECOND DRIVER (optional) -->
       <div class="field" style="position:relative;">
         <label>
-          Second Driver · Pemandu Kedua
-          <span class="bm" style="display:block;font-size:11px;color:#6B7A8D;margin-top:2px;">If two drivers · optional</span>
+          <span data-en="Second driver">Pemandu kedua</span>
+          <span class="bm" style="display:block;font-size:11px;color:#6B7A8D;margin-top:2px;" data-en="Only if there are two drivers">Hanya jika ada dua pemandu</span>
         </label>
-        <input type="text" id="secondSearch" autocomplete="off" placeholder="Staff ID atau nama (optional)" style="width:100%;box-sizing:border-box;padding:13px 16px;font-size:16px;border:1.5px solid #C7D0DC;border-radius:10px;background:#fff;">
+        <input type="text" id="secondSearch" autocomplete="off" placeholder="ID staf atau nama" data-en-ph="Staff ID or name" style="width:100%;box-sizing:border-box;padding:13px 16px;font-size:16px;border:1.5px solid #C7D0DC;border-radius:10px;background:#fff;">
         <input type="hidden" id="secondDriver">
         <div id="secondPanel" style="display:none;position:absolute;left:0;right:0;z-index:20;border:1.5px solid #C7D0DC;border-top:none;border-radius:0 0 10px 10px;max-height:240px;overflow-y:auto;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,.12);"></div>
         <div id="staffIdBadge2" style="display:none;margin-top:8px;padding:8px 12px;background:#FFF1E6;color:#9A3412;border-radius:8px;font-size:14px;font-weight:600;"></div>
       </div>
 
       <div class="field">
-        <label>Vehicle Number · Nombor Kenderaan <span class="req">*</span></label>
+        <label><span data-en="Vehicle number">Nombor kenderaan</span> <span class="req">*</span></label>
         <select id="vehicleNo" required>
-          <option value="">— Select vehicle · Pilih kenderaan —</option>
+          <option value="" data-en="— Select vehicle —">— Pilih kenderaan —</option>
         </select>
-        <div class="error-msg" id="err-vehicle">Please select a vehicle · Sila pilih kenderaan</div>
+        <div class="error-msg" id="err-vehicle" data-en="Please select a vehicle">Sila pilih kenderaan</div>
       </div>
 
       <!-- B4: shipment-aware delivery checklist (auto-shows when this lorry has a shipment today) -->
@@ -349,7 +354,7 @@
 
 <div class="loading-overlay" id="loadingOverlay">
   <div class="spinner"></div>
-  <div class="loading-text">Submitting... · Menghantar...</div>
+  <div class="loading-text">Menghantar…</div>
 </div>
 
 <div class="success-screen" id="successScreen">
@@ -411,6 +416,52 @@ var SCAN_TEST = true;
   P.setItem = function(k, v){ return s.call(this, NS + k, v); };
   P.removeItem = function(k){ return r.call(this, NS + k); };
 })();
+// ── [Lang 2026-10-23] ONE language on screen: Bahasa Melayu by default, English when the driver taps EN ──
+// Field test: English and Malay side by side looked cluttered. Static markup is written in Malay with the
+// English in data-en (data-en-ph for placeholders); JS-built text goes through L(en, bm). Lspan() is for
+// screens that are built once and kept (they get both texts, so applyLang() can flip them later).
+// Values sent to the server or compared in code (problem reasons, statuses, file names) never change.
+var LANG_KEY = 'clf_lang';
+var LANG = 'bm';
+try{ if (localStorage.getItem(LANG_KEY) === 'en') LANG = 'en'; }catch(e){}
+function L(en, bm){ return LANG === 'en' ? en : bm; }
+function _escA(s){ return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function Lspan(en, bm){ return '<span data-en="' + _escA(en) + '" data-bm="' + _escA(bm) + '">' + L(en, bm) + '</span>'; }
+function applyLang(){
+  try{
+    document.documentElement.setAttribute('lang', LANG === 'en' ? 'en' : 'ms');
+    var i, els = document.querySelectorAll('[data-en]');
+    for (i = 0; i < els.length; i++){
+      var el = els[i];
+      if (!el.hasAttribute('data-bm')) el.setAttribute('data-bm', el.innerHTML);
+      var want = LANG === 'en' ? el.getAttribute('data-en') : el.getAttribute('data-bm');
+      if (el.innerHTML !== want) el.innerHTML = want;
+    }
+    els = document.querySelectorAll('[data-en-ph]');
+    for (i = 0; i < els.length; i++){
+      var ph = els[i];
+      if (!ph.hasAttribute('data-bm-ph')) ph.setAttribute('data-bm-ph', ph.getAttribute('placeholder') || '');
+      ph.setAttribute('placeholder', LANG === 'en' ? ph.getAttribute('data-en-ph') : ph.getAttribute('data-bm-ph'));
+    }
+    var sw = document.querySelectorAll('#langSwitch button');
+    for (i = 0; i < sw.length; i++){
+      var on = sw[i].getAttribute('data-l') === LANG;
+      sw[i].className = on ? 'on' : '';
+      sw[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+  }catch(e){}
+}
+function setLang(l){
+  LANG = (l === 'en') ? 'en' : 'bm';
+  try{ localStorage.setItem(LANG_KEY, LANG); }catch(e){}
+  applyLang();
+  try{ _langRefresh_(); }catch(e){ console.warn('language refresh failed', e); }
+}
+document.addEventListener('click', function(e){
+  var b = e.target && e.target.closest ? e.target.closest('#langSwitch button') : null;
+  if (b) setLang(b.getAttribute('data-l'));
+});
+applyLang();
 var BRANCH_DISPLAY = { MTK: 'Mentakab', KTN: 'Kuantan' };
 
 // V17: Dynamically loaded from backend /getDrivers — empty until fetchDrivers() resolves
@@ -439,7 +490,7 @@ function wireDriverPicker(searchId, hiddenId, panelId, badgeId, onPick){
           return '<div class="dp-row" data-name="' + _esc(d.name) + '" style="padding:13px 14px;border-bottom:1px solid #F0F0F0;cursor:pointer;font-size:15px;">' +
                  '<b>' + _esc(d.staffId || '') + '</b> &middot; ' + _esc(d.name) + '</div>';
         }).join('')
-      : '<div style="padding:13px 14px;color:#8A9BB0;font-size:13px;">No match &middot; Tiada padanan</div>';
+      : '<div style="padding:13px 14px;color:#8A9BB0;font-size:13px;">' + L('No match', 'Tiada padanan') + '</div>';
     panel.style.display = 'block';
   }
   function pick(name, silent){
@@ -461,6 +512,10 @@ const ROSTER_CACHE_KEY = 'clf_roster_cache_' + BRANCH;   // last good roster (pe
 
 function _applyRoster(drivers){
   STAFF_IDS = {}; ROSTER = drivers.slice();
+  // a roster that loads after a failed first try must not keep the "Failed to load" placeholder
+  var _ds = document.getElementById('driverSearch');
+  if (_ds){ _ds.setAttribute('data-en-ph', 'Staff ID (e.g. 448) or name'); _ds.setAttribute('data-bm-ph', 'ID staf (cth. 448) atau nama');
+    _ds.placeholder = L('Staff ID (e.g. 448) or name', 'ID staf (cth. 448) atau nama'); }
   drivers.forEach(d => { STAFF_IDS[d.name] = d.staffId || ''; });
 
   wireDriverPicker('driverSearch', 'driverName', 'driverPanel', 'staffIdBadge', function(name){
@@ -497,7 +552,8 @@ async function fetchAndPopulateDrivers(isRetry) {
     }catch(e){}
     if (!usedCache){
       var ds = document.getElementById('driverSearch');
-      if (ds) ds.placeholder = '⚠ Failed to load — tap to retry · Tekan untuk cuba lagi';
+      if (ds){ ds.setAttribute('data-en-ph', '⚠ Failed to load — tap to retry'); ds.setAttribute('data-bm-ph', '⚠ Gagal dimuat — tekan untuk cuba lagi');
+        ds.placeholder = L('⚠ Failed to load — tap to retry', '⚠ Gagal dimuat — tekan untuk cuba lagi'); }
       if (ds && !ds._retryWired){ ds._retryWired = true; ds.addEventListener('focus', function(){ if (!ROSTER.length) fetchAndPopulateDrivers(true); }); }
     }
     if (!isRetry) setTimeout(function(){ if (!ROSTER.length) fetchAndPopulateDrivers(true); }, 5000);   // one auto-retry
@@ -526,7 +582,7 @@ function _vehiclesLoaded(){
 
 function _applyVehicles(sel, plates){
   var prev = sel.value;   // never clobber a pick the driver already made
-  sel.innerHTML = '<option value="">— Select vehicle · Pilih kenderaan —</option>';
+  sel.innerHTML = '<option value="" data-en="— Select vehicle —" data-bm="— Pilih kenderaan —">' + L('— Select vehicle —', '— Pilih kenderaan —') + '</option>';
   plates.forEach(function(plate){
     var o = document.createElement('option');
     o.value = plate; o.textContent = plate;
@@ -574,7 +630,8 @@ async function fetchVehicles(isRetry) {
     if (!usedCache){
       // A reload gets exactly one new attempt, so don't send drivers there — retry in-page instead.
       // err.name lets the office triage a screenshot: TypeError = network/blocked, SyntaxError = HTML body.
-      sel.innerHTML = '<option value="">⚠ Tap to retry · Tekan untuk cuba lagi' + (err && err.name ? ' (' + err.name + ')' : '') + '</option>';
+      var _sfx = (err && err.name ? ' (' + err.name + ')' : '');   // both texts kept so the BM / EN switch can flip it
+      sel.innerHTML = '<option value="" data-en="' + _escA('⚠ Tap to retry' + _sfx) + '" data-bm="' + _escA('⚠ Tekan untuk cuba lagi' + _sfx) + '">' + L('⚠ Tap to retry', '⚠ Tekan untuk cuba lagi') + _sfx + '</option>';
       if (!sel._retryWired){ sel._retryWired = true;
         sel.addEventListener('mousedown', function(){ if (!_vehiclesLoaded()) fetchVehicles(true); });
         sel.addEventListener('focus',     function(){ if (!_vehiclesLoaded()) fetchVehicles(true); });
@@ -629,8 +686,9 @@ window.onload = function() {
 // list — matters on shared routes where the OTHER lorry may have delivered stops meanwhile.
 // GUARD: skip while a photo flow is in progress (_deliverIdx >= 0) — returning FROM THE CAMERA
 // also fires this, and a refresh racing onShipPhoto could drop the just-taken photo.
+var _osCamUntil = 0;   // [Round1] set while the phone's own camera is open for a proof / pallet photo
 document.addEventListener('visibilitychange', function(){
-  if (document.hidden || _deliverIdx >= 0) return;
+  if (document.hidden || _deliverIdx >= 0 || Date.now() < _osCamUntil) return;
   if (_smMode){ if (_smAuthed()) smLoadDeliveries(true); return; }   // [Salesman] re-sync my deliveries
   if (document.getElementById('vehicleNo').value) checkShipmentForVehicle(true);
   // [Roster-fix 2026-07-24] a tab left open kept its load-time roster forever — refetch on
@@ -1063,18 +1121,18 @@ var _qGateEls = null;   // DOM built once, reused
 function _qGateBuild_(){
   var ov = document.createElement('div');
   ov.id = 'qGateOverlay';
-  ov.style.cssText = 'display:none;position:fixed;inset:0;z-index:10000;background:rgba(11,31,58,.93);flex-direction:column;align-items:center;justify-content:center;padding:28px 22px;';
+  ov.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(11,31,58,.93);flex-direction:column;align-items:center;justify-content:center;padding:28px 22px;';
   ov.innerHTML =
       '<div style="background:#fff;border-radius:14px;max-width:340px;width:100%;padding:22px 18px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.35);">'
-    + '<div style="font-size:19px;font-weight:700;color:#0B1F3A;margin-bottom:10px;">&#9888;&#65039; Photo not clear &middot; Gambar tidak jelas</div>'
+    + '<div style="font-size:19px;font-weight:700;color:#0B1F3A;margin-bottom:10px;">&#9888;&#65039; ' + Lspan('Photo not clear', 'Foto tidak jelas') + '</div>'
     + '<div id="qGateReasons" style="font-size:14px;color:#1A3A5C;line-height:1.7;margin-bottom:10px;"></div>'
     // [Gate-hint 2026-09-09] multi-invoice stops: drivers laid 2 invoices side by side in ONE shot,
     // which trips the cut check AND only counts as 1 photo. Say the rule right where they get stuck.
-    + '<div style="font-size:13px;color:#854F0B;background:#FFF8E1;border:1px solid #F0D9A8;border-radius:8px;padding:8px 10px;margin-bottom:14px;line-height:1.6;">&#128444;&#65039; <b>1 invoice = 1 photo</b> &middot; 1 invois = 1 foto<br>Lay it flat, whole page in frame, leave a white border &middot; Ratakan, satu muka penuh, tinggalkan ruang putih</div>'
-    + '<button type="button" id="qGateRetake" style="width:100%;padding:15px;background:#1D4ED8;color:#fff;border:none;border-radius:10px;font-family:\'DM Sans\',sans-serif;font-size:16px;font-weight:700;cursor:pointer;">&#128247; Retake · Ambil semula</button>'
+    + '<div style="font-size:13px;color:#854F0B;background:#FFF8E1;border:1px solid #F0D9A8;border-radius:8px;padding:8px 10px;margin-bottom:14px;line-height:1.6;">&#128444;&#65039; ' + Lspan('<b>1 invoice = 1 photo</b><br>Lay it flat, whole page in the frame, white border around it.', '<b>1 invois = 1 foto</b><br>Ratakan, seluruh muka dalam bingkai, ada ruang putih di tepi.') + '</div>'
+    + '<button type="button" id="qGateRetake" style="width:100%;padding:15px;background:#1D4ED8;color:#fff;border:none;border-radius:10px;font-family:\'DM Sans\',sans-serif;font-size:16px;font-weight:700;cursor:pointer;">&#128247; ' + Lspan('Retake', 'Ambil semula') + '</button>'
     // [Gate-hint 2026-09-09] was a grey underlined 13px link that drivers never noticed after 7-8 retakes;
     // now a full-width outlined button. WHEN it appears is unchanged (3rd consecutive fail, see showQualityGate_).
-    + '<button type="button" id="qGateAnyway" style="display:none;width:100%;margin-top:10px;padding:13px;background:#fff;color:#854F0B;border:1.5px solid #E0C68A;border-radius:10px;font-family:\'DM Sans\',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">&#9888;&#65039; Upload anyway &middot; Tetap hantar</button>'
+    + '<button type="button" id="qGateAnyway" style="display:none;width:100%;margin-top:10px;padding:13px;background:#fff;color:#854F0B;border:1.5px solid #E0C68A;border-radius:10px;font-family:\'DM Sans\',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">&#9888;&#65039; ' + Lspan('Upload anyway', 'Hantar juga') + '</button>'
     + '</div>';
   document.body.appendChild(ov);
   _qGateEls = { ov: ov, reasons: ov.querySelector('#qGateReasons'), retake: ov.querySelector('#qGateRetake'), anyway: ov.querySelector('#qGateAnyway') };
@@ -1083,9 +1141,9 @@ function _qGateBuild_(){
 function showQualityGate_(reasons, allowAnyway){
   if (!_qGateEls) _qGateBuild_();
   var TXT = {
-    cut:      'Invoice not fully in frame · Invois terpotong',
-    blur:     'Photo is blurry · Kabur',
-    exposure: 'Too bright/dark · Terlalu cerah/gelap'
+    cut:      L('Invoice not fully in the frame', 'Invois terpotong'),
+    blur:     L('Photo is blurry', 'Foto kabur'),
+    exposure: L('Too bright or too dark', 'Terlalu terang atau gelap')
   };
   _qGateEls.reasons.innerHTML = (reasons || []).map(function(r){ return '&bull; ' + (TXT[r] || _esc(r)); }).join('<br>');
   _qGateEls.anyway.style.display = allowAnyway ? 'block' : 'none';   // [Gate-hint 2026-09-09] full-width button
@@ -1153,10 +1211,10 @@ function removePhoto(idx) {
     if (ov && ov.contains(img)) return;   // the overlay's own big image (zoom toggle handles it)
     if (!ov) {
       ov = document.createElement('div');
-      ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.93);display:flex;align-items:center;justify-content:center;overflow:auto;';
+      ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,.93);display:flex;align-items:center;justify-content:center;overflow:auto;';
       ov.innerHTML = '<img style="max-width:100%;max-height:100%;transition:transform .15s;transform-origin:center;">'
-        + '<div style="position:fixed;top:10px;right:14px;color:#fff;font-size:30px;line-height:1;padding:6px 10px;">&times;</div>'
-        + '<div id="pvCap" style="position:fixed;bottom:12px;left:0;right:0;text-align:center;color:#bbb;font-size:12px;">Tap photo to zoom &middot; tap outside to close</div>';
+        + '<div style="position:fixed;top:10px;top:max(10px, env(safe-area-inset-top));right:14px;color:#fff;font-size:30px;line-height:1;padding:6px 10px;">&times;</div>'
+        + '<div id="pvCap" style="position:fixed;bottom:12px;bottom:calc(12px + env(safe-area-inset-bottom));left:0;right:0;text-align:center;color:#bbb;font-size:12px;"></div>';
       ov.addEventListener('click', function (ev) {
         var big = ov.querySelector('img');
         if (ev.target === big) {                       // toggle zoom
@@ -1173,10 +1231,10 @@ function removePhoto(idx) {
     var nm = (window._photoNameByUrl && window._photoNameByUrl[String(img.src).slice(-64)]) || '';
     var cap = ov.querySelector('#pvCap');
     if (cap) cap.innerHTML =
-      (nm.indexOf('_scanC') >= 0 ? '<b style="color:#7f7;">SCAN &#10003; Cropped + whitened &middot; Dipotong + diputihkan</b>'
-       : nm.indexOf('_scanF') >= 0 ? '<b style="color:#ff5;">SCAN &#10003; Whitened, full frame kept &middot; Diputihkan, bingkai penuh</b>'
-       : '<b style="color:#f97;">Original photo &middot; Foto asal</b>')
-      + ' &middot; Tap photo to zoom &middot; tap outside to close';
+      (nm.indexOf('_scanC') >= 0 ? '<b style="color:#7f7;">&#10003; ' + L('Scanned', 'Diimbas') + '</b>'
+       : nm.indexOf('_scanF') >= 0 ? '<b style="color:#ff5;">&#10003; ' + L('Whitened, edges not found', 'Diputihkan, tepi tidak dikesan') + '</b>'
+       : '<b style="color:#f97;">' + L('Original photo', 'Foto asal') + '</b>')
+      + ' &middot; ' + L('Tap photo to zoom, tap outside to close', 'Tekan foto untuk zum, tekan di luar untuk tutup');
     ov.style.display = 'flex';
   });
 })();
@@ -1388,16 +1446,15 @@ async function checkShipmentForVehicle(keepListOnFail, isRetry){
   // Manual POD stays disabled either way - it would not count on the dashboard.
   function _box(html){ man.style.display='none'; sec.style.display='block';
     sec.innerHTML = '<div style="padding:18px 14px;text-align:center;color:#9A3412;font-size:14px;line-height:1.6;border:1.5px solid #F0C9A8;background:#FFF7ED;border-radius:10px;">' + html + '</div>'; }
-  var _retryBtn = '<button type="button" id="shipRetry" style="margin-top:14px;background:#fff;color:#854F0B;border:1.5px solid #E0C68A;border-radius:8px;padding:11px 18px;font-weight:700;font-size:14px;cursor:pointer;">&#8635; Tap to retry &middot; Tekan untuk cuba lagi</button>';
+  var _retryBtn = '<button type="button" id="shipRetry" style="margin-top:14px;background:#fff;color:#854F0B;border:1.5px solid #E0C68A;border-radius:8px;padding:11px 18px;font-weight:700;font-size:14px;cursor:pointer;">&#8635; ' + L('Tap to retry', 'Tekan untuk cuba lagi') + '</button>';
 
   // The server ANSWERED and this lorry genuinely has nothing today - the office's problem to fix.
   function fallEmpty(){ if (_shipGroups.length && !_shipStale) return;   // a live list stands (re-import race); a stale one does not
     _shipKey=''; _shipGroups=[]; _shipStale=false;
     _box('<div style="font-size:30px;margin-bottom:6px;">&#9888;&#65039;</div>'
-      + '<b>No delivery order matches this lorry' + (vehicle ? ' (' + _esc(vehicle) + ')' : '') + '.</b>'
-      + '<br><span style="font-size:12.5px;color:#6b5836;">Tiada senarai penghantaran sepadan untuk lori ini.</span>'
-      + '<br><br>Check the <b>lorry number</b> &amp; <b>date</b> are correct. If they are, the order may be under a <b>different / mis-typed lorry number</b> &mdash; ask the <b>office</b> to check &amp; re-import.'
-      + '<br><span style="font-size:12.5px;color:#6b5836;">Semak nombor lori &amp; tarikh. Jika betul, pesanan mungkin guna nombor lori salah taip &mdash; hubungi pejabat.</span>'
+      + '<b>' + L('No delivery list for this lorry', 'Tiada senarai penghantaran untuk lori ini') + (vehicle ? ' (' + _esc(vehicle) + ')' : '') + '</b>'
+      + '<br><br>' + L('Check the lorry number and the date. If both are right, ask the office to check the order.',
+                      'Semak nombor lori dan tarikh. Jika kedua-duanya betul, minta pejabat semak pesanan.')
       + _retryBtn); }
 
   // We never GOT an answer. That is not the same thing as an empty list, so it must never say so:
@@ -1415,10 +1472,9 @@ async function checkShipmentForVehicle(keepListOnFail, isRetry){
       return;
     }
     _box('<div style="font-size:30px;margin-bottom:6px;">&#128246;</div>'
-      + '<b>Cannot load the delivery list right now.</b>'
-      + '<br><span style="font-size:12.5px;color:#6b5836;">Senarai penghantaran tidak dapat dimuat sekarang.</span>'
-      + '<br><br>This is a <b>connection problem</b>, not a missing order. Move to better signal, then tap retry.'
-      + '<br><span style="font-size:12.5px;color:#6b5836;">Ini masalah <b>sambungan</b>, bukan pesanan hilang. Cari liputan lebih baik, kemudian tekan cuba lagi.</span>'
+      + '<b>' + L('Cannot load the delivery list right now', 'Senarai penghantaran tidak dapat dimuat sekarang') + '</b>'
+      + '<br><br>' + L('This is a <b>connection problem</b>, not a missing order. Find better signal, then tap retry.',
+                      'Ini masalah <b>sambungan</b>, bukan pesanan hilang. Cari liputan lebih baik, kemudian tekan cuba lagi.')
       + _retryBtn
       + (err && err.name ? '<div style="font-size:11px;color:#9a8050;margin-top:9px;">(' + _esc(err.name) + ')</div>' : ''));
   }
@@ -1429,7 +1485,7 @@ async function checkShipmentForVehicle(keepListOnFail, isRetry){
   // groups BEFORE fetching, so fallError's "is a list on screen" test cannot be fooled by them.
   if (!keepListOnFail){ _shipKey=''; _shipGroups=[]; _shipStale=false;
     sec.style.display='block'; man.style.display='none';
-    sec.innerHTML = '<div style="padding:14px;text-align:center;color:#854F0B;">Checking delivery list&hellip; &middot; Menyemak&hellip;</div>'; }
+    sec.innerHTML = '<div style="padding:14px;text-align:center;color:#854F0B;">' + L('Checking delivery list…', 'Menyemak senarai…') + '</div>'; }
   // 15s abort keeps a dead-zone fetch from hanging forever (same idiom as fetchVehicles/saveDelivery)
   var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
   var timer = ctrl ? setTimeout(function(){ ctrl.abort(); }, 15000) : null;
@@ -1501,8 +1557,13 @@ function _autoFillAssignedDrivers(shipment){
 function _buildGroups(items){
   // A2: carry over photos the driver snapped but hasn't successfully saved yet — the post-save
   // read-back rebuilds this list and used to silently discard them (driver had to re-take).
-  var prevPhotos = {};
-  (_shipGroups || []).forEach(function(g){ if (g.key && g.photos && g.photos.length) prevPhotos[g.key] = g.photos; });
+  var prevPhotos = {}, prevProof = {}, prevPallet = {};
+  (_shipGroups || []).forEach(function(g){
+    if (!g.key) return;
+    if (g.photos && g.photos.length) prevPhotos[g.key] = g.photos;
+    if (g._failProof) prevProof[g.key] = g._failProof;     // [Round1] Problem proof photo (taken, reason not yet tapped)
+    if (g._pallet) prevPallet[g.key] = g._pallet;          // [Round1] pallet type / counts / photo typed in but not yet saved
+  });
   var map = {}; _shipGroups = [];
   items.forEach(function(it){
     var k = it.custCode || it.customerName || it.invoiceNo;
@@ -1514,6 +1575,8 @@ function _buildGroups(items){
     // everything delivered, the buffered photos are no longer needed and are dropped.
     var hasPending = g.invs.some(function(x){ return String(x.status).toLowerCase() !== 'delivered'; });
     if (hasPending && prevPhotos[g.key]) g.photos = prevPhotos[g.key];
+    if (hasPending && prevProof[g.key]) g._failProof = prevProof[g.key];
+    if (hasPending && prevPallet[g.key]) g._pallet = prevPallet[g.key];
   });
 }
 
@@ -1529,25 +1592,34 @@ function renderShipmentList(){
   var remaining = total - done - failed;
   var pct = total ? Math.round(done/total*100) : 0;
   var vehicle = document.getElementById('vehicleNo').value;
-  var html = '<div class="section-label">📋 Today\'s Delivery List · Senarai Penghantaran</div>'
+  var html = '<div class="section-label">📋 ' + L('Today\'s deliveries', 'Penghantaran hari ini') + '</div>'
     + '<div style="background:#FFF8E1;border:1px solid #F0D9A8;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:#412402;">'
-    + '<b>'+_esc(vehicle)+'</b> · '+done+' / '+total+' delivered'+(failed?' · '+failed+' problem':'')
-    + (remaining>0 ? ' · <b>'+remaining+' to go · lagi</b>' : '')
+    + '<b>'+_esc(vehicle)+'</b> · '+done+'/'+total+' '+L('delivered','dihantar')+(failed?' · '+failed+' '+L('problem','masalah'):'')
+    + (remaining>0 ? ' · <b>'+remaining+' '+L('to go','lagi')+'</b>' : '')
     + '<div style="height:8px;background:#F0D9A8;border-radius:99px;margin-top:7px;overflow:hidden;"><div style="height:100%;width:'+pct+'%;background:#2E7D32;border-radius:99px;transition:width .3s;"></div></div></div>'
     // [Ship-fix 2026-08-19] the list can now be the cached copy - say so, loudly, instead of
     // letting a stale checklist pass for live server truth.
     + (_shipStale ? '<div style="background:#FFF7ED;border:1.5px solid #F0C9A8;border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:12.5px;color:#9A3412;line-height:1.5;">'
-        + '<b>&#128246; Offline copy &mdash; not synced yet.</b> Tap &#8635; when you have signal.'
-        + '<br><span style="color:#6b5836;">Salinan luar talian &mdash; belum disegerak. Tekan &#8635; bila ada liputan.</span></div>' : '')
+        + '<b>&#128246; ' + L('Offline copy, not synced yet.', 'Salinan luar talian, belum disegerak.') + '</b> '
+        + L('Tap &#8635; when you have signal.', 'Tekan &#8635; bila ada liputan.') + '</div>' : '')
     // B4/B6: search + manual refresh (44-stop routes need both)
     + '<div style="display:flex;gap:8px;margin-bottom:12px;">'
-    + '<input type="text" id="shipFilter" value="'+_esc(_shipFilter)+'" placeholder="🔍 Find customer · Cari pelanggan" autocomplete="off" '
+    + '<input type="text" id="shipFilter" value="'+_esc(_shipFilter)+'" placeholder="🔍 ' + _escA(L('Find customer', 'Cari pelanggan')) + '" autocomplete="off" '
     +   'style="flex:1;box-sizing:border-box;padding:11px 14px;font-size:15px;border:1.5px solid #E0C68A;border-radius:8px;background:#fff;color:#412402;">'
-    + '<button type="button" id="shipRefresh" style="background:#fff;color:#854F0B;border:1.5px solid #E0C68A;border-radius:8px;padding:0 14px;font-weight:700;font-size:14px;cursor:pointer;">&#8635;</button>'
+    + '<button type="button" id="shipRefresh" aria-label="' + _escA(L('Refresh list', 'Muat semula senarai')) + '" style="background:#fff;color:#854F0B;border:1.5px solid #E0C68A;border-radius:8px;padding:0 14px;font-weight:700;font-size:14px;cursor:pointer;">&#8635;</button>'
     + '</div><div id="shipGroupsWrap"></div>'
-    + '<div style="text-align:center;color:#9a8050;font-size:11.5px;margin-top:6px;">Not on the list? Ask the office to add it. · Tiada dalam senarai? Hubungi pejabat.</div>';
+    + '<div style="text-align:center;color:#9a8050;font-size:11.5px;margin-top:6px;">' + L('Not on the list? Ask the office to add it.', 'Tiada dalam senarai? Minta pejabat tambah.') + '</div>';
   sec.innerHTML = html;
   renderShipGroups();
+}
+
+// [Lang 2026-10-23] after BM <-> EN: redraw whatever JS drew in the old language
+function _langRefresh_(){
+  var sec = document.getElementById('shipmentSection');
+  if (_smMode) _smBanner(true);
+  if (_shipGroups.length && sec && sec.style.display !== 'none'){ renderShipmentList(); try{ renderPalletOnboard(); }catch(e){} return; }
+  if (_smMode){ if (_smAuthed()) smLoadDeliveries(true); else smRenderGate(''); return; }
+  if (document.getElementById('vehicleNo').value) checkShipmentForVehicle(true);   // re-draws its empty / error box
 }
 
 // B4: groups list only (separate from the header so typing in the search box keeps focus).
@@ -1572,7 +1644,7 @@ async function _palletGetWrite(action, params){
     return await res.json();
   }catch(err){
     console.error('PALLET_DROP getWrite ' + action + ' failed', err);
-    return { status: 'error', message: 'No connection · Tiada sambungan' };
+    return { status: 'error', message: L('No connection', 'Tiada sambungan') };
   }
 }
 
@@ -1587,7 +1659,8 @@ function _palletToast(kind, html, pos){   // [AutoCap v2] pos 'top' = show at th
     document.body.appendChild(t);
   }
   t.style.background = (kind === 'ok') ? '#2E7D32' : (kind === 'err' ? '#C62828' : '#854F0B');
-  if (pos === 'top'){ t.style.top = '16px'; t.style.bottom = 'auto'; } else { t.style.top = 'auto'; t.style.bottom = '24px'; }
+  if (pos === 'top'){ t.style.top = '16px'; t.style.top = 'calc(16px + env(safe-area-inset-top))'; t.style.bottom = 'auto'; }
+  else { t.style.top = 'auto'; t.style.bottom = '24px'; t.style.bottom = 'calc(24px + env(safe-area-inset-bottom))'; }   // first value = fallback where env() is unknown
   t.innerHTML = html;
   t.style.opacity = '1';
   if (_palletToastTmr) clearTimeout(_palletToastTmr);
@@ -1607,7 +1680,7 @@ async function fetchPalletMaster(){
 
 // Options HTML for a pallet-type <select> (built fresh from PALLET_MASTER each render)
 function _palletOptions(selectedKey){
-  var opts = '<option value="">— Pallet type · Jenis pallet —</option>';
+  var opts = '<option value="">' + L('— Pallet type —', '— Jenis pallet —') + '</option>';
   PALLET_MASTER.forEach(function(m){
     var k = _esc(m.palletKey);
     opts += '<option value="' + k + '"' + (selectedKey === m.palletKey ? ' selected' : '') + '>' + _esc(m.displayName || m.palletKey) + '</option>';
@@ -1637,15 +1710,15 @@ function firePalletDrop(g){
     if (hasPhoto) params.photos = [g._pallet.photo];
     (hasPhoto ? _palletPostWrite(Object.assign({ formType: 'PALLET_DROP' }, params)) : _palletGetWrite('PALLET_DROP', params)).then(function(r){
       if (r && r.status === 'success'){
-        _palletToast('ok', '<b>Pallet recorded · Pallet direkod</b><br>' + _esc(g.name) + ' — ' + qty + ' × ' + _esc(_palletDisplayName(g._pallet.palletKey)));
+        _palletToast('ok', '<b>' + L('Pallet recorded', 'Pallet direkod') + '</b><br>' + _esc(g.name) + ' — ' + qty + ' × ' + _esc(_palletDisplayName(g._pallet.palletKey)));
         if (g._pallet){ g._pallet.qty = ''; g._pallet.photo = null; }   // photo consumed by the drop; collect is independent
       } else {
-        _palletToast('err', '<b>Pallet NOT recorded · Pallet TIDAK direkod</b><br>' + _esc((r && r.message) || 'Server error') + '<br>POD is saved — tell the office the pallet count.');
+        _palletToast('err', '<b>' + L('Pallet NOT recorded', 'Pallet TIDAK direkod') + '</b><br>' + _esc((r && r.message) || L('Server error', 'Ralat pelayan')) + '<br>' + L('POD is saved. Tell the office the pallet count.', 'POD sudah disimpan. Beritahu pejabat jumlah pallet.'));
       }
     });
   }catch(e){
     console.warn('firePalletDrop failed (POD unaffected)', e);
-    _palletToast('err', '<b>Pallet not recorded.</b> POD is saved — report the pallet count to the office.');
+    _palletToast('err', '<b>' + L('Pallet NOT recorded.', 'Pallet TIDAK direkod.') + '</b> ' + L('POD is saved. Tell the office the pallet count.', 'POD sudah disimpan. Beritahu pejabat jumlah pallet.'));
   }
 }
 
@@ -1670,10 +1743,10 @@ function firePalletCollect(g){
     if (colPhoto) params.photos = [g._pallet.photo];
     (colPhoto ? _palletPostWrite(Object.assign({ formType: 'PALLET_COLLECT' }, params)) : _palletGetWrite('PALLET_COLLECT', params)).then(function(r){
       if (r && r.status === 'success'){
-        _palletToast('ok', '<b>Pallet collected · Pallet diambil</b><br>' + _esc(g.name) + ' — ' + qty + ' × ' + _esc(_palletDisplayName(g._pallet.palletKey)));
+        _palletToast('ok', '<b>' + L('Pallet collected', 'Pallet diambil') + '</b><br>' + _esc(g.name) + ' — ' + qty + ' × ' + _esc(_palletDisplayName(g._pallet.palletKey)));
         if (g._pallet){ g._pallet.collectQty = ''; if (colPhoto) g._pallet.photo = null; }
       } else {
-        _palletToast('err', '<b>Collect NOT recorded · Ambil TIDAK direkod</b><br>' + _esc((r && r.message) || 'Server error') + '<br>POD is saved — tell the office the count.');
+        _palletToast('err', '<b>' + L('Collect NOT recorded', 'Ambil TIDAK direkod') + '</b><br>' + _esc((r && r.message) || L('Server error', 'Ralat pelayan')) + '<br>' + L('POD is saved. Tell the office the count.', 'POD sudah disimpan. Beritahu pejabat jumlahnya.'));
       }
     });
   }catch(e){
@@ -1686,12 +1759,12 @@ function _palletDisplayName(key){ var m = PALLET_MASTER.filter(function(x){ retu
 // POST + no-cors + poll getImportResult — used when a pallet drop/collect carries a photo
 // (base64 won't fit a GET URL). Mirrors the POD save's own readback pattern.
 async function _palletPostWrite(payload){
-  if (SCAN_TEST) return { status: 'error', message: 'TEST build — nothing is saved &middot; UJIAN — tiada apa disimpan' };
+  if (SCAN_TEST) return { status: 'error', message: L('TEST build — nothing is saved', 'UJIAN — tiada apa disimpan') };
   var token = payload.clientToken;
   var fd = new FormData();
   fd.append('data', JSON.stringify(payload));
   try{ await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: fd }); }
-  catch(e){ return { status: 'error', message: 'No connection · Tiada sambungan' }; }
+  catch(e){ return { status: 'error', message: L('No connection', 'Tiada sambungan') }; }
   for (var t = 0; t < 8; t++){
     await new Promise(function(r){ setTimeout(r, 1500); });
     try{
@@ -1725,10 +1798,10 @@ function renderPalletOnboard(){
   if (!box){ box = document.createElement('div'); box.id = 'palletOnboard'; sec.insertBefore(box, sec.firstChild); }
   var summary = PALLET_ONBOARD.map(function(l){ return _esc(l.displayName || l.palletKey) + ' ×' + l.assigned; }).join(' · ');
   box.innerHTML = '<div style="border:1.5px solid #E0C68A;background:#FFF9EE;border-radius:10px;padding:11px 12px;margin-bottom:10px;">'
-    + '<div style="font-weight:700;font-size:13px;color:#5C3A1E;">&#128230; Pallets on lorry · Pallet atas lori</div>'
+    + '<div style="font-weight:700;font-size:13px;color:#5C3A1E;">&#128230; ' + L('Pallets on lorry', 'Pallet atas lori') + '</div>'
     + '<div style="font-size:13px;color:#412402;margin:4px 0 6px;">' + summary + '</div>'
-    + '<div style="font-size:11.5px;color:#854F0B;">Correct? Do nothing · Betul? Tak perlu buat apa-apa.</div>'
-    + '<button type="button" onclick="togglePalletFix()" style="margin-top:7px;background:#fff;color:#C62828;border:1px solid #E8B4B4;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:700;cursor:pointer;">Wrong count? Fix here · Angka salah? Betulkan</button>'
+    + '<div style="font-size:11.5px;color:#854F0B;">' + L('Correct? Do nothing.', 'Betul? Tak perlu buat apa-apa.') + '</div>'
+    + '<button type="button" onclick="togglePalletFix()" style="margin-top:7px;background:#fff;color:#C62828;border:1px solid #E8B4B4;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:700;cursor:pointer;">' + L('Wrong count? Fix here', 'Jumlah salah? Betulkan') + '</button>'
     + '<div id="palletFixRows" style="display:none;margin-top:8px;"></div>'
     + '</div>';
 }
@@ -1738,11 +1811,11 @@ function togglePalletFix(){
   if (rows.style.display === 'none'){
     rows.innerHTML = PALLET_ONBOARD.map(function(l, i){
       return '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;">'
-        + '<div style="flex:1;font-size:12.5px;color:#412402;">' + _esc(l.displayName || l.palletKey) + '<br><span style="color:#854F0B;font-size:11px;">assigned ' + l.assigned + '</span></div>'
+        + '<div style="flex:1;font-size:12.5px;color:#412402;">' + _esc(l.displayName || l.palletKey) + '<br><span style="color:#854F0B;font-size:11px;">' + L('assigned ', 'diberi ') + l.assigned + '</span></div>'
         + '<input type="number" id="palletFix-' + i + '" inputmode="numeric" min="0" value="' + l.assigned + '" style="width:80px;padding:9px;font-size:14px;border:1.5px solid #E0C68A;border-radius:8px;">'
         + '</div>';
     }).join('')
-    + '<button type="button" onclick="sendPalletFix()" style="width:100%;margin-top:8px;background:#5C3A1E;color:#fff;border:none;border-radius:8px;padding:11px;font-weight:700;font-size:13px;cursor:pointer;">Send actual received · Hantar jumlah sebenar</button>';
+    + '<button type="button" onclick="sendPalletFix()" style="width:100%;margin-top:8px;background:#5C3A1E;color:#fff;border:none;border-radius:8px;padding:11px;font-weight:700;font-size:13px;cursor:pointer;">' + L('Send the count you received', 'Hantar jumlah sebenar') + '</button>';
     rows.style.display = 'block';
   } else {
     rows.style.display = 'none';
@@ -1757,18 +1830,32 @@ async function sendPalletFix(){
     var got = parseInt(el.value, 10);
     if (!isNaN(got) && got !== Number(l.assigned) && l.entryId) changed.push({ entryId: l.entryId, acceptedQty: got, name: l.displayName || l.palletKey });
   });
-  if (!changed.length){ _palletToast('ok', 'No change — counts match · Tiada beza'); togglePalletFix(); return; }
+  if (!changed.length){ _palletToast('ok', L('No change, the counts match', 'Tiada perubahan, jumlah sama')); togglePalletFix(); return; }
   for (var k = 0; k < changed.length; k++){
     var c = changed[k];
     var r = await _palletGetWrite('PALLET_ACCEPT', { entryId: c.entryId, acceptedQty: c.acceptedQty, driverName: driver, clientToken: _palletNewToken('acc') });
-    if (r && r.status === 'success') _palletToast('ok', '<b>Correction sent · Dihantar</b><br>' + _esc(c.name) + ' → ' + c.acceptedQty);
-    else _palletToast('err', '<b>Not sent · Gagal</b><br>' + _esc(c.name) + ' — ' + _esc((r && r.message) || 'try again'));
+    if (r && r.status === 'success') _palletToast('ok', '<b>' + L('Correction sent', 'Pembetulan dihantar') + '</b><br>' + _esc(c.name) + ' → ' + c.acceptedQty);
+    else _palletToast('err', '<b>' + L('Not sent', 'Gagal dihantar') + '</b><br>' + _esc(c.name) + ' — ' + _esc((r && r.message) || L('try again', 'cuba lagi')));
   }
   togglePalletFix();
   fetchPalletOnboard();   // re-pull so the banner shows the corrected numbers
 }
 
 
+// [Round1 2026-10-23] stop cards: icons instead of sentences, one language at a time, and Problem as its own
+// mode — while the driver picks a reason there is no invoice camera, no Save and no pallet section, only the
+// proof photo, the 4 reasons and Back. Classes and data-i / data-x are unchanged, so every click path works as before.
+var _shipProblem = {};   // g.key → true while that stop's Problem panel is open (survives re-renders and re-syncs)
+var SHIP_REASONS = [ ['Shop closed', 'Kedai tutup'], ['Rejected', 'Ditolak'], ['Partial', 'Sebahagian'], ['Reschedule', 'Jadual semula'] ];   // [0] = the value the server stores, never translated
+function _reasonLabel(v){ for (var k = 0; k < SHIP_REASONS.length; k++){ if (SHIP_REASONS[k][0] === v) return L(SHIP_REASONS[k][0], SHIP_REASONS[k][1]); } return v; }
+function _groupByKey(k){ for (var gi = 0; gi < _shipGroups.length; gi++){ if (_shipGroups[gi].key === k) return _shipGroups[gi]; } return null; }
+var ICO = {
+  cam:   '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>',
+  camS:  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>',
+  warn:  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  back:  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>',
+  check: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>'
+};
 function renderShipGroups(){
   var wrap = document.getElementById('shipGroupsWrap');
   if (!wrap) return;
@@ -1784,27 +1871,40 @@ function renderShipGroups(){
   function rank(g){ return g.invs.every(function(x){ return String(x.status).toLowerCase()==='delivered'; }) ? 1 : 0; }
   disp.sort(function(a,b){ return rank(a.g)-rank(b.g) || a.i-b.i; });
   var html = '';
-  if (!disp.length){ html = '<div style="text-align:center;color:#9a8050;font-size:13px;padding:14px;">No match · Tiada padanan</div>'; }
+  if (!disp.length){ html = '<div style="text-align:center;color:#9a8050;font-size:13px;padding:14px;">' + L('No match', 'Tiada padanan') + '</div>'; }
   disp.forEach(function(d){
     var g = d.g, i = d.i;
     var gDone = g.invs.every(function(x){ return String(x.status).toLowerCase()==='delivered'; });
     var gFail = !gDone && g.invs.some(function(x){ return String(x.status).toLowerCase()==='failed'; });
     var color = gDone ? '#2E7D32' : (gFail ? '#C62828' : '#C9A227');
-    var badge = gDone ? '<span style="color:#2E7D32;font-weight:700;font-size:13px;">&#10003; Delivered</span>'
-              : (gFail ? '<span style="color:#C62828;font-weight:700;font-size:13px;">&#10007; Problem</span>' : '');
-    html += '<div style="border:1px solid #E0C68A;border-left:5px solid '+color+';border-radius:8px;padding:12px;margin-bottom:10px;'+(gDone?'opacity:.55;':'')+'">'
+    var badge = gDone ? '<span style="color:#2E7D32;font-weight:700;font-size:13px;white-space:nowrap;">&#10003; ' + L('Delivered', 'Dihantar') + '</span>'
+              : (gFail ? '<span style="color:#C62828;font-weight:700;font-size:13px;white-space:nowrap;">&#10007; ' + L('Problem', 'Masalah') + '</span>' : '');
+    html += '<div style="border:1px solid #E0C68A;border-left:5px solid '+color+';border-radius:10px;padding:12px;margin-bottom:10px;'+(gDone?'opacity:.55;':'')+'">'
       + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;"><div style="font-weight:700;font-size:15px;color:#412402;">'+_esc(g.name)+'</div>'+badge+'</div>'
-      + '<div style="font-size:12px;color:#854F0B;margin:3px 0 6px;">'+_esc(g.area)+' · '+g.invs.length+' invoice(s)</div>'
-      ;
+      + '<div style="font-size:12.5px;color:#854F0B;margin:3px 0 8px;">'+_esc(g.area)+' · '+g.invs.length+' '+L(g.invs.length === 1 ? 'invoice' : 'invoices', 'invois')+'</div>';
     if (gDone){
       html += '<div style="font-size:11px;color:#6b5836;word-break:break-all;">'+ g.invs.map(function(x){ return String(x.invoiceNo); }).sort(function(a,b){ return a.localeCompare(b); }).map(_esc).join(' · ') +'</div>';
     }
-    if (!gDone){
+    if (!gDone && _shipProblem[g.key]){
+      // ── Problem mode: proof photo first (the office looks for the closed shop front), then the reason ──
+      html += '<div style="padding:10px;border:1.5px solid #F0C9A8;background:#FFF7ED;border-radius:10px;">'
+        + '<div style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:#9A3412;margin-bottom:10px;">' + ICO.warn + ' ' + L('Problem at this stop', 'Masalah di kedai ini') + '</div>'
+        + (g._failProof
+            ? '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;"><span style="position:relative;display:inline-block;">'
+              + '<img src="data:' + _escA(g._failProof.type || 'image/jpeg') + ';base64,' + g._failProof.base64 + '" style="width:60px;height:60px;object-fit:cover;border-radius:8px;border:1px solid #F0C9A8;">'
+              + '<button type="button" class="ship-proof-x" data-i="'+i+'" aria-label="' + _escA(L('Remove', 'Buang')) + '" style="position:absolute;top:-7px;right:-7px;width:26px;height:26px;background:rgba(0,0,0,.75);color:#fff;border:0;border-radius:50%;font-size:15px;line-height:1;cursor:pointer;padding:0;">&times;</button></span>'
+              + '<span style="font-size:13px;font-weight:700;color:#2E7D32;">&#10003; ' + L('Proof photo added', 'Foto bukti ada') + '</span></div>'
+            : '<button type="button" class="ship-proof" data-i="'+i+'" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;margin-bottom:10px;background:#fff;color:#9A3412;border:1.5px solid #E8B4A0;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;">' + ICO.cam + ' ' + L('Proof photo', 'Foto bukti') + '</button>')
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+        + SHIP_REASONS.map(function(r){ return '<button type="button" class="ship-reason" data-i="'+i+'" data-r="'+_esc(r[0])+'" style="min-height:48px;padding:6px 8px;background:#FFF3CD;color:#854F0B;border:1px solid #E0C68A;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">' + _esc(L(r[0], r[1])) + '</button>'; }).join('')
+        + '</div>'
+        + '<button type="button" class="ship-problem-back" data-i="'+i+'" style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;margin-top:8px;background:none;color:#854F0B;border:0;font-size:14px;font-weight:700;cursor:pointer;">' + ICO.back + ' ' + L('Back', 'Kembali') + '</button>'
+        + '</div>';
+    } else if (!gDone){
       // [untag+count 2026-07-15] each pending invoice is a tap-to-toggle chip (default = to deliver).
       // Untag the ones not delivered; photo count MUST equal the to-deliver count (no-missing / no-duplicate at source).
-      // [tidy 2026-07-18] chips sorted by invoice number + uniform grid — big stops used to render
-      // in raw import order with ragged widths. data-x keeps the ORIGINAL g.invs index, so the
-      // untag toggle and every count/save path are untouched; only the display order changes.
+      // [tidy 2026-07-18] chips sorted by invoice number + uniform grid. data-x keeps the ORIGINAL g.invs index,
+      // so the untag toggle and every count/save path are untouched; only the display order changes.
       var _ord = g.invs.map(function(_x, _xi){ return _xi; }).sort(function(a, b){
         return String(g.invs[a].invoiceNo).localeCompare(String(g.invs[b].invoiceNo));
       });
@@ -1822,66 +1922,118 @@ function renderShipGroups(){
       var toDeliver = g.invs.filter(function(x){ return String(x.status).toLowerCase()!=='delivered' && !x._untag; }).length;
       var photos = g.photos || [];
       var matchCount = (photos.length===toDeliver && toDeliver>0);
-      html += '<div style="font-size:12px;font-weight:700;margin-bottom:8px;color:'+(matchCount?'#2E7D32':'#C62828')+';">'
-        + toDeliver+' to deliver &middot; '+photos.length+' photo'+(photos.length===1?'':'s')
-        + (matchCount ? ' &#10003;' : (photos.length<toDeliver ? ' &mdash; take '+(toDeliver-photos.length)+' more &middot; ambil '+(toDeliver-photos.length)+' lagi' : ' &mdash; remove '+(photos.length-toDeliver)+' &middot; buang '+(photos.length-toDeliver)))
-        + '</div>'
-        // [Gate-hint 2026-09-09] 2+ invoice stops: spell out the 1-photo-per-invoice rule on the card itself
-        + (toDeliver > 1 && photos.length < toDeliver ? '<div style="font-size:11.5px;color:#854F0B;margin:-4px 0 8px;">1 invoice = 1 photo &middot; 1 invois = 1 foto &mdash; do not put 2 invoices in one shot &middot; jangan 2 invois dalam satu gambar</div>' : '');
+      // one short line: photos taken / needed (and the 1-invoice-1-photo rule while it still matters)
+      html += '<div style="font-size:13px;font-weight:700;margin-bottom:8px;color:'+(matchCount?'#2E7D32':'#C62828')+';">'
+        + L('Photos', 'Foto') + ' ' + photos.length + '/' + toDeliver + (matchCount ? ' &#10003;' : '')
+        + (photos.length > toDeliver ? ' &middot; ' + L('remove ' + (photos.length - toDeliver), 'buang ' + (photos.length - toDeliver)) : '')
+        + (toDeliver > 1 && photos.length < toDeliver ? '<span style="font-weight:600;color:#854F0B;"> &middot; ' + L('1 invoice = 1 photo', '1 invois = 1 foto') + '</span>' : '')
+        + '</div>';
       if (photos.length){
-        html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">'
+        html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">'
           + photos.map(function(p, pi){
-              var t = '<img src="'+p.dataUrl+'" style="width:54px;height:54px;object-fit:cover;border-radius:6px;border:1px solid #E0C68A;">';
-              var x = '<button type="button" class="ship-photo-x" data-g="'+i+'" data-p="'+pi+'" aria-label="Remove" style="position:absolute;top:-4px;right:-4px;width:20px;height:20px;background:rgba(0,0,0,.72);color:#fff;border:0;border-radius:50%;font-size:13px;line-height:1;cursor:pointer;padding:0;">&times;</button>';
+              var t = '<img src="'+p.dataUrl+'" style="width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid #E0C68A;">';
+              var x = '<button type="button" class="ship-photo-x" data-g="'+i+'" data-p="'+pi+'" aria-label="' + _escA(L('Remove', 'Buang')) + '" style="position:absolute;top:-6px;right:-6px;width:24px;height:24px;background:rgba(0,0,0,.72);color:#fff;border:0;border-radius:50%;font-size:14px;line-height:1;cursor:pointer;padding:0;">&times;</button>';
               return '<span style="position:relative;display:inline-block;margin-top:4px;">' + t
                 + (p.qualityFlag ? '<span style="position:absolute;bottom:1px;left:1px;font-size:12px;line-height:1;">&#128681;</span>' : '')
                 + x + '</span>';
             }).join('')
-          + '<span style="align-self:center;font-size:12px;color:#2E7D32;font-weight:600;">'+photos.length+' photo'+(photos.length>1?'s':'')+' ready &#10003;</span>'
           + '</div>';
       }
-      html += '<div style="display:flex;gap:8px;">'
-        + '<button type="button" class="ship-photo" data-i="'+i+'" style="flex:1;background:#fff;color:#2E7D32;border:1.5px solid #2E7D32;border-radius:8px;padding:11px;font-weight:700;font-size:13px;cursor:pointer;">&#128247; '+(photos.length? ('Add photo · Tambah') : 'Take photo · Ambil foto')+'</button>'
-        + '<button type="button" class="ship-fail" data-i="'+i+'" style="background:#fff;color:#854F0B;border:1px solid #E0C68A;border-radius:8px;padding:11px 12px;font-weight:600;font-size:13px;cursor:pointer;">Problem</button>'
-        + '</div>';
-      if (matchCount){
-        html += '<button type="button" class="ship-save" data-i="'+i+'" style="width:100%;margin-top:8px;background:#2E7D32;color:#fff;border:none;border-radius:8px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;">&#10003; Save — Delivered &middot; Dihantar</button>';
-      }
-      // [FailProof 2026-07-23] photo evidence for a problem stop (e.g. the closed shopfront):
-      // driver snaps the proof FIRST, then taps the reason — the photo rides the same submit
-      // and shows up on the POD Admin board next to the failed invoice.
-      html += '<div class="ship-reasons" data-i="'+i+'" style="display:none;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center;">'
-        + '<button type="button" class="ship-proof" data-i="'+i+'" style="background:#fff;color:#2E7D32;border:1.5px solid #2E7D32;border-radius:6px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer;">&#128247; '
-          + (g._failProof ? 'Retake proof · Ambil semula' : 'Photo proof · Foto bukti') + '</button>'
-        + (g._failProof ? '<span style="font-size:12px;color:#2E7D32;font-weight:700;">1 proof &#10003; <button type="button" class="ship-proof-x" data-i="'+i+'" aria-label="Remove" style="background:rgba(0,0,0,.6);color:#fff;border:0;border-radius:50%;width:18px;height:18px;font-size:12px;line-height:1;cursor:pointer;padding:0;vertical-align:1px;">&times;</button></span>' : '')
-        + '<span style="flex-basis:100%;height:0;"></span>'
-        + ['Shop closed','Rejected','Partial','Reschedule'].map(function(r){ return '<button type="button" class="ship-reason" data-i="'+i+'" data-r="'+_esc(r)+'" style="background:#FFF3CD;color:#854F0B;border:1px solid #E0C68A;border-radius:6px;padding:7px 10px;font-size:12px;cursor:pointer;">'+_esc(r)+'</button>'; }).join('')
-        + '</div>';
-      // Optional pallet drop for THIS customer — hidden until the driver taps "Pallet?".
-      // Only shown if the master loaded; fill only if there are pallets (per boss).
+      // pallets come BEFORE Save: they are sent together with the Save, so a driver who saves first loses them
       if (!_smMode && PALLET_MASTER.length){
         var pSel = (g._pallet && g._pallet.palletKey) || '';
         var pQty = (g._pallet && g._pallet.qty) || '';
         var pCollect = (g._pallet && g._pallet.collectQty) || '';
         var openPallet = !!(pSel || pQty || pCollect);   // keep open across re-render if partially filled
-        html += '<button type="button" class="pallet-toggle" data-i="'+i+'" style="width:100%;margin-top:8px;background:#fff;color:#854F0B;border:1px dashed #E0C68A;border-radius:8px;padding:10px;font-weight:600;font-size:13px;cursor:pointer;">'
-          + '&#128230; Pallet? &middot; Ada pallet?</button>'
-          + '<div class="pallet-fields" data-i="'+i+'" style="display:'+(openPallet?'flex':'none')+';flex-direction:column;gap:8px;margin-top:8px;">'
+        html += '<button type="button" class="pallet-toggle" data-i="'+i+'" style="width:100%;margin-bottom:8px;background:#fff;color:#854F0B;border:1px dashed #E0C68A;border-radius:10px;min-height:42px;padding:8px;font-weight:600;font-size:13px;cursor:pointer;">'
+          + '&#128230; ' + L('Pallets?', 'Ada pallet?') + '</button>'
+          + '<div class="pallet-fields" data-i="'+i+'" style="display:'+(openPallet?'flex':'none')+';flex-direction:column;gap:8px;margin-bottom:8px;">'
           + '<select class="pallet-type" data-i="'+i+'" style="width:100%;padding:11px 12px;font-size:14px;border:1.5px solid #E0C68A;border-radius:8px;background:#fff;color:#412402;">'+_palletOptions(pSel)+'</select>'
           + '<div style="display:flex;gap:8px;">'
-          + '<label style="flex:1;font-size:11px;font-weight:600;color:#854F0B;">&#128230;&#10145;&#65039; Drop &middot; Beri'
+          + '<label style="flex:1;font-size:12px;font-weight:600;color:#854F0B;">&#128230;&#10145;&#65039; ' + L('Drop', 'Beri')
           + '<input type="number" class="pallet-qty" data-i="'+i+'" inputmode="numeric" min="0" value="'+_esc(pQty)+'" placeholder="0" style="width:100%;margin-top:3px;padding:11px 12px;font-size:14px;border:1.5px solid #E0C68A;border-radius:8px;background:#fff;color:#412402;box-sizing:border-box;"></label>'
-          + '<label style="flex:1;font-size:11px;font-weight:600;color:#0E7C5A;">&#8617;&#65039;&#128230; Collect &middot; Ambil'
+          + '<label style="flex:1;font-size:12px;font-weight:600;color:#0E7C5A;">&#8617;&#65039;&#128230; ' + L('Collect', 'Ambil')
           + '<input type="number" class="pallet-collect" data-i="'+i+'" inputmode="numeric" min="0" value="'+_esc(pCollect)+'" placeholder="0" style="width:100%;margin-top:3px;padding:11px 12px;font-size:14px;border:1.5px solid #E0C68A;border-radius:8px;background:#fff;color:#412402;box-sizing:border-box;"></label>'
           + '</div>'
-          + '<button type="button" class="pallet-photo" data-i="'+i+'" style="width:100%;background:#fff;color:'+(g._pallet && g._pallet.photo ? '#2E7D32' : '#854F0B')+';border:1px '+(g._pallet && g._pallet.photo ? 'solid #2E7D32' : 'dashed #E0C68A')+';border-radius:8px;padding:9px;font-size:12px;font-weight:600;cursor:pointer;">'
-          + (g._pallet && g._pallet.photo ? '&#10003; Photo attached · Foto ada' : '&#128247; Photo evidence · Foto bukti (optional)') + '</button>'
+          + '<button type="button" class="pallet-photo" data-i="'+i+'" style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px;min-height:42px;background:#fff;color:'+(g._pallet && g._pallet.photo ? '#2E7D32' : '#854F0B')+';border:1px '+(g._pallet && g._pallet.photo ? 'solid #2E7D32' : 'dashed #E0C68A')+';border-radius:8px;padding:8px;font-size:13px;font-weight:600;cursor:pointer;">'
+          + (g._pallet && g._pallet.photo ? '&#10003; ' + L('Pallet photo added', 'Foto pallet ada') : ICO.camS + ' ' + L('Pallet photo (optional)', 'Foto pallet (pilihan)')) + '</button>'
           + '</div>';
       }
+      // actions: the camera icon while photos are missing, Save once photos = invoices, Problem always
+      var primary = photos.length < toDeliver
+        ? '<button type="button" class="ship-photo" data-i="'+i+'" aria-label="' + _escA(L('Take photo', 'Ambil foto')) + '" style="flex:1;display:flex;align-items:center;justify-content:center;min-height:54px;background:#2E7D32;color:#fff;border:0;border-radius:12px;cursor:pointer;">' + ICO.cam + '</button>'
+        : (matchCount ? '<button type="button" class="ship-save" data-i="'+i+'" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;min-height:54px;background:#2E7D32;color:#fff;border:none;border-radius:12px;font-weight:800;font-size:16px;cursor:pointer;">' + ICO.check + ' ' + L('Save', 'Simpan') + '</button>' : '');
+      html += '<div style="display:flex;gap:8px;">' + primary
+        + '<button type="button" class="ship-fail" data-i="'+i+'" style="' + (primary ? '' : 'flex:1;') + 'display:flex;align-items:center;justify-content:center;gap:6px;min-height:54px;padding:0 14px;background:#fff;color:#9A3412;border:1.5px solid #E8B4A0;border-radius:12px;font-weight:700;font-size:14px;cursor:pointer;">' + ICO.warn + ' ' + L('Problem', 'Masalah') + '</button>'
+        + '</div>';
     }
     html += '</div>';
   });
   wrap.innerHTML = html;
+}
+
+// [Round1 2026-10-23] Yes / Cancel sheet in the driver's language (window.confirm speaks the phone's own
+// language and looks like an error). Resolves true or false.
+function _confirmSheet(title, note, yesTxt, noTxt){
+  return new Promise(function(resolve){
+    var ov = document.createElement('div');
+    ov.id = 'confirmSheet';
+    ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:10050;background:rgba(11,31,58,.6);display:flex;align-items:flex-end;justify-content:center;';
+    ov.innerHTML = '<div style="background:#fff;width:100%;max-width:480px;border-radius:16px 16px 0 0;padding:20px 18px;padding-bottom:max(20px, calc(env(safe-area-inset-bottom) + 14px));font-family:\'DM Sans\',sans-serif;">'
+      + '<div style="font-size:17px;font-weight:800;color:#0B1F3A;line-height:1.35;">' + _esc(title) + '</div>'
+      + (note ? '<div style="font-size:14px;color:#9A3412;margin-top:6px;">' + _esc(note) + '</div>' : '')
+      + '<div style="display:flex;gap:10px;margin-top:16px;">'
+      +   '<button type="button" data-a="no" style="flex:1;min-height:52px;background:#fff;color:#0B1F3A;border:1.5px solid #CBD5E1;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;">' + _esc(noTxt) + '</button>'
+      +   '<button type="button" data-a="yes" style="flex:1.3;min-height:52px;background:#C62828;color:#fff;border:0;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;">' + _esc(yesTxt) + '</button>'
+      + '</div></div>';
+    function done(v){ try{ ov.remove(); }catch(e){} resolve(v); }
+    ov.addEventListener('click', function(e){ var b = e.target.closest('button'); if (b) done(b.getAttribute('data-a') === 'yes'); else if (e.target === ov) done(false); });
+    document.body.appendChild(ov);
+  });
+}
+// proof / pallet photos land on the stop by KEY, after any await — a background re-sync may have replaced
+// the stop objects meanwhile (it used to drop a just-taken proof photo)
+function _setFailProof(key, dataUrl){
+  var grp = _groupByKey(key), m = String(dataUrl || '').match(/^data:([^;]+);base64,(.*)$/);
+  if (grp && m){
+    grp._failProof = { base64: m[2], type: m[1], name: 'proof.jpg' };
+    _shipProblem[key] = true;
+    _palletToast('ok', '&#10003; ' + L('Proof photo added. Now choose the reason.', 'Foto bukti ditambah. Sekarang pilih sebab.'));
+  }
+  renderShipGroups();
+}
+function _setPalletPhoto(key, dataUrl){
+  var grp = _groupByKey(key), m = String(dataUrl || '').match(/^data:([^;]+);base64,(.*)$/);
+  if (grp && m){
+    if (!grp._pallet) grp._pallet = { palletKey:'', qty:'', collectQty:'' };
+    grp._pallet.photo = { base64: m[2], type: m[1], name: 'pallet_' + Date.now() + '.jpg' };
+    _palletToast('ok', '&#10003; ' + L('Pallet photo added', 'Foto pallet ditambah'));
+  }
+  renderShipGroups();
+}
+// the phone's own camera: ONLY the emergency path when the in-page camera cannot run on this phone
+function _osEvidencePhoto(kind, key){
+  var id = kind === 'pallet' ? 'palletPhotoInput' : 'proofPhotoInput';
+  var inp = document.getElementById(id);
+  if (!inp){
+    inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'image/*'; inp.capture = 'environment';
+    inp.id = id; inp.style.display = 'none';
+    document.body.appendChild(inp);
+    inp.addEventListener('change', async function(){
+      var f = inp.files && inp.files[0], k = inp.getAttribute('data-k');
+      if (f){
+        var entry;
+        try { entry = await compressImage(f); } catch(err){ entry = await readFileAsDataUrl(f); }
+        // evidence photo: no quality gate — any shot of the closed shop / the pallets is better than none
+        if (kind === 'pallet') _setPalletPhoto(k, entry.dataUrl); else _setFailProof(k, entry.dataUrl);
+      }
+      inp.value = ''; _osCamUntil = 0;
+    });
+  }
+  inp.setAttribute('data-k', key);
+  _osCamUntil = Date.now() + 120000;   // no re-sync while the phone camera is open (cleared when the photo lands)
+  inp.click();
 }
 
 // B4: search box — input delegation; only the groups wrap re-renders so the keyboard stays open
@@ -1923,39 +2075,17 @@ document.getElementById('shipmentSection').addEventListener('click', function(e)
   }
   var ph = e.target.closest('.ship-photo');
   if (ph){ _deliverIdx = parseInt(ph.getAttribute('data-i'),10);
-    // [AutoCap 2026-09-09] in-page camera (guide frame + auto shutter); OS camera when unsupported / after a fallback
+    // [AutoCap 2026-09-09] in-page camera (guide frame + auto shutter); the phone camera only when this phone cannot run it
     if (_acSupported() && !_acOff){ openAutoCapture(_deliverIdx); } else { document.getElementById('shipPhoto').click(); }
     return; }
   var pp = e.target.closest('.pallet-photo');
   if (pp){
-    var pi = parseInt(pp.getAttribute('data-i'), 10);
-    var inp = document.getElementById('palletPhotoInput');
-    if (!inp){
-      inp = document.createElement('input');
-      inp.type = 'file'; inp.accept = 'image/*'; inp.capture = 'environment';
-      inp.id = 'palletPhotoInput'; inp.style.display = 'none';
-      document.body.appendChild(inp);
-      inp.addEventListener('change', function(){
-        var f = inp.files && inp.files[0]; var gi = Number(inp.getAttribute('data-i'));
-        var grp = _shipGroups[gi];
-        if (f && grp){
-          var rd = new FileReader();
-          rd.onload = function(){
-            var durl = String(rd.result || '');
-            var m = durl.match(/^data:([^;]+);base64,(.*)$/);
-            if (m){ if (!grp._pallet) grp._pallet = { palletKey:'', qty:'', collectQty:'' };
-              grp._pallet.photo = { base64: m[2], type: m[1], name: 'pallet_' + Date.now() + '.jpg' };
-              _palletToast('ok', '&#10003; Photo attached · Foto dilampirkan');
-              renderShipGroups();
-            }
-          };
-          rd.readAsDataURL(f);
-        }
-        inp.value = '';
-      });
-    }
-    inp.setAttribute('data-i', pi);
-    inp.click();
+    var ppg = _shipGroups[parseInt(pp.getAttribute('data-i'), 10)];
+    if (!ppg) return;
+    var ppKey = ppg.key;
+    // [Round1] our own camera for every photo (boss: no phone camera); the phone camera stays only as the emergency path
+    if (_acSupported() && !_acOff){ openAutoCapture(_shipGroups.indexOf(ppg), { mode: 'evidence', kind: 'pallet', onPhoto: function(entry){ _setPalletPhoto(ppKey, entry.dataUrl); } }); }
+    else _osEvidencePhoto('pallet', ppKey);
     return;
   }
   var ut = e.target.closest('.ship-untag');
@@ -1963,44 +2093,40 @@ document.getElementById('shipmentSection').addEventListener('click', function(e)
     if (_shipGroups[_gi] && _shipGroups[_gi].invs[_xi]){ _shipGroups[_gi].invs[_xi]._untag = !_shipGroups[_gi].invs[_xi]._untag; renderShipGroups(); } return; }
   var sv = e.target.closest('.ship-save');
   if (sv){ saveDelivery(parseInt(sv.getAttribute('data-i'),10)); return; }
+  // [Round1] Problem = its own mode on the card (invoice camera, Save and pallets step aside)
   var fb = e.target.closest('.ship-fail');
-  if (fb){ var i = fb.getAttribute('data-i'); var box = document.querySelector('.ship-reasons[data-i="'+i+'"]'); if (box) box.style.display = (box.style.display==='none'?'flex':'none'); return; }
-  // [FailProof] take / remove the problem-evidence photo (buffered on the group until a reason is tapped)
+  if (fb){ var _fg = _shipGroups[parseInt(fb.getAttribute('data-i'),10)]; if (_fg){ _shipProblem[_fg.key] = true; renderShipGroups(); } return; }
+  var pbk = e.target.closest('.ship-problem-back');
+  if (pbk){ var _bg = _shipGroups[parseInt(pbk.getAttribute('data-i'),10)]; if (_bg){ delete _shipProblem[_bg.key]; renderShipGroups(); } return; }
+  // [FailProof] take / remove the problem-evidence photo (kept on the stop until a reason is confirmed)
   var pfx = e.target.closest('.ship-proof-x');
-  if (pfx){ var _pg=_shipGroups[parseInt(pfx.getAttribute('data-i'),10)]; if(_pg){ _pg._failProof=null; renderShipGroups();
-      var _bx=document.querySelector('.ship-reasons[data-i="'+pfx.getAttribute('data-i')+'"]'); if(_bx) _bx.style.display='flex'; } return; }
+  if (pfx){ var _pg=_shipGroups[parseInt(pfx.getAttribute('data-i'),10)]; if(_pg){ _pg._failProof=null; renderShipGroups(); } return; }
   var pfb = e.target.closest('.ship-proof');
   if (pfb){
-    var pfi = parseInt(pfb.getAttribute('data-i'), 10);
-    var pin = document.getElementById('proofPhotoInput');
-    if (!pin){
-      pin = document.createElement('input');
-      pin.type='file'; pin.accept='image/*'; pin.capture='environment';
-      pin.id='proofPhotoInput'; pin.style.display='none';
-      document.body.appendChild(pin);
-      pin.addEventListener('change', async function(){
-        var f = pin.files && pin.files[0]; var gi = Number(pin.getAttribute('data-i'));
-        var grp = _shipGroups[gi];
-        if (f && grp){
-          var entry;
-          try { entry = await compressImage(f); } catch(err){ entry = await readFileAsDataUrl(f); }
-          // evidence photo: no quality gate — any shot of the closed shop is better than none
-          var m = String(entry.dataUrl||'').match(/^data:([^;]+);base64,(.*)$/);
-          if (m){ grp._failProof = { base64:m[2], type:m[1], name:'proof.jpg' };
-            renderShipGroups();
-            var bx=document.querySelector('.ship-reasons[data-i="'+gi+'"]'); if(bx) bx.style.display='flex';
-            _palletToast('ok', '&#10003; Proof photo attached &middot; Foto bukti dilampirkan &mdash; now tap the reason &middot; sila tekan sebab');
-          }
-        }
-        pin.value='';
-      });
-    }
-    pin.setAttribute('data-i', pfi);
-    pin.click();
+    var pfg = _shipGroups[parseInt(pfb.getAttribute('data-i'), 10)];
+    if (!pfg) return;
+    var pfKey = pfg.key;
+    if (_acSupported() && !_acOff){ openAutoCapture(_shipGroups.indexOf(pfg), { mode: 'evidence', kind: 'proof', onPhoto: function(entry){ _setFailProof(pfKey, entry.dataUrl); } }); }
+    else _osEvidencePhoto('proof', pfKey);
     return;
   }
   var rb = e.target.closest('.ship-reason');
-  if (rb){ failGroup(parseInt(rb.getAttribute('data-i'),10), rb.getAttribute('data-r')); return; }
+  if (rb){
+    var rg = _shipGroups[parseInt(rb.getAttribute('data-i'),10)], rv = rb.getAttribute('data-r');
+    if (!rg) return;
+    var rKey = rg.key;
+    var rn = rg.invs.filter(function(x){ return String(x.status).toLowerCase()!=='delivered'; }).length;
+    _confirmSheet(
+      L('Mark ' + rn + (rn === 1 ? ' invoice' : ' invoices') + ' as “' + _reasonLabel(rv) + '”?', 'Tandakan ' + rn + ' invois sebagai “' + _reasonLabel(rv) + '”?'),
+      rg._failProof ? '' : L('No proof photo added.', 'Tiada foto bukti.'),
+      L('Yes, mark', 'Ya, tandakan'), L('Cancel', 'Batal')
+    ).then(function(yes){
+      if (!yes) return;
+      var cur = _groupByKey(rKey);   // by key: a re-sync may have rebuilt the list while the sheet was open
+      if (cur) failGroup(_shipGroups.indexOf(cur), rv);
+    });
+    return;
+  }
   var pt = e.target.closest('.pallet-toggle');
   if (pt){ var pf = document.querySelector('.pallet-fields[data-i="'+pt.getAttribute('data-i')+'"]'); if (pf) pf.style.display = (pf.style.display==='none'?'flex':'none'); return; }   // FIX: this branch was dropped in the KTN merge — the Pallet? button did nothing
 });
@@ -2021,7 +2147,7 @@ function _addPhotoToGroup(gKey, entry, fallbackGroup){
     ? cur.invs.filter(function(x){ return String(x.status).toLowerCase() !== 'delivered'; }).length
     : 99;
   if (cur.photos.length >= _cap){
-    _palletToast('err', 'Limit reached: ' + _cap + ' photo(s) = ' + _cap + ' invoice(s) at this stop &middot; Had: ' + _cap + ' foto = ' + _cap + ' invois di hentian ini');
+    _palletToast('err', L('Limit reached: ' + _cap + (_cap === 1 ? ' photo for ' : ' photos for ') + _cap + (_cap === 1 ? ' invoice' : ' invoices') + ' at this stop', 'Had: ' + _cap + ' foto untuk ' + _cap + ' invois di kedai ini'));
     return { added: false, group: cur };
   }
   cur.photos.push({ dataUrl: entry.dataUrl, name: entry.name, type: entry.type, qualityFlag: !!entry.qualityFlag, origDataUrl: entry.origDataUrl || null, scan: entry.scan || null });   // [Scanner] backup original rides along
@@ -2554,23 +2680,23 @@ function _srBuild_(){
   ov = document.createElement('div'); ov.id = 'srOverlay';
   ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:9700;background:#0B1F3A;display:none;flex-direction:column;font-family:\'DM Sans\',sans-serif;color:#fff;';
   ov.innerHTML =
-      '<div style="padding:12px 14px 8px;display:flex;align-items:center;gap:10px;">'
-    +   '<div style="flex:1;min-width:0;"><div id="srTitle" style="font-size:16px;font-weight:800;">Check the scan &middot; Semak imbasan'
-    +     ((typeof SCAN_TEST !== 'undefined' && SCAN_TEST) ? ' <span style="background:#B91C1C;color:#fff;font-size:11px;padding:2px 7px;border-radius:999px;vertical-align:middle;">TEST &middot; UJIAN</span>' : '') + '</div>'
+      '<div style="padding:12px 14px 8px;padding-top:max(12px, env(safe-area-inset-top));padding-left:max(14px, env(safe-area-inset-left));padding-right:max(14px, env(safe-area-inset-right));display:flex;align-items:center;gap:10px;">'
+    +   '<div style="flex:1;min-width:0;"><div id="srTitle" style="font-size:17px;font-weight:800;">' + Lspan('Check the scan', 'Semak imbasan')
+    +     ((typeof SCAN_TEST !== 'undefined' && SCAN_TEST) ? ' <span style="background:#B91C1C;color:#fff;font-size:11px;padding:2px 7px;border-radius:999px;vertical-align:middle;">' + Lspan('TEST', 'UJIAN') + '</span>' : '') + '</div>'
     +   '<div id="srTag" style="display:inline-block;margin-top:4px;font-size:12.5px;font-weight:700;padding:3px 9px;border-radius:999px;"></div></div>'
-    +   '<button type="button" id="srToggle" style="background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:7px 10px;font-size:12.5px;line-height:1.25;cursor:pointer;">Original<br>Asal</button>'
+    +   '<button type="button" id="srToggle" style="background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:7px 10px;font-size:12.5px;line-height:1.25;cursor:pointer;min-height:40px;">' + L('Original', 'Asal') + '</button>'
     + '</div>'
     + '<div id="srStage" style="position:relative;flex:1;min-height:0;margin:0 10px;border-radius:10px;overflow:hidden;background:#1d2f4a;display:flex;align-items:center;justify-content:center;">'
     +   '<img id="srImg" alt="" style="max-width:100%;max-height:100%;object-fit:contain;background:#fff;display:none;">'
-    +   '<div id="srBusy" style="text-align:center;font-size:15px;font-weight:700;line-height:1.5;padding:20px;">Scanning&hellip; &middot; Mengimbas&hellip;'
-    +     '<br><button type="button" id="srSkip" style="display:none;margin:18px auto 0;padding:12px 16px;background:#fff;color:#0B1F3A;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:700;line-height:1.3;cursor:pointer;">Use the photo without scanning<br><span style="font-weight:500;font-size:12px;">Guna foto tanpa imbas</span></button></div>'
+    +   '<div id="srBusy" style="text-align:center;font-size:15px;font-weight:700;line-height:1.5;padding:20px;">' + Lspan('Scanning…', 'Mengimbas…')
+    +     '<br><button type="button" id="srSkip" style="display:none;margin:18px auto 0;padding:12px 16px;background:#fff;color:#0B1F3A;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:700;line-height:1.3;cursor:pointer;">' + Lspan('Use the photo without scanning', 'Guna foto tanpa imbas') + '</button></div>'
     +   '<div id="srEditor" style="position:absolute;top:0;left:0;right:0;bottom:0;display:none;background:#000;"></div>'
     + '</div>'
-    + '<div id="srHint" style="padding:8px 14px 0;font-size:12.5px;line-height:1.4;color:#C9D6E3;text-align:center;"></div>'
-    + '<div id="srBtns" style="padding:10px 12px 14px;padding-bottom:calc(22px + env(safe-area-inset-bottom, 0px));display:flex;gap:8px;">'
-    +   '<button type="button" id="srRetake" style="flex:1;padding:13px 6px;background:#fff;color:#0B1F3A;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:700;line-height:1.25;cursor:pointer;">&#8635; Retake<br><span style="font-weight:500;font-size:12px;">Ambil semula</span></button>'
-    +   '<button type="button" id="srAdjust" style="flex:1;padding:13px 6px;background:#fff;color:#0B1F3A;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:700;line-height:1.25;cursor:pointer;">&#8982; Adjust<br><span style="font-weight:500;font-size:12px;">Laras sudut</span></button>'
-    +   '<button type="button" id="srUse" style="flex:1.3;padding:13px 6px;background:#2E7D32;color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:15px;font-weight:800;line-height:1.25;cursor:pointer;">&#10003; Use<br><span style="font-weight:500;font-size:12px;">Guna</span></button>'
+    + '<div id="srHint" style="padding:8px 14px 0;font-size:13.5px;line-height:1.4;color:#C9D6E3;text-align:center;"></div>'
+    + '<div id="srBtns" style="padding:10px 12px 22px;padding-bottom:max(22px, calc(env(safe-area-inset-bottom) + 12px));padding-left:max(12px, env(safe-area-inset-left));padding-right:max(12px, env(safe-area-inset-right));display:flex;gap:8px;">'
+    +   '<button type="button" id="srRetake" style="flex:1;padding:13px 6px;background:#fff;color:#0B1F3A;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:700;line-height:1.25;cursor:pointer;min-height:52px;">&#8635; ' + Lspan('Retake', 'Ambil semula') + '</button>'
+    +   '<button type="button" id="srAdjust" style="flex:1;padding:13px 6px;background:#fff;color:#0B1F3A;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:700;line-height:1.25;cursor:pointer;min-height:52px;">&#8982; ' + Lspan('Adjust', 'Laras') + '</button>'
+    +   '<button type="button" id="srUse" style="flex:1.3;padding:13px 6px;background:#2E7D32;color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:15px;font-weight:800;line-height:1.25;cursor:pointer;min-height:52px;">&#10003; ' + Lspan('Use', 'Guna') + '</button>'
     + '</div>';
   document.body.appendChild(ov);
   // Scanic's toolbar buttons are 34 px icons — too small for a driver's thumb in a moving lorry.
@@ -2584,17 +2710,17 @@ function _srBuild_(){
 }
 function _srTag_(entry){
   var t = document.getElementById('srTag'), h = document.getElementById('srHint'), sc = entry.scan || {};
-  if (sc.ok && sc.cropped && sc.sure === false){ t.textContent = '⚠ Check the edges · Semak tepi'; t.style.background = '#FBBF24'; t.style.color = '#412402';
-    h.innerHTML = 'The paper edge was hard to see. Is any part of the invoice cut off? Tap <b>Adjust</b>.<br>Tepi kertas sukar dikesan. Ada bahagian invois terpotong? Tekan <b>Laras</b>.'; }
-  else if (sc.ok && sc.cropped){ t.textContent = '✓ Scanned · Diimbas'; t.style.background = '#2E7D32'; t.style.color = '#fff';
-    h.innerHTML = 'Whole invoice visible and readable? Tap <b>Use</b>. Edges cut off? Tap <b>Adjust</b>.<br>Seluruh invois nampak? Tekan <b>Guna</b>. Tepi terpotong? Tekan <b>Laras</b>.'; }
-  else if (sc.ok){ t.textContent = '⚠ Edges not found · Tepi tidak dikesan'; t.style.background = '#FBBF24'; t.style.color = '#412402';
-    h.innerHTML = 'Tap <b>Adjust</b> and drag the 4 corners onto the paper, or <b>Retake</b>.<br>Tekan <b>Laras</b> dan tarik 4 sudut ke kertas, atau <b>Ambil semula</b>.'; }
-  else { t.textContent = 'Photo (not scanned) · Foto (tidak diimbas)'; t.style.background = '#64748B'; t.style.color = '#fff';
+  if (sc.ok && sc.cropped && sc.sure === false){ t.textContent = '⚠ ' + L('Check the edges', 'Semak tepi'); t.style.background = '#FBBF24'; t.style.color = '#412402';
+    h.innerHTML = L('Is part of the invoice cut off? Tap <b>Adjust</b>.', 'Ada bahagian invois terpotong? Tekan <b>Laras</b>.'); }
+  else if (sc.ok && sc.cropped){ t.textContent = '✓ ' + L('Scanned', 'Diimbas'); t.style.background = '#2E7D32'; t.style.color = '#fff';
+    h.innerHTML = L('All clear? Tap <b>Use</b>. Edges cut off? Tap <b>Adjust</b>.', 'Semua jelas? Tekan <b>Guna</b>. Tepi terpotong? Tekan <b>Laras</b>.'); }
+  else if (sc.ok){ t.textContent = '⚠ ' + L('Edges not found', 'Tepi tidak dikesan'); t.style.background = '#FBBF24'; t.style.color = '#412402';
+    h.innerHTML = L('Tap <b>Adjust</b> and drag the 4 corners, or <b>Retake</b>.', 'Tekan <b>Laras</b> dan tarik 4 sudut, atau <b>Ambil semula</b>.'); }
+  else { t.textContent = L('Normal photo (not scanned)', 'Foto biasa (tidak diimbas)'); t.style.background = '#64748B'; t.style.color = '#fff';
     var er = String(sc.err || '');
-    h.innerHTML = /too slow/.test(er) ? 'The scan took too long on this phone — the normal photo will be used.<br>Imbasan terlalu lama di telefon ini — foto biasa akan digunakan.'
-      : /not loaded/.test(er) ? 'The scanner has not loaded yet (weak signal?) — the normal photo will be used.<br>Pengimbas belum dimuatkan (isyarat lemah?) — foto biasa akan digunakan.'
-      : 'This photo could not be scanned — the normal photo will be used.<br>Foto ini tidak dapat diimbas — foto biasa akan digunakan.'; }
+    h.innerHTML = /too slow/.test(er) ? L('Scanning is too slow on this phone. The normal photo will be used.', 'Imbasan terlalu lama di telefon ini. Foto biasa akan digunakan.')
+      : /not loaded/.test(er) ? L('The scanner has not loaded yet (weak signal?). The normal photo will be used.', 'Pengimbas belum dimuat (isyarat lemah?). Foto biasa akan digunakan.')
+      : L('This photo could not be scanned. The normal photo will be used.', 'Foto ini tidak dapat diimbas. Foto biasa akan digunakan.'); }
   document.getElementById('srAdjust').style.display = entry._scanSrc ? '' : 'none';
   document.getElementById('srToggle').style.display = entry.origDataUrl ? '' : 'none';
 }
@@ -2612,7 +2738,7 @@ function scanAndReview_(blob, plainEntry){
   var skip = document.getElementById('srSkip'), tog = document.getElementById('srToggle');
   // nothing from the previous photo may stay clickable while this one scans
   ['srUse', 'srRetake', 'srAdjust', 'srToggle'].forEach(function(id){ document.getElementById(id).onclick = null; });
-  tog.style.display = 'none'; tog.innerHTML = 'Original<br>Asal'; skip.style.display = 'none';
+  tog.style.display = 'none'; tog.innerHTML = L('Original', 'Asal'); skip.style.display = 'none';
   img.style.display = 'none'; img.removeAttribute('src'); busy.style.display = 'block'; ed.style.display = 'none'; ed.innerHTML = '';
   btns.style.visibility = 'hidden'; hint.innerHTML = ''; tag.textContent = '';
   ov.style.display = 'flex';
@@ -2644,18 +2770,18 @@ function scanAndReview_(blob, plainEntry){
       document.getElementById('srUse').onclick = function(){ finish(entry); };
       document.getElementById('srRetake').onclick = function(){ finish(null); };
       document.getElementById('srToggle').onclick = function(){ showingOrig = !showingOrig; show(entry);
-        this.innerHTML = showingOrig ? 'Scan<br>Imbasan' : 'Original<br>Asal'; };
+        this.innerHTML = showingOrig ? L('Scan', 'Imbasan') : L('Original', 'Asal'); };
       document.getElementById('srAdjust').onclick = function(){
         if (!entry._scanSrc || !_scanic) return;
         btns.style.visibility = 'hidden'; img.style.display = 'none'; ed.style.display = 'block';
-        hint.innerHTML = 'Drag the 4 dots onto the paper corners, then <b>Apply</b>.<br>Tarik 4 titik ke sudut kertas, kemudian <b>Guna</b>.';
+        hint.innerHTML = L('Drag the 4 dots onto the paper corners, then tap <b>Done</b>.', 'Tarik 4 titik ke sudut kertas, kemudian tekan <b>Siap</b>.');
         var src = entry._scanSrc, c0 = entry.scan && entry.scan.corners;
         if (!c0){ var mx = src.width * 0.08, my = src.height * 0.08;
           c0 = { topLeft: { x: mx, y: my }, topRight: { x: src.width - mx, y: my }, bottomRight: { x: src.width - mx, y: src.height - my }, bottomLeft: { x: mx, y: src.height - my } }; }
         try{
           editor = _scanic.createCornerEditor({ container: ed, image: src, corners: c0, handleHitArea: 48,
             magnifier: { enabled: true, zoom: 2.5, size: 120 },
-            toolbar: { reset: true, cancel: true, apply: true, labels: { reset: 'Reset · Set semula', cancel: 'Cancel · Batal', apply: 'Apply · Guna' } },
+            toolbar: { reset: true, cancel: true, apply: true, labels: { reset: L('Reset', 'Set semula'), cancel: L('Cancel', 'Batal'), apply: L('Done', 'Siap') } },
             onCancel: function(){ try{ editor.destroy(); }catch(e){} editor = null; show(entry); },
             onConfirm: function(corners){
               try{ editor.destroy(); }catch(e){} editor = null;
@@ -2673,7 +2799,7 @@ function scanAndReview_(blob, plainEntry){
                   }
                   scan.width = 0;
                 }catch(e){ console.warn('re-scan failed:', e); }
-                showingOrig = false; document.getElementById('srToggle').innerHTML = 'Original<br>Asal';
+                showingOrig = false; document.getElementById('srToggle').innerHTML = L('Original', 'Asal');
                 show(entry);
               }, 30);
             } });
@@ -2724,7 +2850,7 @@ async function onShipPhoto(input){
     // [Scanner] invoice photo → scan copy; the driver sees it and chooses Use / Retake / Adjust
     try{
       var _rev = await scanAndReview_(input.files[f], entry);
-      if (!_rev){ _palletToast('warn', 'Tap <b>Take photo</b> to retake &middot; Tekan <b>Ambil foto</b> untuk ambil semula', 'top'); continue; }
+      if (!_rev){ _palletToast('warn', L('Tap the camera button to retake', 'Tekan butang kamera untuk ambil semula'), 'top'); continue; }
       entry = _rev;
     }catch(scanErr){ console.warn('scan review failed open:', scanErr); }
     var _r = _addPhotoToGroup(gKey, entry, g);   // [AutoCap] shared with the in-page camera path
@@ -2745,7 +2871,8 @@ async function onShipPhoto(input){
 // The captured frame still goes through compressImage() + the gate, so what reaches the server
 // is byte-for-byte the same shape as an OS-camera photo. Backend unchanged.
 // Fallback: no getUserMedia / permission denied / camera never ready → OS camera (<input capture>),
-// remembered for the rest of the session (_acOff). Problem/proof photos still use the OS camera.
+// remembered for the rest of the session (_acOff). [Round1 2026-10-23] Problem proof and pallet photos use this
+// camera too (evidence mode: no frame, no auto shutter, no scan); there is no "Use phone camera" button any more.
 // Every async continuation holds its OWN session object `s` and bails when `_ac !== s` — a
 // close + re-open while a promise is in flight must never leak a stream or land a photo on
 // another stop (review F2).
@@ -2785,47 +2912,53 @@ function _acGroupOf(s){ if (!s) return null; for (var i=0;i<_shipGroups.length;i
 function _acLive(s){ return !!(s && _ac === s && !s.closed); }   // this session is still the one on screen
 
 function _acBuild(){
-  if (!_acEl('acStyle')){   // landscape: the stage is short, so a portrait-shaped frame cannot fit — use a wide frame and a slimmer header (D4)
+  if (!_acEl('acStyle')){   // landscape: the stage is short — slimmer header (D4); the A4 frame itself is sized in JS (_acLayoutGuide)
     var st = document.createElement('style'); st.id = 'acStyle';
-    st.textContent = '@media (orientation: landscape){ #acHeader{ padding:6px 12px 4px !important; } #acTitle{ font-size:14px !important; } #acSub{ display:none !important; } #acStatus{ font-size:13px !important; padding:6px 10px !important; } }';
+    st.textContent = '@media (orientation: landscape){ #acHeader{ padding-top:6px !important; padding-bottom:4px !important; } #acTitle{ font-size:14px !important; } #acSub{ display:none !important; } #acStatus{ font-size:13px !important; height:44px !important; } }';
     document.head.appendChild(st);
   }
   var ov = document.createElement('div');
   ov.id = 'acOverlay';
   // top/left/right/bottom instead of `inset` and no `aspect-ratio`: older Safari (<14.5 / <15) still passes _acSupported (review F6)
   ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:9500;background:#000;display:flex;flex-direction:column;font-family:\'DM Sans\',sans-serif;color:#fff;';
+  // [Round1 2026-10-23] field test on an iPhone: the bottom text touched the screen edge, too many words, the bottom
+  // row did not line up. Now: safe-area padding on every edge, a one-line title (1/16 · invoice no.), a status box of
+  // fixed height (so the A4 frame never jumps), and a 3-column bottom row: torch · shutter · photo count.
+  // No "Use phone camera" button any more (boss: only our camera) — the phone camera is only the automatic
+  // emergency path when this phone cannot run the in-page camera at all (_acFallback).
+  var SA = 'padding-left:max(14px, env(safe-area-inset-left));padding-right:max(14px, env(safe-area-inset-right));';
   ov.innerHTML =
       '<div id="acStage" style="position:relative;flex:1;overflow:hidden;background:#000;">'
     +   '<video id="acVideo" playsinline muted autoplay style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;background:#000;"></video>'
     // width/height are declared twice on purpose: plain % first as the fallback for browsers without CSS min()
-    // (iOS 13.0-13.3, old Huawei/WebView), then the min() form which wins where supported (audit M1).
+    // (iOS 13.0-13.3, old Huawei/WebView), then the min() form; _acLayoutGuide() then sets the exact A4 size.
     +   '<div id="acGuide" style="position:absolute;left:50%;top:54%;transform:translate(-50%,-50%);width:86%;height:70%;width:min(86%, 56vh);height:min(70%, 66vh);border:3px solid rgba(255,255,255,.92);border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);pointer-events:none;transition:border-color .2s;"></div>'
     +   '<div id="acFlash" style="position:absolute;top:0;left:0;right:0;bottom:0;background:#2E7D32;opacity:0;pointer-events:none;transition:opacity .15s;"></div>'
-    +   '<div id="acHeader" style="position:absolute;top:0;left:0;right:0;padding:12px 14px 10px;background:linear-gradient(rgba(0,0,0,.75),rgba(0,0,0,0));display:flex;align-items:flex-start;gap:10px;">'
-    +     '<div style="flex:1;min-width:0;"><div id="acTitle" style="font-size:17px;font-weight:800;line-height:1.25;"></div><div id="acSub" style="font-size:12px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;"></div></div>'
-    +     '<button type="button" id="acTorch" style="display:none;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:8px;padding:8px 10px;font-size:15px;line-height:1;cursor:pointer;">&#128294;</button>'
-    +     '<button type="button" id="acClose" aria-label="Close" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:8px;padding:8px 13px;font-size:18px;line-height:1;cursor:pointer;">&times;</button>'
+    +   '<div id="acHeader" style="position:absolute;top:0;left:0;right:0;padding:12px 14px 10px;padding-top:max(12px, env(safe-area-inset-top));' + SA + 'background:linear-gradient(rgba(0,0,0,.75),rgba(0,0,0,0));display:flex;align-items:flex-start;gap:10px;">'
+    +     '<div style="flex:1;min-width:0;"><div id="acTitle" style="font-size:18px;font-weight:800;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div><div id="acSub" style="font-size:13px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;"></div></div>'
+    +     '<button type="button" id="acClose" aria-label="Close" style="flex:none;width:44px;height:44px;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:10px;font-size:22px;line-height:1;cursor:pointer;">&times;</button>'
     +   '</div>'
     + '</div>'
     // status + progress live BELOW the preview, never on top of the guide frame (emulation finding D3)
-    + '<div id="acStatusRow" style="padding:8px 14px 6px;background:#0B1F3A;">'
-    +   '<div id="acStatus" style="text-align:center;font-size:14.5px;font-weight:700;line-height:1.4;padding:8px 12px;border-radius:10px;background:rgba(255,255,255,.08);min-height:2.8em;"></div>'
+    + '<div id="acStatusRow" style="padding:8px 14px 6px;' + SA + 'background:#0B1F3A;">'
+    +   '<div id="acStatus" style="display:flex;align-items:center;justify-content:center;text-align:center;box-sizing:border-box;height:52px;overflow:hidden;font-size:15px;font-weight:700;line-height:1.3;padding:5px 12px;border-radius:10px;background:rgba(255,255,255,.08);"></div>'
     +   '<div style="margin-top:6px;height:5px;border-radius:3px;background:rgba(255,255,255,.25);overflow:hidden;"><div id="acBarFill" style="height:100%;width:0;background:#4ADE80;transition:width .18s;"></div></div>'
     + '</div>'
-    + '<div id="acAnywayRow" style="display:none;padding:8px 16px 0;background:#0B1F3A;"><button type="button" id="acAnyway" style="width:100%;padding:12px;background:#fff;color:#854F0B;border:1.5px solid #E0C68A;border-radius:10px;font-family:\'DM Sans\',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">&#9888;&#65039; Upload anyway &middot; Tetap hantar</button></div>'
-    + '<div style="padding:12px 16px 14px;background:#0B1F3A;display:flex;align-items:center;justify-content:space-between;gap:12px;">'
-    +   '<button type="button" id="acFallback" style="background:none;border:none;color:#9FB3C8;font-size:12px;line-height:1.35;text-decoration:underline;text-align:left;width:34%;padding:0;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Use phone camera<br>Guna kamera telefon</button>'
-    +   '<button type="button" id="acShutter" aria-label="Take photo" style="width:70px;height:70px;border-radius:50%;background:#fff;border:5px solid #C9D6E3;cursor:pointer;flex:none;"></button>'
-    +   '<div id="acCount" style="width:34%;text-align:right;font-size:13px;line-height:1.35;color:#C9D6E3;"></div>'
+    + '<div id="acAnywayRow" style="display:none;padding:8px 16px 0;' + SA + 'background:#0B1F3A;"><button type="button" id="acAnyway" style="width:100%;min-height:48px;padding:10px;background:#fff;color:#854F0B;border:1.5px solid #E0C68A;border-radius:10px;font-family:\'DM Sans\',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">&#9888;&#65039; <span id="acAnywayTxt"></span></button></div>'
+    + '<div id="acBottom" style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:12px 16px 24px;padding-bottom:max(24px, calc(env(safe-area-inset-bottom) + 12px));' + SA + 'background:#0B1F3A;">'
+    +   '<div style="justify-self:start;"><button type="button" id="acTorch" aria-label="Torch" style="display:none;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.35);font-size:20px;line-height:1;cursor:pointer;">&#128294;</button></div>'
+    +   '<button type="button" id="acShutter" aria-label="Take photo" style="width:72px;height:72px;border-radius:50%;background:#fff;border:5px solid #C9D6E3;cursor:pointer;"></button>'
+    +   '<div style="justify-self:end;"><span id="acCount" style="display:inline-block;min-width:58px;text-align:center;padding:7px 12px;border-radius:999px;background:rgba(255,255,255,.12);color:#fff;font-size:16px;font-weight:800;"></span></div>'
     + '</div>';
   document.body.appendChild(ov);
-  // [Scanner] keep the A4 frame right when the phone turns or Safari's toolbars come and go
+  // [Scanner] keep the A4 frame right when the phone turns, Safari's toolbars come and go, or a row under the camera
+  // changes height ("Upload anyway" appears) — ResizeObserver catches the last one, a window resize does not
   window.addEventListener('resize', _acLayoutGuide);
   try{ if (window.visualViewport) window.visualViewport.addEventListener('resize', _acLayoutGuide); }catch(e){}
   window.addEventListener('orientationchange', function(){ setTimeout(_acLayoutGuide, 300); });
+  try{ if (window.ResizeObserver) new ResizeObserver(function(){ _acLayoutGuide(); }).observe(ov.querySelector('#acStage')); }catch(e){}
   ov.querySelector('#acClose').onclick = function(){ closeAutoCapture(); renderShipmentList(); };
   ov.querySelector('#acShutter').onclick = function(){ if (_ac) _acCapture(_ac, true); };
-  ov.querySelector('#acFallback').onclick = function(){ if (_ac) _acFallback(_ac, 'driver chose OS camera', true); };
   ov.querySelector('#acAnyway').onclick = function(){
     var s = _ac;
     if (s && s.pendingEntry){ var e = s.pendingEntry; s.pendingEntry = null; e.qualityFlag = true; _acShowAnyway(false); _acAccept(s, e); }
@@ -2847,8 +2980,11 @@ function _acLayoutGuide(){
     if (!(W > 40 && H > 40)) return;   // overlay hidden
     var top = (hd ? hd.offsetTop + hd.offsetHeight : 0) + 4, avH = H - top - 10, avW = W * 0.9, gw, gh;
     if (avH < 60){ top = 6; avH = H - 16; }   // very short landscape view: under the title beats no frame
-    if (W >= H){ gw = Math.min(avW, avH * AC_A4); gh = gw / AC_A4; }
-    else       { gh = Math.min(avH, avW * AC_A4); gw = gh / AC_A4; }
+    // upright vs sideways follows the SCREEN, not the camera area: on a small portrait phone the camera area
+    // can be wider than tall (Safari toolbars + bottom controls), and the page on the lap is still upright
+    var land = (window.matchMedia && window.matchMedia('(orientation: landscape)').matches) || (window.innerWidth > window.innerHeight);
+    if (land){ gw = Math.min(avW, avH * AC_A4); gh = gw / AC_A4; }
+    else     { gh = Math.min(avH, avW * AC_A4); gw = gh / AC_A4; }
     g.style.boxSizing = 'border-box';
     g.style.width = Math.round(gw) + 'px'; g.style.height = Math.round(gh) + 'px';
     g.style.left = Math.round((W - gw) / 2) + 'px'; g.style.top = Math.round(top + (avH - gh) / 2) + 'px';
@@ -2861,31 +2997,52 @@ function _acStatus(text, frac, tone){
   if (b) b.style.width = Math.round(Math.max(0, Math.min(1, frac || 0)) * 100) + '%';
   if (g) g.style.borderColor = tone === 'ok' ? '#4ADE80' : (tone === 'warn' ? '#FBBF24' : 'rgba(255,255,255,.92)');
 }
-function _acShowAnyway(show){ var r = _acEl('acAnywayRow'); if (r) r.style.display = show ? 'block' : 'none'; }
+function _acShowAnyway(show){ var r = _acEl('acAnywayRow'), t = _acEl('acAnywayTxt'); if (t) t.textContent = L('Upload anyway', 'Hantar juga'); if (r) r.style.display = show ? 'block' : 'none'; }
+// [Round1] no auto shot for a while → the shutter pulses (it replaced the "or tap the round button" sentence)
+function _acPulse(on){ var b = _acEl('acShutter'); if (b){ if (on) b.classList.add('pulse'); else b.classList.remove('pulse'); } }
 function _acHeader(s){
   var g = _acGroupOf(s); if (!g) return;
+  var t = _acEl('acTitle'), sub = _acEl('acSub'), c = _acEl('acCount');
+  if (s.mode === 'evidence'){
+    if (t) t.textContent = s.kind === 'pallet' ? L('Pallet photo', 'Foto pallet') : L('Proof photo', 'Foto bukti');
+    if (sub) sub.textContent = g.name || '';
+    if (c){ c.textContent = ''; c.style.visibility = 'hidden'; }
+    _acLayoutGuide();
+    return;
+  }
   var pend = _acPending(g), have = (g.photos || []).length, need = pend.length;
   var next = pend[Math.min(have, pend.length - 1)];
-  var t = _acEl('acTitle'), sub = _acEl('acSub'), c = _acEl('acCount');
-  if (t) t.textContent = 'Invoice ' + Math.min(have + 1, need) + ' of ' + need + (next ? ' · ' + next.invoiceNo : '');
+  if (t) t.textContent = Math.min(have + 1, need) + '/' + need + (next ? ' · ' + next.invoiceNo : '');
   if (sub) sub.textContent = g.name || '';
-  if (c) c.innerHTML = have + ' / ' + need + ' photo' + (need === 1 ? '' : 's') + '<br>1 invoice = 1 photo';
+  if (c){ c.textContent = have + '/' + need; c.style.visibility = 'visible'; }
   _acLayoutGuide();   // [Scanner] the title's height decides where the A4 frame starts
 }
-var AC_HINT = '<br><span style="font-weight:500;opacity:.85;">or tap the round button · atau tekan butang bulat</span>';
 
-async function openAutoCapture(i){
+// opts.mode 'evidence' = a Problem proof photo or a pallet photo: no A4 frame, no auto shutter, no quality gate,
+// no scan; the photo goes to opts.onPhoto(entry) and the camera closes. Default = invoice photos (as before).
+async function openAutoCapture(i, opts){
+  opts = opts || {};
+  var ev = opts.mode === 'evidence';
   var g = _shipGroups[i];
   if (!g){ _deliverIdx = -1; return; }
   if (_ac) closeAutoCapture(true);
-  var pend = _acPending(g);
-  if (!pend.length){ _deliverIdx = -1; alert('Select at least one invoice to deliver · Pilih sekurang-kurangnya satu invois'); return; }
-  if ((g.photos || []).length >= pend.length){ _deliverIdx = -1; _palletToast('err', 'Limit reached: ' + pend.length + ' photo(s) = ' + pend.length + ' invoice(s) at this stop'); return; }
+  if (!ev){
+    var pend = _acPending(g);
+    if (!pend.length){ _deliverIdx = -1; alert(L('Select at least one invoice to deliver', 'Pilih sekurang-kurangnya satu invois')); return; }
+    if ((g.photos || []).length >= pend.length){ _deliverIdx = -1; _palletToast('err', L('All ' + pend.length + ' photos for this stop are taken', 'Semua ' + pend.length + ' foto untuk kedai ini sudah diambil')); return; }
+  }
   var ov = _acEl('acOverlay') || _acBuild();
   ov.style.display = 'flex';
-  _acShowAnyway(false);
+  _acShowAnyway(false); _acPulse(false);
+  try{
+    _acEl('acGuide').style.display = ev ? 'none' : 'block';
+    _acEl('acTorch').style.display = 'none';
+    _acEl('acClose').setAttribute('aria-label', L('Close', 'Tutup'));
+    _acEl('acShutter').setAttribute('aria-label', L('Take photo', 'Ambil foto'));
+    _acEl('acTorch').setAttribute('aria-label', L('Torch', 'Lampu suluh'));
+  }catch(e){}
   try{ document.documentElement.style.overflow = 'hidden'; document.body.style.overflow = 'hidden'; }catch(e){}   // no page scroll behind the camera (audit M7)
-  var s = { gKey: g.key, video: _acEl('acVideo'), stream: null, raf: 0, lastTick: 0, stable: 0, prevLum: null, capturedLum: null, ready: false,
+  var s = { gKey: g.key, mode: ev ? 'evidence' : 'invoice', kind: opts.kind || '', onPhoto: opts.onPhoto || null, video: _acEl('acVideo'), stream: null, raf: 0, lastTick: 0, stable: 0, prevLum: null, capturedLum: null, ready: false,
             cooldownUntil: 0, cooldownMsg: null, changedSinceCapture: true, busy: false, fails: 0, pendingEntry: null, closed: false,
             openedAt: Date.now(), lastShotAt: 0, captures: 0, torchOn: false, track: null, audio: null,
             canvas: document.createElement('canvas'), mini: document.createElement('canvas') };
@@ -2895,10 +3052,10 @@ async function openAutoCapture(i){
   // AudioContext must be born inside the tap or iOS keeps it suspended (no shutter beep) — review F6
   try{ var ACtor = window.AudioContext || window.webkitAudioContext; if (ACtor){ s.audio = new ACtor(); if (s.audio.resume) s.audio.resume().catch(function(){}); } }catch(e){}
   _acHeader(s);
-  _acStatus('Starting camera… · Membuka kamera…', 0);
+  _acStatus(L('Starting camera…', 'Membuka kamera…'), 0);
   var stream = null;
   // the permission prompt / a wedged WebView can leave getUserMedia pending forever — tell the driver the way out (audit M6)
-  var wd = setTimeout(function(){ if (_acLive(s) && !s.stream) _acStatus('Camera not responding — tap <u>Use phone camera</u> below · Kamera tidak respon — tekan <u>Guna kamera telefon</u>', 0, 'warn'); }, 15000);
+  var wd = setTimeout(function(){ if (_acLive(s) && !s.stream) _acStatus(L('Camera not responding. Close (×) and try again.', 'Kamera tidak respon. Tutup (×) dan cuba lagi.'), 0, 'warn'); }, 15000);
   try{
     stream = await navigator.mediaDevices.getUserMedia({ audio: false,
       video: { facingMode: { ideal: 'environment' }, width: { ideal: 3840 }, height: { ideal: 2160 } } });   // [Scanner] was 1920x1080 → ~96 dpi on the paper
@@ -2922,7 +3079,8 @@ async function openAutoCapture(i){
       var caps = (s.track && s.track.getCapabilities) ? s.track.getCapabilities() : {};
       if (caps && caps.torch){ s.torchOK = true; _acEl('acTorch').style.display = 'inline-block'; }
     }catch(e){}
-    _acStatus('Put the invoice inside the frame · Letak invois dalam bingkai', 0);
+    _acStatus(ev ? (s.kind === 'pallet' ? L('Take a photo of the pallets', 'Ambil gambar pallet') : L('Take a photo of the shop or the problem', 'Ambil gambar kedai atau masalah'))
+                 : L('Put the invoice in the frame', 'Letak invois dalam bingkai'), 0);
     s.lastTick = 0;
     s.raf = requestAnimationFrame(function(){ _acTick(s); });
   }catch(err){
@@ -2947,6 +3105,7 @@ function _acTick(s){
   var v = s.video;
   if (s.track && s.track.readyState !== 'live'){ _acFallback(s, 'camera stopped', false); return; }   // another app took the camera
   if (!(v.videoWidth > 0)) return;
+  if (s.mode === 'evidence') return;   // proof / pallet photo: the driver frames it and taps — nothing to analyse
   try{
     // 1) working copy ≤640px (same scale class the after-the-fact gate uses)
     var c = s.canvas, ctx = s.ctx, W = v.videoWidth, H = v.videoHeight, sc = 640 / Math.max(W, H);
@@ -2971,22 +3130,23 @@ function _acTick(s){
     if (s.pendingEntry){ s.stable = 0; return; }   // "Upload anyway" is waiting for the driver — no auto re-shoot, manual shutter still works (review N2)
     if (!s.changedSinceCapture){
       if (fromShot > AC_CHANGE_MIN){ s.changedSinceCapture = true; s.capturedLum = null; }
-      else { s.stable = 0; _acStatus('Put the NEXT invoice in the frame · Letak invois SETERUSNYA' + (now - s.lastShotAt > AC_MANUAL_HINT_MS ? AC_HINT : ''), 0, 'warn'); return; }
+      else { s.stable = 0; _acPulse(now - s.lastShotAt > AC_MANUAL_HINT_MS); _acStatus(L('Put the NEXT invoice in the frame', 'Letak invois SETERUSNYA dalam bingkai'), 0, 'warn'); return; }
     }
     // 4) the very same three checks as the upload gate
     var qr = checkPhotoQuality_(c, ctx), r = qr.reasons || [], msg = null;
-    if (r.indexOf('exposure') >= 0) msg = mean < 40 ? 'Too dark — more light · Terlalu gelap' : 'Too bright / glare · Terlalu cerah / silau';
-    else if (r.indexOf('cut') >= 0) msg = 'Whole invoice inside the frame · Seluruh invois dalam bingkai';
-    else if (r.indexOf('blur') >= 0) msg = mean < 90 ? 'Put the invoice inside the frame · Letak invois dalam bingkai' : 'Move closer / hold steady · Dekat sikit / pegang stabil';
-    else if (motion > AC_MOTION_MAX) msg = 'Hold still… · Pegang stabil…';
+    if (r.indexOf('exposure') >= 0) msg = mean < 40 ? L('Too dark, more light please', 'Terlalu gelap, perlu cahaya') : L('Too bright or glare', 'Terlalu terang atau silau');
+    else if (r.indexOf('cut') >= 0) msg = L('Fit the whole invoice in the frame', 'Masukkan seluruh invois dalam bingkai');
+    else if (r.indexOf('blur') >= 0) msg = mean < 90 ? L('Put the invoice in the frame', 'Letak invois dalam bingkai') : L('Move closer and hold steady', 'Dekat sikit dan pegang stabil');
+    else if (motion > AC_MOTION_MAX) msg = L('Hold still…', 'Pegang stabil…');
     if (msg){
       s.stable = 0;
-      if (now - Math.max(s.openedAt, s.lastShotAt) > AC_MANUAL_HINT_MS) msg += AC_HINT;
+      _acPulse(now - Math.max(s.openedAt, s.lastShotAt) > AC_MANUAL_HINT_MS);
       _acStatus(msg, 0, r.length ? 'warn' : null);
       return;
     }
     s.stable++;
-    _acStatus('Hold… · Tahan…', s.stable / AC_STABLE_FRAMES, 'ok');
+    _acPulse(false);
+    _acStatus(L('Hold…', 'Tahan…'), s.stable / AC_STABLE_FRAMES, 'ok');
     if (s.stable >= AC_STABLE_FRAMES){ s.stable = 0; _acCapture(s, false); }
   }catch(e){
     console.warn('AutoCap tick failed:', e);   // fail-open: the manual shutter and the OS-camera link still work
@@ -3009,14 +3169,22 @@ async function _acCapture(s, manual){
     var entry;
     try{ entry = await compressImage(blob); }catch(e){ entry = await readFileAsDataUrl(blob); }
     if (!_acLive(s)) return;   // overlay closed / re-opened while compressing — drop, never land on another stop (review F2)
+    if (s.mode === 'evidence'){
+      // proof / pallet photo: no quality gate, no scan — any clear shot of the shop or the pallets will do
+      var cb = s.onPhoto;
+      try{ if (navigator.vibrate) navigator.vibrate(60); }catch(e){}
+      closeAutoCapture();
+      if (cb) cb(entry);
+      return;
+    }
     if (entry.quality && !entry.quality.ok){
       // Auto mode can get here too (full-res vs 640px resample near a threshold) — count it, say why, and
       // offer "Upload anyway" at 3 either way, instead of silently re-shooting every second (review F5).
-      var TXT = { cut: 'not fully in frame · terpotong', blur: 'blurry · kabur', exposure: 'too bright/dark · terlalu cerah/gelap' };
+      var TXT = { cut: L('cut off', 'terpotong'), blur: L('blurry', 'kabur'), exposure: L('too bright or dark', 'terlalu terang atau gelap') };
       var why = entry.quality.reasons.map(function(x){ return TXT[x] || x; }).join(', ');
       s.fails++;
-      if (s.fails >= 3){ s.pendingEntry = entry; _acShowAnyway(true); _acStatus('Not clear: ' + why + '<br>Retake, or Upload anyway below', 0, 'warn'); }
-      else if (manual || s.fails >= 2) _acStatus('Not clear: ' + why + ' — retake · ambil semula', 0, 'warn');
+      if (s.fails >= 3){ s.pendingEntry = entry; _acShowAnyway(true); _acStatus(L('Not clear: ' + why + '. Retake, or tap Upload anyway.', 'Tidak jelas: ' + why + '. Ambil semula, atau tekan Hantar juga.'), 0, 'warn'); }
+      else if (manual || s.fails >= 2) _acStatus(L('Not clear: ' + why + '. Retake.', 'Tidak jelas: ' + why + '. Ambil semula.'), 0, 'warn');
       s.cooldownMsg = null; s.cooldownUntil = Date.now() + 800;   // brief pause so the loop does not re-fire on the very next frame
       return;
     }
@@ -3024,10 +3192,10 @@ async function _acCapture(s, manual){
     try{
       var _rev = await scanAndReview_(blob, entry);
       if (!_acLive(s)){   // camera closed during the review (screen lock, call): keep a photo the driver chose to Use
-        if (_rev){ try{ var _kept = _addPhotoToGroup(s.gKey, _rev, null); if (_kept.added){ renderShipmentList(); _palletToast('ok', 'Photo kept &middot; Foto disimpan', 'top'); } }catch(e){} }
+        if (_rev){ try{ var _kept = _addPhotoToGroup(s.gKey, _rev, null); if (_kept.added){ renderShipmentList(); _palletToast('ok', L('Photo kept', 'Foto disimpan'), 'top'); } }catch(e){} }
         return; }
       if (!_rev){ s.cooldownMsg = null; s.cooldownUntil = Date.now() + 900; s.stable = 0;
-        _acStatus('Retake &mdash; same invoice in the frame &middot; Ambil semula invois yang sama', 0, 'warn'); return; }
+        _acStatus(L('Retake the same invoice', 'Ambil semula invois yang sama'), 0, 'warn'); return; }
       entry = _rev;
     }catch(scanErr){ console.warn('scan review failed open:', scanErr); }
     s.capturedLum = shotLum;
@@ -3035,7 +3203,7 @@ async function _acCapture(s, manual){
     _acAccept(s, entry);
   }catch(e){
     console.warn('AutoCap capture failed:', e);
-    if (_acLive(s)) _acStatus('Capture failed — try again · Gagal, cuba lagi', 0, 'warn');
+    if (_acLive(s)) _acStatus(L('Could not take the photo, try again', 'Gagal ambil foto, cuba lagi'), 0, 'warn');
   }finally{ s.busy = false; }
 }
 
@@ -3044,7 +3212,7 @@ function _acAccept(s, entry){
   var g = _acGroupOf(s);
   var res = _addPhotoToGroup(s.gKey, entry, g);
   if (!res.added){ closeAutoCapture(); renderShipmentList(); return; }
-  s.fails = 0; s.captures++; s.pendingEntry = null; _acShowAnyway(false); _qGateTries = 0;
+  s.fails = 0; s.captures++; s.pendingEntry = null; _acShowAnyway(false); _acPulse(false); _qGateTries = 0;
   try{ var f = _acEl('acFlash'); if (f){ f.style.opacity = '.55'; setTimeout(function(){ f.style.opacity = '0'; }, 160); } }catch(e){}
   try{ if (navigator.vibrate) navigator.vibrate(60); }catch(e){}
   try{
@@ -3056,11 +3224,11 @@ function _acAccept(s, entry){
   if (have >= need){
     closeAutoCapture();
     renderShipmentList();
-    _palletToast('ok', '<b>' + have + ' photo' + (have === 1 ? '' : 's') + ' ready &#10003;</b> Tap <b>Save — Delivered</b> · Tekan Simpan', 'top');   // top: never covers the Save button (D5)
+    _palletToast('ok', L('<b>All photos taken &#10003;</b> Tap <b>Save</b>.', '<b>Semua foto siap &#10003;</b> Tekan <b>Simpan</b>.'), 'top');   // top: never covers the Save button (D5)
     try{ var card = document.querySelector('.ship-save[data-i="' + _shipGroups.indexOf(g) + '"]'); if (card) card.scrollIntoView({ block: 'center', behavior: 'smooth' }); }catch(e){}
     return;
   }
-  s.cooldownMsg = '&#10003; Saved · Next invoice · Invois seterusnya';
+  s.cooldownMsg = '&#10003; ' + L('Next invoice', 'Invois seterusnya');
   s.cooldownUntil = Date.now() + AC_COOLDOWN_MS;
   s.lastShotAt = Date.now();
   s.changedSinceCapture = false; s.stable = 0;
@@ -3069,27 +3237,20 @@ function _acAccept(s, entry){
 
 function _acFallback(s, reason, userGesture){
   console.warn('AutoCap fallback:', reason);
-  var gKey = s ? s.gKey : null;
   if (s) s.fellBack = true;   // closeAutoCapture must not count this close a second time
   closeAutoCapture(true);
-  // Only DEFINITIVE reasons switch this session to the OS camera for good. Camera busy / slow start /
-  // stream died are retried on the next tap; two soft failures in a row also switch (audit M3).
-  if (/NotAllowed|NotFound|Security|OverconstrainedError|driver chose/i.test(String(reason || ''))){ _acOff = true; }
+  // Only DEFINITIVE reasons switch this session to the phone camera for good (permission denied, no camera).
+  // Camera busy / slow start / stream died are retried on the next tap; two soft failures in a row also switch (audit M3).
+  // [Round1 2026-10-23] there is no "Use phone camera" button any more — the phone camera is only this emergency path.
+  if (/NotAllowed|NotFound|Security|OverconstrainedError/i.test(String(reason || ''))){ _acOff = true; }
   else { _acFails++; if (_acFails >= 2) _acOff = true; }
-  var idx = -1;
-  for (var i = 0; i < _shipGroups.length; i++){ if (_shipGroups[i].key === gKey){ idx = i; break; } }   // by key, not by stale index
-  if (userGesture && idx >= 0){
-    _deliverIdx = idx;   // keep the stop selected so the OS-camera path lands the photo on the same card
-    document.getElementById('shipPhoto').click();   // inside the tap → allowed; onShipPhoto resets _deliverIdx (also on cancel)
-    return;
-  }
-  // Permission denied / camera-not-ready arrive outside a tap; browsers refuse a programmatic file-input click
-  // there, so do NOT leave _deliverIdx armed (it would silence the visibilitychange re-sync all day — review F1).
+  // These failures arrive outside a tap; browsers refuse a programmatic file-input click there, so do NOT leave
+  // _deliverIdx armed (it would silence the visibilitychange re-sync all day — review F1).
   _deliverIdx = -1;
   renderShipmentList();   // photos captured before the camera died must show on the card (review S1)
   _palletToast('warn', _acOff
-    ? 'In-page camera unavailable — tap <b>Take photo</b> again to use the phone camera. · Tekan <b>Ambil foto</b> sekali lagi untuk guna kamera telefon'
-    : 'Camera stopped — tap <b>Take photo</b> to try again. · Kamera terhenti — tekan <b>Ambil foto</b> untuk cuba lagi', 'top');
+    ? L('The camera cannot open here. Tap the camera button again to use the phone camera.', 'Kamera tidak dapat dibuka di sini. Tekan butang kamera sekali lagi untuk guna kamera telefon.')
+    : L('Camera stopped. Tap the camera button to try again.', 'Kamera terhenti. Tekan butang kamera untuk cuba lagi.'), 'top');
 }
 
 function closeAutoCapture(keepDeliverIdx){
@@ -3121,25 +3282,25 @@ function _scanTestSummary_(g, photos, originals, invoiceNos){
   var kb = function(b64){ return Math.round((b64 || '').length * 0.75 / 1024); };
   var sTot = photos.reduce(function(a, p){ return a + kb(p.base64); }, 0), oTot = originals.reduce(function(a, p){ return a + kb(p.base64); }, 0);
   var rows = g.photos.map(function(p, k){
-    var sc = p.scan || {}, st = sc.ok ? (sc.cropped ? (sc.adjusted ? 'scanned (corners adjusted)' : 'scanned') : 'whitened, edges not found') : 'plain photo' + (sc.err ? ' — ' + _esc(sc.err) : '');
+    var sc = p.scan || {}, st = sc.ok ? (sc.cropped ? (sc.adjusted ? L('scanned (corners adjusted)', 'diimbas (sudut dilaras)') : L('scanned', 'diimbas')) : L('whitened, edges not found', 'diputihkan, tepi tidak dikesan')) : L('plain photo', 'foto biasa') + (sc.err ? ' — ' + _esc(sc.err) : '');
     return '<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-top:1px solid #E2E8F0;">'
       + '<img src="' + p.dataUrl + '" style="width:84px;border:1px solid #CBD5E1;border-radius:4px;background:#fff;">'
       + (p.origDataUrl ? '<img src="' + p.origDataUrl + '" style="width:58px;border:1px solid #CBD5E1;border-radius:4px;opacity:.85;">' : '')
       + '<div style="font-size:12px;line-height:1.45;color:#0B1F3A;"><b>' + _esc(invoiceNos[k] || ('#' + (k + 1))) + '</b><br>' + st
-      + '<br>scan ' + kb(photos[k].base64) + ' KB' + (sc.out ? ' · ' + sc.out[0] + '×' + sc.out[1] : '')
-      + (p.origDataUrl ? '<br>original ' + kb(p.origDataUrl.split(',')[1]) + ' KB' : '') + (sc.ms ? '<br>' + sc.ms + ' ms' : '') + '</div></div>';
+      + '<br>' + L('scan ', 'imbasan ') + kb(photos[k].base64) + ' KB' + (sc.out ? ' · ' + sc.out[0] + '×' + sc.out[1] : '')
+      + (p.origDataUrl ? '<br>' + L('original ', 'asal ') + kb(p.origDataUrl.split(',')[1]) + ' KB' : '') + (sc.ms ? '<br>' + sc.ms + ' ms' : '') + '</div></div>';
   }).join('');
   var ov = document.createElement('div');
   ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:9900;background:rgba(11,31,58,.6);display:flex;align-items:center;justify-content:center;padding:14px;font-family:\'DM Sans\',sans-serif;';
   ov.innerHTML = '<div style="background:#fff;border-radius:12px;max-width:520px;width:100%;max-height:88vh;overflow:auto;padding:16px;">'
-    + '<div style="font-size:16px;font-weight:800;color:#B91C1C;">TEST — nothing was saved</div>'
-    + '<div style="font-size:13px;color:#475569;margin:2px 0 10px;">UJIAN — tiada apa disimpan. A real Save would upload:</div>'
-    + '<div style="font-size:13px;color:#0B1F3A;"><b>' + photos.length + '</b> scan cop' + (photos.length === 1 ? 'y' : 'ies') + ' (' + sTot + ' KB)'
-    + ' + <b>' + originals.length + '</b> backup original' + (originals.length === 1 ? '' : 's') + ' (' + oTot + ' KB) = <b>' + (sTot + oTot) + ' KB</b></div>'
+    + '<div style="font-size:16px;font-weight:800;color:#B91C1C;">' + L('TEST — nothing was saved', 'UJIAN — tiada apa disimpan') + '</div>'
+    + '<div style="font-size:13px;color:#475569;margin:2px 0 10px;">' + L('A real Save would upload:', 'Simpan sebenar akan muat naik:') + '</div>'
+    + '<div style="font-size:13px;color:#0B1F3A;"><b>' + photos.length + '</b> ' + L(photos.length === 1 ? 'scan copy' : 'scan copies', 'salinan imbasan') + ' (' + sTot + ' KB)'
+    + ' + <b>' + originals.length + '</b> ' + L(originals.length === 1 ? 'backup original' : 'backup originals', 'foto asal simpanan') + ' (' + oTot + ' KB) = <b>' + (sTot + oTot) + ' KB</b></div>'
     + rows
     + '<div style="display:flex;gap:8px;margin-top:12px;">'
-    +   '<button type="button" id="stKeep" style="flex:1;padding:12px;background:#fff;color:#0B1F3A;border:1.5px solid #CBD5E1;border-radius:10px;font-weight:700;">Keep photos<br><span style="font-weight:500;font-size:12px;">Simpan foto</span></button>'
-    +   '<button type="button" id="stClear" style="flex:1;padding:12px;background:#0B1F3A;color:#fff;border:none;border-radius:10px;font-weight:700;">Clear &amp; try again<br><span style="font-weight:500;font-size:12px;">Padam &amp; cuba lagi</span></button>'
+    +   '<button type="button" id="stKeep" style="flex:1;padding:12px;background:#fff;color:#0B1F3A;border:1.5px solid #CBD5E1;border-radius:10px;font-weight:700;">' + L('Keep photos', 'Simpan foto') + '</button>'
+    +   '<button type="button" id="stClear" style="flex:1;padding:12px;background:#0B1F3A;color:#fff;border:none;border-radius:10px;font-weight:700;">' + L('Clear &amp; try again', 'Padam &amp; cuba lagi') + '</button>'
     + '</div></div>';
   document.body.appendChild(ov);
   ov.querySelector('#stKeep').onclick = function(){ ov.remove(); };
@@ -3156,12 +3317,12 @@ async function saveDelivery(i){
   // (duplicate POD rows + double KPI credit) — same fix as the fuel form's submit button.
   if (g._saving) return;
   g._saving = true;
-  if (!g.photos || !g.photos.length){ g._saving = false; alert('Take a photo first · Sila ambil foto dulu'); return; }
+  if (!g.photos || !g.photos.length){ g._saving = false; alert(L('Take a photo first', 'Sila ambil foto dulu')); return; }
   var _tagged = g.invs.filter(function(x){ return String(x.status).toLowerCase()!=='delivered' && !x._untag; }).map(function(x){ return x.invoiceNo; });
-  if (!_tagged.length){ g._saving=false; alert('Select at least one invoice to deliver · Pilih sekurang-kurangnya satu invois'); return; }
-  if (g.photos.length !== _tagged.length){ g._saving=false; alert('Photos must equal invoices delivered: '+g.photos.length+' photo(s) vs '+_tagged.length+' invoice(s) · Foto mesti sama dengan bilangan invois'); return; }
+  if (!_tagged.length){ g._saving=false; alert(L('Select at least one invoice to deliver', 'Pilih sekurang-kurangnya satu invois')); return; }
+  if (g.photos.length !== _tagged.length){ g._saving=false; alert(L('Photos must equal invoices: ' + g.photos.length + ' photos, ' + _tagged.length + ' invoices', 'Bilangan foto mesti sama dengan invois: ' + g.photos.length + ' foto, ' + _tagged.length + ' invois')); return; }
   var overlay = document.getElementById('loadingOverlay');
-  document.querySelector('.loading-text').textContent = 'Saving… · Menyimpan…';
+  document.querySelector('.loading-text').textContent = L('Saving…', 'Menyimpan…');
   overlay.classList.add('show');
   try{
     var photos = g.photos.map(function(p){ return { base64: p.dataUrl.split(',')[1], name: p.name, type: p.type }; });
@@ -3194,7 +3355,7 @@ async function saveDelivery(i){
       await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body: fd, signal: _ctrl ? _ctrl.signal : undefined });
     } finally { if (_tmo) clearTimeout(_tmo); }
 
-    document.querySelector('.loading-text').textContent = 'Confirming… · Mengesahkan…';
+    document.querySelector('.loading-text').textContent = L('Confirming…', 'Mengesahkan…');
     var confirmed = null;
     for (var t = 0; t < 8; t++){
       await new Promise(function(r){ setTimeout(r, 1500); });
@@ -3206,7 +3367,8 @@ async function saveDelivery(i){
     }
     if (confirmed && confirmed.status === 'error'){
       // REAL failure — keep the photos so the driver can just hit Save again.
-      alert('NOT saved · TIDAK disimpan!\n' + (confirmed.message || 'Server error') + '\n\nYour photos are kept — please tap Save again. · Foto anda masih ada — sila tekan Simpan semula.');
+      alert(L('NOT saved!\n' + (confirmed.message || 'Server error') + '\n\nYour photos are kept. Please tap Save again.',
+              'TIDAK disimpan!\n' + (confirmed.message || 'Ralat pelayan') + '\n\nFoto anda masih ada. Sila tekan Simpan semula.'));
     } else if (confirmed){
       g.invs.forEach(function(x){ if(!x._untag && String(x.status).toLowerCase()!=='delivered') x.status='delivered'; x._untag=false; });   // [untag] only tagged ones delivered; untagged stay pending
       g.photos = [];
@@ -3220,7 +3382,7 @@ async function saveDelivery(i){
       renderShipmentList();
     }
   }catch(err){
-    alert('Save failed, please retry · Simpan gagal, sila cuba lagi\n(Your photos are kept · Foto anda masih ada)');
+    alert(L('Save failed, please try again.\n(Your photos are kept.)', 'Simpan gagal, sila cuba lagi.\n(Foto anda masih ada.)'));
   }finally{
     g._saving = false;
     overlay.classList.remove('show');
@@ -3234,12 +3396,13 @@ async function saveDelivery(i){
 async function failGroup(i, reason){
   var g = _shipGroups[i]; if (!g) return;
   if (SCAN_TEST){ var _pc = g.invs.filter(function(x){ return String(x.status).toLowerCase()!=='delivered'; }).length;
-    alert('TEST — nothing saved.\nWould mark ' + _pc + ' invoice(s) as: ' + reason + '\n\nUJIAN — tiada apa disimpan.'); return; }
+    alert(L('TEST — nothing saved.\nWould mark ' + _pc + (_pc === 1 ? ' invoice' : ' invoices') + ' as: ' + _reasonLabel(reason),
+            'UJIAN — tiada apa disimpan.\nAkan tandakan ' + _pc + ' invois sebagai: ' + _reasonLabel(reason))); return; }
   if (g._saving) return;            // double-tap guard (same as saveDelivery)
   g._saving = true;
   var pending = g.invs.filter(function(x){ return String(x.status).toLowerCase()!=='delivered'; });
   var overlay = document.getElementById('loadingOverlay');
-  document.querySelector('.loading-text').textContent = 'Saving… · Menyimpan…';
+  document.querySelector('.loading-text').textContent = L('Saving…', 'Menyimpan…');
   overlay.classList.add('show');
   var errMsg = '';
   try{
@@ -3283,7 +3446,8 @@ async function failGroup(i, reason){
   finally{
     g._saving = false;
     overlay.classList.remove('show');
-    if (errMsg) alert('Some were NOT saved (' + errMsg + ') — please try again.\nSebahagian TIDAK disimpan — sila cuba lagi.');
+    if (errMsg) alert(L('Some were NOT saved (' + errMsg + '). Please try again.', 'Sebahagian TIDAK disimpan (' + errMsg + '). Sila cuba lagi.'));
+    else delete _shipProblem[g.key];   // [Round1] stop marked: leave Problem mode
     renderShipmentList();
   }
 }
@@ -3331,7 +3495,7 @@ async function smPost(payload){
   payload.clientToken = token;
   var fd = new FormData(); fd.append('data', JSON.stringify(payload));
   try{ await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body: fd }); }
-  catch(e){ return { status:'error', message:'No connection · Tiada sambungan' }; }
+  catch(e){ return { status:'error', message: L('No connection', 'Tiada sambungan') }; }
   for (var t=0;t<8;t++){
     await new Promise(function(r){ setTimeout(r,1500); });
     try{
@@ -3340,7 +3504,7 @@ async function smPost(payload){
       if (rd && rd.status && rd.status !== 'pending') return rd;
     }catch(e){}
   }
-  return { status:'error', message:'No confirmation · Tiada pengesahan' };
+  return { status:'error', message: L('No confirmation', 'Tiada pengesahan') };
 }
 
 function _smRefreshGps(){
@@ -3370,8 +3534,8 @@ function _smBanner(on){
     var form = document.getElementById('podForm');
     form.parentNode.insertBefore(b, form);
   }
-  b.innerHTML = '<span>&#129333; SALESMAN MODE' + (_smName ? ' &middot; ' + _esc(_smName) : '') + (_smId ? ' (' + _esc(_smId) + ')' : '') + '</span>'
-    + '<span><button type="button" id="smSignOut" style="background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;">Sign out &middot; Keluar</button></span>';
+  b.innerHTML = '<span>&#129333; ' + L('SALESMAN MODE', 'MOD JURUJUAL') + (_smName ? ' &middot; ' + _esc(_smName) : '') + (_smId ? ' (' + _esc(_smId) + ')' : '') + '</span>'
+    + '<span><button type="button" id="smSignOut" style="background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;">' + L('Sign out', 'Keluar') + '</button></span>';
   var so = document.getElementById('smSignOut'); if (so) so.onclick = _smSignOut;
 }
 
@@ -3379,7 +3543,7 @@ function smEnter(prefillId){
   _smMode = true;
   document.body.classList.add('sm-mode');
   _smFields(true); _smBanner(true);
-  var tl = document.getElementById('smToggleLink'); if (tl) tl.textContent = 'Driver mode · Mod pemandu';
+  var tl = document.getElementById('smToggleLink'); if (tl) tl.textContent = L('Driver mode', 'Mod pemandu');
   if (prefillId) _smId = String(prefillId).toUpperCase();
   if (_smAuthed()){ smLoadDeliveries(); } else { smRenderGate(); }
 }
@@ -3387,7 +3551,7 @@ function smExit(){
   _smMode = false;
   document.body.classList.remove('sm-mode');
   _smFields(false); _smBanner(false);
-  var tl = document.getElementById('smToggleLink'); if (tl) tl.textContent = 'Salesman &middot; Jurujual &rarr;';
+  var tl = document.getElementById('smToggleLink'); if (tl) tl.textContent = L('Salesman →', 'Jurujual →');
   var sec = document.getElementById('shipmentSection');
   if (sec){ sec.style.display = 'none'; sec.innerHTML = ''; }
   _shipKey = ''; _shipGroups = [];
@@ -3398,19 +3562,19 @@ function smRenderGate(msg){
   if (!sec) return;
   sec.style.display = 'block';
   sec.innerHTML = '<div style="border:1.5px solid #C4B5FD;background:#F5F3FF;border-radius:12px;padding:16px;">'
-    + '<div style="font-weight:800;font-size:15px;color:#5B21B6;margin-bottom:10px;">Salesman sign in &middot; Log masuk jurujual</div>'
-    + '<label style="font-size:12px;font-weight:700;color:#4C1D95;">Staff ID</label>'
-    + '<input id="smIdInput" autocomplete="off" placeholder="e.g. TER 500" value="' + _esc(_smId) + '" style="width:100%;box-sizing:border-box;margin:4px 0 10px;padding:12px;font-size:16px;border:1.5px solid #C4B5FD;border-radius:9px;">'
+    + '<div style="font-weight:800;font-size:15px;color:#5B21B6;margin-bottom:10px;">' + L('Salesman sign in', 'Log masuk jurujual') + '</div>'
+    + '<label style="font-size:12px;font-weight:700;color:#4C1D95;">' + L('Staff ID', 'ID staf') + '</label>'
+    + '<input id="smIdInput" autocomplete="off" placeholder="' + _escA(L('e.g. TER 500', 'cth. TER 500')) + '" value="' + _esc(_smId) + '" style="width:100%;box-sizing:border-box;margin:4px 0 10px;padding:12px;font-size:16px;border:1.5px solid #C4B5FD;border-radius:9px;">'
     + '<label style="font-size:12px;font-weight:700;color:#4C1D95;">PIN</label>'
-    + '<input id="smPinInput" type="password" inputmode="numeric" autocomplete="off" placeholder="6-digit PIN" style="width:100%;box-sizing:border-box;margin:4px 0 6px;padding:12px;font-size:16px;border:1.5px solid #C4B5FD;border-radius:9px;">'
+    + '<input id="smPinInput" type="password" inputmode="numeric" autocomplete="off" placeholder="' + _escA(L('6-digit PIN', 'PIN 6 digit')) + '" style="width:100%;box-sizing:border-box;margin:4px 0 6px;padding:12px;font-size:16px;border:1.5px solid #C4B5FD;border-radius:9px;">'
     + '<div id="smGateErr" style="min-height:16px;font-size:12px;color:#B91C1C;font-weight:600;">' + (msg ? _esc(msg) : '') + '</div>'
-    + '<button type="button" id="smLoadBtn" style="width:100%;margin-top:8px;background:#6D28D9;color:#fff;border:none;border-radius:10px;padding:14px;font-weight:800;font-size:15px;cursor:pointer;">Load my deliveries &middot; Muat penghantaran saya</button>'
+    + '<button type="button" id="smLoadBtn" style="width:100%;margin-top:8px;background:#6D28D9;color:#fff;border:none;border-radius:10px;padding:14px;font-weight:800;font-size:15px;cursor:pointer;">' + L('Load my deliveries', 'Muat penghantaran saya') + '</button>'
     + '</div>';
   var btn = document.getElementById('smLoadBtn');
   btn.onclick = function(){
     var id = document.getElementById('smIdInput').value.trim().toUpperCase();
     var pin = document.getElementById('smPinInput').value.trim();
-    if (!id || !pin){ document.getElementById('smGateErr').textContent = 'Enter Staff ID + PIN · Isi ID + PIN'; return; }
+    if (!id || !pin){ document.getElementById('smGateErr').textContent = L('Enter your Staff ID and PIN', 'Isi ID staf dan PIN'); return; }
     _smId = id; _smPin = pin;
     smLoadDeliveries();
   };
@@ -3422,11 +3586,11 @@ async function smLoadDeliveries(quiet){
   var sec = document.getElementById('shipmentSection');
   if (!sec) return;
   var date = document.getElementById('deliveryDate').value || new Date().toISOString().slice(0,10);
-  if (!quiet){ sec.style.display='block'; sec.innerHTML = '<div style="padding:14px;text-align:center;color:#5B21B6;">Loading your deliveries&hellip; &middot; Memuatkan&hellip;</div>'; }
+  if (!quiet){ sec.style.display='block'; sec.innerHTML = '<div style="padding:14px;text-align:center;color:#5B21B6;">' + L('Loading your deliveries…', 'Memuatkan penghantaran anda…') + '</div>'; }
   var rd = await smPost({ formType:'GET_SALESMAN_SHIPMENTS', salesmanId:_smId, pin:_smPin, date:date });
   if (!rd || rd.status === 'error'){
     _smPin = quiet ? _smPin : '';
-    smRenderGate((rd && rd.message) || 'Could not load — check connection · Semak talian');
+    smRenderGate((rd && rd.message) || L('Could not load. Check your connection.', 'Tidak dapat dimuat. Semak talian anda.'));
     return;
   }
   _smName = (rd.salesman && rd.salesman.name) || _smName;
@@ -3435,9 +3599,8 @@ async function smLoadDeliveries(quiet){
     sec.style.display='block';
     sec.innerHTML = '<div style="padding:18px 14px;text-align:center;color:#5B21B6;font-size:14px;line-height:1.6;border:1.5px solid #C4B5FD;background:#F5F3FF;border-radius:10px;">'
       + '<div style="font-size:30px;margin-bottom:6px;">&#128230;</div>'
-      + '<b>No delivery marked to you for ' + _esc(date) + '.</b>'
-      + '<br><span style="font-size:12.5px;color:#6D5BA6;">Tiada penghantaran ditandakan kepada anda.</span>'
-      + '<br><br>Ask the office to mark the DL to you &middot; Minta pejabat tandakan DL kepada anda.'
+      + '<b>' + L('No delivery marked to you for ' + _esc(date) + '.', 'Tiada penghantaran ditandakan kepada anda untuk ' + _esc(date) + '.') + '</b>'
+      + '<br><br>' + L('Ask the office to mark the DL to you.', 'Minta pejabat tandakan DL kepada anda.')
       + '</div>';
     _shipKey=''; _shipGroups=[];
     return;
@@ -3447,9 +3610,9 @@ async function smLoadDeliveries(quiet){
   if (rd.shipments.length > 1 && !quiet){
     sec.style.display='block';
     sec.innerHTML = '<div style="border:1.5px solid #C4B5FD;background:#F5F3FF;border-radius:12px;padding:14px;">'
-      + '<div style="font-weight:800;font-size:14px;color:#5B21B6;margin-bottom:8px;">Pick a delivery order &middot; Pilih DL</div>'
+      + '<div style="font-weight:800;font-size:14px;color:#5B21B6;margin-bottom:8px;">' + L('Pick a delivery order', 'Pilih DL') + '</div>'
       + rd.shipments.map(function(s,i){
-          return '<button type="button" class="sm-pick-dl" data-k="' + _esc(s.shipmentKey) + '" style="display:block;width:100%;text-align:left;margin-bottom:6px;background:#fff;border:1.5px solid #C4B5FD;border-radius:9px;padding:11px 12px;font-size:14px;cursor:pointer;"><b>' + _esc(s.shipmentKey) + '</b> &middot; ' + (s.itemCount||'?') + ' invoice(s)</button>';
+          return '<button type="button" class="sm-pick-dl" data-k="' + _esc(s.shipmentKey) + '" style="display:block;width:100%;text-align:left;margin-bottom:6px;background:#fff;border:1.5px solid #C4B5FD;border-radius:9px;padding:11px 12px;font-size:14px;cursor:pointer;"><b>' + _esc(s.shipmentKey) + '</b> &middot; ' + (s.itemCount||'?') + ' ' + L('invoices', 'invois') + '</button>';
         }).join('')
       + '</div>';
     sec.querySelectorAll('.sm-pick-dl').forEach(function(b){
