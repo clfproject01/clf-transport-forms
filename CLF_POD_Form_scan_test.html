@@ -2093,6 +2093,43 @@ function _scanicLoad_(){
 // (faded blue/purple customer stamps) are never whitened — the first build erased a whole
 // customer stamp. Dark areas reachable from the photo's border are not paper (seat, lap)
 // and are painted white; interior dark blocks (barcodes, bold table frames) are left alone.
+//
+// [Tone v2 2026-10-23] Black/grey pixels go through ONE smooth curve on n = pixel ÷ paper (0–1):
+//   n ≥ SCAN_PAPER_WHITE → white paper; below it the ink is darkened (gamma), nothing is cut away.
+// The first build painted every grey pixel ≥ 88% of the paper pure white and faded 74–88% towards
+// white. Thin strokes, small print and slightly blurred text all sit in that band, so on the first
+// phone test the scan looked over-exposed with broken letters. Measured on 5 real driver photos:
+// only 34–57% of the faint-stroke pixels stayed visible before, ≥ 99% now, paper still pure white.
+// Rule kept from the July scan tool: judge an enhancement by the weakest marks that survive
+// (faint stamps, light print, pencil), never by how clean the page looks.
+var SCAN_PAPER_WHITE = 0.94;   // n at/above this is paper → pure white
+var SCAN_INK_BLACK   = 0.30;   // n at/below this is solid ink → black
+var SCAN_INK_GAMMA   = 1.8;    // > 1 darkens the strokes in between, so faint text reads
+var SCAN_STAMP_GAIN  = 2.2;    // coloured ink (stamps, blue pen) is pushed this much further from white, hue kept
+var _scanToneLUT = null;
+function _scanTone_(){
+  if (_scanToneLUT) return _scanToneLUT;
+  var L = new Uint8ClampedArray(1025), i, t;
+  for (i = 0; i <= 1024; i++){
+    t = (i / 1024 - SCAN_INK_BLACK) / (SCAN_PAPER_WHITE - SCAN_INK_BLACK);
+    L[i] = t <= 0 ? 0 : (t >= 1 ? 255 : Math.round(255 * Math.pow(t, SCAN_INK_GAMMA)));
+  }
+  return (_scanToneLUT = L);
+}
+// Share of the page the camera itself blew out to pure white (all channels ≥ 250). Nothing can
+// bring back a stroke lost there, so the test build shows it to tell "camera too bright" apart
+// from "scan too white".
+function _scanClip_(c){
+  try{
+    var k = Math.min(1, 300 / Math.max(c.width, c.height)), w = Math.max(1, Math.round(c.width * k)), h = Math.max(1, Math.round(c.height * k));
+    var t = document.createElement('canvas'); t.width = w; t.height = h;
+    var x = t.getContext('2d', { willReadFrequently: true }); x.drawImage(c, 0, 0, w, h);
+    var d = x.getImageData(0, 0, w, h).data, n = 0, i;
+    t.width = 0;
+    for (i = 0; i < d.length; i += 4) if (d[i] >= 250 && d[i + 1] >= 250 && d[i + 2] >= 250) n++;
+    return Math.round(n / (w * h) * 1000) / 1000;
+  }catch(e){ return null; }
+}
 function clfWhiten_(src){
   var W = src.width, H = src.height;
   var sx0 = src.getContext('2d', { willReadFrequently: true });
@@ -2163,6 +2200,7 @@ function clfWhiten_(src){
     if (lid[y * w + x]) continue;
     if ((x > 0 && lid[y*w+x-1]) || (x < w-1 && lid[y*w+x+1]) || (y > 0 && lid[(y-1)*w+x]) || (y < h-1 && lid[(y+1)*w+x])) lid2[y * w + x] = 1;
   }
+  var tone = _scanTone_(), kg = SCAN_STAMP_GAIN;
   for (i = 0; i < W * H; i++){
     var o = i * 4, fx = i % W, fy = (i - fx) / W;
     if (lid2[Math.min(h - 1, (fy / S) | 0) * w + Math.min(w - 1, (fx / S) | 0)]){ px[o] = px[o+1] = px[o+2] = 255; continue; }
@@ -2170,13 +2208,13 @@ function clfWhiten_(src){
     var rr = px[o] / br, rg = px[o+1] / bgg, rb = px[o+2] / bb;
     if (rr > 1) rr = 1; if (rg > 1) rg = 1; if (rb > 1) rb = 1;
     var rmin = Math.min(rr, rg, rb), rmax = Math.max(rr, rg, rb);
-    var R = rr * 255, G = rg * 255, B = rb * 255;
-    if (rmax - rmin > 0.045){                       // coloured ink (stamp): push away from white, hue kept
-      R = 255 - (255 - R) * 1.7; G = 255 - (255 - G) * 1.7; B = 255 - (255 - B) * 1.7;
+    var R, G, B;
+    if (rmax - rmin > 0.045){                       // coloured ink (stamp, blue pen): push away from white, hue kept
+      R = 255 - (255 - rr * 255) * kg; G = 255 - (255 - rg * 255) * kg; B = 255 - (255 - rb * 255) * kg;
       if (R < 0) R = 0; if (G < 0) G = 0; if (B < 0) B = 0;
-    } else if (rmin >= 0.88){ R = G = B = 255; }
-    else if (rmin >= 0.74){ var t = (rmin - 0.74) / 0.14, s2 = t * t * (3 - 2 * t); R += (255 - R) * s2; G += (255 - G) * s2; B += (255 - B) * s2; }
-    else if (rmin < 0.55){ var kk = Math.pow(rmin / 0.55, 0.55); R *= kk; G *= kk; B *= kk; }
+    } else {                                        // black/grey: one smooth curve, paper → white, strokes darker
+      R = G = B = tone[Math.round((0.299 * rr + 0.587 * rg + 0.114 * rb) * 1024)];
+    }
     px[o] = R; px[o+1] = G; px[o+2] = B;
   }
   var out = document.createElement('canvas'); out.width = W; out.height = H;
@@ -2447,10 +2485,11 @@ async function _scanFromCorners_(srcCanvas, corners, job){
   }
   var base = _scanFit_(flat || srcCanvas, SCAN_OUT_MAX);
   try{ await _scanYield_(job); }catch(e){ if (flat) flat.width = 0; if (base !== srcCanvas && base !== flat) base.width = 0; throw e; }
+  var clip = _scanClip_(base);   // measured on the page BEFORE whitening = what the camera delivered
   var out = clfWhiten_(base);
   if (flat && flat !== base) flat.width = 0;
   if (base !== srcCanvas && base !== out) base.width = 0;
-  return { canvas: out, cropped: !!flat, aspect: hw };
+  return { canvas: out, cropped: !!flat, aspect: hw, clip: clip };
 }
 
 // Takes the raw camera blob + the plain entry from compressImage(); returns the entry with
@@ -2483,6 +2522,7 @@ async function scanInvoice_(blob, plainEntry, job){
     if (!res.cropped) corners = null;       // extraction refused → treat as "edges not found"
     info.cropped = !!corners; info.corners = corners; info.out = [scan.width, scan.height];
     info.aspect = res.aspect ? Math.round(res.aspect * 1000) / 1000 : null;
+    info.clip = res.clip;
     info.ms = Date.now() - t0;
     if (info.ms > SCAN_SLOW_MS && !_scanWasHidden_(t0)){ scan.width = 0; throw new Error('too slow (' + info.ms + ' ms)'); }
     var orig = _scanFit_(src, ORIG_MAX);
@@ -2628,6 +2668,7 @@ function scanAndReview_(blob, plainEntry){
                     entry.scan.cropped = true; entry.scan.corners = corners; entry.scan.adjusted = true; entry.scan.sure = true;
                     entry.scan.out = [scan.width, scan.height];
                     entry.scan.aspect = res.aspect ? Math.round(res.aspect * 1000) / 1000 : null;
+                    entry.scan.clip = res.clip;
                     entry.name = String(entry.name).replace(/_scan[CF]\.jpg$/i, '') + '_scanC.jpg';
                   }
                   scan.width = 0;
@@ -2643,12 +2684,14 @@ function scanAndReview_(blob, plainEntry){
 }
 
 // small diagnostics line (test build only shows it) — lets the office read a phone's camera
-// resolution and scanner state without a laptop
+// resolution and scanner state without a laptop. "blown N%" = share of the page the camera had
+// already burnt to pure white before the scan touched it (high = the photo itself is over-exposed).
 function _scanDebug_(){
   var el = document.getElementById('scanDebug'); if (!el) return;
   var s = _scanLast, cam = window._acCamRes ? (window._acCamRes[0] + '×' + window._acCamRes[1]) : '—';
   el.textContent = 'scanner: ' + _scanicState + ' · camera: ' + cam
-    + (s ? ' · last: ' + (s.ok ? (s.cropped ? 'cropped ' + s.how + ' ' + s.score : 'whitened') : 'plain') + ' ' + s.ms + ' ms' + (s.src ? ' src ' + s.src[0] + '×' + s.src[1] : '') + (s.out ? ' → ' + s.out[0] + '×' + s.out[1] : '') + (s.err ? ' (' + s.err + ')' : '') : '');
+    + (s ? ' · last: ' + (s.ok ? (s.cropped ? 'cropped ' + s.how + ' ' + s.score : 'whitened') : 'plain') + ' ' + s.ms + ' ms' + (s.src ? ' src ' + s.src[0] + '×' + s.src[1] : '') + (s.out ? ' → ' + s.out[0] + '×' + s.out[1] : '')
+      + (typeof s.clip === 'number' ? ' · blown ' + Math.round(s.clip * 100) + '%' : '') + (s.err ? ' (' + s.err + ')' : '') : '');
 }
 // warm the scanner up in the background so the first photo does not wait for the download
 setTimeout(function(){ _scanicLoad_(); }, 1500);
@@ -2744,7 +2787,7 @@ function _acLive(s){ return !!(s && _ac === s && !s.closed); }   // this session
 function _acBuild(){
   if (!_acEl('acStyle')){   // landscape: the stage is short, so a portrait-shaped frame cannot fit — use a wide frame and a slimmer header (D4)
     var st = document.createElement('style'); st.id = 'acStyle';
-    st.textContent = '@media (orientation: landscape){ #acGuide{ width:72% !important; height:64% !important; top:60% !important; } #acHeader{ padding:6px 12px 4px !important; } #acTitle{ font-size:14px !important; } #acSub{ display:none !important; } #acStatus{ font-size:13px !important; padding:6px 10px !important; } }';
+    st.textContent = '@media (orientation: landscape){ #acHeader{ padding:6px 12px 4px !important; } #acTitle{ font-size:14px !important; } #acSub{ display:none !important; } #acStatus{ font-size:13px !important; padding:6px 10px !important; } }';
     document.head.appendChild(st);
   }
   var ov = document.createElement('div');
@@ -2776,6 +2819,10 @@ function _acBuild(){
     +   '<div id="acCount" style="width:34%;text-align:right;font-size:13px;line-height:1.35;color:#C9D6E3;"></div>'
     + '</div>';
   document.body.appendChild(ov);
+  // [Scanner] keep the A4 frame right when the phone turns or Safari's toolbars come and go
+  window.addEventListener('resize', _acLayoutGuide);
+  try{ if (window.visualViewport) window.visualViewport.addEventListener('resize', _acLayoutGuide); }catch(e){}
+  window.addEventListener('orientationchange', function(){ setTimeout(_acLayoutGuide, 300); });
   ov.querySelector('#acClose').onclick = function(){ closeAutoCapture(); renderShipmentList(); };
   ov.querySelector('#acShutter').onclick = function(){ if (_ac) _acCapture(_ac, true); };
   ov.querySelector('#acFallback').onclick = function(){ if (_ac) _acFallback(_ac, 'driver chose OS camera', true); };
@@ -2788,6 +2835,26 @@ function _acBuild(){
   return ov;
 }
 function _acEl(id){ return document.getElementById(id); }
+// [Scanner 2026-10-23] A4 guide frame (1 : 1.414) on every screen size. Upright on a portrait screen,
+// lying sideways on a landscape one; always below the title and inside the camera view. Re-fitted
+// on resize / rotation / Safari toolbars coming and going. Fail-open: the CSS frame stays.
+var AC_A4 = Math.SQRT2;
+function _acLayoutGuide(){
+  try{
+    var st = _acEl('acStage'), g = _acEl('acGuide'), hd = _acEl('acHeader');
+    if (!st || !g) return;
+    var W = st.clientWidth, H = st.clientHeight;
+    if (!(W > 40 && H > 40)) return;   // overlay hidden
+    var top = (hd ? hd.offsetTop + hd.offsetHeight : 0) + 4, avH = H - top - 10, avW = W * 0.9, gw, gh;
+    if (avH < 60){ top = 6; avH = H - 16; }   // very short landscape view: under the title beats no frame
+    if (W >= H){ gw = Math.min(avW, avH * AC_A4); gh = gw / AC_A4; }
+    else       { gh = Math.min(avH, avW * AC_A4); gw = gh / AC_A4; }
+    g.style.boxSizing = 'border-box';
+    g.style.width = Math.round(gw) + 'px'; g.style.height = Math.round(gh) + 'px';
+    g.style.left = Math.round((W - gw) / 2) + 'px'; g.style.top = Math.round(top + (avH - gh) / 2) + 'px';
+    g.style.transform = 'none';
+  }catch(e){}
+}
 function _acStatus(text, frac, tone){
   var s = _acEl('acStatus'), b = _acEl('acBarFill'), g = _acEl('acGuide');
   if (s && s.innerHTML !== text) s.innerHTML = text;
@@ -2803,6 +2870,7 @@ function _acHeader(s){
   if (t) t.textContent = 'Invoice ' + Math.min(have + 1, need) + ' of ' + need + (next ? ' · ' + next.invoiceNo : '');
   if (sub) sub.textContent = g.name || '';
   if (c) c.innerHTML = have + ' / ' + need + ' photo' + (need === 1 ? '' : 's') + '<br>1 invoice = 1 photo';
+  _acLayoutGuide();   // [Scanner] the title's height decides where the A4 frame starts
 }
 var AC_HINT = '<br><span style="font-weight:500;opacity:.85;">or tap the round button · atau tekan butang bulat</span>';
 
