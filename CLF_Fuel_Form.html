@@ -1,610 +1,579 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ms" translate="no">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>CLF Trading — Fuel Submission</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FBCE07">
+<meta name="google" content="notranslate">
+<title>CLF Minyak</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+  /* [Fuel R1 2026-10-24] the Fuel form in the POD design (approved rounds 2/3), with its OWN colour so a busy driver
+     never mistakes it for POD: a yellow app bar (#FBCE07) with navy text and the navy-lettered official logo
+     (brand/clf-logo-horizontal-navy.png = the white logo with only its lettering recoloured; mark and dot untouched).
+     Below the bar it is POD: same cards, fields, green Save and navy links, so both still read as one company.
+     Phone system fonts, 4 sizes (13/15/17/22). */
+  :root{
+    --navy:#141C77; --navy-50:#EEF0FA;
+    --red-700:#C8101E; --red-50:#FEF2F2;
+    --green:#15803D; --green-50:#ECFDF3;
+    --amber:#B45309; --amber-50:#FFFBEB;
+    --fuel:#FBCE07; --fuel-50:#FEF6D8; --fuel-ink:#7A5C00;
+    --ink:#0F172A; --ink-2:#475569; --ink-3:#94A3B8;
+    --line:#E2E8F0; --bg:#FFFFFF; --bg-2:#F4F6FA;
+    --r:12px;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{touch-action:manipulation;-webkit-text-size-adjust:100%}   /* pinch zoom yes, double-tap zoom no */
+  html,body{background:var(--bg-2)}
+  body{font:15px/1.45 var(--font);color:var(--ink);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;min-height:100vh}
+  button,input,select,textarea{font:inherit;color:inherit}
+  button{cursor:pointer}
+  [hidden]{display:none!important}
+  .app{max-width:480px;margin:0 auto;min-height:100vh;background:var(--bg);padding-bottom:24px;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+  svg.i{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  svg.i.s{width:18px;height:18px}
 
-  :root {
-    --navy: #0B1F3A;
-    --navy-mid: #1A3A5C;
-    --navy-light: #1E4976;
-    --gold: #C9A84C;
-    --gold-light: #E8C97A;
-    --white: #FFFFFF;
-    --off-white: #F4F7FB;
-    --gray: #8A9BB0;
-    --gray-light: #D8E4F0;
-    --success: #22C55E;
-    --error: #EF4444;
-    --radius: 14px;
-    --radius-sm: 8px;
-  }
+  /* app bar: logo · pump + MINYAK over the branch · online · language */
+  .bar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:10px;min-height:56px;padding:8px 12px;padding-top:max(8px, env(safe-area-inset-top));background:var(--fuel);color:var(--navy)}
+  .bar img{height:30px;width:auto;display:block}
+  .bar .sep{width:1px;height:26px;background:rgba(20,28,119,.25)}
+  .bar .ttl{display:flex;align-items:center;gap:7px;min-width:0}
+  .bar .ttl svg.i{width:24px;height:24px}
+  .bar .tt{display:flex;flex-direction:column;min-width:0;line-height:1.15}
+  .bar .tt b{font-size:17px;font-weight:800;letter-spacing:.6px}
+  .bar .tt span{font-size:12px;font-weight:700;white-space:nowrap}
+  .bar .sp{flex:1}
+  @media (max-width:359px){ .bar{gap:8px} .bar .sep{display:none} }
+  @media (max-width:340px){ .bar .ttl svg.i{display:none} }   /* 320px phones: the yellow bar + MINYAK still say which form this is */
+  .dot{flex:none;width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(21,128,61,.22)}
+  .dot.off{background:#64748B;box-shadow:0 0 0 3px rgba(100,116,139,.25)}
+  .seg{flex:none;display:inline-flex;padding:2px;border-radius:999px;border:1px solid var(--navy)}
+  .seg button{border:0;background:none;color:var(--navy);font-weight:800;font-size:13px;min-width:40px;height:32px;padding:0 8px;border-radius:999px}
+  .seg button.on{background:var(--navy);color:#fff}
+  .tbanner{background:var(--red-700);color:#fff;text-align:center;font-size:13px;font-weight:800;padding:6px 10px}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  .wrap{padding:12px 14px 0}
+  /* trip: date / driver / lorry fold into three lines once all three are set (same card as POD) */
+  .trip{border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;background:var(--bg)}
+  .trip-row{display:flex;align-items:center;gap:12px}
+  .trip-ic{width:40px;height:40px;border-radius:10px;background:var(--fuel-50);color:var(--fuel-ink);display:flex;align-items:center;justify-content:center;flex:none}
+  .trip-main{flex:1;min-width:0}
+  .trip-l1{font-size:17px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .trip-l2{font-size:13px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .trip-l2.warn{color:var(--amber);font-weight:700}
+  .link{flex:none;border:0;background:none;color:var(--navy);font-weight:700;font-size:15px;min-height:44px;padding:0 6px}
+  .link:disabled{color:var(--ink-3)}
+  .form{margin-top:12px;display:grid;gap:12px}
+  .field{position:relative;min-width:0}
+  .fl{display:block;font-size:13px;font-weight:700;color:var(--ink-2);margin-bottom:4px}
+  .req{color:var(--red-700)}
+  .in{display:block;width:100%;height:48px;border:1.5px solid var(--line);border-radius:10px;padding:0 12px;font-size:16px;color:var(--ink);background:#fff;-webkit-appearance:none;appearance:none}
+  .in:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(20,28,119,.12)}
+  .in::placeholder{color:var(--ink-3)}
+  .in:disabled{background:var(--bg-2);color:var(--ink-2)}
+  /* date box: iPhone Safari lays its date value out with flex (display:block pinned it to the top of the box) and writes it
+     in the PHONE's language — our own text (page language) sits on top while the overlay is live; the real input stays
+     underneath, so a tap anywhere still opens the picker (same fix as POD, 2026-10-23) */
+  input[type="date"].in{position:relative;display:-webkit-flex;display:flex;align-items:center;padding-right:44px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cline x1='16' y1='2' x2='16' y2='6'/%3E%3Cline x1='8' y1='2' x2='8' y2='6'/%3E%3Cline x1='3' y1='10' x2='21' y2='10'/%3E%3C/svg%3E") no-repeat right 12px center;background-size:20px 20px}
+  input[type="date"].in::-webkit-date-and-time-value{text-align:left;margin:0}
+  input[type="date"].in::-webkit-calendar-picker-indicator{position:absolute;top:0;left:0;right:0;bottom:0;width:auto;height:auto;margin:0;padding:0;opacity:0;cursor:pointer}
+  .date-in{position:relative}
+  .date-txt{display:none;position:absolute;left:13.5px;right:44px;top:50%;transform:translateY(-50%);font-size:16px;line-height:22px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+  .date-txt.warn{color:var(--amber);font-weight:700}
+  .date-in.on .date-txt{display:block}
+  .date-in.on input[type="date"].in{color:transparent;-webkit-text-fill-color:transparent}
+  select.in{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23475569' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px}
+  .error-msg{display:none;font-size:13px;font-weight:600;color:var(--red-700);margin-top:4px}
+  .error-msg.show{display:block}
+  .remembered-badge{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;background:var(--green-50);color:var(--green);font-size:11px;font-weight:700;vertical-align:middle}
+  .picked{margin-top:6px;font-size:13px;font-weight:700;color:var(--green)}
+  .dp-panel{position:absolute;left:0;right:0;z-index:20;border:1.5px solid var(--line);border-top:0;border-radius:0 0 10px 10px;max-height:240px;overflow-y:auto;background:#fff;box-shadow:0 8px 20px rgba(15,23,42,.12)}
+  .dp-row{padding:13px 14px;border-bottom:1px solid #F1F5F9;cursor:pointer;font-size:15px}
+  .dp-none{padding:13px 14px;color:var(--ink-3);font-size:13px}
 
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--navy);
-    min-height: 100vh;
-    color: var(--white);
-    -webkit-font-smoothing: antialiased;
-  }
+  /* fuel card: odometer · RM + litres · receipt photo · Save / No refuel */
+  .card{border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-top:12px;background:var(--bg)}
+  .fields{display:grid;gap:12px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .hint{font-size:13px;color:var(--ink-2);margin-top:4px}
+  .hint.today{display:flex;align-items:center;gap:6px;color:var(--green);font-weight:700}
+  .photo{position:relative;display:flex;align-items:center;justify-content:center;gap:10px;min-height:64px;padding:8px 12px;border-radius:12px;border:1.5px dashed var(--ink-3);background:#fff;color:var(--navy);font-weight:800;font-size:15px;overflow:hidden}
+  .photo input{position:absolute;top:0;left:0;width:100%;height:100%;z-index:2;opacity:0;cursor:pointer;font-size:0}
+  .photo.dis{opacity:.6}
+  .photo.big{flex-direction:column;gap:8px;min-height:132px;border-width:2px;font-size:17px}
+  .photo.big svg.i{width:36px;height:36px}
+  /* OCR v2: the photo itself was the problem (blurry, too far, two receipts) — a new photo is one big tap away */
+  .photo.retake{min-height:56px;margin-bottom:12px;border-style:solid;border-color:var(--amber);background:var(--amber-50);color:var(--amber)}
+  /* after the photo: thumbnail · what was read · Tukar */
+  .rcpt{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  .rcpt img{width:56px;height:56px;border-radius:8px;object-fit:cover;flex:none;border:1px solid var(--line);background:var(--bg-2)}
+  .rcpt-main{flex:1;min-width:0}
+  .rcpt-l1{display:flex;align-items:center;gap:6px;font-size:15px;font-weight:800;color:var(--navy)}
+  .rcpt-l1.ok{color:var(--green)}
+  .rcpt-l1.warn{color:var(--amber)}
+  .rcpt-l2{font-size:13px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rcpt-l2.warn{color:var(--amber);font-weight:700}
+  .rcpt .ph-c{position:relative;flex:none;display:flex;align-items:center;min-height:44px;padding:0 4px;color:var(--navy);font-size:14px;font-weight:700}
+  .rcpt .ph-c input{position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;font-size:0;cursor:pointer}
+  .spin-s{width:16px;height:16px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--navy);animation:sp .8s linear infinite;flex:none}
+  .hint.ok{color:var(--green);font-weight:700}
+  .check-note{font-size:13px;color:var(--ink-2);margin-top:10px}
+  .acts{display:flex;gap:8px;margin-top:14px}
+  .btn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:54px;border-radius:12px;border:0;font-weight:800;font-size:15px;padding:0 16px}
+  .btn svg.i{width:22px;height:22px}
+  .btn:disabled{opacity:.6}
+  .b-pri{flex:1;background:var(--navy);color:#fff}
+  .b-save{flex:1;background:var(--green);color:#fff}
+  .b-ghost{background:#fff;color:var(--ink);border:1.5px solid var(--line)}
+  .b-red{background:var(--red-700);color:#fff}   /* No refuel [boss 2026-10-24: red, clearly apart from the green Save] */
+  .b-full{width:100%}
+  /* a Save the server has not confirmed yet (never painted green): amber box with Semak */
+  .unc{border-radius:10px;background:var(--amber-50);color:var(--amber);padding:12px}
+  .unc-h{display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px}
+  .unc-s{font-size:15px;font-weight:700;color:var(--ink);margin-top:6px;overflow-wrap:anywhere}
+  .unc-n{font-size:13px;font-weight:700;margin-top:4px}
+  .unc .acts{margin-top:12px}
+  .note{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--ink-2);margin:12px 2px 0}
+  .note svg.i{width:16px;height:16px;margin-top:1px;color:var(--navy)}
 
-  .app {
-    max-width: 480px;
-    margin: 0 auto;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
+  /* saved */
+  .done{text-align:center;padding:48px 20px 24px}
+  .done-ic{width:72px;height:72px;border-radius:50%;background:var(--green-50);color:var(--green);display:inline-flex;align-items:center;justify-content:center}
+  .done-ic svg.i{width:36px;height:36px;stroke-width:2.5}
+  .done h2{font-size:22px;font-weight:800;margin-top:14px}
+  .done p{font-size:15px;color:var(--ink-2);margin-top:4px}
+  .done .btn{margin-top:28px}
 
-  /* HEADER */
-  .header {
-    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
-    padding: 28px 24px 24px;
-    border-bottom: 1px solid rgba(201,168,76,0.25);
-    position: relative;
-    overflow: hidden;
-  }
-  /* form identity — big icon + name so drivers instantly know which app this is */
-  .form-identity { display: flex; align-items: center; gap: 14px; position: relative; z-index: 1; margin-top: 4px; }
-  .form-icon {
-    width: 54px; height: 54px; flex-shrink: 0;
-    background: rgba(201,168,76,0.16); border: 1.5px solid rgba(201,168,76,0.6);
-    border-radius: 14px; display: flex; align-items: center; justify-content: center;
-  }
-  .form-icon svg { width: 30px; height: 30px; stroke: var(--gold-light); fill: none; }
-
-  .logo-row {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 18px;
-    position: relative;
-    z-index: 1;
-  }
-  .logo-box {
-    width: 52px; height: 52px;
-    background: var(--white);
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-    overflow: hidden;
-    border: 2px solid rgba(201,168,76,0.4);
-  }
-  .logo-text-clf {
-    font-size: 13px; font-weight: 600;
-    color: var(--navy);
-    line-height: 1;
-    text-align: center;
-  }
-  .logo-text-clf span {
-    display: block;
-    font-size: 9px;
-    color: var(--gold);
-    font-weight: 500;
-    margin-top: 2px;
-  }
-  .company-name { font-size: 16px; font-weight: 600; color: var(--white); line-height: 1.2; }
-  .company-reg { font-size: 11px; color: var(--gold); margin-top: 2px; font-weight: 400; }
-
-  .form-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(201,168,76,0.15);
-    border: 1px solid rgba(201,168,76,0.35);
-    border-radius: 20px;
-    padding: 6px 14px;
-    position: relative; z-index: 1;
-  }
-  .form-badge-dot {
-    width: 7px; height: 7px;
-    background: var(--gold);
-    border-radius: 50%;
-    animation: pulse 2s infinite;
-  }
-  @keyframes pulse {
-    0%,100% { opacity: 1; } 50% { opacity: 0.4; }
-  }
-  .form-badge-text { font-size: 12px; font-weight: 500; color: var(--gold-light); }
-
-  .form-title {
-    font-size: 30px; font-weight: 600;
-    color: var(--white);
-    letter-spacing: 1px; line-height: 1;
-    margin: 0;
-    position: relative; z-index: 1;
-  }
-  .form-subtitle {
-    font-size: 12px; color: var(--gray);
-    position: relative; z-index: 1;
-    line-height: 1.5;
-  }
-  /* branch label — prominent so a driver on the wrong link notices (label, not a control) */
-  .branch-label {
-    display: inline-block;
-    font-size: 14px; font-weight: 600;
-    color: var(--navy);
-    background: var(--gold);
-    border-radius: 8px;
-    padding: 2px 10px;
-    margin-left: 6px;
-    letter-spacing: 0.5px;
-    vertical-align: middle;
-  }
-
-  /* BODY */
-  .form-body {
-    flex: 1;
-    background: var(--off-white);
-    padding: 24px 20px 32px;
-  }
-
-  /* NOTICE */
-  .notice {
-    background: rgba(11,31,58,0.08);
-    border: 1px solid rgba(11,31,58,0.12);
-    border-left: 3px solid var(--gold);
-    border-radius: var(--radius-sm);
-    padding: 10px 14px;
-    margin-bottom: 20px;
-    font-size: 12px;
-    color: var(--navy-mid);
-    line-height: 1.5;
-  }
-  .notice b { color: var(--navy); }
-
-  /* SECTION LABEL */
-  .section-label {
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-    color: var(--navy-light);
-    margin: 20px 0 10px;
-  }
-
-  /* FIELD */
-  .field { margin-bottom: 14px; }
-  .field label {
-    display: block;
-    font-size: 13px; font-weight: 500;
-    color: var(--navy);
-    margin-bottom: 6px;
-  }
-  .field label .bm {
-    display: block;
-    font-size: 11px; font-weight: 400;
-    color: var(--gray);
-    margin-top: 1px;
-  }
-  .field label .req { color: var(--gold); margin-left: 2px; }
-
-  input[type="text"],
-  input[type="number"],
-  input[type="date"],
-  select, textarea {
-    width: 100%;
-    padding: 13px 16px;
-    background: var(--white);
-    border: 1.5px solid var(--gray-light);
-    border-radius: var(--radius-sm);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 15px;
-    color: var(--navy);
-    outline: none;
-    transition: border-color 0.2s;
-    -webkit-appearance: none;
-    appearance: none;
-  }
-  input:focus, select:focus, textarea:focus {
-    border-color: var(--navy-light);
-    box-shadow: 0 0 0 3px rgba(30,73,118,0.12);
-  }
-  input::placeholder { color: var(--gray); font-size: 14px; }
-  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238A9BB0' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; padding-right: 40px; }
-
-  /* PHOTO UPLOAD */
-  .photo-btn {
-    width: 100%;
-    padding: 20px;
-    background: var(--white);
-    border: 2px dashed var(--gray-light);
-    border-radius: var(--radius);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-  }
-  .photo-btn:active { transform: scale(0.98); }
-  .photo-btn.has-photo {
-    border-style: solid;
-    border-color: var(--success);
-    background: rgba(34,197,94,0.06);
-  }
-  .photo-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-  .photo-icon {
-    width: 44px; height: 44px;
-    background: var(--navy);
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .photo-icon svg { width: 22px; height: 22px; stroke: var(--gold); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-  .photo-label { font-size: 14px; font-weight: 600; color: var(--navy); }
-  .photo-sublabel { font-size: 12px; color: var(--gray); }
-  .photo-preview {
-    width: 100%; max-height: 200px;
-    object-fit: cover;
-    border-radius: var(--radius-sm);
-    display: none;
-    margin-top: 8px;
-  }
-  .photo-preview.visible { display: block; }
-
-  /* CONFIRM */
-  .confirm-row {
-    display: flex; gap: 12px; align-items: flex-start;
-    background: rgba(11,31,58,0.05);
-    border: 1px solid var(--gray-light);
-    border-radius: var(--radius-sm);
-    padding: 14px;
-    margin: 20px 0;
-    cursor: pointer;
-  }
-  .confirm-row input[type="checkbox"] {
-    width: 20px; height: 20px;
-    flex-shrink: 0;
-    margin-top: 1px;
-    accent-color: var(--navy);
-    cursor: pointer;
-  }
-  .confirm-text { font-size: 12px; color: var(--navy-mid); line-height: 1.6; }
-  .confirm-text b { color: var(--navy); }
-
-  /* SUBMIT */
-  .submit-btn {
-    width: 100%;
-    padding: 17px;
-    background: var(--navy);
-    color: var(--white);
-    border: none;
-    border-radius: var(--radius);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 16px; font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    letter-spacing: 0.3px;
-  }
-  .submit-btn:active { transform: scale(0.98); }
-  .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-  .submit-btn .gold-bar {
-    position: absolute; bottom: 0; left: 0; right: 0;
-    height: 3px;
-    background: var(--gold);
-    border-radius: 0 0 var(--radius) var(--radius);
-  }
-  .btn-wrap { position: relative; }
-
-  /* SUCCESS SCREEN */
-  .success-screen {
-    display: none;
-    position: fixed; inset: 0;
-    background: var(--navy);
-    z-index: 100;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 32px;
-    text-align: center;
-  }
-  .success-screen.show { display: flex; }
-  .success-icon {
-    width: 80px; height: 80px;
-    background: rgba(34,197,94,0.15);
-    border: 2px solid var(--success);
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    margin-bottom: 24px;
-    animation: pop 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
-  }
-  @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
-  .success-icon svg { width: 36px; height: 36px; stroke: var(--success); fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
-  .success-title { font-size: 26px; font-weight: 600; color: var(--white); margin-bottom: 8px; }
-  .success-subtitle { font-size: 15px; color: var(--gray); margin-bottom: 24px; line-height: 1.5; }
-  .success-time {
-    background: rgba(201,168,76,0.12);
-    border: 1px solid rgba(201,168,76,0.3);
-    border-radius: var(--radius-sm);
-    padding: 12px 20px;
-    margin-bottom: 32px;
-  }
-  .success-time-label { font-size: 11px; color: var(--gold); font-weight: 500; letter-spacing: 0.8px; text-transform: uppercase; }
-  .success-time-val { font-family: 'DM Mono', monospace; font-size: 18px; color: var(--white); margin-top: 4px; }
-  .success-driver { font-size: 13px; color: var(--gray); margin-bottom: 8px; }
-  .success-driver b { color: var(--gold-light); }
-  .new-btn {
-    width: 100%; padding: 16px;
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.15);
-    border-radius: var(--radius);
-    color: var(--white);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 15px; font-weight: 500;
-    cursor: pointer;
-  }
-
-  /* LOADING */
-  .loading-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(11,31,58,0.85);
-    z-index: 99;
-    flex-direction: column;
-    align-items: center; justify-content: center;
-    gap: 16px;
-  }
-  .loading-overlay.show { display: flex; }
-  .spinner {
-    width: 44px; height: 44px;
-    border: 3px solid rgba(201,168,76,0.2);
-    border-top-color: var(--gold);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-text { color: var(--white); font-size: 14px; }
-
-  .error-msg { font-size: 12px; color: var(--error); margin-top: 4px; display: none; }
-  .error-msg.show { display: block; }
-
-  .remembered-badge {
-    display: inline-flex; align-items: center; gap: 4px;
-    background: rgba(34,197,94,0.1);
-    border: 1px solid rgba(34,197,94,0.25);
-    border-radius: 20px;
-    padding: 2px 8px;
-    font-size: 10px; color: var(--success);
-    font-weight: 500;
-    margin-left: 6px;
-    vertical-align: middle;
-  }
+  /* yes / change sheet, saving overlay */
+  .scrim{position:fixed;top:0;left:0;right:0;bottom:0;z-index:10050;background:rgba(15,23,42,.55);display:flex;align-items:flex-end;justify-content:center}
+  .sheet{width:100%;max-width:480px;background:#fff;border-radius:18px 18px 0 0;padding:20px 18px;padding-bottom:max(20px, calc(env(safe-area-inset-bottom) + 14px))}
+  .sheet h3{font-size:17px;font-weight:800;line-height:1.35}
+  .sheet p{font-size:15px;color:var(--ink-2);margin-top:6px}
+  .sheet .row{display:flex;gap:10px;margin-top:16px}
+  .sheet .row button{flex:1;min-height:52px;border-radius:12px;font-weight:800;font-size:15px}
+  .sheet .row .no{background:#fff;border:1.5px solid var(--line)}
+  .sheet .row .yes{flex:1.3;background:var(--navy);color:#fff;border:0}
+  .loading-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:99;background:rgba(20,28,119,.92);flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:0 24px;text-align:center}   /* not `inset`: iOS < 14.5 ignores it */
+  .loading-overlay.show{display:flex}
+  .spinner{width:42px;height:42px;border-radius:50%;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;animation:sp .8s linear infinite}
+  .loading-text{color:#fff;font-size:17px;font-weight:800}
+  @keyframes sp{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
-
 <div class="app">
-  <!-- HEADER -->
-  <div class="header">
-    <div class="logo-row">
-      <div class="logo-box">
-        <div class="logo-text-clf">CLF<span>Trading</span></div>
-      </div>
-      <div>
-        <div class="company-name">CLF Trading Sdn. Bhd.</div>
-        <div class="company-reg" id="companyReg">557522-A · Mentakab, Pahang</div>
-      </div>
-    </div>
-    <div class="form-identity">
-      <div class="form-icon">
-        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="22" x2="15" y2="22"/><line x1="4" y1="9" x2="14" y2="9"/><path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18"/><path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2 2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 5"/></svg>
-      </div>
-      <div>
-        <div class="form-title">FUEL <span id="branchLabel" class="branch-label">Mentakab</span></div>
-        <div class="form-subtitle">Daily Fuel Receipt · Resit Bahan Api</div>
-      </div>
-    </div>
-  </div>
+  <header class="bar">
+    <img src="brand/clf-logo-horizontal-navy.png" alt="CLF Trading" width="72" height="30" decoding="async">
+    <span class="sep" aria-hidden="true"></span>
+    <span class="ttl"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><line x1="3" y1="22" x2="15" y2="22"/><line x1="4" y1="9" x2="14" y2="9"/><path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18"/><path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2 2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 5"/></svg><span class="tt"><b data-en="FUEL">MINYAK</b><span id="branchLabel">Mentakab</span></span></span>
+    <span class="sp"></span>
+    <span class="dot" id="netDot" role="img" aria-label="Dalam talian"></span>
+    <span class="seg" id="langSwitch" role="group" aria-label="Bahasa / Language"><button type="button" data-l="bm">BM</button><button type="button" data-l="en">EN</button></span>
+  </header>
 
-  <!-- FORM BODY -->
-  <div class="form-body">
-    <div class="notice">
-      <b>Important · Penting:</b> Fill all fields. Late = lower score.<br>
-      <span style="opacity:.75;">Isi semua ruang. Lewat = markah rendah.</span>
-    </div>
-
-    <!-- NO FUEL TODAY shortcut -->
-    <div style="margin-bottom:18px;padding:14px;background:#FAEEDA;border-left:4px solid #C9A84C;border-radius:8px;">
-      <div style="font-size:13px;color:#854F0B;margin-bottom:8px;font-weight:600;">
-        Did not refuel today? · Tidak isi minyak hari ini?
-      </div>
-      <div style="font-size:12px;color:#6B7A8D;margin-bottom:10px;line-height:1.5;">
-        Tap below to declare "No Fuel Today" — only Driver + Vehicle needed.<br>
-        Tekan untuk laporkan "Tiada Bahan Api Hari Ini" — hanya perlu Pemandu + Kenderaan.
-      </div>
-      <button type="button" onclick="submitNoFuel()" style="width:100%;padding:12px;background:#C9A84C;color:#412402;border:none;border-radius:8px;font-weight:600;font-size:14px;cursor:pointer;">
-        ⛽ Declare No Fuel Today · Lapor Tiada Bahan Api Hari Ini
-      </button>
-    </div>
-
+  <main class="wrap" id="mainView">
     <form id="fuelForm" novalidate>
 
-      <div class="section-label">Trip Info · Maklumat Perjalanan</div>
-
-      <!-- DATE -->
-      <div class="field">
-        <label>Fuel Date · Tarikh Pengisian Bahan Api <span class="req">*</span></label>
-        <input type="date" id="fuelDate" required>
-        <div class="error-msg" id="err-date">Please select a date · Sila pilih tarikh</div>
-      </div>
-
-      <!-- DRIVER -->
-      <div class="field" style="position:relative;">
-        <label>
-          Driver · Pemandu <span class="req">*</span>
-          <span id="rememberedBadge" class="remembered-badge" style="display:none;">✓ Remembered</span>
-        </label>
-        <input type="text" id="driverSearch" autocomplete="off" placeholder="Staff ID (e.g. 448) atau nama" style="width:100%;box-sizing:border-box;padding:13px 16px;font-size:16px;border:1.5px solid #D8E4F0;border-radius:8px;background:#fff;color:#0B1F3A;">
-        <input type="hidden" id="driverName" required>
-        <div id="driverPanel" style="display:none;position:absolute;left:0;right:0;z-index:20;border:1.5px solid #D8E4F0;border-top:none;border-radius:0 0 8px 8px;max-height:240px;overflow-y:auto;background:#fff;box-shadow:0 6px 18px rgba(11,31,58,.15);"></div>
-        <div class="error-msg" id="err-driver">Please select your name · Sila pilih nama</div>
-        <div id="staffIdBadge" style="display:none;margin-top:8px;padding:6px 12px;background:#F5E6B8;color:#412402;border-radius:6px;font-size:13px;font-weight:600;"></div>
-      </div>
-
-      <!-- SECOND DRIVER (optional) -->
-      <div class="field" style="position:relative;">
-        <label>
-          Second Driver · Pemandu Kedua
-          <span class="bm">If two drivers share this lorry · optional</span>
-        </label>
-        <input type="text" id="secondSearch" autocomplete="off" placeholder="Staff ID atau nama (optional)" style="width:100%;box-sizing:border-box;padding:13px 16px;font-size:16px;border:1.5px solid #D8E4F0;border-radius:8px;background:#fff;color:#0B1F3A;">
-        <input type="hidden" id="secondDriver">
-        <div id="secondPanel" style="display:none;position:absolute;left:0;right:0;z-index:20;border:1.5px solid #D8E4F0;border-top:none;border-radius:0 0 8px 8px;max-height:240px;overflow-y:auto;background:#fff;box-shadow:0 6px 18px rgba(11,31,58,.15);"></div>
-        <div id="staffIdBadge2" style="display:none;margin-top:8px;padding:6px 12px;background:#F5E6B8;color:#412402;border-radius:6px;font-size:13px;font-weight:600;"></div>
-      </div>
-
-      <!-- VEHICLE -->
-      <div class="field">
-        <label>Vehicle Number · Nombor Kenderaan <span class="req">*</span></label>
-        <select id="vehicleNo" required>
-          <option value="">— Select vehicle · Pilih kenderaan —</option>
-        </select>
-        <div class="error-msg" id="err-vehicle">Please select a vehicle · Sila pilih kenderaan</div>
-      </div>
-
-      <div class="section-label">Fuel Details · Butiran Bahan Api</div>
-
-      <!-- MILEAGE -->
-      <div class="field">
-        <label>
-          Current Mileage (KM) · Bacaan Odometer Semasa <span class="req">*</span>
-          <span class="bm">Enter current odometer reading · Masukkan bacaan odometer semasa</span>
-        </label>
-        <input type="number" id="mileage" placeholder="e.g. 85420" min="0" required>
-        <div id="lastOdoHint" style="display:none;margin-top:6px;padding:6px 12px;background:#EFF6FF;color:#1E40AF;border-radius:6px;font-size:13px;"></div>
-        <div class="error-msg" id="err-mileage">Please enter mileage · Sila masukkan bacaan odometer</div>
-      </div>
-
-      <!-- AMOUNT (RM) — driver-entered (decision 2026-06-05) -->
-      <div class="field">
-        <label>
-          Fuel Amount (RM) · Jumlah Bahan Api (RM) <span class="req">*</span>
-          <span class="bm">Total RM on the receipt · Jumlah RM pada resit</span>
-        </label>
-        <input type="number" id="amount" placeholder="e.g. 180.00" min="0" step="0.01" required>
-        <div class="error-msg" id="err-amount">Please enter the fuel amount · Sila masukkan jumlah</div>
-      </div>
-
-      <!-- LITRES (optional) -->
-      <div class="field">
-        <label>
-          Litres · Liter
-          <span class="bm">Optional · Pilihan</span>
-        </label>
-        <input type="number" id="litres" placeholder="e.g. 120.5" min="0" step="0.01">
-      </div>
-
-      <div class="notice" style="border-left-color:#C9A84C;margin-bottom:4px;">
-        <b>Snap the receipt too · Ambil foto resit juga:</b> we read it to double-check your amount.<br>
-        <span style="opacity:.75;">Kami baca resit untuk semak semula jumlah &amp; liter anda.</span>
-      </div>
-
-      <div class="section-label">Receipt Photo · Foto Resit</div>
-
-      <!-- PHOTO UPLOAD -->
-      <div class="field">
-        <label>Upload Receipt Image · Muat Naik Gambar Resit <span class="req">*</span></label>
-        <div class="photo-btn" id="photoBtn">
-          <!-- no `capture` attr: lets the driver pick camera OR gallery (receipt photographed earlier at the pump) -->
-          <input type="file" id="receiptPhoto" accept="image/*" onchange="handlePhoto(this)">
-          <div class="photo-icon">
-            <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      <!-- trip card: folds to lorry / date / driver once all three are set (see _tripRender) -->
+      <section class="trip" id="tripCard">
+        <div class="trip-row">
+          <div class="trip-ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><line x1="3" y1="22" x2="15" y2="22"/><line x1="4" y1="9" x2="14" y2="9"/><path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18"/><path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2 2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 5"/></svg></div>
+          <div class="trip-main"><div class="trip-l1" id="tripL1"></div><div class="trip-l2" id="tripL2"></div><div class="trip-l2" id="tripL3" hidden></div></div>
+          <button type="button" class="link" id="tripToggle" hidden></button>
+        </div>
+        <div class="form" id="tripForm">
+          <!-- [boss 2026-10-24] lorry FIRST: picking it brings the driver (see _loadCrew); the date (today by default) goes last -->
+          <div class="field">
+            <label class="fl" for="vehicleNo"><span data-en="Lorry">Lori</span> <span class="req">*</span></label>
+            <select class="in" id="vehicleNo" required>
+              <option value="" data-en="&mdash; Select lorry &mdash;">&mdash; Pilih lori &mdash;</option>
+            </select>
+            <div class="error-msg" id="err-vehicle" data-en="Please select a lorry">Sila pilih lori</div>
           </div>
-          <div class="photo-label" id="photoLabel">Tap to take photo · Ketik untuk ambil gambar</div>
-          <div class="photo-sublabel" id="photoSub">Camera or gallery · Kamera atau galeri</div>
-          <img class="photo-preview" id="photoPreview" alt="Receipt preview">
+
+          <div class="field">
+            <label class="fl" for="driverSearch"><span data-en="Driver">Pemandu</span> <span class="req">*</span> <span id="rememberedBadge" class="remembered-badge" style="display:none;" data-en="&#10003; Remembered">&#10003; Diingati</span></label>
+            <input class="in" type="text" id="driverSearch" autocomplete="off" placeholder="ID staf (cth. 448) atau nama" data-en-ph="Staff ID (e.g. 448) or name">
+            <input type="hidden" id="driverName" required>
+            <div id="driverPanel" class="dp-panel" style="display:none;"></div>
+            <div class="error-msg" id="err-driver" data-en="Please select your name">Sila pilih nama anda</div>
+            <div id="staffIdBadge" class="picked" style="display:none;"></div>
+          </div>
+
+          <div class="field">
+            <label class="fl" for="secondSearch"><span data-en="2nd driver (if any)">Pemandu kedua (jika ada)</span></label>
+            <input class="in" type="text" id="secondSearch" autocomplete="off" placeholder="ID staf atau nama" data-en-ph="Staff ID or name">
+            <input type="hidden" id="secondDriver">
+            <div id="secondPanel" class="dp-panel" style="display:none;"></div>
+            <div class="error-msg" id="err-second" data-en="Same as the driver">Sama dengan pemandu</div>
+            <div id="staffIdBadge2" class="picked" style="display:none;"></div>
+          </div>
+
+          <div class="field">
+            <label class="fl" for="fuelDate"><span data-en="Date">Tarikh</span> <span class="req">*</span></label>
+            <div class="date-in" id="dateWrap"><input class="in" type="date" id="fuelDate" required><span class="date-txt" id="dateTxt" aria-hidden="true"></span></div>
+            <div class="error-msg" id="err-date" data-en="Please select a date">Sila pilih tarikh</div>
+          </div>
         </div>
-        <div class="error-msg" id="err-photo">Please take a photo of the receipt · Sila ambil gambar resit</div>
-      </div>
+      </section>
 
-      <!-- CONFIRM -->
-      <label class="confirm-row" for="confirmCheck">
-        <input type="checkbox" id="confirmCheck">
-        <div class="confirm-text">
-          <b>I confirm · Saya sahkan</b> all info is accurate and matches the actual receipt. <b>False submissions lower your score.</b><br>
-          <span style="opacity:.75;">Semua maklumat tepat dan sepadan dengan resit sebenar.</span>
+      <!-- fuel card [boss 2026-10-24: photo first]: 1) the receipt photo → 2) the server reads it → 3) the driver
+           checks RM / litres (already filled), types the odometer, saves. Nothing to type before the photo. -->
+      <section class="card" id="fuelCard">
+        <div id="stepPhoto">
+          <!-- no `capture`: the driver may pick a receipt photographed earlier at the pump from the gallery -->
+          <div class="photo big" id="photoBtn">
+            <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            <span id="photoTxt">Ambil foto resit</span>
+            <input type="file" id="receiptPhoto" accept="image/*" aria-label="Foto resit / Receipt photo">
+          </div>
+          <div class="error-msg" id="err-photo" data-en="Take a photo of the receipt">Ambil foto resit</div>
+          <div class="acts"><button type="button" class="btn b-red b-full" id="noFuelBtn"><span data-en="No refuel">Tak isi minyak</span></button></div>
         </div>
-      </label>
-      <div class="error-msg" id="err-confirm">Please confirm the declaration · Sila sahkan perisytiharan</div>
 
-      <!-- SUBMIT -->
-      <div class="btn-wrap">
-        <button type="button" class="submit-btn" id="submitBtn" onclick="submitForm()">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 2 11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          Submit Fuel Record · Hantar Rekod Bahan Api
-        </button>
-        <div class="gold-bar"></div>
-      </div>
+        <div id="stepCheck" hidden>
+          <div class="rcpt">
+            <img id="photoPreview" alt="">
+            <div class="rcpt-main"><div class="rcpt-l1" id="ocrHead"></div><div class="rcpt-l2" id="ocrInfo"></div></div>
+            <span class="ph-c"><span id="photoChange">Tukar</span><input type="file" id="receiptPhoto2" accept="image/*" aria-label="Tukar foto / Change photo"></span>
+          </div>
+          <div class="photo retake" id="retakeBtn" hidden>
+            <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            <span id="retakeTxt">Ambil foto semula</span>
+            <input type="file" id="receiptPhoto3" accept="image/*" aria-label="Ambil foto semula / Retake photo">
+          </div>
+          <div class="fields" id="fuelFields">
+            <div class="two">
+              <div class="field">
+                <label class="fl" for="amount"><span data-en="Amount (RM)">Jumlah (RM)</span> <span class="req">*</span></label>
+                <input class="in" type="number" id="amount" inputmode="decimal" min="0" step="0.01">
+                <div class="hint ok" id="tagAmount" hidden data-en="&#10003; from receipt">&#10003; dari resit</div>
+                <div class="error-msg" id="err-amount" data-en="Required">Wajib diisi</div>
+              </div>
+              <div class="field">
+                <label class="fl" for="litres"><span data-en="Litres">Liter</span> <span class="req">*</span></label>
+                <input class="in" type="number" id="litres" inputmode="decimal" min="0" step="0.01">
+                <div class="hint ok" id="tagLitres" hidden data-en="&#10003; from receipt">&#10003; dari resit</div>
+                <div class="error-msg" id="err-litres" data-en="Required">Wajib diisi</div>
+              </div>
+            </div>
+            <div class="field">
+              <label class="fl" for="mileage">Odometer (km) <span class="req">*</span></label>
+              <input class="in" type="number" id="mileage" inputmode="numeric" min="0">
+              <div class="hint" id="lastOdoHint" hidden></div>
+              <div class="error-msg" id="err-mileage" data-en="Required">Wajib diisi</div>
+            </div>
+          </div>
+          <div class="check-note" id="checkNote" data-en="Check them against the receipt. Fix anything wrong.">Semak dengan resit. Betulkan jika salah.</div>
+          <div class="acts" id="fuelActs">
+            <button type="button" class="btn b-save b-full" id="saveBtn"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span data-en="Save">Simpan</span></button>
+          </div>
+        </div>
 
+        <div class="unc" id="uncBox" hidden>
+          <div class="unc-h"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span id="uncHead">Belum disahkan</span></div>
+          <div class="unc-s" id="uncSum"></div>
+          <div class="unc-n" id="uncNote"></div>
+          <div class="acts">
+            <button type="button" class="btn b-pri" id="uncCheck"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg><span id="uncCheckTxt">Semak</span></button>
+            <button type="button" class="btn b-ghost" id="uncResend" hidden><span id="uncResendTxt">Hantar semula</span></button>
+          </div>
+        </div>
+      </section>
+
+      <div class="note"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span data-en="Please submit on the same day. Thank you!">Sila hantar pada hari yang sama. Terima kasih!</span></div>
     </form>
-  </div>
+  </main>
+
+  <section class="done" id="doneView" hidden>
+    <div class="done-ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></div>
+    <h2 id="doneTitle">Disimpan</h2>
+    <p id="doneL1"></p>
+    <p id="doneL2"></p>
+    <p id="doneL3"></p>
+    <button type="button" class="btn b-pri b-full" id="doneBtn"><span id="doneBtnTxt">Selesai</span></button>
+  </section>
 </div>
 
-<!-- LOADING -->
 <div class="loading-overlay" id="loadingOverlay">
   <div class="spinner"></div>
-  <div class="loading-text">Submitting... · Menghantar...</div>
-</div>
-
-<!-- SUCCESS -->
-<div class="success-screen" id="successScreen">
-  <div class="success-icon">
-    <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-  </div>
-  <div class="success-title">Submitted! · Berjaya!</div>
-  <div class="success-subtitle">Your fuel record has been recorded successfully.<br>Rekod bahan api anda telah berjaya disimpan.</div>
-  <div class="success-time">
-    <div class="success-time-label">Submission Time · Masa Penghantaran</div>
-    <div class="success-time-val" id="successTime"></div>
-  </div>
-  <div class="success-driver">Driver · Pemandu: <b id="successDriver"></b></div>
-  <div class="success-driver">Vehicle · Kenderaan: <b id="successVehicle"></b></div>
-  <div class="success-subtitle" style="margin-top:12px;font-size:12px;color:#854F0B;background:#FFF8E1;border:1px solid #F0D9A8;border-radius:6px;padding:8px 10px;">
-    ⓘ Photo uploaded — please verify it appears in the supervisor dashboard within 1 minute.<br>
-    Foto dimuat naik — sila sahkan ia muncul dalam papan pemuka penyelia dalam 1 minit.
-  </div>
-  <br>
-  <button class="new-btn" onclick="resetForm()">Submit Another · Hantar Lagi</button>
+  <div class="loading-text">Menyimpan&hellip;</div>
 </div>
 
 <script>
-// ============================================================
-// CONFIGURATION — Update these values
-// ============================================================
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxabHh2Kd04z7k0zZOOoaJs2i5hgycQsO_AYoRS99xZx2WqMJ6cowumY0e1znehiRM1/exec';
-// Replace with your deployed Apps Script Web App URL
-// e.g. https://script.google.com/macros/s/ABC123.../exec
-// ============================================================
 
 // Branch — read ONCE from the URL (?branch=KTN). Old MTK bookmarks with no param default to MTK.
 var BRANCH = (new URLSearchParams(location.search).get('branch') || 'MTK').toUpperCase();
 var BRANCH_DISPLAY = { MTK: 'Mentakab', KTN: 'Kuantan' };
 
+// ── [Fuel TEST build] nothing this page does may write to the live system ──
+// Reads (action=get…) go to the real backend so the boss tests with real lorries and drivers. Every write
+// (the FUEL save, NO_FUEL) is answered here and never sent: ?sim=ok (default) answers "saved",
+// ?sim=unc loses the answer (shows "Belum disahkan"), ?sim=err answers a server error.
+// ?sim=blur / far / two / unsure: every receipt photo comes back as one the reader could not trust (blurry photo,
+// receipt too far, two receipts in one photo, sum does not add up) — answered here, no paid reading.
+var FUEL_TEST = false;
+var _SIM = FUEL_TEST ? (new URLSearchParams(location.search).get('sim') || 'ok') : '';
+(function(){
+  if (!FUEL_TEST || !window.fetch) return;
+  var _realFetch = window.fetch.bind(window);
+  function answer(o, ms){ return new Promise(function(res){ setTimeout(function(){ res(new Response(JSON.stringify(o), { headers: { 'Content-Type': 'application/json' } })); }, ms || 0); }); }
+  function lost(ms){ return new Promise(function(res, rej){ setTimeout(function(){ rej(new TypeError('TEST: answer lost')); }, ms); }); }
+  window.fetch = function(input, init){
+    try{
+      var url = String((input && input.url) || input || ''), method = String((init && init.method) || (input && input.method) || 'GET').toUpperCase();
+      if (url.indexOf(SCRIPT_URL) === 0){
+        var act = (url.match(/[?&]action=([^&]+)/) || [])[1] || '';
+        if (act === 'getImportResult') return answer({ status: 'pending' }, 300);   // test tokens never reach the server
+        var ft = '';
+        try{ if (method !== 'GET' && init && init.body && typeof init.body.get === 'function') ft = (JSON.parse(init.body.get('data') || '{}') || {}).formType || ''; }catch(e){}
+        if (ft === 'FUEL_OCR'){   // reading a receipt saves nothing: the real server reads it; until its OCR add-on is in, a sample reading
+          var held = { blur: ['PHOTO', 'BLURRY', 'ONE'], far: ['PHOTO', 'TOO_FAR', 'ONE'], two: ['MULTI', 'NONE', 'SEVERAL'], unsure: ['NO_MATCH', 'NONE', 'ONE'] }[_SIM];
+          if (held) return answer({ status: 'success', sim: true, ocr: { readable: true, total_rm: null, litres: null, unit_price: 5.17, station: 'PETRON',
+            fuel_type: 'DIESEL', receipt_date: _todayMYT(), receipt_time: '09:12', receipts: held[2], photo_issue: held[1], why: held[0], use: false } }, 1200);
+          var sample = function(){ return answer({ status: 'success', sample: true, ocr: { readable: true, total_rm: 180.5, litres: 46.15, unit_price: 3.911,
+            station: 'PETRONAS', fuel_type: 'DIESEL', receipt_date: _todayMYT(), receipt_time: '09:12', receipts: 'ONE', photo_issue: 'NONE', why: 'OK', use: true } }, 0); };
+          return _realFetch(input, init).then(function(r){ return r.clone().json().then(function(j){ return (j && j.status === 'success') ? r : sample(); }, sample); }, sample);
+        }
+        if (method !== 'GET' || !/^get/i.test(act)){
+          console.info('[TEST] not sent:', method, act || 'FUEL', '(sim=' + _SIM + ')');
+          if (_SIM === 'unc') return lost(1500);
+          if (_SIM === 'err') return answer({ status: 'error', message: 'TEST — server error, nothing saved' }, 1500);
+          return answer({ status: 'success', formType: act || 'FUEL', test: true }, 1500);
+        }
+      }
+    }catch(e){
+      console.warn('[TEST] guard error — request blocked:', e);
+      return answer({ status: 'error', message: 'TEST build — nothing is saved' });
+    }
+    return _realFetch(input, init);
+  };
+})();
+// The test page shares clfproject01.github.io with the REAL forms, so it keeps its own copy of every remembered
+// value (driver, lorry, language, pending save): nothing it stores is read by the real Fuel / POD forms.
+(function(){
+  if (!FUEL_TEST || !window.Storage) return;
+  var P = Storage.prototype, g = P.getItem, s = P.setItem, r = P.removeItem, NS = 'clf_fueltest:';
+  P.getItem = function(k){ return g.call(this, NS + k); };
+  P.setItem = function(k, v){ return s.call(this, NS + k, v); };
+  P.removeItem = function(k){ return r.call(this, NS + k); };
+})();
+
 // localStorage keys are namespaced per branch so a KTN phone never shows a remembered MTK driver/vehicle.
-const STORAGE_KEY = 'clf_driver_name_' + BRANCH;
-const VEHICLE_KEY = 'clf_fuel_vehicle_' + BRANCH;   // remember-last-vehicle (added for branch rollout)
+const STORAGE_KEY = 'clf_driver_name_' + BRANCH;       // remembered driver — the same key as POD on purpose
+const VEHICLE_KEY = 'clf_fuel_vehicle_' + BRANCH;      // remembered lorry (Fuel's own)
+const ROSTER_CACHE_KEY = 'clf_roster_cache_' + BRANCH; // last good roster / plates — shared with POD: one good
+const VEH_CACHE_KEY = 'clf_vehicle_cache_' + BRANCH;   //   load on either form rescues both in a dead zone
+const UNC_KEY = 'clf_fuel_pending_' + BRANCH;          // a Save the server has not confirmed yet (no photo in it)
+const DRAFT_KEY = 'clf_fuel_draft_' + BRANCH;          // typed numbers, kept for an hour (cheap phones reload the tab after the camera)
+const CREW_KEY = 'clf_fuel_crew_' + BRANCH;            // lorry → the crew this phone last saved for it (instant auto-fill)
 
-// V17: Dynamically loaded from backend /getDrivers — empty until fetchDrivers() resolves
-let STAFF_IDS = {};
-let ROSTER = [];   // [{name, staffId}] — drives the searchable Staff-ID picker
+// ── ONE language on screen: Bahasa Melayu by default, English when the driver taps EN (same system as POD) ──
+// Static markup is written in Malay with the English in data-en (data-en-ph for placeholders); JS-built text goes
+// through L(en, bm). Values sent to the server never change with the language. The choice (clf_lang) is shared
+// with POD: a driver who picked EN there gets EN here too.
+var LANG_KEY = 'clf_lang';
+var LANG = 'bm';
+try{ if (localStorage.getItem(LANG_KEY) === 'en') LANG = 'en'; }catch(e){}
+function L(en, bm){ return LANG === 'en' ? en : bm; }
+function applyLang(){
+  try{
+    document.documentElement.setAttribute('lang', LANG === 'en' ? 'en' : 'ms');
+    var i, els = document.querySelectorAll('[data-en]');
+    for (i = 0; i < els.length; i++){
+      var el = els[i];
+      if (!el.hasAttribute('data-bm')) el.setAttribute('data-bm', el.innerHTML);
+      var want = LANG === 'en' ? el.getAttribute('data-en') : el.getAttribute('data-bm');
+      if (el.innerHTML !== want) el.innerHTML = want;
+    }
+    els = document.querySelectorAll('[data-en-ph]');
+    for (i = 0; i < els.length; i++){
+      var ph = els[i];
+      if (!ph.hasAttribute('data-bm-ph')) ph.setAttribute('data-bm-ph', ph.getAttribute('placeholder') || '');
+      ph.setAttribute('placeholder', LANG === 'en' ? ph.getAttribute('data-en-ph') : ph.getAttribute('data-bm-ph'));
+    }
+    var sw = document.querySelectorAll('#langSwitch button');
+    for (i = 0; i < sw.length; i++){
+      var on = sw[i].getAttribute('data-l') === LANG;
+      sw[i].className = on ? 'on' : '';
+      sw[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+  }catch(e){}
+}
+function setLang(l){
+  LANG = (l === 'en') ? 'en' : 'bm';
+  try{ localStorage.setItem(LANG_KEY, LANG); }catch(e){}
+  applyLang();
+  try{ _langRefresh_(); }catch(e){ console.warn('language refresh failed', e); }
+}
+document.addEventListener('click', function(e){
+  var b = e.target && e.target.closest ? e.target.closest('#langSwitch button') : null;
+  if (b) setLang(b.getAttribute('data-l'));
+});
+applyLang();
 
+// ── state ──
+var STAFF_IDS = {};
+var ROSTER = [];                        // [{name, staffId}] — drives the searchable Staff-ID picker
+var _tripOpen = false;
+var _lastOdo = null, _lastOdoVeh = '';  // last odometer reading of the picked lorry {mileage, date}
+var _autoCrew = { d: false, s: false }; // which crew fields were AUTO-filled (vs picked by a human)
+var _photoFile = null, _photoUrl = '';
+var _saving = false;
+var _unc = null, _uncNote = 'first', _checking = false;
+var _doneInfo = null;
+
+function $(id){ return document.getElementById(id); }
 function _esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 function _normId(s){ return String(s == null ? '' : s).replace(/\s+/g, '').toUpperCase(); }
+function _fmtKm(v){ var n = Number(v); return isNaN(n) ? String(v) : n.toLocaleString('en-MY', { maximumFractionDigits: 1 }); }
+function _fmtRM(v){ var n = Number(v); return isNaN(n) ? String(v) : n.toFixed(2); }
+function _plate(v){ return String(v || '').replace(/ /g, ' '); }   // a plate never breaks over two lines
+function _todayMYT(){ return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' }); }
+function _timeMYT(d){ try{ return new Date(d).toLocaleTimeString('en-GB', { timeZone: 'Asia/Kuala_Lumpur', hour: '2-digit', minute: '2-digit' }); }catch(e){ return ''; } }
+var _MON_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+var _MON_BM = ['Jan', 'Feb', 'Mac', 'Apr', 'Mei', 'Jun', 'Jul', 'Ogo', 'Sep', 'Okt', 'Nov', 'Dis'];
+// "Hari ini · Sabtu, 24 Okt" — hand-written names, so every phone shows the same words
+function _dateLabel(iso){
+  var p = String(iso || '').split('-');
+  if (p.length !== 3) return String(iso || '');
+  var d = new Date(+p[0], +p[1] - 1, +p[2]);
+  var day = (LANG === 'en' ? ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+                           : ['Ahad', 'Isnin', 'Selasa', 'Rabu', 'Khamis', 'Jumaat', 'Sabtu'])[d.getDay()];
+  var s = day + ', ' + d.getDate() + ' ' + (LANG === 'en' ? _MON_EN : _MON_BM)[d.getMonth()];
+  return iso === _todayMYT() ? L('Today', 'Hari ini') + ' · ' + s : s;
+}
+function _shortDate(iso){   // "23 Okt" (or "hari ini") for the last-reading line
+  var p = String(iso || '').split('-');
+  if (p.length !== 3) return String(iso || '');
+  if (iso === _todayMYT()) return L('today', 'hari ini');
+  return (+p[2]) + ' ' + (LANG === 'en' ? _MON_EN : _MON_BM)[+p[1] - 1];
+}
 
-// "Type Staff ID or name -> filtered list -> tap -> name confirmed" picker.
-// The hidden input keeps the NAME (what validate/submit/KPI read).
+// stroke icons (24px grid) instead of emoji: same look on every phone, sized by CSS (svg.i)
+var ICO_PATHS = {
+  check:  '<polyline points="20 6 9 17 4 12"/>',
+  warn:   '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'
+};
+function _ico(k, cls){ return '<svg class="i' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" aria-hidden="true">' + (ICO_PATHS[k] || '') + '</svg>'; }
+
+// [FIELD DEBUG] on-screen error bar — only with ?debug=1 (the office can ask a driver to open the form with it)
+var _DBG_ON_ = /debug=1/.test(location.search);
+function _dbgToast_(msg){ if(!_DBG_ON_) return; try{ var t=document.createElement('div'); t.style.cssText='position:fixed;bottom:8px;left:8px;right:8px;z-index:99999;background:#B91C1C;color:#fff;font-size:11px;padding:8px 10px;border-radius:8px;word-break:break-all;'; t.textContent='DEBUG: '+String(msg).slice(0,220); document.body.appendChild(t); setTimeout(function(){ t.remove(); },20000); }catch(_){} }
+window.addEventListener('error', function(e){ _dbgToast_((e.message||'error')+' @'+(e.lineno||'?')); });
+window.addEventListener('unhandledrejection', function(e){ _dbgToast_('promise: '+String(e.reason && e.reason.message || e.reason)); });
+
+// Lightweight non-blocking toast: ok (green) / err (red, 6 s) / warn (amber)
+var _toastTmr = null;
+function _toast(kind, html, pos){   // pos 'top' = just below the app bar, so it never covers the button it points at
+  var t = $('fuelToast');
+  if (!t){
+    t = document.createElement('div');
+    t.id = 'fuelToast'; t.setAttribute('role', 'status');
+    t.style.cssText = 'position:fixed;left:0;right:0;margin:0 auto;width:-webkit-fit-content;width:fit-content;max-width:calc(100% - 32px);bottom:24px;z-index:120;padding:12px 16px;border-radius:12px;font-size:15px;font-weight:600;line-height:1.4;color:#fff;box-shadow:0 10px 24px rgba(15,23,42,.3);opacity:0;transition:opacity .2s;pointer-events:none;';
+    document.body.appendChild(t);
+  }
+  t.style.background = (kind === 'ok') ? '#15803D' : (kind === 'err' ? '#C8101E' : '#B45309');
+  if (pos === 'top'){
+    var _bar = document.querySelector('.bar'), _bb = 0;
+    try{ _bb = _bar ? Math.max(0, _bar.getBoundingClientRect().bottom) : 0; }catch(e){}
+    t.style.top = Math.round(_bb + 12) + 'px'; t.style.bottom = 'auto';
+  }
+  else { t.style.top = 'auto'; t.style.bottom = '24px'; t.style.bottom = 'calc(24px + env(safe-area-inset-bottom))'; }   // first value = fallback where env() is unknown
+  t.innerHTML = html;
+  t.style.opacity = '1';
+  if (_toastTmr) clearTimeout(_toastTmr);
+  _toastTmr = setTimeout(function(){ t.style.opacity = '0'; }, kind === 'err' ? 6000 : 4000);
+}
+
+// Yes / Change sheet in the driver's language (window.confirm speaks the phone's own language and looks like an
+// error). Resolves true (yes) or false (back to the form).
+function _confirmSheet(title, note, yesTxt, noTxt){
+  return new Promise(function(resolve){
+    var ov = document.createElement('div');
+    ov.id = 'confirmSheet'; ov.className = 'scrim';
+    ov.innerHTML = '<div class="sheet" role="dialog" aria-modal="true"><h3>' + _esc(title) + '</h3>'
+      + (note ? '<p>' + _esc(note) + '</p>' : '')
+      + '<div class="row"><button type="button" class="no" data-a="no">' + _esc(noTxt) + '</button>'
+      + '<button type="button" class="yes" data-a="yes">' + _esc(yesTxt) + '</button></div></div>';
+    function done(v){ try{ ov.remove(); }catch(e){} resolve(v); }
+    ov.addEventListener('click', function(e){ var b = e.target.closest('button'); if (b) done(b.getAttribute('data-a') === 'yes'); else if (e.target === ov) done(false); });
+    document.body.appendChild(ov);
+  });
+}
+
+// the saving screen counts the seconds so nobody thinks it froze and closes the page.
+// _ovClock_(label) starts, (label, true) keeps counting under a new label, (null) stops.
+var _ovClockIv = 0, _ovClockT0 = 0, _ovClockLbl = '';
+function _ovClock_(label, keepT0){
+  if (_ovClockIv){ clearInterval(_ovClockIv); _ovClockIv = 0; }
+  if (!label){ _ovClockT0 = 0; return; }
+  if (!keepT0 || !_ovClockT0) _ovClockT0 = Date.now();
+  _ovClockLbl = label;
+  var tick = function(){
+    var el = document.querySelector('.loading-text'), s = Math.round((Date.now() - _ovClockT0) / 1000);
+    if (el) el.textContent = _ovClockLbl + (s >= 3 ? ' ' + s + 's' : '') + (s >= 20 ? ' · ' + L('keep this page open', 'biar halaman ini terbuka') : '');
+  };
+  tick(); _ovClockIv = setInterval(tick, 1000);
+}
+function _overlay(on){ $('loadingOverlay').classList[on ? 'add' : 'remove']('show'); }
+
+// ── trip card: date, driver and lorry fold into a 3-line summary once all three are set. Touching a field means
+// "editing": the card then stays open until the driver taps Siap, so it never folds away under a finger. ──
+function _dateShow(){
+  var w = $('dateWrap'), t = $('dateTxt'), v = $('fuelDate').value;
+  if (!w || !t) return;
+  t.textContent = v ? _dateLabel(v) : '';
+  t.className = 'date-txt' + (v && v !== _todayMYT() ? ' warn' : '');
+  w.className = 'date-in' + (v ? ' on' : '');
+}
+$('fuelDate').addEventListener('input', _dateShow);   // live while the picker turns
+function _tripRender(){
+  _dateShow();
+  var v = $('vehicleNo').value, dt = $('fuelDate').value, dn = $('driverName').value, sd = $('secondDriver').value;
+  [['err-date', dt], ['err-driver', dn], ['err-vehicle', v]].forEach(function(p){ if (p[1]) _errOff(p[0]); });
+  if (!(dn && sd && dn === sd)) _errOff('err-second');
+  var done = !!(v && dt && dn);
+  var l1 = $('tripL1'), l2 = $('tripL2'), l3 = $('tripL3'), tg = $('tripToggle');
+  if (!done){
+    l1.textContent = L('Trip details', 'Maklumat perjalanan');
+    l2.textContent = L('Lorry, driver and date', 'Lori, pemandu dan tarikh');
+    l2.className = 'trip-l2'; l3.hidden = true; tg.hidden = true;
+  } else {
+    var sid = STAFF_IDS[dn];
+    l1.textContent = v;
+    l2.textContent = _dateLabel(dt);
+    l2.className = 'trip-l2' + (dt === _todayMYT() ? '' : ' warn');   // not today: amber, easy to spot
+    l3.textContent = dn + (sid ? ' · ' + sid : '') + (sd && sd !== dn ? ' + ' + sd : '');
+    l3.hidden = false; tg.hidden = false;
+    tg.textContent = _tripOpen ? L('Done', 'Siap') : L('Change', 'Ubah');
+  }
+  $('tripForm').hidden = !(!done || _tripOpen);
+}
+(function(){
+  var tg = $('tripToggle'), fm = $('tripForm');
+  tg.addEventListener('click', function(){ _tripOpen = !_tripOpen; _tripRender(); });
+  fm.addEventListener('focusin', function(){ if (!_tripOpen){ _tripOpen = true; _tripRender(); } });
+})();
+
+// online dot in the app bar: grey while the phone is offline
+function _netRender(){
+  var d = $('netDot');
+  if (!d) return;
+  var on = navigator.onLine !== false, t = on ? L('Online', 'Dalam talian') : L('Offline', 'Luar talian');
+  d.className = 'dot' + (on ? '' : ' off');
+  d.setAttribute('aria-label', t); d.title = t;
+}
+window.addEventListener('offline', _netRender);
+_netRender();
+
+// ── driver picker: "type Staff ID or name -> filtered list -> tap -> name confirmed".
+// The hidden input keeps the NAME (what the save and the KPI read). Wired once; it reads ROSTER live. ──
 function wireDriverPicker(searchId, hiddenId, panelId, badgeId, onPick){
-  var search = document.getElementById(searchId),
-      hidden = document.getElementById(hiddenId),
-      panel  = document.getElementById(panelId),
-      badge  = document.getElementById(badgeId);
-  if (!search || !hidden || !panel) return;
+  var search = $(searchId), hidden = $(hiddenId), panel = $(panelId), badge = $(badgeId);
+  if (!search || !hidden || !panel || search._pick) return;
   function render(q){
     var nq = _normId(q), nameq = String(q || '').trim().toLowerCase();
     if (!q || !q.trim()){ panel.style.display = 'none'; return; }
@@ -614,10 +583,10 @@ function wireDriverPicker(searchId, hiddenId, panelId, badgeId, onPick){
     }).slice(0, 8);
     panel.innerHTML = matches.length
       ? matches.map(function(d){
-          return '<div class="dp-row" data-name="' + _esc(d.name) + '" style="padding:13px 14px;border-bottom:1px solid #EEF2F7;cursor:pointer;font-size:15px;color:#0B1F3A;">' +
+          return '<div class="dp-row" data-name="' + _esc(d.name) + '">' +
                  '<b>' + _esc(d.staffId || '') + '</b> &middot; ' + _esc(d.name) + '</div>';
         }).join('')
-      : '<div style="padding:13px 14px;color:#8A9BB0;font-size:13px;">No match &middot; Tiada padanan</div>';
+      : '<div class="dp-none">' + _esc(L('No match', 'Tiada padanan')) + '</div>';
     panel.style.display = 'block';
   }
   function pick(name, silent){
@@ -626,440 +595,761 @@ function wireDriverPicker(searchId, hiddenId, panelId, badgeId, onPick){
     search.value = (d && d.staffId ? d.staffId + ' · ' : '') + name;
     if (badge){ badge.textContent = '✓ ' + name; badge.style.display = 'block'; }
     panel.style.display = 'none';
-    // silent = programmatic fill (crew auto-fill) — must NOT run onPick, or the auto-filled name
-    // would be saved to localStorage as the "remembered driver" on a shared phone.
+    try{ _tripRender(); }catch(e){}
+    // silent = programmatic fill (crew auto-fill): must NOT be saved as the "remembered driver" on a shared phone
     if (!silent && onPick) onPick(name);
   }
-  search.addEventListener('input', function(){ hidden.value = ''; if (badge) badge.style.display = 'none'; render(search.value); });
+  search.addEventListener('input', function(){ hidden.value = ''; if (badge) badge.style.display = 'none'; render(search.value); try{ _tripRender(); }catch(e){} });
   search.addEventListener('focus', function(){ search.select(); if (search.value.trim() && !hidden.value) render(search.value); });
   panel.addEventListener('click', function(e){ var row = e.target.closest('.dp-row'); if (row) pick(row.getAttribute('data-name')); });
   document.addEventListener('click', function(e){ if (e.target !== search && !panel.contains(e.target)) panel.style.display = 'none'; });
   search._pick = pick;
 }
+// a human typing in a crew field takes ownership — stop treating it as auto-filled
+$('driverSearch').addEventListener('input', function(){ _autoCrew.d = false; });
+$('secondSearch').addEventListener('input', function(){ _autoCrew.s = false; });
 
-// Fetch driver roster from Apps Script (so adding/removing in Drivers/Master_Control sheet auto-syncs)
-async function fetchAndPopulateDrivers() {
+function _applyRoster(drivers){
+  STAFF_IDS = {}; ROSTER = drivers.slice();
+  drivers.forEach(function(d){ STAFF_IDS[d.name] = d.staffId || ''; });
+  // a roster that loads after a failed first try must not keep the "Failed to load" placeholder
+  _crewBusy(_crewBusyOn);
+  wireDriverPicker('driverSearch', 'driverName', 'driverPanel', 'staffIdBadge', function(name){
+    try{ localStorage.setItem(STORAGE_KEY, name); }catch(e){}
+    $('rememberedBadge').style.display = 'inline-flex';
+  });
+  wireDriverPicker('secondSearch', 'secondDriver', 'secondPanel', 'staffIdBadge2', null);
+  // restore the remembered driver only into an empty field (a later re-load must not undo a pick)
+  var saved = null; try{ saved = localStorage.getItem(STORAGE_KEY); }catch(e){}
+  if (saved && STAFF_IDS[saved] !== undefined && !$('driverName').value){
+    $('driverSearch')._pick(saved, true);
+    $('rememberedBadge').style.display = 'inline-flex';
+  }
+  _tripRender();
+}
+
+async function fetchAndPopulateDrivers(isRetry){
+  var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
+  var timer = ctrl ? setTimeout(function(){ ctrl.abort(); }, 15000) : null;
   try {
-    const res = await fetch(SCRIPT_URL + '?action=getDrivers&branch=' + encodeURIComponent(BRANCH), { method: 'GET' });
+    const res = await fetch(SCRIPT_URL + '?action=getDrivers&branch=' + encodeURIComponent(BRANCH), { method: 'GET', signal: ctrl ? ctrl.signal : undefined });
     const data = await res.json();
-    if (!data || data.status !== 'ok' || !Array.isArray(data.drivers) || data.drivers.length === 0) {
-      throw new Error('Empty driver roster from server');
-    }
-    // Build STAFF_IDS map
-    STAFF_IDS = {}; ROSTER = data.drivers.slice();
-    data.drivers.forEach(d => { STAFF_IDS[d.name] = d.staffId || ''; });
-
-    // Wire the Staff-ID search pickers (hidden inputs keep the NAME)
-    wireDriverPicker('driverSearch', 'driverName', 'driverPanel', 'staffIdBadge', function(name){
-      localStorage.setItem(STORAGE_KEY, name);
-      document.getElementById('rememberedBadge').style.display = 'inline-flex';
-    });
-    wireDriverPicker('secondSearch', 'secondDriver', 'secondPanel', 'staffIdBadge2', null);
-
-    // Restore remembered driver
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved && STAFF_IDS[saved] && document.getElementById('driverSearch')._pick) {
-      document.getElementById('driverSearch')._pick(saved);
-      document.getElementById('rememberedBadge').style.display = 'inline-flex';
-    }
+    if (!data || data.status !== 'ok' || !Array.isArray(data.drivers) || data.drivers.length === 0) throw new Error('Empty driver roster from server');
+    _applyRoster(data.drivers);
+    try{ localStorage.setItem(ROSTER_CACHE_KEY, JSON.stringify(data.drivers)); localStorage.setItem(ROSTER_CACHE_KEY + '_ts', String(Date.now())); }catch(e){}
   } catch (err) {
     console.error('fetchAndPopulateDrivers failed:', err);
-    var ds = document.getElementById('driverSearch');
-    if (ds) ds.placeholder = '⚠ Failed to load — refresh the page';
+    _dbgToast_('getDrivers: ' + (err && err.name) + ' — ' + (err && err.message));
+    if (ROSTER.length) return;   // a late-failing re-load must never clobber a working roster
+    // Fall back to the cached roster (still lets the driver pick + save at the depot dead zone)
+    var usedCache = false;
+    try{
+      var cached = JSON.parse(localStorage.getItem(ROSTER_CACHE_KEY) || 'null');
+      var _cts = Number(localStorage.getItem(ROSTER_CACHE_KEY + '_ts') || 0);
+      var _fresh = !_cts || (Date.now() - _cts) < 14 * 864e5;   // 14-day cap on the offline roster
+      if (Array.isArray(cached) && cached.length && _fresh){ _applyRoster(cached); usedCache = true; }
+    }catch(e){}
+    if (!usedCache){
+      var ds = $('driverSearch');
+      ds.setAttribute('data-en-ph', '⚠ Failed to load — tap to retry'); ds.setAttribute('data-bm-ph', '⚠ Gagal dimuat — tekan untuk cuba lagi');
+      ds.placeholder = L('⚠ Failed to load — tap to retry', '⚠ Gagal dimuat — tekan untuk cuba lagi');
+      if (!ds._retryWired){ ds._retryWired = true; ds.addEventListener('focus', function(){ if (!ROSTER.length) fetchAndPopulateDrivers(true); }); }
+    }
+    if (!isRetry) setTimeout(function(){ if (!ROSTER.length) fetchAndPopulateDrivers(true); }, 5000);   // one auto-retry
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
 
-// Fetch the branch-scoped lorry list from Apps Script (replaces the old hardcoded <option> plates).
-// Populate the list -> restore the remembered vehicle -> fire `change` so the existing change-handler
-// (last-odometer hint + crew auto-fill) still runs. Mirrors fetchAndPopulateDrivers()'s fetch/error style.
-async function fetchVehicles() {
-  var sel = document.getElementById('vehicleNo');
-  if (!sel) return;
+// ── lorry list: the same rescue kit as POD (a 14-day per-branch cache, one 5 s auto-retry, tap-to-retry on the
+// select, a 15 s abort). Some phones cannot reach script.googleusercontent.com (the /exec redirect target) while
+// GitHub Pages loads fine — a full reload never helps there, so the ⚠ state must be recoverable in-page. ──
+function _vehiclesLoaded(){ var sel = $('vehicleNo'); return !!(sel && sel.options.length > 1); }
+function _applyVehicles(sel, plates){
+  var prev = sel.value;   // never clobber a pick the driver already made
+  sel.innerHTML = '<option value="" data-en="— Select lorry —" data-bm="— Pilih lori —">' + _esc(L('— Select lorry —', '— Pilih lori —')) + '</option>';
+  plates.forEach(function(plate){
+    var o = document.createElement('option');
+    o.value = plate; o.textContent = plate;
+    sel.appendChild(o);
+  });
+  if (prev) sel.value = prev;                         // sticks only if the plate is still in the list
+  if (sel.selectedIndex < 0) sel.selectedIndex = 0;   // a vanished plate lands on the placeholder, not a blank box
+  _tripRender();
+}
+async function fetchVehicles(isRetry){
+  var sel = $('vehicleNo');
+  var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
+  var timer = ctrl ? setTimeout(function(){ ctrl.abort(); }, 15000) : null;
   try {
-    const res = await fetch(SCRIPT_URL + '?action=getVehicles&branch=' + encodeURIComponent(BRANCH), { method: 'GET' });
-    const data = await res.json();
-    if (!data || data.status !== 'ok' || !Array.isArray(data.vehicles) || data.vehicles.length === 0) {
-      throw new Error('Empty vehicle list from server');
-    }
-    // Keep the placeholder, append the branch's plates.
-    sel.innerHTML = '<option value="">— Select vehicle · Pilih kenderaan —</option>';
-    data.vehicles.forEach(function(plate){
-      var o = document.createElement('option');
-      o.value = plate; o.textContent = plate;
-      sel.appendChild(o);
-    });
-    // Restore remembered vehicle (per-branch key), THEN let change-dependent logic run.
-    try {
-      var savedVeh = localStorage.getItem(VEHICLE_KEY);
-      if (savedVeh) {
-        sel.value = savedVeh;
-        if (sel.value === savedVeh) {   // value sticks only if the plate exists in this branch
-          sel.dispatchEvent(new Event('change'));
-        }
-      }
-    } catch (e) { /* localStorage unavailable — fine */ }
+    const res = await fetch(SCRIPT_URL + '?action=getVehicles&branch=' + encodeURIComponent(BRANCH), { method: 'GET', signal: ctrl ? ctrl.signal : undefined });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();   // an HTML error body lands here as SyntaxError
+    if (!data || data.status !== 'ok' || !Array.isArray(data.vehicles) || data.vehicles.length === 0) throw new Error('Empty vehicle list from server');
+    _applyVehicles(sel, data.vehicles);
+    try{ localStorage.setItem(VEH_CACHE_KEY, JSON.stringify(data.vehicles)); localStorage.setItem(VEH_CACHE_KEY + '_ts', String(Date.now())); }catch(e){}
+    // a retry that succeeds after the start-up restore already ran still owes the driver the remembered plate
+    if (isRetry && !sel.value) _restoreVehicle();
   } catch (err) {
     console.error('fetchVehicles failed:', err);
-    // No hardcoded fallback — show a clear refresh state rather than a silently-empty dropdown.
-    sel.innerHTML = '<option value="">⚠ Refresh · Sila muat semula</option>';
+    _dbgToast_('getVehicles: ' + (err && err.name) + ' — ' + (err && err.message));
+    if (_vehiclesLoaded()) return;   // a late-failing duplicate must never clobber a working list
+    var usedCache = false;
+    try{
+      var cached = JSON.parse(localStorage.getItem(VEH_CACHE_KEY) || 'null');
+      var _ts = Number(localStorage.getItem(VEH_CACHE_KEY + '_ts') || 0);
+      var _fresh = !_ts || (Date.now() - _ts) < 14 * 864e5;
+      if (Array.isArray(cached) && cached.length && _fresh){ _applyVehicles(sel, cached); usedCache = true; }
+    }catch(e){}
+    if (!usedCache){
+      // err.name lets the office triage a screenshot: TypeError = network/blocked, SyntaxError = HTML body
+      var _sfx = (err && err.name ? ' (' + err.name + ')' : '');
+      sel.innerHTML = '<option value="" data-en="' + _esc('⚠ Tap to retry' + _sfx) + '" data-bm="' + _esc('⚠ Tekan untuk cuba lagi' + _sfx) + '">' + _esc(L('⚠ Tap to retry', '⚠ Tekan untuk cuba lagi') + _sfx) + '</option>';
+      if (!sel._retryWired){ sel._retryWired = true;
+        sel.addEventListener('mousedown', function(){ if (!_vehiclesLoaded()) fetchVehicles(true); });
+        sel.addEventListener('focus',     function(){ if (!_vehiclesLoaded()) fetchVehicles(true); });
+      }
+      _tripRender();
+    }
+    if (!isRetry) setTimeout(function(){ if (!_vehiclesLoaded()) fetchVehicles(true); }, 5000);   // one auto-retry
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
+function _restoreVehicle(){
+  try{
+    var vs = $('vehicleNo'), savedVeh = localStorage.getItem(VEHICLE_KEY);
+    if (savedVeh && !vs.value){
+      vs.value = savedVeh;
+      if (vs.value === savedVeh) _onVehicleChange();   // sticks only if the plate exists in this branch
+      else vs.selectedIndex = 0;
+    }
+  }catch(e){ /* localStorage unavailable — fine */ }
+}
 
-// (driver Staff-ID confirmation is now handled inside wireDriverPicker)
+// ── picked lorry: last odometer reading (typo guard + "already sent today") and crew auto-fill ──
+function _clearCrewField(hidId, searchId, badgeId){
+  var h = $(hidId), s = $(searchId), b = $(badgeId);
+  if (h) h.value = ''; if (s) s.value = ''; if (b){ b.style.display = 'none'; b.textContent = ''; }
+}
+function _onVehicleChange(){
+  var veh = $('vehicleNo').value;
+  try{ localStorage.setItem(VEHICLE_KEY, veh || ''); }catch(e){}   // remember-last-vehicle (per-branch key)
+  // switching lorries: crew AUTO-filled for the previous lorry belongs to that lorry, not this one
+  if (_autoCrew.d){ _clearCrewField('driverName', 'driverSearch', 'staffIdBadge'); _autoCrew.d = false; }
+  if (_autoCrew.s){ _clearCrewField('secondDriver', 'secondSearch', 'staffIdBadge2'); _autoCrew.s = false; }
+  _loadVehicleInfo(veh, true);
+}
+function _loadVehicleInfo(veh, withCrew){
+  _lastOdo = null; _lastOdoVeh = veh; _renderOdoHint();
+  _tripRender();
+  if (!veh) return;
+  _fetchLastOdo(veh).then(function(d){
+    if (_lastOdoVeh !== veh || !d || !d.found) return;   // the driver already switched lorry
+    _lastOdo = d; _renderOdoHint();
+  });
+  if (withCrew) _loadCrew(veh);
+}
+$('vehicleNo').addEventListener('change', _onVehicleChange);
+// getLastMileage = the newest fuel row of this lorry (submission time; `date` is that day in Malaysia time)
+async function _fetchLastOdo(veh){
+  var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
+  var timer = ctrl ? setTimeout(function(){ ctrl.abort(); }, 15000) : null;
+  try{
+    var r = await fetch(SCRIPT_URL + '?action=getLastMileage&vehicleNo=' + encodeURIComponent(veh), { signal: ctrl ? ctrl.signal : undefined });
+    var d = await r.json();
+    return (d && d.status === 'ok') ? d : null;
+  }catch(e){ return null; }
+  finally{ if (timer) clearTimeout(timer); }
+}
+function _renderOdoHint(){
+  var h = $('lastOdoHint');
+  if (!_lastOdo || _lastOdoVeh !== $('vehicleNo').value){ h.hidden = true; return; }
+  var km = _fmtKm(_lastOdo.mileage) + ' km';
+  if (_lastOdo.date === _todayMYT()){   // this lorry already has a fuel entry today: say so, so nobody sends it twice
+    h.className = 'hint today';
+    h.innerHTML = _ico('check', 's') + '<span>' + _esc(L('Already sent today: ', 'Sudah dihantar hari ini: ') + km) + '</span>';
+  } else {
+    h.className = 'hint';
+    h.textContent = L('Last: ', 'Lepas: ') + km + ' · ' + _shortDate(_lastOdo.date);
+  }
+  h.hidden = false;
+}
+// ── crew auto-fill once a lorry is picked [boss 2026-10-24: "after choosing the lorry the driver must appear"].
+// Only fields nobody typed in, roster names only, never saved as the "remembered driver". Three sources, best first:
+//   1. at once: the crew THIS PHONE last saved for this lorry (clf_fuel_crew_<branch>, 30 days)
+//   2. the lorry's delivery order on the FUEL DATE (the office plan; the server does the same lookup) — replaces 1
+//   3. no order that day and still nobody: the lorry's latest delivery order in the 3 days before
+// A lookup that finds an order makes the server read the whole item sheet (7–13 s, Oct 2026), so the empty driver
+// box says "Mencari pemandu…" meanwhile instead of looking broken. ──
+var _crewSeq = 0, _crewBusyOn = false;
+function _inRoster(name){ return !!name && ROSTER.some(function(x){ return x.name === name; }); }
+function _crewMem(){ try{ return JSON.parse(localStorage.getItem(CREW_KEY) || '{}') || {}; }catch(e){ return {}; } }
+function _crewRemember(veh, d, s){
+  if (!veh || !d) return;
+  try{ var m = _crewMem(); m[_normId(veh)] = { d: d, s: s || '', t: Date.now() }; localStorage.setItem(CREW_KEY, JSON.stringify(m)); }catch(e){}
+}
+function _crewBusy(on){
+  _crewBusyOn = !!on;
+  if (!ROSTER.length) return;   // the roster's own "failed — tap to retry" text stays
+  var ds = $('driverSearch');
+  var en = on ? 'Finding the driver…' : 'Staff ID (e.g. 448) or name', bm = on ? 'Mencari pemandu…' : 'ID staf (cth. 448) atau nama';
+  ds.setAttribute('data-en-ph', en); ds.setAttribute('data-bm-ph', bm); ds.placeholder = L(en, bm);
+}
+function _crewFill(p, s, plan){   // plan = the office's order: it may replace auto-filled names, and drop an auto helper it does not list
+  p = String(p || '').trim(); s = String(s || '').trim();
+  if (p && _inRoster(p) && $('driverName').value !== p && (!$('driverName').value || (plan && _autoCrew.d))){ $('driverSearch')._pick(p, true); _autoCrew.d = true; }
+  if (s && s !== p && _inRoster(s)){
+    if ($('secondDriver').value !== s && (!$('secondDriver').value || (plan && _autoCrew.s))){ $('secondSearch')._pick(s, true); _autoCrew.s = true; }
+  } else if (plan && !s && _autoCrew.s){ _clearCrewField('secondDriver', 'secondSearch', 'staffIdBadge2'); _autoCrew.s = false; }
+  _tripRender();
+}
+async function _shipCrew(veh, date){   // {p, s} from the lorry's delivery order on that date, or null (none / failed)
+  var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
+  var timer = ctrl ? setTimeout(function(){ ctrl.abort(); }, 30000) : null;
+  try{
+    var r = await fetch(SCRIPT_URL + '?action=getShipmentForLorry&vehicleNo=' + encodeURIComponent(veh) + '&date=' + encodeURIComponent(date), { signal: ctrl ? ctrl.signal : undefined });
+    var d = await r.json();
+    if (!d || d.status !== 'ok' || !d.shipments || !d.shipments.length) return null;
+    var s = d.shipments[0];
+    if (_normId(s.lorry2) && _normId(veh) === _normId(s.lorry2)) return { p: s.lorry2Primary, s: s.lorry2Secondary };   // this lorry is the order's 2nd lorry
+    return { p: s.assignedPrimary, s: s.assignedSecondary };
+  }catch(e){ return null; }
+  finally{ if (timer) clearTimeout(timer); }
+}
+function _dayBefore(iso, k){ var p = String(iso).split('-'); return new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] - k)).toISOString().slice(0, 10); }
+async function _loadCrew(veh){
+  var seq = ++_crewSeq, date = $('fuelDate').value || _todayMYT();
+  function stale(){ return seq !== _crewSeq || $('vehicleNo').value !== veh || ($('fuelDate').value || _todayMYT()) !== date; }
+  var mem = _crewMem()[_normId(veh)];
+  if (mem && Date.now() - mem.t < 30 * 864e5) _crewFill(mem.d, mem.s, false);
+  _crewBusy(true);
+  try{
+    var c = await _shipCrew(veh, date);
+    if (stale()) return;
+    if (c){ _crewFill(c.p, c.s, true); return; }
+    for (var k = 1; k <= 3 && !$('driverName').value; k++){
+      c = await _shipCrew(veh, _dayBefore(date, k));
+      if (stale()) return;
+      if (c){ _crewFill(c.p, c.s, false); return; }
+    }
+  } finally {
+    if (seq === _crewSeq) _crewBusy(false);
+  }
+}
+$('fuelDate').addEventListener('change', function(){
+  // another day may have another crew: drop the auto-filled names and ask again for the new date
+  if (_autoCrew.d){ _clearCrewField('driverName', 'driverSearch', 'staffIdBadge'); _autoCrew.d = false; }
+  if (_autoCrew.s){ _clearCrewField('secondDriver', 'secondSearch', 'staffIdBadge2'); _autoCrew.s = false; }
+  if ($('vehicleNo').value) _loadCrew($('vehicleNo').value);
+  _tripRender();
+});
 
-window.onload = function() {
-  // Branch label in the header — prominent so a driver on the wrong link notices.
-  var branchName = BRANCH_DISPLAY[BRANCH] || BRANCH;
-  var bl = document.getElementById('branchLabel'); if (bl) bl.textContent = branchName;
-  var cr = document.getElementById('companyReg'); if (cr) cr.textContent = '557522-A · ' + branchName + ', Pahang';
+// ── receipt photo FIRST [boss 2026-10-24]: the photo is read at once (formType FUEL_OCR, Claude on the server)
+// and RM / litres arrive filled in — the driver checks them, fixes what is wrong, types the odometer, saves.
+// The photo is compressed ONCE: the reading and the Save send the same bytes, so the server's 15-minute cache
+// answers the Save's own reading (one paid call per receipt). Before the server has its OCR add-on (or when the
+// reading fails) the boxes simply stay empty to type — saving works the same either way.
+// OCR v2 [2026-10-24, after the 40-receipt trial]: a reading is filled in ONLY when it adds up (litres × price per
+// litre = total, ±6 sen) — Petron prints 0 as Ø and v1 sometimes took it for 8. Better an empty box than a wrong
+// number a busy driver saves without looking. A blurry / far photo or two receipts in one photo get a big
+// "Ambil foto semula" (the driver is still at the pump). ──
+var OCR_WAIT_MS = 25000;
+var _photoPh = null;                         // the compressed photo {base64, name, type}
+var _ocr = null, _ocrSample = false;         // what the receipt said (null = nothing usable)
+var _ocrState = 'none';                      // none | reading | done | manual
+var _ocrWhy = '';                            // manual because of: PHOTO | MULTI | UNSURE | '' (could not read / no answer)
+var _ocrSeq = 0;                             // a newer photo makes an older reading stale
+var _ocrAuto = { amount: null, litres: null };   // the values the reading filled in (a typed value is never overwritten)
 
-  // Set today's date as default (Kuala Lumpur timezone — fixes early-morning bug)
-  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
-  document.getElementById('fuelDate').value = today;
-  document.getElementById('fuelDate').max = today;
+function _setPhoto(f){
+  if (_photoUrl){ try{ URL.revokeObjectURL(_photoUrl); }catch(e){} _photoUrl = ''; }
+  _photoFile = f || null;
+  if (f){ try{ _photoUrl = URL.createObjectURL(f); }catch(e){} }
+  else { try{ $('receiptPhoto').value = ''; $('receiptPhoto2').value = ''; $('receiptPhoto3').value = ''; }catch(e){} }
+  _renderPhoto();
+}
+function _renderPhoto(){
+  var img = $('photoPreview');
+  if (_photoFile && _photoUrl){ if (img.getAttribute('src') !== _photoUrl) img.src = _photoUrl; img.style.visibility = ''; }
+  else img.removeAttribute('src');
+  $('photoBtn').className = 'photo big' + ($('receiptPhoto').disabled ? ' dis' : '');
+  $('photoTxt').textContent = L('Take receipt photo', 'Ambil foto resit');
+  $('photoChange').textContent = L('Change', 'Tukar');
+  $('retakeTxt').textContent = L('Retake photo', 'Ambil foto semula');
+}
+function _clearReceipt(){
+  _ocrSeq++; _setPhoto(null);
+  _photoPh = null; _ocr = null; _ocrSample = false; _ocrState = 'none'; _ocrWhy = ''; _ocrAuto = { amount: null, litres: null };
+}
+// which part of the fuel card shows: the photo button, the reading, the boxes to check — or the unconfirmed Save
+function _renderFuelStep(){
+  var unc = !!_unc, has = !!_photoFile, reading = _ocrState === 'reading';
+  $('uncBox').hidden = !unc;
+  $('stepPhoto').hidden = unc || has;
+  $('stepCheck').hidden = unc || !has;
+  $('fuelFields').hidden = reading; $('fuelActs').hidden = reading;
+  $('checkNote').hidden = reading || _ocrState !== 'done';
+  $('retakeBtn').hidden = reading || _ocrState !== 'manual' || (_ocrWhy !== 'PHOTO' && _ocrWhy !== 'MULTI');
+  _renderOcrHead(); _renderOcrTags();
+}
+var _FUEL_NAMES = { DIESEL: 'Diesel', RON95: 'RON95', RON97: 'RON97' };
+var _STATION_NAMES = { PETRONAS: 'Petronas', SHELL: 'Shell', PETRON: 'Petron', CALTEX: 'Caltex', BHPETROL: 'BHPetrol' };
+var _PHOTO_MSG = { BLURRY: ['Photo blurry', 'Foto kabur'], TOO_FAR: ['Receipt too far', 'Resit terlalu jauh'],
+  PARTLY_HIDDEN: ['Numbers covered', 'Nombor terlindung'], DARK_OR_GLARE: ['Too dark or shiny', 'Terlalu gelap / silau'] };
+function _renderOcrHead(){
+  var h = $('ocrHead'), i = $('ocrInfo');
+  if (_ocrState === 'reading'){
+    h.className = 'rcpt-l1'; h.innerHTML = '<span class="spin-s"></span><span>' + _esc(L('Reading the receipt…', 'Membaca resit…')) + '</span>';
+    i.textContent = ''; i.className = 'rcpt-l2'; return;
+  }
+  if (_ocrState !== 'done'){
+    // not filled in: say why in a few words; the receipt's station / date are not shown (from an unsure reading they mislead)
+    var pm = _PHOTO_MSG[(_ocr && _ocr.photo_issue) || ''] || ['Photo not clear', 'Foto kurang jelas'];
+    var head = _ocrWhy === 'MULTI' ? L('2 receipts in 1 photo', '2 resit dalam 1 foto')
+             : _ocrWhy === 'PHOTO' ? L(pm[0], pm[1])
+             : _ocrWhy === 'UNSURE' ? L('Not sure — please type', 'Tak pasti — isi sendiri')
+             : L('Could not read it — please type', 'Tak dapat dibaca — isi sendiri');
+    h.className = 'rcpt-l1 warn'; h.innerHTML = _ico('warn', 's') + '<span>' + _esc(head) + '</span>';
+    i.textContent = _ocrWhy === 'MULTI' ? L('One receipt per photo', 'Satu resit, satu foto')
+                  : _ocrWhy === 'PHOTO' ? L('Flat, close and in good light', 'Rata, dekat dan terang') : '';
+    i.className = 'rcpt-l2';
+    return;
+  }
+  h.className = 'rcpt-l1 ok'; h.innerHTML = _ico('check', 's') + '<span>' + _esc(L('Read from the receipt', 'Dibaca dari resit')) + '</span>';
+  // station · fuel · date and time on the receipt — amber when the date is not the fuel date, or the fuel is not diesel
+  var o = _ocr || {}, parts = [], warn = false;
+  if (_STATION_NAMES[o.station]) parts.push(_STATION_NAMES[o.station]);
+  if (o.fuel_type && o.fuel_type !== 'UNKNOWN'){ parts.push(_FUEL_NAMES[o.fuel_type] || L('Other fuel', 'Minyak lain')); if (o.fuel_type !== 'DIESEL') warn = true; }
+  if (o.receipt_date){ var rd = _rcptDate(o.receipt_date, $('fuelDate').value); parts.push(_shortDate(rd) + (o.receipt_time ? ' ' + o.receipt_time : '')); if (rd !== $('fuelDate').value) warn = true; }
+  if (_ocrSample) parts.push(L('TEST: sample reading', 'UJIAN: bacaan contoh'));
+  i.textContent = parts.join(' · '); i.className = 'rcpt-l2' + (warn ? ' warn' : '');
+}
+function _renderOcrTags(){   // "✓ dari resit" stays only while the box still holds what the receipt said
+  $('tagAmount').hidden = !(_ocrAuto.amount != null && $('amount').value === _ocrAuto.amount);
+  $('tagLitres').hidden = !(_ocrAuto.litres != null && $('litres').value === _ocrAuto.litres);
+}
+function _prefill(id, val){
+  var el = $(id), prev = _ocrAuto[id];
+  if (val == null){ if (prev != null && el.value === prev) el.value = ''; _ocrAuto[id] = null; return; }   // a new photo without it: drop the old auto value
+  if (!el.value || el.value === prev){ el.value = val; _ocrAuto[id] = val; _errOff('err-' + id); }
+}
+// OCR v2: fill in only a reading that adds up. The v2 server already holds the others back (use:false, no numbers);
+// the sum is checked here too, so an answer from the v1 server (no `use`) gets the same treatment.
+function _ocrUsable(o){
+  if (!o || !o.readable || o.use === false) return false;
+  var t = o.total_rm, l = o.litres, u = o.unit_price;
+  if (typeof t !== 'number' || typeof l !== 'number' || typeof u !== 'number') return false;
+  return Math.abs(t - l * u) <= 0.06;   // pump rounding + 5-sen cash rounding stay under 3 sen
+}
+// [boss 2026-10-24] a receipt date one YEAR off the fuel date (same day and month) is the reader mistaking a digit
+// of the year (Petron prints 0 as a slashed zero: 2026 read as 2025) — count it as the fuel date, no amber
+function _rcptDate(iso, fuel){
+  var a = String(iso || '').split('-'), b = String(fuel || '').split('-');
+  if (a.length === 3 && b.length === 3 && a[1] === b[1] && a[2] === b[2] && Math.abs(+a[0] - +b[0]) === 1) return fuel;
+  return iso;
+}
+function _ocrWhyOf(o){
+  if (!o) return '';
+  if (o.receipts === 'SEVERAL') return 'MULTI';
+  if (o.photo_issue && o.photo_issue !== 'NONE') return 'PHOTO';
+  return (o.readable && o.receipts !== 'NONE') ? 'UNSURE' : '';
+}
+async function _onPhotoPicked(f){
+  _setPhoto(f); _errOff('err-photo');
+  var seq = ++_ocrSeq;
+  _photoPh = null; _ocr = null; _ocrSample = false; _ocrState = 'reading'; _ocrWhy = ''; _renderFuelStep();
+  var ph = null;
+  try{ ph = await compressToBase64(f); }catch(e){ ph = null; }
+  if (seq !== _ocrSeq) return;
+  _photoPh = ph;
+  var res = (ph && navigator.onLine !== false) ? await _readReceipt(ph) : null;
+  if (seq !== _ocrSeq) return;
+  var o = (res && res.status === 'success' && res.ocr) ? res.ocr : null, use = _ocrUsable(o);
+  _ocr = o; _ocrSample = !!(res && res.sample);
+  // a new photo never keeps the previous photo's auto-filled numbers; a number the driver typed always stays
+  _prefill('amount', use ? o.total_rm.toFixed(2) : null);
+  _prefill('litres', use ? String(o.litres) : null);
+  _ocrWhy = use ? '' : _ocrWhyOf(o);
+  _ocrState = use ? 'done' : 'manual';
+  _saveDraft(); _renderFuelStep();
+}
+function _readReceipt(ph){
+  return _postRead_({ formType: 'FUEL_OCR', branch: BRANCH, vehicleNo: $('vehicleNo').value, driverName: $('driverName').value,
+    photoBase64: ph.base64, photoName: ph.name, photoType: ph.type,
+    clientToken: 'ocr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10) }, OCR_WAIT_MS);
+}
+$('photoPreview').addEventListener('error', function(){ this.style.visibility = 'hidden'; });   // e.g. a HEIC the browser cannot draw: the upload still works
+['receiptPhoto', 'receiptPhoto2', 'receiptPhoto3'].forEach(function(id){
+  $(id).addEventListener('change', function(){
+    var f = this.files && this.files[0];
+    if (f) _onPhotoPicked(f);   // a cancelled picker keeps the photo already taken
+  });
+});
 
-  // V17: Fetch driver list from backend; this also restores remembered driver
-  fetchAndPopulateDrivers();
-  // Branch-scoped lorry list (replaces the old hardcoded plates); restores remembered vehicle too
-  fetchVehicles();
+// ── typed numbers survive a tab reload for an hour (cheap Androids drop the tab while the camera is open) ──
+function _saveDraft(){
+  if (_unc) return;
+  try{
+    var d = { m: $('mileage').value, a: $('amount').value, l: $('litres').value, t: Date.now() };
+    if (d.m || d.a || d.l) localStorage.setItem(DRAFT_KEY, JSON.stringify(d)); else localStorage.removeItem(DRAFT_KEY);
+  }catch(e){}
+}
+function _restoreDraft(){
+  try{
+    var d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
+    if (d && Date.now() - d.t < 3600000){
+      if (!$('mileage').value) $('mileage').value = d.m || '';
+      if (!$('amount').value) $('amount').value = d.a || '';
+      if (!$('litres').value) $('litres').value = d.l || '';
+    } else localStorage.removeItem(DRAFT_KEY);
+  }catch(e){}
+}
+function _clearDraft(){ try{ localStorage.removeItem(DRAFT_KEY); }catch(e){} }
+['mileage', 'amount', 'litres'].forEach(function(id){
+  $(id).addEventListener('input', function(){ _errOff('err-' + id); _saveDraft(); _renderOcrTags(); });
+});
+
+// ── checks (all of the old form's, one language, short). Errors sit under their field. ──
+var ERR_DEF = {
+  'err-date':    ['Please select a date', 'Sila pilih tarikh'],
+  'err-driver':  ['Please select your name', 'Sila pilih nama anda'],
+  'err-second':  ['Same as the driver', 'Sama dengan pemandu'],
+  'err-vehicle': ['Please select a lorry', 'Sila pilih lori'],
+  'err-mileage': ['Required', 'Wajib diisi'],
+  'err-amount':  ['Required', 'Wajib diisi'],
+  'err-litres':  ['Required', 'Wajib diisi'],
+  'err-photo':   ['Take a photo of the receipt', 'Ambil foto resit']
 };
+function _err(id, pair){   // both texts are kept on the element, so the BM / EN switch flips a shown error too
+  var e = $(id); if (!e) return;
+  pair = pair || ERR_DEF[id];
+  e.setAttribute('data-en', _esc(pair[0])); e.setAttribute('data-bm', _esc(pair[1]));
+  e.innerHTML = _esc(L(pair[0], pair[1]));
+  e.classList.add('show');
+}
+function _errOff(id){ var e = $(id); if (e) e.classList.remove('show'); }
+function _focus(id){
+  var el = id === 'receiptPhoto' ? $('photoBtn') : $(id);
+  if (!el) return;
+  try{ if (id !== 'receiptPhoto') el.focus(); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }catch(e){}
+}
+function _sheetYes(){ return L('Yes, correct', 'Ya, betul'); }
+function _sheetBack(){ return L('Change', 'Ubah'); }
 
-// (old <select> change-listeners removed — driver picking is handled by wireDriverPicker)
+async function validateFuel(){
+  Object.keys(ERR_DEF).forEach(_errOff);
+  var first = null;
+  function need(ok, errId, focusId){ if (!ok){ _err(errId); if (!first) first = focusId; } }
+  var dt = $('fuelDate').value, dn = $('driverName').value, sd = $('secondDriver').value, veh = $('vehicleNo').value;
+  need(!!veh, 'err-vehicle', 'vehicleNo');   // screen order: lorry, driver, 2nd driver, date
+  need(!!dn, 'err-driver', 'driverSearch');
+  need(!(dn && sd && dn === sd), 'err-second', 'secondSearch');   // the same person twice would double-count the credit
+  need(!!dt, 'err-date', 'fuelDate');
+  if (first){ _tripOpen = true; _tripRender(); }
+  var mv = parseFloat($('mileage').value), av = parseFloat($('amount').value), lv = parseFloat($('litres').value);
+  need(mv > 0, 'err-mileage', 'mileage');
+  need(av > 0, 'err-amount', 'amount');
+  need(lv > 0, 'err-litres', 'litres');   // [2026-10-24] litres required: printed on every receipt, km/L needs it
+  need(!!_photoFile, 'err-photo', 'receiptPhoto');
+  if (first){ _focus(first); return false; }
 
-function handlePhoto(input) {
-  if (input.files && input.files[0]) {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      const preview = document.getElementById('photoPreview');
-      preview.src = e.target.result;
-      preview.classList.add('visible');
-      document.getElementById('photoBtn').classList.add('has-photo');
-      document.getElementById('photoLabel').textContent = 'Photo taken! · Gambar diambil!';
-      document.getElementById('photoSub').textContent = 'Tap to retake · Ketik untuk ambil semula';
-    };
-    reader.readAsDataURL(input.files[0]);
+  // Hard ceiling RM 500 (raised from 300 by the boss on 2026-06-22 — do not lower without asking). A real fill is
+  // ~RM 250, so anything above is almost always a fat-finger like 2432.34; the office corrects a genuine big fill.
+  if (av > 500){ _err('err-amount', ['Over RM 500 — check again', 'Lebih RM 500 — semak semula']); _focus('amount'); return false; }
+
+  // odometer vs the lorry's last reading (a wrong odometer poisons all km / fuel analytics)
+  if (_lastOdo && _lastOdoVeh === veh){
+    var lastKm = Number(_lastOdo.mileage), lastTxt = L('Last: ', 'Lepas: ') + _fmtKm(lastKm) + ' km · ' + _shortDate(_lastOdo.date);
+    if (mv <= lastKm){
+      if (!(await _confirmSheet(L('Odometer lower than last time?', 'Odometer lebih rendah dari lepas?'), lastTxt, _sheetYes(), _sheetBack()))){ _focus('mileage'); return false; }
+    } else if (mv - lastKm > 1500){
+      var jump = '+' + _fmtKm(Math.round(mv - lastKm)) + ' km';
+      if (!(await _confirmSheet(L(jump + ' since last time?', jump + ' sejak lepas?'), lastTxt, _sheetYes(), _sheetBack()))){ _focus('mileage'); return false; }
+    }
+  }
+  // RM per litre outside 1.2–6.0: a missing decimal point, or RM and litres swapped
+  var perL = av / lv;
+  if (perL < 1.2 || perL > 6){
+    if (!(await _confirmSheet(L('RM ' + perL.toFixed(2) + ' per litre?', 'RM ' + perL.toFixed(2) + ' seliter?'), L('Amount and litres swapped?', 'Jumlah dan liter tertukar?'), _sheetYes(), _sheetBack()))){ _focus('amount'); return false; }
+  }
+  return true;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════════════
+// Save tells the truth (as POD round 3): "Disimpan" ONLY after the server confirmed it.
+//  * the POST's own answer is read. Apps Script answers a POST with a 302 to script.googleusercontent.com, which allows
+//    any origin, so a plain CORS fetch reads the JSON as long as the request stays "simple" (FormData, no headers).
+//  * answer lost on the way back → ask the result cache doPost fills under clientToken (10 minutes).
+//  * still nothing → "Belum disahkan" with Semak. NEVER resent automatically: the backend has no duplicate guard for
+//    FUEL, a resend writes a second row (and a second KPI credit). Semak asks the cache again, then reads the lorry's
+//    newest odometer: the same reading = it landed. Only when the server answers and the reading is still missing
+//    after UNC_RESEND_MS does "Hantar semula" appear.
+// ══════════════════════════════════════════════════════════════════════════════════════
+var POST_WAIT_MS = 60000;        // the server answers after Drive + receipt OCR
+var CONFIRM_POLL_MS = FUEL_TEST ? 8000 : 60000;   // after a lost answer: keep asking the result cache this long
+var SAVE_POLL_GAPS = [1500, 2500, 4000, 6000, 8000, 10000, 12000, 15000];   // gaps between those asks (the last one repeats)
+var SEMAK_POLL_MS = 6000;        // Semak asks the cache once more, briefly, before it reads the odometer
+var UNC_RESEND_MS = FUEL_TEST ? 30000 : 600000;   // a server run is long over by then (and the cache entry has expired)
+
+// POST that READS the answer. Returns the server's JSON ({status:'success'|'error', …}) or null = UNKNOWN —
+// aborted, connection lost, an HTML error page, anything without a clear status. Null is never a success.
+async function _postRead_(payload, timeoutMs){
+  var fd = new FormData(); fd.append('data', JSON.stringify(payload));
+  var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  var tmo = ctrl ? setTimeout(function(){ ctrl.abort(); }, timeoutMs) : null;
+  try{
+    var res = await fetch(SCRIPT_URL, { method: 'POST', body: fd, signal: ctrl ? ctrl.signal : undefined });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var d = await res.json();   // an HTML error page (time-out, quota) lands here as SyntaxError
+    if (d && d.status === 'error' && d.code === 'IN_PROGRESS') return null;
+    if (d && (d.status === 'success' || d.status === 'error')) return d;
+    throw new Error('answer without a status');
+  }catch(e){
+    console.warn('[Fuel] ' + payload.formType + ': answer not read —', e && e.name, e && e.message);
+    _dbgToast_(payload.formType + ' answer: ' + (e && e.name) + ' - ' + (e && e.message));
+    return null;
+  }finally{ if (tmo) clearTimeout(tmo); }
+}
+// Ask doPost's result cache (getImportResult, 10 minutes per clientToken) with growing gaps, for up to maxMs.
+// 'pending' = not written (yet). Returns the answer or null; stops at once while the phone says it is offline.
+async function _pollResult_(token, maxMs, gaps){
+  gaps = gaps || SAVE_POLL_GAPS;
+  var t0 = Date.now();
+  for (var k = 0; ; k++){
+    var left = maxMs - (Date.now() - t0);
+    if (left <= 0) return null;
+    var wait = Math.min(gaps[Math.min(k, gaps.length - 1)], left);
+    if (wait > 0) await new Promise(function(r){ setTimeout(r, wait); });
+    if (navigator.onLine === false) return null;
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var tmo = ctrl ? setTimeout(function(){ ctrl.abort(); }, 15000) : null;
+    try{
+      var rb = await fetch(SCRIPT_URL + '?action=getImportResult&token=' + encodeURIComponent(token), { signal: ctrl ? ctrl.signal : undefined });
+      var rd = await rb.json();
+      if (rd && (rd.status === 'success' || (rd.status === 'error' && rd.code !== 'IN_PROGRESS'))) return rd;
+    }catch(e){ /* keep asking */ }
+    finally{ if (tmo) clearTimeout(tmo); }
   }
 }
 
-// A4: fetch the lorry's last odometer reading when a vehicle is picked — shown as guidance,
-// and used in validate() to catch typos (a wrong odometer poisons ALL km / fuel analytics).
-var _lastOdo = null, _lastOdoVeh = '';
-var _autoCrew = { d: false, s: false };   // which crew fields were AUTO-filled (vs picked by a human)
-(function(){
-  var vSel = document.getElementById('vehicleNo');
-  if (!vSel) return;
-  function _clearCrewField(hidId, searchId, badgeId){
-    var h = document.getElementById(hidId), s = document.getElementById(searchId), b = document.getElementById(badgeId);
-    if (h) h.value = ''; if (s) s.value = ''; if (b){ b.style.display = 'none'; b.textContent = ''; }
-  }
-  vSel.addEventListener('change', function(){
-    var veh = vSel.value;
-    try{ localStorage.setItem(VEHICLE_KEY, veh || ''); }catch(e){}   // remember-last-vehicle (per-branch key)
-    _lastOdo = null; _lastOdoVeh = veh;
-    // Switching lorries: clear crew that was AUTO-filled for the PREVIOUS lorry (it belongs to
-    // that lorry, not this one). Manually-picked / remembered names are left alone.
-    if (_autoCrew.d){ _clearCrewField('driverName','driverSearch','staffIdBadge'); _autoCrew.d = false; }
-    if (_autoCrew.s){ _clearCrewField('secondDriver','secondSearch','staffIdBadge2'); _autoCrew.s = false; }
-    var hint = document.getElementById('lastOdoHint');
-    if (hint){ hint.style.display = 'none'; hint.textContent = ''; }
-    if (!veh) return;
-    fetch(SCRIPT_URL + '?action=getLastMileage&vehicleNo=' + encodeURIComponent(veh))
-      .then(function(r){ return r.json(); })
-      .then(function(d){
-        if (_lastOdoVeh !== veh) return;                  // user already switched vehicle
-        if (d && d.status === 'ok' && d.found){
-          _lastOdo = d;
-          if (hint){
-            hint.innerHTML = 'Last reading · Bacaan terakhir: <b>' + Number(d.mileage).toLocaleString() + ' km</b> (' + d.date + ')';
-            hint.style.display = 'block';
-          }
-        }
-      }).catch(function(){ /* hint is best-effort */ });
-
-    // Crew auto-fill: pull TODAY's shipment assignment for this lorry and pre-fill driver + helper
-    // (only when still empty — never overwrites what the driver picked). Mirrors the POD form,
-    // so the fuel entry's crew lines up with the dashboard tally.
-    var today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
-    fetch(SCRIPT_URL + '?action=getShipmentForLorry&vehicleNo=' + encodeURIComponent(veh) + '&date=' + encodeURIComponent(today))
-      .then(function(r){ return r.json(); })
-      .then(function(d){
-        if (vSel.value !== veh) return;                   // switched vehicle while fetching
-        if (!d || d.status !== 'ok' || !d.shipments || !d.shipments.length) return;
-        var s = d.shipments[0];
-        function _n(x){ return String(x || '').replace(/\s+/g,'').toUpperCase(); }
-        var primary, secondary;
-        if (_n(s.lorry2) && _n(veh) === _n(s.lorry2)) { primary = s.lorry2Primary; secondary = s.lorry2Secondary; }
-        else { primary = s.assignedPrimary; secondary = s.assignedSecondary; }
-        function inRoster(name){ return ROSTER.some(function(x){ return x.name === name; }); }
-        primary = String(primary || '').trim(); secondary = String(secondary || '').trim();
-        var dHid = document.getElementById('driverName'), dSearch = document.getElementById('driverSearch');
-        if (primary && dHid && !dHid.value && dSearch && dSearch._pick && inRoster(primary)){ dSearch._pick(primary, true); _autoCrew.d = true; }
-        var sHid = document.getElementById('secondDriver'), sSearch = document.getElementById('secondSearch');
-        if (secondary && secondary !== primary && sHid && !sHid.value && sSearch && sSearch._pick && inRoster(secondary)){ sSearch._pick(secondary, true); _autoCrew.s = true; }
-      }).catch(function(){ /* best-effort — backend auto-credit is the safety net */ });
-  });
-  // A human typing in a crew field takes ownership — stop treating it as auto-filled
-  var _ds = document.getElementById('driverSearch'), _ss2 = document.getElementById('secondSearch');
-  if (_ds) _ds.addEventListener('input', function(){ _autoCrew.d = false; });
-  if (_ss2) _ss2.addEventListener('input', function(){ _autoCrew.s = false; });
-})();
-
-function validate() {
-  let valid = true;
-  const fields = [
-    { id: 'fuelDate', err: 'err-date' },
-    { id: 'driverName', err: 'err-driver', focusId: 'driverSearch' },
-    { id: 'vehicleNo', err: 'err-vehicle' },
-    { id: 'mileage', err: 'err-mileage' },
-  ];
-
-  fields.forEach(f => {
-    const el = document.getElementById(f.id);
-    const err = document.getElementById(f.err);
-    if (!el.value) {
-      err.classList.add('show');
-      if (valid) { var fe = document.getElementById(f.focusId || f.id); if (fe) fe.focus(); }
-      valid = false;
-    } else {
-      err.classList.remove('show');
-    }
-  });
-
-  if (!document.getElementById('receiptPhoto').files.length) {
-    document.getElementById('err-photo').classList.add('show');
-    valid = false;
-  } else {
-    document.getElementById('err-photo').classList.remove('show');
-  }
-
-  if (!document.getElementById('confirmCheck').checked) {
-    document.getElementById('err-confirm').classList.add('show');
-    valid = false;
-  } else {
-    document.getElementById('err-confirm').classList.remove('show');
-  }
-
-  // Amount required — driver-entered fuel cost (decision 2026-06-05)
-  const _amt = document.getElementById('amount');
-  if (!_amt || _amt.value === '' || isNaN(parseFloat(_amt.value)) || parseFloat(_amt.value) <= 0) {
-    document.getElementById('err-amount').classList.add('show');
-    valid = false;
-  } else {
-    document.getElementById('err-amount').classList.remove('show');
-  }
-
-  // A4: odometer sanity vs the lorry's last known reading (typo protection).
-  // Lower than last, or a jump > 1,500 km, needs the driver to explicitly confirm.
-  const _mv = parseFloat(document.getElementById('mileage').value);
-  if (valid && _lastOdo && _lastOdoVeh === document.getElementById('vehicleNo').value && !isNaN(_mv)) {
-    if (_mv <= _lastOdo.mileage) {
-      if (!confirm('⚠ Odometer ' + _mv.toLocaleString() + ' is LOWER than the last reading '
-            + Number(_lastOdo.mileage).toLocaleString() + ' km (' + _lastOdo.date + ').\n'
-            + 'Bacaan odometer LEBIH RENDAH daripada bacaan terakhir.\n\n'
-            + 'Please check for a typo. Continue anyway?\nSila semak. Teruskan juga?')) {
-        document.getElementById('mileage').focus();
-        valid = false;
-      }
-    } else if (_mv - _lastOdo.mileage > 1500) {
-      if (!confirm('⚠ That is ' + Math.round(_mv - _lastOdo.mileage).toLocaleString() + ' km since the last reading ('
-            + Number(_lastOdo.mileage).toLocaleString() + ' km, ' + _lastOdo.date + ') — very far for one tank.\n'
-            + 'Itu sangat jauh sejak bacaan terakhir.\n\n'
-            + 'Please check for a typo. Continue anyway?\nSila semak. Teruskan juga?')) {
-        document.getElementById('mileage').focus();
-        valid = false;
-      }
-    }
-  }
-
-  // Hard ceiling: a real fuel fill is at most ~RM 250, so BLOCK anything over RM 500 (almost
-  // always a fat-finger like 2432.34). Unlike the soft confirms below, this cannot be dismissed.
-  // A genuine larger fill is corrected afterwards by the office (manager edit).
-  const _amtCap = parseFloat(document.getElementById('amount').value);
-  if (valid && !isNaN(_amtCap) && _amtCap > 500) {
-    alert('⚠ Fuel RM ' + _amtCap.toLocaleString(undefined, { minimumFractionDigits: 2 })
-        + ' over limit RM 500 — please check amount (usually <= RM 250).\n'
-        + 'Jumlah minyak RM melebihi had RM 500 — sila semak (biasanya ≤ RM 250).');
-    document.getElementById('amount').focus();
-    valid = false;
-  }
-
-  // B8: amount plausibility — catches a missing decimal ("180" → "18000") and RM/litres swapped.
-  const _amtV = parseFloat(document.getElementById('amount').value);
-  const _litV = parseFloat(document.getElementById('litres').value);
-  if (valid && !isNaN(_amtV) && _amtV > 0) {
-    if (!isNaN(_litV) && _litV > 0) {
-      const perL = _amtV / _litV;
-      if (perL < 1.2 || perL > 6) {
-        if (!confirm('⚠ RM ' + _amtV.toLocaleString(undefined,{minimumFractionDigits:2}) + ' ÷ ' + _litV + ' L = RM '
-              + perL.toFixed(2) + ' per litre — that does not look like a normal fuel price.\n'
-              + 'Itu tidak nampak seperti harga minyak biasa.\n\n'
-              + 'Check: RM and Litres maybe swapped, or a missing decimal point? Continue anyway?\n'
-              + 'Semak: RM dan Liter mungkin tertukar? Teruskan juga?')) {
-          document.getElementById('amount').focus();
-          valid = false;
-        }
-      }
-    } else if (_amtV > 1500 || _amtV < 10) {
-      if (!confirm('⚠ Fuel amount = RM ' + _amtV.toLocaleString(undefined,{minimumFractionDigits:2}) + ' — is that correct?\n'
-            + 'Jumlah bahan api = RM ' + _amtV.toLocaleString(undefined,{minimumFractionDigits:2}) + ' — betul ke?\n\n'
-            + 'Check for a missing decimal point. Continue anyway?\nSemak titik perpuluhan. Teruskan juga?')) {
-        document.getElementById('amount').focus();
-        valid = false;
-      }
-    }
-  }
-
-  // B18 fix: driver and secondDriver must not be the same person (would double-count credit)
-  const dr = document.getElementById('driverName').value;
-  const sdEl = document.getElementById('secondDriver');
-  const sd = sdEl ? sdEl.value : '';
-  if (dr && sd && dr === sd) {
-    alert('Driver and Second Driver cannot be the same person.\nPemandu dan Pemandu Kedua tidak boleh sama.');
-    var _ss = document.getElementById('secondSearch'); if (_ss) _ss.focus();
-    valid = false;
-  }
-
-  return valid;
+function _busy(on){ $('saveBtn').disabled = on; $('noFuelBtn').disabled = on; }
+function _metaNow(){   // exactly what the old form sent: raw strings, roster names, '' when there is no helper
+  return {
+    fuelDate: $('fuelDate').value,
+    driverName: $('driverName').value,
+    secondDriver: $('secondDriver').value || '',
+    vehicleNo: $('vehicleNo').value,
+    mileage: $('mileage').value,
+    amount: $('amount').value,
+    litres: $('litres').value || ''
+  };
 }
+function _noSignal(){ _toast('warn', _esc(L('No signal. Try again when you have signal.', 'Tiada liputan. Cuba lagi bila ada liputan.'))); }
 
-async function submitForm() {
-  if (!validate()) return;
-
-  // Litres nudge: it's printed on every receipt, and without it km/L for this lorry goes blank.
-  const _litEl = document.getElementById('litres');
-  if (_litEl && (!_litEl.value || !(parseFloat(_litEl.value) > 0))) {
-    if (!confirm('Litres is empty — it is printed on your receipt and helps track the lorry.\n'
-          + 'Liter kosong — ia tercetak pada resit anda.\n\n'
-          + 'OK = submit WITHOUT litres · Hantar TANPA liter\n'
-          + 'Cancel = go back and add it · Kembali dan isi')) {
-      _litEl.focus();
-      return;
+async function saveFuel(){
+  if (_saving || _unc) return;
+  if (!(await validateFuel())) return;
+  if (navigator.onLine === false){ _noSignal(); return; }   // nothing can leave the phone: say so, keep the form
+  _saving = true; _busy(true);
+  _overlay(true); _ovClock_(L('Saving…', 'Menyimpan…'));
+  var meta = _metaNow(), ph = null, res = null, token = '';
+  try{
+    try{ ph = _photoPh || await compressToBase64(_photoFile); }catch(e){ ph = null; }   // the bytes already read = the server's cache hit
+    if (!ph){
+      _err('err-photo', ['Photo could not be read. Take it again.', 'Foto tidak dapat dibaca. Ambil semula.']);
+      _focus('receiptPhoto'); return;
     }
-  }
-
-  // A3: block double-taps — a fast second tap before the overlay paints used to double-submit.
-  const _btn = document.getElementById('submitBtn');
-  if (_btn) { if (_btn.disabled) return; _btn.disabled = true; }
-
-  document.getElementById('loadingOverlay').classList.add('show');
-
-  try {
-    const photoFile = document.getElementById('receiptPhoto').files[0];
-    const ph = await compressToBase64(photoFile);   // B7: ~10-20× smaller upload
-
-    const now = new Date();
-    // A3: clientToken + read-back — the server stashes its REAL result under this token,
-    // so a server-side failure no longer shows a false "Submitted!" screen.
-    const token = 'fuel_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
-    const payload = {
+    var now = new Date();
+    token = 'fuel_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+    var payload = {
       formType: 'FUEL',
       branch: BRANCH,
       timestamp: now.toISOString(),
-      fuelDate: document.getElementById('fuelDate').value,
-      driverName: document.getElementById('driverName').value,
-      secondDriver: document.getElementById('secondDriver').value || '',
-      vehicleNo: document.getElementById('vehicleNo').value,
-      mileage: document.getElementById('mileage').value,
-      amount: document.getElementById('amount').value,
-      litres: document.getElementById('litres').value || '',
+      fuelDate: meta.fuelDate,
+      driverName: meta.driverName,
+      secondDriver: meta.secondDriver,
+      vehicleNo: meta.vehicleNo,
+      mileage: meta.mileage,
+      amount: meta.amount,
+      litres: meta.litres,
       photoBase64: ph.base64,
       photoName: ph.name,
       photoType: ph.type,
       clientToken: token,
     };
-
-    const formData = new FormData();
-    formData.append('data', JSON.stringify(payload));
-    await fetch(SCRIPT_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      body: formData
-    });
-
-    // Poll for the real result (OCR can take a few seconds — be patient: ~24s max)
-    let result = null;
-    for (let t = 0; t < 12; t++) {
-      await new Promise(r => setTimeout(r, 2000));
-      try {
-        const rb = await fetch(SCRIPT_URL + '?action=getImportResult&token=' + encodeURIComponent(token));
-        const rd = await rb.json();
-        if (rd && rd.status && rd.status !== 'pending') { result = rd; break; }
-      } catch (e) { /* keep polling */ }
-    }
-
-    document.getElementById('loadingOverlay').classList.remove('show');
-    if (_btn) _btn.disabled = false;
-
-    if (result && result.status === 'error') {
-      alert('NOT submitted · TIDAK dihantar!\n' + (result.message || 'Server error') + '\n\nPlease try again. · Sila cuba lagi.');
-      return;   // form stays filled — driver just re-taps Submit
-    }
-    // success confirmed, or no read-back (weak signal → the entry almost certainly went in;
-    // supervisor dashboard remains the final check, as the notice on the form says)
-
-    const timeStr = now.toLocaleDateString('en-MY', { day:'2-digit', month:'short', year:'numeric' })
-      + ' · ' + now.toLocaleTimeString('en-MY', { hour:'2-digit', minute:'2-digit' });
-    document.getElementById('successTime').textContent = timeStr;
-    document.getElementById('successDriver').textContent = payload.driverName;
-    document.getElementById('successVehicle').textContent = payload.vehicleNo;
-    document.getElementById('successScreen').classList.add('show');
-
-  } catch (err) {
-    document.getElementById('loadingOverlay').classList.remove('show');
-    if (_btn) _btn.disabled = false;
-    alert('Submission failed. Please check your connection and try again.\nPenghantaran gagal. Sila semak sambungan anda dan cuba lagi.');
+    if (FUEL_TEST) console.info('[TEST] would send', Object.assign({}, payload, { photoBase64: '(' + ph.base64.length + ' chars)' }));
+    meta.at = now.getTime();
+    res = await _postRead_(payload, POST_WAIT_MS);
+    if (!res){ _ovClock_(L('Confirming…', 'Mengesahkan…'), true); res = await _pollResult_(token, CONFIRM_POLL_MS, SAVE_POLL_GAPS); }
+  } finally {
+    _overlay(false); _ovClock_(null); _saving = false; _busy(false);
   }
+  if (!token) return;
+  if (res && res.status === 'success'){ _showDone(meta); return; }
+  if (res && res.status === 'error'){
+    _toast('err', _esc(L('Not saved. Try again.', 'Tidak disimpan. Cuba lagi.')) + (res.message ? '<br><small>' + _esc(res.message) + '</small>' : ''));
+    return;   // the form stays filled — the driver just taps Simpan again
+  }
+  _uncSet({ token: token, at: meta.at, day: _todayMYT(), meta: meta }, 'first');
 }
 
-async function submitNoFuel() {
-  // Validate only Driver + Vehicle
-  const driver = document.getElementById('driverName').value;
-  const vehicle = document.getElementById('vehicleNo').value;
-  if (!driver) {
-    document.getElementById('err-driver').classList.add('show');
-    var _ds = document.getElementById('driverSearch'); if (_ds) _ds.focus();
-    return;
-  }
-  if (!vehicle) {
-    document.getElementById('err-vehicle').classList.add('show');
-    document.getElementById('vehicleNo').focus();
-    return;
-  }
-  if (!confirm('Confirm: ' + driver + ' did NOT refuel today?\nSahkan: ' + driver + ' TIDAK isi minyak hari ini?')) return;
-
-  document.getElementById('loadingOverlay').classList.add('show');
-  try {
-    // V20: GET-as-write so browser reads JSON response and reports real success/failure
-    const now = new Date();
-    const fuelDate = document.getElementById('fuelDate').value || now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
-    const secondDriver = document.getElementById('secondDriver').value || '';
-    const url = SCRIPT_URL
+// No refuel today: driver + lorry + date only. GET-write that answers in its own response (it always did).
+async function submitNoFuel(){
+  if (_saving || _unc) return;
+  Object.keys(ERR_DEF).forEach(_errOff);
+  var dt = $('fuelDate').value || _todayMYT(), dn = $('driverName').value, sd = $('secondDriver').value || '', veh = $('vehicleNo').value;
+  var first = null;
+  if (!veh){ _err('err-vehicle'); first = first || 'vehicleNo'; }
+  if (!dn){ _err('err-driver'); first = first || 'driverSearch'; }
+  if (dn && sd && dn === sd){ _err('err-second'); first = first || 'secondSearch'; }
+  if (first){ _tripOpen = true; _tripRender(); _focus(first); return; }
+  var title = dt === _todayMYT() ? L('No refuel today?', 'Tak isi minyak hari ini?')
+                                 : L('No refuel on ' + _dateLabel(dt) + '?', 'Tak isi minyak pada ' + _dateLabel(dt) + '?');
+  if (!(await _confirmSheet(title, veh + ' · ' + dn, L('Yes, send', 'Ya, hantar'), L('Cancel', 'Batal')))) return;
+  if (navigator.onLine === false){ _noSignal(); return; }
+  _saving = true; _busy(true);
+  _overlay(true); _ovClock_(L('Saving…', 'Menyimpan…'));
+  var now = new Date(), json = null, failed = false;
+  var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
+  var timer = ctrl ? setTimeout(function(){ ctrl.abort(); }, 30000) : null;
+  try{
+    var url = SCRIPT_URL
       + '?action=NO_FUEL'
-      + '&driverName=' + encodeURIComponent(driver)
-      + '&secondDriver=' + encodeURIComponent(secondDriver)
-      + '&vehicleNo=' + encodeURIComponent(vehicle)
-      + '&fuelDate=' + encodeURIComponent(fuelDate)
+      + '&driverName=' + encodeURIComponent(dn)
+      + '&secondDriver=' + encodeURIComponent(sd)
+      + '&vehicleNo=' + encodeURIComponent(veh)
+      + '&fuelDate=' + encodeURIComponent(dt)
       + '&branch=' + encodeURIComponent(BRANCH)
       + '&timestamp=' + encodeURIComponent(now.toISOString());
-    const res = await fetch(url);
-    const json = await res.json();
-    document.getElementById('loadingOverlay').classList.remove('show');
-    if (json.status === 'success' || json.status === 'ok') {
-      const timeStr = now.toLocaleDateString('en-MY', { day:'2-digit', month:'short', year:'numeric' })
-        + ' · ' + now.toLocaleTimeString('en-MY', { hour:'2-digit', minute:'2-digit' });
-      document.getElementById('successTime').textContent = timeStr;
-      document.getElementById('successDriver').textContent = driver + ' (NO FUEL)';
-      document.getElementById('successVehicle').textContent = vehicle;
-      document.getElementById('successScreen').classList.add('show');
-    } else {
-      alert('Submission failed: ' + (json.message || 'unknown error') + '\nPenghantaran gagal: ' + (json.message || 'sila cuba lagi'));
-    }
-  } catch (err) {
-    document.getElementById('loadingOverlay').classList.remove('show');
-    alert('Submission failed. Please check your connection.\nPenghantaran gagal. Sila semak sambungan anda.');
+    var res = await fetch(url, { signal: ctrl ? ctrl.signal : undefined });
+    json = await res.json();
+  }catch(e){ failed = true; }
+  finally{ if (timer) clearTimeout(timer); _overlay(false); _ovClock_(null); _saving = false; _busy(false); }
+  if (json && (json.status === 'success' || json.status === 'ok')){
+    _showDone({ noFuel: true, fuelDate: dt, vehicleNo: veh, driverName: dn, secondDriver: sd, at: now.getTime() });
+  } else if (failed){
+    _toast('warn', _esc(L('Not sure it was saved. Check your signal and try again.', 'Belum pasti disimpan. Semak liputan dan cuba lagi.')));
+  } else {
+    _toast('err', _esc(L('Not saved. Try again.', 'Tidak disimpan. Cuba lagi.')) + (json && json.message ? '<br><small>' + _esc(json.message) + '</small>' : ''));
   }
 }
 
+// ── a Save the server has not confirmed: kept on the phone (no photo), shown as "Belum disahkan", checked with Semak ──
+var UNC_NOTES = {
+  first: ['Your entry is kept. Tap Check.', 'Maklumat anda masih ada. Tekan Semak.'],
+  still: ['Still not confirmed. Tap Check again in a minute.', 'Masih belum disahkan. Tekan Semak lagi sebentar lagi.'],
+  gone:  ['It did not reach the system. Tap Send again.', 'Tidak masuk ke sistem. Tekan Hantar semula.']
+};
+function _uncSet(u, note){
+  _unc = u || null;
+  if (note) _uncNote = note;
+  try{ if (_unc) localStorage.setItem(UNC_KEY, JSON.stringify(_unc)); else localStorage.removeItem(UNC_KEY); }catch(e){}
+  _renderUnc();
+}
+function _renderUnc(){
+  var on = !!_unc;
+  // the entry under check must stay exactly as sent: no edits until it is settled
+  ['fuelDate', 'driverSearch', 'secondSearch', 'vehicleNo', 'receiptPhoto', 'receiptPhoto2', 'receiptPhoto3'].forEach(function(id){ $(id).disabled = on; });
+  $('tripToggle').disabled = on;
+  _renderPhoto(); _renderFuelStep();
+  if (!on) return;
+  var m = _unc.meta;
+  $('uncHead').textContent = L('Not confirmed yet', 'Belum disahkan');
+  $('uncSum').textContent = _fmtKm(m.mileage) + ' km · RM ' + _fmtRM(m.amount) + ' · ' + m.litres + ' L · ' + _plate(m.vehicleNo);
+  var n = UNC_NOTES[_uncNote] || UNC_NOTES.first;
+  $('uncNote').textContent = L(n[0], n[1]);
+  $('uncCheckTxt').textContent = _checking ? L('Checking…', 'Menyemak…') : L('Check', 'Semak');
+  $('uncCheck').disabled = _checking;
+  $('uncResend').hidden = !_unc.canResend;
+  $('uncResendTxt').textContent = L('Send again', 'Hantar semula');
+}
+async function checkUnconfirmed(auto){
+  if (!_unc || _checking) return;
+  if (navigator.onLine === false){ if (!auto){ _uncNote = 'still'; _renderUnc(); _noSignal(); } return; }
+  var u = _unc, outcome = 'still', msg = '';
+  _checking = true; _renderUnc();
+  try{
+    var res = await _pollResult_(u.token, SEMAK_POLL_MS, [0, 2000]);
+    if (res && res.status === 'success') outcome = 'ok';
+    else if (res && res.status === 'error'){ outcome = 'err'; msg = res.message || ''; }
+    else {
+      var odo = await _fetchLastOdo(u.meta.vehicleNo);
+      if (odo && odo.found && Number(odo.mileage) === Number(u.meta.mileage) && odo.date === u.day) outcome = 'ok';
+      else if (odo && Date.now() - u.at >= UNC_RESEND_MS) outcome = 'gone';   // the server answered: the reading is not there
+    }
+  } finally { _checking = false; }
+  if (_unc !== u){ _renderUnc(); return; }   // settled elsewhere meanwhile
+  if (outcome === 'ok'){ _uncSet(null); _showDone(u.meta); return; }
+  if (outcome === 'err'){
+    _uncSet(null); _refill(u.meta);
+    _toast('err', _esc(L('Not saved. Try again.', 'Tidak disimpan. Cuba lagi.')) + (msg ? '<br><small>' + _esc(msg) + '</small>' : ''));
+    return;
+  }
+  if (outcome === 'gone'){ u.canResend = true; _uncSet(u, 'gone'); return; }
+  _uncNote = 'still'; _renderUnc();
+}
+// after a reload the fields are empty: put the entry back (the photo has to be taken again)
+function _refill(m){
+  if (!$('mileage').value) $('mileage').value = m.mileage || '';
+  if (!$('amount').value) $('amount').value = m.amount || '';
+  if (!$('litres').value) $('litres').value = m.litres || '';
+  if (!_photoFile) _err('err-photo');
+}
+function resendUnconfirmed(){
+  if (!_unc || !_unc.canResend) return;
+  var u = _unc;
+  _uncSet(null); _refill(u.meta);
+  if (!_photoFile){ _focus('receiptPhoto'); _toast('warn', _esc(L('Take the receipt photo again, then tap Save.', 'Ambil foto resit semula, kemudian tekan Simpan.')), 'top'); return; }
+  saveFuel();
+}
+
+// ── saved ──
+function _showDone(info){
+  _doneInfo = info; _clearDraft();
+  _crewRemember(info.vehicleNo, info.driverName, info.secondDriver);   // next time this lorry is picked, its crew is there at once
+  $('mainView').hidden = true; $('doneView').hidden = false;
+  _renderDone();
+  try{ window.scrollTo(0, 0); }catch(e){}
+}
+function _renderDone(){
+  if (!_doneInfo) return;
+  var d = _doneInfo;
+  $('doneTitle').textContent = L('Saved', 'Disimpan');
+  $('doneL1').textContent = d.noFuel ? L('No refuel', 'Tak isi minyak') : 'RM ' + _fmtRM(d.amount) + ' · ' + d.litres + ' L';
+  $('doneL2').textContent = d.noFuel ? _plate(d.vehicleNo) : _plate(d.vehicleNo) + ' · ' + _fmtKm(d.mileage) + ' km';
+  $('doneL3').textContent = _dateLabel(d.fuelDate) + ' · ' + _timeMYT(d.at);
+  $('doneBtnTxt').textContent = L('Done', 'Selesai');
+}
+function resetForm(){
+  _doneInfo = null;
+  $('doneView').hidden = true; $('mainView').hidden = false;
+  ['mileage', 'amount', 'litres'].forEach(function(id){ $(id).value = ''; });
+  _clearReceipt(); _renderFuelStep();   // back to step 1: the photo button
+  Object.keys(ERR_DEF).forEach(_errOff);
+  var today = _todayMYT(), sameDay = $('fuelDate').value === today;
+  $('fuelDate').value = today; $('fuelDate').max = today;
+  // same lorry, same day = same crew: keep it. An entry for another day had that day's crew → ask again for today.
+  if (!sameDay){
+    if (_autoCrew.d){ _clearCrewField('driverName', 'driverSearch', 'staffIdBadge'); _autoCrew.d = false;
+      var saved = null; try{ saved = localStorage.getItem(STORAGE_KEY); }catch(e){}
+      if (saved && STAFF_IDS[saved] !== undefined) $('driverSearch')._pick(saved, true);
+    }
+    if (_autoCrew.s){ _clearCrewField('secondDriver', 'secondSearch', 'staffIdBadge2'); _autoCrew.s = false; }
+  }
+  _tripOpen = false;
+  if ($('vehicleNo').value) _loadVehicleInfo($('vehicleNo').value, !sameDay);   // a fresh last reading: it now says "already sent today"
+  _tripRender();
+  try{ window.scrollTo(0, 0); }catch(e){}
+}
+
+// after BM <-> EN: redraw whatever JS drew in the old language
+function _langRefresh_(){
+  try{ _tripRender(); _netRender(); _renderOdoHint(); _renderPhoto(); _renderUnc(); _renderFuelStep(); _renderDone(); }catch(e){}
+}
+
+// ── photo: downscale before upload (raw camera files are 3-12 MB → 30 s+ on 3G and frequent time-outs; ~1600px JPEG
+// is ~200-400 KB and still plenty for the receipt OCR). Falls back to the raw file if anything goes wrong. ──
 function toBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -1068,14 +1358,10 @@ function toBase64(file) {
     reader.readAsDataURL(file);
   });
 }
-
-// B7: downscale the receipt photo before upload (raw camera files are 3-12 MB → 30s+ on 3G and
-// frequent timeouts; ~1600px JPEG is ~200-400 KB and still plenty for the OCR cross-check).
-// Falls back to the raw file if anything goes wrong.
 function compressToBase64(file) {
   return new Promise((resolve, reject) => {
-    // raw fallback must settle the promise even if the raw read ALSO fails (file evicted from
-    // storage between selection and submit) — otherwise the await hangs forever behind the overlay
+    // the raw fallback must settle the promise even if the raw read ALSO fails (file evicted from storage between
+    // selection and save) — otherwise the await hangs forever behind the overlay
     const raw = () => toBase64(file).then(b64 => resolve({ base64: b64, name: file.name, type: file.type })).catch(reject);
     try {
       const reader = new FileReader();
@@ -1102,32 +1388,50 @@ function compressToBase64(file) {
   });
 }
 
-function resetForm() {
-  document.getElementById('successScreen').classList.remove('show');
-  document.getElementById('fuelForm').reset();
-  document.getElementById('photoPreview').classList.remove('visible');
-  document.getElementById('photoBtn').classList.remove('has-photo');
-  document.getElementById('photoLabel').textContent = 'Tap to take photo · Ketik untuk ambil gambar';
-  document.getElementById('photoSub').textContent = 'Camera or gallery · Kamera atau galeri';
+// ── wiring + start ──
+$('fuelForm').addEventListener('submit', function(e){ e.preventDefault(); });
+$('saveBtn').addEventListener('click', function(){ saveFuel(); });
+$('noFuelBtn').addEventListener('click', function(){ submitNoFuel(); });
+$('uncCheck').addEventListener('click', function(){ checkUnconfirmed(false); });
+$('uncResend').addEventListener('click', resendUnconfirmed);
+$('doneBtn').addEventListener('click', resetForm);
+_renderPhoto(); _renderFuelStep();
 
-  // Restore date and driver name (Kuala Lumpur timezone)
-  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
-  document.getElementById('fuelDate').value = today;
-  ['staffIdBadge','staffIdBadge2'].forEach(function(id){ var b=document.getElementById(id); if(b) b.style.display='none'; });
-  var dsearch = document.getElementById('driverSearch'); if (dsearch) dsearch.value = '';
-  var ssearch = document.getElementById('secondSearch'); if (ssearch) ssearch.value = '';
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved && dsearch && dsearch._pick) {
-    dsearch._pick(saved);
-    document.getElementById('rememberedBadge').style.display = 'inline-flex';
-  }
-  // Restore the remembered vehicle too (per-branch key), then fire change so the odometer hint re-loads.
-  try {
-    var vs = document.getElementById('vehicleNo');
-    var savedVeh = localStorage.getItem(VEHICLE_KEY);
-    if (vs && savedVeh) { vs.value = savedVeh; if (vs.value === savedVeh) vs.dispatchEvent(new Event('change')); }
+window.onload = function(){
+  // branch in the app bar — prominent so a driver on the wrong link notices
+  $('branchLabel').textContent = BRANCH_DISPLAY[BRANCH] || BRANCH;
+  // Kuala Lumpur timezone — fixes the early-morning date bug
+  var today = _todayMYT();
+  $('fuelDate').value = today; $('fuelDate').max = today;
+  // a Save left unconfirmed (page closed, phone restarted) is checked again before anything else
+  var pend = null;
+  try{ pend = JSON.parse(localStorage.getItem(UNC_KEY) || 'null'); }catch(e){}
+  if (pend && pend.token && pend.meta && Date.now() - pend.at < 864e5) _uncSet(pend, 'first');
+  else { try{ localStorage.removeItem(UNC_KEY); }catch(e){} _restoreDraft(); }
+  _tripRender();
+  // restore the remembered lorry AFTER the roster AND the plates exist (crew auto-fill needs both)
+  Promise.all([
+    fetchAndPopulateDrivers().catch(function(){}),
+    fetchVehicles().catch(function(){})
+  ]).finally(function(){
+    _restoreVehicle();
+    _tripRender();
+    if (_unc) checkUnconfirmed(true);
+  });
+};
+
+// back on this tab (camera / gallery / WhatsApp / pocket): heal what failed, re-check a pending Save
+document.addEventListener('visibilitychange', function(){
+  if (document.hidden) return;
+  _netRender();
+  try {   // a tab left open kept its load-time roster forever — refetch, at most once per 5 minutes
+    var now = Date.now();
+    if (!window._rosterAt || now - window._rosterAt > 300000){ window._rosterAt = now; fetchAndPopulateDrivers(true); }
   } catch (e) {}
-}
+  try { if (!_vehiclesLoaded()) fetchVehicles(true); } catch (e) {}
+  if (_unc) checkUnconfirmed(true);
+});
+window.addEventListener('online', function(){ _netRender(); if (_unc) checkUnconfirmed(true); });
 </script>
 </body>
 </html>
