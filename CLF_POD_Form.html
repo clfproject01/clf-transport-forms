@@ -3536,6 +3536,7 @@ async function _postRead_(payload, timeoutMs){
     var res = await fetch(SCRIPT_URL, { method: 'POST', body: fd, signal: ctrl ? ctrl.signal : undefined });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     var d = await res.json();   // an HTML error page (time-out, quota) lands here as SyntaxError
+    if (d && d.status === 'error' && d.code === 'IN_PROGRESS') return null;   // the same Save is still running on the server: not an answer yet
     if (d && (d.status === 'success' || d.status === 'error')) return d;
     throw new Error('answer without a status');
   }catch(e){
@@ -3561,25 +3562,27 @@ async function _pollResult_(token, maxMs, gaps){
     try{
       var rb = await fetch(SCRIPT_URL + '?action=getImportResult&token=' + encodeURIComponent(token), { signal: ctrl ? ctrl.signal : undefined });
       var rd = await rb.json();
-      if (rd && (rd.status === 'success' || rd.status === 'error')) return rd;
+      if (rd && (rd.status === 'success' || (rd.status === 'error' && rd.code !== 'IN_PROGRESS'))) return rd;   // IN_PROGRESS: keep asking
     }catch(e){ /* keep asking */ }
     finally{ if (tmo) clearTimeout(tmo); }
   }
 }
 
-// Which of the tagged invoices the server answer confirms. It names `already` and `notFound`, but only COUNTS the
-// ones it wrote now (`delivered`): the rest count only when that number covers all of them (delivered = 0 → none).
+// Which of the tagged invoices the server answer confirms. It names `already`, `notFound` and (backend v2)
+// `photoFailed`, but only COUNTS the ones it wrote now (`delivered`): the rest count only when that number covers
+// all of them (delivered = 0 → none).
 function _confirmedInvs_(tagged, res){
-  var nf = {}, al = {};
+  var nf = {}, al = {}, pf = {};
   (Array.isArray(res.notFound) ? res.notFound : []).forEach(function(n){ nf[String(n)] = true; });
   (Array.isArray(res.already) ? res.already : []).forEach(function(n){ al[String(n)] = true; });
-  var rest = tagged.filter(function(n){ return !nf[String(n)] && !al[String(n)]; });
+  (Array.isArray(res.photoFailed) ? res.photoFailed : []).forEach(function(n){ pf[String(n)] = true; });   // [R3] its photo did not reach Drive: not delivered
+  var rest = tagged.filter(function(n){ return !nf[String(n)] && !al[String(n)] && !pf[String(n)]; });
   var restOk = (Number(res.delivered) || 0) >= rest.length;
-  var out = { done: [], missing: [], notFound: [] };
+  var out = { done: [], missing: [], notFound: [], photoFailed: [] };
   tagged.forEach(function(n){
     var s = String(n);
-    if (al[s] || (!nf[s] && restOk)) out.done.push(n);
-    else { out.missing.push(n); if (nf[s]) out.notFound.push(n); }
+    if (al[s] || (!nf[s] && !pf[s] && restOk)) out.done.push(n);
+    else { out.missing.push(n); if (nf[s]) out.notFound.push(n); else if (pf[s]) out.photoFailed.push(n); }
   });
   return out;
 }
@@ -3619,10 +3622,14 @@ function _saveOutcome_(key, res, ctx){
     _palletToast('ok', '&#10003; ' + L('Saved: ' + c.done.length + (c.done.length === 1 ? ' invoice delivered' : ' invoices delivered'), 'Disimpan: ' + c.done.length + ' invois dihantar'));
     return 'ok';
   }
+  // [R3] the confirmed invoices are done: their photos leave the card (each photo knows its invoice — barcode / the
+  // driver's choice / list order), so what stays is exactly what still has to go, and Save can be tapped again
+  if (g && g.photos) g.photos = g.photos.filter(function(p){ return !done[String(p.invoiceNo)]; });
   renderShipmentList();
-  var lost = c.missing.filter(function(n){ return c.notFound.indexOf(n) < 0; });
+  var lost = c.missing.filter(function(n){ return c.notFound.indexOf(n) < 0 && c.photoFailed.indexOf(n) < 0; });
   alert(L('Saved only ' + c.done.length + ' of ' + ctx.invs.length + ' invoices.', 'Hanya ' + c.done.length + ' daripada ' + ctx.invs.length + ' invois disimpan.')
     + (lost.length ? '\n' + L('NOT confirmed: ', 'BELUM disahkan: ') + lost.join(', ') : '')
+    + (c.photoFailed.length ? '\n' + L('Photo did not reach the server: ' + c.photoFailed.join(', ') + ' (tap Save again)', 'Foto tidak sampai ke pelayan: ' + c.photoFailed.join(', ') + ' (tekan Simpan semula)') : '')
     + (c.notFound.length ? '\n' + L('Not found on the server (tell the office): ', 'Tiada di pelayan (beritahu pejabat): ') + c.notFound.join(', ') : '')
     + '\n\n' + L('Your photos are kept.', 'Foto anda masih ada.'));
   return 'partial';
@@ -3769,6 +3776,8 @@ async function saveDelivery(i){
       timestamp: now.toISOString(), photos: photos, clientToken: token,
       // [R3] raw barcode per invoice (Shipment_Items col 18) + a photo kept against its barcode (col 19 DRIVER_FORCED)
       barcodeMap: _bp.barcodeMap, forcedMismatch: _bp.forcedMismatch,
+      // [R3] photo i IS invoiceNos[i]: backend v2 then files each photo under its own invoice (an older backend ignores this)
+      photoOrder: 'invoice',
       // [E5] true if ANY included photo was force-uploaded past the quality gate
       qualityFlag: g.photos.some(function(p){ return !!p.qualityFlag; }) };
     if (_smMode){ payload.salesmanId = _smId; payload.pin = _smPin; payload.gps = _smGps || null; payload.driverName = ''; payload.secondDriver = ''; }   // [Salesman] server resolves identity
