@@ -1,0 +1,1539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CLF Fleet Dashboard (TEST)</title>
+<!-- [F1 2026-10-24] Open the connections to the two Apps Script hosts while the page parses (every read
+     is a fetch to script.google.com that 302s to script.googleusercontent.com). -->
+<link rel="preconnect" href="https://script.google.com" crossorigin>
+<link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
+<!-- ApexCharts: self-hosted (vendored from cdnjs 3.49.1). Was jsdelivr CDN — moved local so the
+     charts never depend on a third-party CDN being reachable (a jsdelivr outage crashed the dashboard).
+     [F1] defer: 534 KB no longer blocks first paint; init() waits for DOMContentLoaded, which runs after it. -->
+<script src="apexcharts.min.js" defer></script>
+<style>
+  :root{
+    --green-50:#ECFDF5; --green-500:#16A34A; --green-700:#15803D;
+    --amber-50:#FFFBEB; --amber-500:#D97706; --amber-700:#B45309;
+    --red-50:#FEF2F2; --red-500:#EF4444; --red-700:#B91C1C;
+    --gray-50:#F9FAFB; --gray-100:#F3F4F6; --gray-200:#E5E7EB; --gray-400:#9CA3AF;
+    --gray-500:#6B7280; --gray-600:#4B5563; --gray-700:#374151; --gray-900:#111827;
+    --card:#fff; --radius:14px; --shadow:0 1px 2px rgba(17,24,39,.06),0 1px 3px rgba(17,24,39,.08);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--gray-50);color:var(--gray-900);line-height:1.5;-webkit-font-smoothing:antialiased;padding-bottom:60px;}
+  .wrap{max-width:1080px;margin:0 auto;padding:18px 16px;}
+  .topbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;}
+  .topbar h1{font-size:19px;font-weight:700;letter-spacing:-.01em;}
+  .topbar .meta{font-size:13px;color:var(--gray-500);}
+  .controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px;}
+  .controls label{font-size:13px;color:var(--gray-700);font-weight:500;}
+  .controls input[type=date]{font-family:inherit;font-size:13px;padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;background:#fff;color:var(--gray-900);}
+  .seg{display:inline-flex;border:1px solid var(--gray-200);border-radius:8px;overflow:hidden;}
+  .seg-btn{font-family:inherit;font-size:13px;font-weight:600;padding:6px 16px;border:0;background:#fff;color:var(--gray-500);cursor:pointer;}
+  .seg-btn+.seg-btn{border-left:1px solid var(--gray-200);}
+  .seg-btn.active{background:var(--gray-900);color:#fff;}
+  /* Branch toggle — distinct blue active state so it reads apart from the dark view toggle */
+  .seg.seg-branch .seg-btn.active{background:#1A56DB;color:#fff;}
+  .refresh-btn{font-family:inherit;font-size:13px;font-weight:600;padding:6px 14px;border:1px solid var(--gray-200);border-radius:8px;background:#fff;color:var(--gray-700);cursor:pointer;}
+
+  .banner{display:none;background:var(--red-50);border:1px solid var(--red-500);color:var(--red-700);font-size:13px;padding:9px 13px;border-radius:8px;margin-bottom:14px;}
+  .banner.show{display:block;}
+
+  .testbar{background:#FEF3C7;border-bottom:1px solid #F59E0B;color:#92400E;font-size:12.5px;font-weight:600;text-align:center;padding:6px 10px;}
+  .zone-head{display:flex;align-items:center;gap:10px;margin:28px 0 12px;padding:9px 14px;border-radius:10px;font-weight:700;font-size:16px;}
+  .zone-pod{background:var(--green-50);color:var(--green-700);border-left:5px solid var(--green-500);}
+  .zone-fuel{background:var(--amber-50);color:var(--amber-700);border-left:5px solid var(--amber-500);}
+  .zone-head .sub{font-weight:400;font-size:12.5px;color:var(--gray-500);}
+
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(12,1fr);align-items:start;}
+  .card{background:var(--card);border:1px solid var(--gray-200);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;}
+  .c6{grid-column:span 6;} .c12{grid-column:span 12;} .c4{grid-column:span 4;} .c8{grid-column:span 8;}
+  @media(max-width:760px){ .c6,.c4,.c8{grid-column:span 12;} .card{overflow-x:auto;} }
+
+  .card-title{font-size:14px;font-weight:600;color:var(--gray-700);margin-bottom:2px;}
+  .card-sub{font-size:12px;color:var(--gray-500);margin-bottom:10px;}
+
+  .hero{display:flex;flex-direction:column;justify-content:center;}
+  .hero .big{font-size:44px;font-weight:800;line-height:1;letter-spacing:-.02em;}
+  .hero.pod .big{color:var(--green-700);} .hero.fuel .big{color:var(--amber-700);}
+  .hero .frac{font-size:13.5px;color:var(--gray-500);margin-top:6px;}
+  .heroline{font-size:13px;color:var(--gray-700);margin-top:10px;padding-top:8px;border-top:1px solid var(--gray-100);}
+  .heroline b{font-size:17px;color:var(--amber-700);}
+  .chips{display:flex;gap:7px;margin-top:10px;flex-wrap:wrap;}
+  .chip{font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid var(--gray-200);color:var(--gray-700);}
+  .chip.green{background:var(--green-50);color:var(--green-700);border-color:var(--green-500);}
+  .chip.red{background:var(--red-50);color:var(--red-700);border-color:var(--red-500);}
+  .chip.amber{background:var(--amber-50);color:var(--amber-700);border-color:var(--amber-500);}
+  .chip.mono{font-variant-numeric:tabular-nums;}
+
+  table.act{width:100%;border-collapse:collapse;font-size:12.5px;}
+  table.act th{text-align:left;color:var(--gray-500);font-weight:600;padding:5px 8px;border-bottom:1px solid var(--gray-200);}
+  table.act td{padding:6px 8px;border-bottom:1px solid var(--gray-100);}
+  table.act tr.fail{background:var(--red-50);}
+  table.act tr.pend{background:var(--amber-50);}
+  .st-fail{color:var(--red-700);font-weight:600;} .st-pend{color:var(--amber-700);font-weight:600;}
+  .rm{font-variant-numeric:tabular-nums;text-align:right;}
+  .prog-mini{display:inline-block;width:64px;height:7px;background:var(--gray-100);border-radius:99px;overflow:hidden;vertical-align:middle;margin-right:9px;}
+  .prog-mini i{display:block;height:100%;border-radius:99px;background:var(--green-500);}
+  .prog-frac{font-variant-numeric:tabular-nums;font-size:12px;color:var(--gray-600);}
+  .route-stop{display:flex;align-items:flex-start;gap:11px;font-size:13.5px;}
+  .route-time{font-variant-numeric:tabular-nums;color:var(--gray-500);width:44px;flex:0 0 auto;padding-top:2px;}
+  .route-dot{width:22px;height:22px;border-radius:50%;background:var(--green-500);color:#fff;font-size:11px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .route-name{color:var(--gray-900);font-weight:500;padding-top:2px;}
+  .route-area{color:var(--gray-400);font-weight:400;font-size:12px;}
+  .lpick{font-size:12px;padding:4px 11px;border:1px solid var(--gray-200);border-radius:99px;color:var(--gray-600);cursor:pointer;background:#fff;}
+  .lpick.active{background:var(--green-500);color:#fff;border-color:var(--green-500);font-weight:600;}
+  .note-line{font-size:12px;color:var(--gray-500);margin-top:8px;}
+  .empty{font-size:13px;color:var(--gray-400);padding:10px 2px;}
+  .collapser{cursor:pointer;user-select:none;}
+  /* Needs-action accordion */
+  tr.na-sum{cursor:pointer;user-select:none;}
+  tr.na-sum td{font-weight:600;}
+  tr.na-sum .caret{display:inline-block;width:14px;color:var(--gray-400);}
+  tr.na-det{display:none;}
+  tr.na-det.open{display:table-row;}
+  tr.na-det td{background:#fff;font-size:12px;color:var(--gray-600);}
+  .pill-mini{font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;margin-left:6px;}
+  .pill-fail{background:var(--red-50);color:var(--red-700);border:1px solid var(--red-500);}
+  .pill-pend{background:var(--amber-50);color:var(--amber-700);border:1px solid var(--amber-500);}
+  .filter-chip{font-size:12px;font-weight:600;padding:4px 12px;border:1px solid var(--gray-200);border-radius:99px;background:#fff;color:var(--gray-600);cursor:pointer;}
+  .filter-chip.active{background:var(--gray-900);color:#fff;border-color:var(--gray-900);}
+  /* Route gap between stops */
+  .route-gap{font-size:11.5px;color:var(--gray-400);padding:2px 0 2px 55px;font-variant-numeric:tabular-nums;}
+  .route-gap.slow{color:var(--amber-700);font-weight:600;}
+  .route-inv{font-size:11px;color:var(--gray-400);font-weight:400;margin-left:6px;}
+  /* 2nd-lorry sub-row */
+  tr.sub-lorry td{color:var(--gray-600);background:#F5F8FF;}
+  .unavail{font-size:13px;color:var(--amber-700);background:var(--amber-50);border:1px solid var(--amber-500);border-radius:8px;padding:8px 12px;display:inline-block;}
+  /* numeric table headers must right-align WITH their numbers (specificity fix) */
+  table.act th.rm{text-align:right;}
+  .plate{white-space:nowrap;font-weight:600;}
+  .tag2{font-size:10.5px;font-weight:700;letter-spacing:.03em;color:#1A56DB;border:1px solid #1A56DB;border-radius:4px;padding:1px 6px;margin-left:7px;vertical-align:1px;}
+  /* Driver board (professional, no emoji) */
+  .b-row{display:flex;gap:10px;padding:7px 0;border-top:1px solid var(--gray-100);font-size:12.5px;align-items:flex-start;}
+  .b-row:first-child{border-top:none;}
+  .b-label{flex:0 0 96px;font-weight:600;color:var(--gray-700);white-space:nowrap;}
+  .b-label .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;}
+  .b-label .cnt{color:var(--gray-400);font-weight:600;margin-left:4px;}
+  .b-names{color:var(--gray-600);line-height:1.6;}
+  .b-names b{color:var(--gray-900);font-weight:600;}
+  .b-names .meta{color:var(--gray-400);font-size:11.5px;}
+  /* one driver per line — Staff ID column + Name column */
+  .b-list{flex:1;color:var(--gray-600);}
+  .b-item{display:flex;align-items:baseline;gap:8px;padding:2.5px 0;line-height:1.4;}
+  .b-item .meta{flex:0 0 auto;color:var(--gray-400);font-size:11.5px;white-space:nowrap;}
+  .b-sid{flex:0 0 54px;color:var(--gray-500);font-variant-numeric:tabular-nums;}
+  .b-nm{flex:1 1 auto;min-width:0;color:var(--gray-900);font-weight:600;overflow-wrap:anywhere;}
+  /* [F1 2026-10-24] loading line, saved-view pill, per-zone retry, clock-aware "not yet" */
+  .loadline{font-size:12px;color:var(--gray-500);margin:-12px 0 14px;min-height:16px;}
+  .pill{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--gray-100);color:var(--gray-600);margin-left:6px;}
+  .pill.old{background:var(--amber-50);color:var(--amber-700);border:1px solid var(--amber-500);}
+  .retry{font-family:inherit;font-size:12px;font-weight:700;margin-left:8px;padding:2px 10px;border:1px solid var(--amber-500);border-radius:6px;background:#fff;color:var(--amber-700);cursor:pointer;}
+  .chip.grey{background:var(--gray-50);color:var(--gray-600);border-color:var(--gray-200);}
+  table.act tr.wait td{color:var(--gray-700);}
+  .st-wait{color:var(--gray-500);font-weight:600;}
+  .tag-today{font-size:10.5px;font-weight:700;color:var(--amber-700);border:1px solid var(--amber-500);border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:1px;}
+  .b-more{flex:0 0 auto;cursor:pointer;color:var(--gray-500);user-select:none;}
+  .b-role{color:var(--gray-400);font-size:11px;font-weight:400;margin-left:4px;}
+</style>
+</head>
+<body>
+<div class="testbar">TEST PAGE: lorry-vs-lorry fuel comparisons removed (D8) · the live dashboard is unchanged</div>
+<div class="wrap">
+
+  <div class="topbar">
+    <h1>CLF Fleet Dashboard</h1>
+    <div class="meta" id="dashMeta">Loading…</div>
+  </div>
+
+  <div class="banner" id="errBanner"></div>
+
+  <div class="controls">
+    <label>Date: <input type="date" id="dateInput"></label>
+    <div class="seg" id="daySeg">
+      <button class="seg-btn" data-day="today">Today</button>
+      <button class="seg-btn" data-day="yesterday">Yesterday</button>
+    </div>
+    <div class="seg" id="viewSeg">
+      <button class="seg-btn active" data-view="daily">Daily</button>
+      <button class="seg-btn" data-view="weekly">Weekly</button>
+      <button class="seg-btn" data-view="monthly">Monthly</button>
+    </div>
+    <div class="seg seg-branch" id="branchSeg">
+      <button class="seg-btn active" data-branch="ALL" title="All branches">All</button>
+      <button class="seg-btn" data-branch="MTK" title="Mentakab (MTK)">MTK</button>
+      <button class="seg-btn" data-branch="KTN" title="Kuantan (KTN)">KTN</button>
+    </div>
+    <button class="refresh-btn" id="refreshBtn">↻ Refresh</button>
+    <span class="meta" id="lastRefresh"></span>
+  </div>
+  <div class="loadline" id="loadLine"></div>
+
+  <!-- ===================== POD ZONE ===================== -->
+  <div class="zone-head zone-pod">📦 DELIVERIES (POD) <span class="sub" id="podScope">— the business</span></div>
+
+  <div class="grid">
+    <!-- KPI row: left column stacks hero + driver board, so it matches the right card's height -->
+    <div class="c4" style="display:flex;flex-direction:column;gap:14px;">
+      <div class="card hero pod">
+        <div class="card-title" id="podHeroTitle">Deliveries confirmed</div>
+        <div class="big" id="podPct">…</div>
+        <div class="frac" id="podFrac">…</div>
+        <div class="chips" id="podChips"></div>
+      </div>
+      <div class="card" style="flex:1;">
+        <div class="card-title" id="boardTitle">Drivers now</div>
+        <div class="card-sub">Standby = route finished, free for a 2nd trip · helpers count with their lorry</div>
+        <div id="driverBoard"></div>
+      </div>
+    </div>
+
+    <!-- Haven't submitted POD -->
+    <div class="card c8">
+      <div class="card-title">No POD yet</div>
+      <div class="card-sub" id="podNotSubmittedSub">Assigned a lorry but 0 deliveries confirmed yet · turns amber after 3 pm</div>
+      <div id="podNotSubmitted"></div>
+      <div class="note-line" id="podNotSubmittedNote"></div>
+    </div>
+
+    <!-- Needs action (collapsible accordion, grouped per lorry) -->
+    <div class="card c12">
+      <div class="card-title">Needs action — problem stops &amp; not yet confirmed</div>
+      <div class="card-sub">One line per lorry — tap a lorry to see its invoices · lorries with problem stops float to the top</div>
+      <div style="display:flex;gap:8px;margin:4px 0 10px;">
+        <span class="filter-chip active" id="naFilterAll">All</span>
+        <span class="filter-chip" id="naFilterFailed">Problems only</span>
+      </div>
+      <div id="needsActionWrap"><table class="act"><thead><tr><th style="width:18px;"></th><th>Lorry</th><th>Driver</th><th class="rm">Problem</th><th class="rm" id="naPendHead">Not yet</th><th class="rm">RM</th></tr></thead><tbody id="needsActionBody"></tbody></table></div>
+    </div>
+
+    <!-- Per-lorry success -->
+    <div class="card c12">
+      <div class="card-title">Delivery progress by lorry</div>
+      <div class="card-sub" id="lorrySuccessSub">Green = finished · blue = on the way · red = has problem stops · number = confirmed / planned · started lorries only</div>
+      <div id="lorrySuccess"></div>
+      <div class="empty" id="lorrySuccessEmpty" style="display:none;">No started lorries for this date.</div>
+    </div>
+
+    <!-- Crew table (collapsible) -->
+    <div class="card c12">
+      <div class="card-title collapser" id="crewToggle"><span id="crewCaret">▸</span> Today's lorries &amp; crew — who is driving what <span style="font-weight:400;color:var(--gray-400);font-size:12px;">(click to show / hide)</span></div>
+      <div id="crewBody" style="display:none;">
+        <div class="card-sub">Primary + helper assigned to each lorry (from the Shipment assignment)</div>
+        <table class="act"><thead><tr><th>Lorry</th><th>Primary driver</th><th>Helper</th><th style="width:175px;">Progress</th></tr></thead><tbody id="crewRows"></tbody></table>
+      </div>
+    </div>
+
+    <!-- Driver summary: routes / 2nd trips / leave (collapsible, follows Daily-Weekly-Monthly) -->
+    <div class="card c12">
+      <div class="card-title collapser" id="dsumToggle"><span id="dsumCaret">▸</span> Driver summary — routes, 2nd trips &amp; leave <span style="font-weight:400;color:var(--gray-400);font-size:12px;">(click to show / hide)</span></div>
+      <div id="dsumBody" style="display:none;">
+        <div class="card-sub">Follows the Daily / Weekly / Monthly selector · Routes done = every stop processed · 2nd trips = extra trips beyond the first</div>
+        <table class="act"><thead><tr><th>Driver</th><th class="rm">Routes done</th><th class="rm">2nd trips</th><th class="rm">Leave days</th><th class="rm">Deliveries</th></tr></thead><tbody id="dsumRows"></tbody></table>
+      </div>
+    </div>
+
+    <!-- Route timeline (collapsible) -->
+    <div class="card c12">
+      <div class="card-title collapser" id="routeToggle"><span id="routeCaret">▸</span> Lorry route — stop by stop, with arrival time <span style="font-weight:400;color:var(--gray-400);font-size:12px;">(click to show)</span></div>
+      <div id="routeBody" style="display:none;">
+        <div class="card-sub">Stops in delivery order · time = when the driver confirmed each POD · distance between stops = coming once customer addresses are added</div>
+        <div class="chips" id="routePicker" style="margin:10px 0 4px;"></div>
+        <div id="routeStops"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== FUEL ZONE ===================== -->
+  <div class="zone-head zone-fuel">⛽ FUEL <span class="sub" id="fuelScope">— the cost</span></div>
+
+  <div class="grid">
+    <!-- Hero -->
+    <div class="card c4 hero fuel">
+      <div class="card-title" id="fuelHeroTitle">Fuel cost</div>
+      <div class="big" id="fuelPerKmHero">…</div>
+      <div class="frac" id="fuelKmPerL">…</div>
+      <div class="heroline">Fuel use per lorry: <b id="fuelTotal">…</b></div>
+    </div>
+
+    <!-- Haven't submitted fuel -->
+    <div class="card c8">
+      <div class="card-title">Fuel slips not in yet <span id="noFuelTag"></span></div>
+      <div class="card-sub">Drivers with no fuel entry today · on-leave excluded · turns amber after 4 pm</div>
+      <div class="chips" id="noFuelChips"></div>
+      <div class="note-line" id="noFuelNote"></div>
+    </div>
+
+    <!-- Fuel cost by lorry -->
+    <div class="card c6">
+      <div class="card-title">Fuel cost by lorry (RM)</div>
+      <div class="card-sub">RM per lorry this period · A–Z by plate</div>
+      <div id="fuelCostLorry"></div>
+      <div class="empty" id="fuelCostEmpty" style="display:none;">No fuel RM recorded for this period yet (drivers enter RM on the new form).</div>
+    </div>
+
+    <!-- RM per km by lorry — [D8 2026-10-24] hidden: comparing lorries on fuel waits for 6 months of data (governance rule) -->
+    <div class="card c6" style="display:none;">
+      <div class="card-title">Fuel efficiency by lorry — RM per km</div>
+      <div class="card-sub">Dashed = fleet avg · red = 30% or more above the fleet average — worth a vehicle check</div>
+      <div id="fuelPerKm"></div>
+      <div class="empty" id="fuelPerKmEmpty" style="display:none;">Needs RM + at least 2 odometer readings per lorry.</div>
+    </div>
+
+    <!-- Cross-check: km vs stops — [F1 2026-10-24] hidden in every view. Its km reaches back to a fill made
+         before the period, it counts invoices (not drops) and gives the 2nd lorry 0, and its wording read as
+         an accusation. It comes back only once the backend counts drops and ~6 months of data exist. -->
+    <div class="card c12" style="display:none;">
+      <div class="card-title">Vehicle check — km per drop</div>
+      <div class="card-sub">km ÷ delivered stops, vs fleet average · above average = compare the route area · rough check until route distance is added</div>
+      <div id="crossCheckWrap"></div>
+    </div>
+
+    <!-- Per-tank: fill-to-fill (collapsible) -->
+    <div class="card c12">
+      <div class="card-title collapser" id="tankToggle"><span id="tankCaret">▸</span> Last fill-up by lorry — what one tank covered <span style="font-weight:400;color:var(--gray-400);font-size:12px;">(click to show / hide)</span></div>
+      <div id="tankBody" style="display:none;">
+        <div class="card-sub">Latest fuel entry per lorry, A–Z by plate · km &amp; stops = what the lorry did since its previous fill</div>
+        <table class="act"><thead><tr><th>Lorry</th><th>Last fill</th><th class="rm">RM</th><th class="rm">Litres</th><th>Since previous fill</th></tr></thead><tbody id="tankRows"></tbody></table>
+        <div class="empty" id="tankEmpty" style="display:none;">Needs at least 2 fills with odometer per lorry — fills in as drivers keep submitting.</div>
+      </div>
+    </div>
+
+    <!-- Fuel submissions (collapsible) -->
+    <div class="card c12">
+      <div class="card-title collapser" id="fuelToggle"><span id="fuelCaret">▸</span> Fuel submissions today <span id="fuelSubTag"></span> <span style="font-weight:400;color:var(--gray-400);font-size:12px;">(click to show / hide)</span></div>
+      <div id="fuelSubBody" style="display:none;">
+        <div class="card-sub">Every fuel entry today · RM = driver-entered · ⚑ = driver vs receipt-OCR differ a lot · tap receipt to view</div>
+        <table class="act"><thead><tr><th>Time</th><th>Lorry</th><th>Driver</th><th class="rm">Odometer</th><th class="rm">RM</th><th class="rm">Litres</th><th>Receipt</th></tr></thead><tbody id="fuelRows"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxabHh2Kd04z7k0zZOOoaJs2i5hgycQsO_AYoRS99xZx2WqMJ6cowumY0e1znehiRM1/exec';
+  var GREEN='#16A34A', AMBER='#D97706', RED='#EF4444';
+  var CHARTS = {};
+  var STAFF = {};        // name -> staffId
+  var ROUTE_SHIPMENTS = [];  // for the lorry route picker
+
+  var selectedView = 'daily';
+  function fmtToday(){ var d=new Date(); var m=('0'+(d.getMonth()+1)).slice(-2), day=('0'+d.getDate()).slice(-2); return d.getFullYear()+'-'+m+'-'+day; }
+  var selectedDate = fmtToday();
+  // [F1 2026-10-24] "Follow today": selectedDate used to be computed once, so a board left open past
+  // midnight kept asking for yesterday forever. Until someone picks another date, load() moves it on.
+  var followToday = true;
+  function fmtYesterday(){ var d=new Date(Date.now()-86400000); var m=('0'+(d.getMonth()+1)).slice(-2), day=('0'+d.getDate()).slice(-2); return d.getFullYear()+'-'+m+'-'+day; }
+  function isToday(){ return selectedDate === fmtToday(); }
+  // yyyy-mm-dd strings compare correctly as text. A FUTURE date is not "past": the import files a DL under
+  // its Est Del Date, so tomorrow can already have DLs — those are planned, not missing.
+  function isPast(){ return selectedDate < fmtToday(); }
+  // Branch filter — reads ?branch=MTK|KTN|ALL from the URL (default ALL = all branches combined).
+  // A Wayne-style link ?branch=KTN opens the dashboard pre-filtered to Kuantan. [F1] Without a URL
+  // branch, the last choice made on this device is reused.
+  var _BRANCH_KEY = 'clfDashT_branch_v1';
+  var _urlBranch = new URLSearchParams(location.search).get('branch');
+  var selectedBranch = (_urlBranch || (function(){ try{ return localStorage.getItem(_BRANCH_KEY); }catch(e){ return null; } })() || 'ALL').toUpperCase();
+  if(['ALL','MTK','KTN'].indexOf(selectedBranch)<0) selectedBranch = 'ALL';
+  function branchLabel(){ return selectedBranch==='MTK' ? 'Mentakab (MTK)' : selectedBranch==='KTN' ? 'Kuantan (KTN)' : 'All branches'; }
+
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function num(v){ return (v==null||v==='') ? null : (isNaN(Number(v))?null:Number(v)); }
+  function fmtRM(n){ n=num(n); return n==null ? '—' : 'RM '+n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function fmtInt(n){ n=num(n); return n==null ? '—' : Math.round(n).toLocaleString(); }
+  function idName(name){ if(!name) return '—'; var sid=STAFF[name]; return sid ? (esc(sid)+' · '+esc(name)) : esc(name); }
+  // Short name: cut at BIN / BINTI / A/L / A/P — fits one line; the staff ID disambiguates
+  function shortName(name){ var n=String(name||'').trim(); if(!n) return ''; return n.split(/\s+(?:BIN|BINTI|A\/L|A\/P)\s+/i)[0].trim()||n; }
+  function idShort(name){ if(!name) return '—'; var sid=STAFF[name]; var sn=shortName(name); return sid ? (esc(sid)+' · '+esc(sn)) : esc(sn); }
+  // Staff ID column + Name column (for the Drivers-now board — aligned, one per line)
+  function idCol(name, suffix){ var sid=STAFF[name]; return '<span class="b-sid">'+(sid?esc(sid):'')+'</span><span class="b-nm">'+esc(shortName(name))+(suffix||'')+'</span>'; }
+
+  // [F1 2026-10-24] Clock-aware "not yet": a stop or slip that simply isn't due yet is grey, turns amber
+  // after its cut-off (POD 15:00; fuel 16:00, the hour the office alert email goes out) and is never red on
+  // the same day. Red is kept for failed (problem) stops only. Past dates are always "late".
+  var POD_DUE_HOUR = 15, FUEL_DUE_HOUR = 16;
+  function hourNow(){ return new Date().getHours(); }
+  function podLate(){ return isPast() || (isToday() && hourNow() >= POD_DUE_HOUR); }
+  function fuelLate(){ return hourNow() >= FUEL_DUE_HOUR; }
+  var _DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], _MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function niceDate(ymd){ var p=String(ymd).split('-').map(Number); if(p.length!==3||!p[0]) return String(ymd); return _DOW[new Date(p[0], p[1]-1, p[2]).getDay()]+' '+p[2]+' '+_MON[p[1]-1]; }
+  // A failed source shows "unavailable" plus a Retry that refetches only that zone's own source.
+  function unavail(zone, text){ return '<span class="unavail">⚠ '+(text||'Data unavailable')+'<button class="retry" data-zone="'+zone+'">Retry</button></span>'; }
+  // [F1] Labels that depend only on the selection. Painted at the start of every load, so switching
+  // date / view / branch never leaves the previous view's wording sitting over placeholders or new data.
+  function paintLabels(){
+    var today = isToday(), past = isPast(), nd = niceDate(selectedDate);
+    var h1 = document.querySelector('.topbar h1');
+    if(h1) h1.textContent = 'CLF Fleet Dashboard' + (selectedBranch==='ALL' ? '' : ' · ' + branchLabel());
+    // B2: the POD half is daily-only — flag it loudly in Weekly/Monthly so the boss doesn't
+    // read a single day's delivery % as the weekly/monthly number.
+    var podScope = $('podScope');
+    if(selectedView==='daily'){ podScope.textContent = '— for ' + nd; podScope.style.color=''; }
+    else { podScope.textContent = '— ⚠ daily view only: showing ' + nd + ' (fuel below follows the ' + selectedView + ' period)'; podScope.style.color='var(--amber-700)'; }
+    $('podHeroTitle').textContent = past ? 'Deliveries confirmed' : (today ? 'Deliveries confirmed so far' : 'Deliveries planned');
+    $('podNotSubmittedSub').textContent = past ? 'Assigned a lorry but no POD recorded that day'
+      : (today ? 'Assigned a lorry but 0 deliveries confirmed yet · turns amber after 3 pm' : 'Assigned a lorry · deliveries happen on that day');
+    $('boardTitle').textContent = today ? 'Drivers now' : (past ? ('Crew on ' + nd) : ('Crew planned for ' + nd));
+    $('naPendHead').textContent = past ? 'No POD' : 'Not yet';
+    $('lorrySuccessSub').textContent = past
+      ? 'Green = finished · amber = invoices with no POD record · red = has problem stops · number = confirmed / planned'
+      : 'Green = finished · blue = on the way · red = has problem stops · number = confirmed / planned · started lorries only';
+    var tag = today ? '' : '<span class="tag-today">today only</span>';   // these two lists are always today's
+    $('noFuelTag').innerHTML = tag; $('fuelSubTag').innerHTML = tag;
+  }
+  var RETRY_OK = {};   // [F1] zone -> LOAD_SEQ in which a Retry refilled it (that load's own late failure must not blank it)
+
+  // [F1] The chart library is deferred and the page starts loading data without waiting for it, so a chart
+  // asked for before the library has run waits in _chartQ and is drawn on DOMContentLoaded (deferred
+  // scripts run before that event). dropChart() destroys a chart AND cancels a queued one, so a zone that
+  // was re-rendered as empty / unavailable in the meantime can't get an old chart drawn over it.
+  var _chartQ = {};
+  function dropChart(id){ if(CHARTS[id]){ try{ CHARTS[id].destroy(); }catch(e){} delete CHARTS[id]; } delete _chartQ[id]; }
+  function chart(id, opt){ var el=$(id); if(!el) return;
+    if(typeof ApexCharts==='undefined'){
+      if(document.readyState==='loading'){ dropChart(id); _chartQ[id] = opt; el.innerHTML = '<div class="empty">Loading chart…</div>'; return; }
+      // Defensive: if the chart library failed to load (slow/blocked CDN), do NOT throw — a single
+      // chart error must never crash the whole dashboard. Show a note; the numbers/tables stay correct.
+      el.innerHTML='<div class="unavail" style="padding:8px;line-height:1.5;">⚠ Chart library didn\'t load. The numbers &amp; tables above are still correct.<br><i>Pustaka carta gagal dimuat — nombor &amp; jadual di atas tetap betul.</i></div>'; return;
+    }
+    opt.chart=opt.chart||{}; opt.chart.animations={enabled:false};
+    dropChart(id);
+    el.innerHTML = '';   // [F1] ApexCharts appends to the container — clear "Loading…" / "unavailable" first
+    try{ CHARTS[id]=new ApexCharts(el, opt); CHARTS[id].render(); }catch(e){ el.innerHTML='<div class="unavail" style="padding:8px;">⚠ Chart could not render</div>'; }
+  }
+  document.addEventListener('DOMContentLoaded', function(){ var q = _chartQ; _chartQ = {}; Object.keys(q).forEach(function(id){ chart(id, q[id]); }); });
+
+  function showErr(msg){ var b=$('errBanner'); if(b){ b.textContent=msg; b.classList.add('show'); } }
+  function hideErr(){ var b=$('errBanner'); if(b) b.classList.remove('show'); }
+
+  // ---------- fetch ----------
+  // Hardened fetch (FN-3): a 45s timeout so a hung Apps Script request can't leave the page stuck on
+  // "Loading…" forever; one 2.5s-backoff retry on a network blip; and an optional AbortSignal from
+  // load() so a newer load (Date/View/Branch switch or auto-refresh) cancels the previous one instead
+  // of piling up in-flight requests. A deliberate abort is never retried.
+  function api(params, signal){
+    var url = _rgUrl(SCRIPT_URL + '?' + params.join('&'));   // [ReadAuth 2026-07-30]
+    function once(){
+      var ctl = (window.AbortController ? new AbortController() : null);
+      var to  = ctl ? setTimeout(function(){ try{ ctl.abort(); }catch(e){} }, 45000) : null;
+      if(ctl && signal){
+        if(signal.aborted){ try{ ctl.abort(); }catch(e){} }
+        else signal.addEventListener('abort', function(){ try{ ctl.abort(); }catch(e){} });
+      }
+      var opt = { method:'GET' }; if(ctl) opt.signal = ctl.signal;
+      return fetch(url, opt).then(
+        function(r){ if(to) clearTimeout(to); return r.json(); },
+        function(e){ if(to) clearTimeout(to); throw e; }
+      );
+    }
+    function isAbort(e){ return (e && e.name==='AbortError') || (signal && signal.aborted); }
+    return once().catch(function(e){
+      if(isAbort(e)) throw e;                                   // cancelled on purpose — don't retry
+      return new Promise(function(r){ setTimeout(r, 2500); }).then(function(){
+        if(signal && signal.aborted) throw e;                  // cancelled during the backoff
+        return once();
+      });
+    });
+  }
+
+  // ISO week key for a yyyy-mm-dd string — same algorithm as the backend's formatWeekKey_,
+  // so Weekly/Monthly follow the PICKED date instead of silently showing the current period (B1).
+  function isoWeekKey(ymd){
+    var p = String(ymd).split('-').map(Number);
+    var d = new Date(Date.UTC(p[0], p[1]-1, p[2]));
+    var dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    var year = d.getUTCFullYear();
+    var ys = new Date(Date.UTC(year, 0, 1));
+    var week = Math.ceil((((d - ys) / 86400000) + 1) / 7);
+    return year + '-W' + (week < 10 ? '0' + week : week);
+  }
+
+  var LOAD_SEQ = 0;        // discard out-of-order responses (fast Daily→Weekly clicks can cross)
+  var LAST_UPDATED = null; // ms timestamp of the last successful render — drives the staleness label
+  var _curAbort = null;    // AbortController of the in-flight load; a newer load aborts it (FN-3)
+  var _lastLoadAt = 0;     // ms of the last load() start — floors the visibilitychange retry (2026-08-10)
+  // [F1] up to SNAP_MAX saved views (date|view|branch), so switching MTK/KTN/Yesterday paints instantly.
+  // (The single-view clfDash_snap_v1 of the previous version is deleted at start-up — see init.)
+  var _SNAP_KEY = 'clfDashT_snaps_v2', _STAFF_KEY = 'clfDashT_staff_v1', SNAP_MAX = 4;   // TEST page: own keys, never the live page's
+  var CUR = { ship:null, fuel:null, dash:null, leave:null };   // latest data per source for what is on screen
+  var ON_SCREEN_KEY = null;     // date|view|branch the board is currently showing
+  var FROM_SNAPSHOT = false;    // board was painted from a saved view and fresh data hasn't settled yet
+  var ZONE_LABEL = { ship:'deliveries', fuel:'fuel', dash:'driver summary', leave:'leave' };
+  var _pending = {}, _loadStartedAt = 0, _loadTick = null;
+
+  // A backend {status:'error'} comes back as HTTP 200 (Apps Script can't set status codes), so treat
+  // anything that isn't status:'ok' as missing — never render an error payload as a green "all good" day.
+  function okData(r){ return (r && r.status==='ok') ? r : null; }
+  // [ReadAuth self-heal 2026-08-10] A dead grant makes every gated read answer
+  // {status:'error',code:'READ_AUTH'}, which okData() flattens to null — indistinguishable from
+  // "server unreachable". _rgIsDenied() was written for exactly this but never called, so the board
+  // could stay broken for up to 5.5h and Refresh could not fix it. Flag the refusal for load().
+  function _rgSeen(box){ return function(r){ if(_rgIsDenied(r)) box.denied = true; return okData(r); }; }
+
+  // localStorage snapshot (FN-4) + staff-id cache (FN-5). The snapshot lets a re-open paint instantly
+  // from the last good data; the staff map (changes rarely) keeps worker IDs visible even when the
+  // heavy getDashboardData call is slow or failing. All wrapped — private mode / quota never throws.
+  function snapKey(){ return selectedDate+'|'+selectedView+'|'+selectedBranch; }
+  // Only what this board renders from dash is kept — the full payload carries a lot the page never uses.
+  function slimDash(d){ return d ? { status:d.status, drivers:d.drivers, notSubmittedToday:d.notSubmittedToday, isPublicHoliday:d.isPublicHoliday } : d; }
+  // per-shipment atRisk duplicates failedList and this page never reads it (~100 KB a saved view)
+  function slimShip(sh){ if(!sh || !sh.shipments) return sh; var o = Object.assign({}, sh); o.shipments = sh.shipments.map(function(s){ var c = Object.assign({}, s); delete c.atRisk; return c; }); return o; }
+  // day = the day the view was SAVED: its "today only" parts (fuel slips not in, fuel list, leave) belong to that day
+  function snapOf(c){ return { k:snapKey(), day:fmtToday(), ts:LAST_UPDATED, date:selectedDate, view:selectedView, branch:selectedBranch, dash:slimDash(c.dash), ship:slimShip(c.ship), fuel:c.fuel, leave:c.leave }; }
+  function loadSnaps(){ try{ var a = JSON.parse(localStorage.getItem(_SNAP_KEY)||'[]'); return Array.isArray(a) ? a : []; }catch(e){ return []; } }
+  function saveSnapshot(o){
+    var a = loadSnaps().filter(function(s){ return s && s.k !== o.k; });
+    a.unshift(o); a = a.slice(0, SNAP_MAX);
+    // localStorage is shared by every form on this origin: on a quota error drop the oldest view and retry.
+    while(a.length){ try{ localStorage.setItem(_SNAP_KEY, JSON.stringify(a)); return; }catch(e){ a.pop(); } }
+    try{ localStorage.removeItem(_SNAP_KEY); }catch(e){}   // not even the newest view fits: don't keep replaying the old list
+  }
+  function loadSnapshot(){ var k = snapKey(), a = loadSnaps(); for(var i=0;i<a.length;i++){ if(a[i] && a[i].k===k) return a[i]; } return null; }
+  function saveStaff(){ try{ localStorage.setItem(_STAFF_KEY, JSON.stringify(STAFF)); }catch(e){} }
+  function loadStaff(){ try{ return JSON.parse(localStorage.getItem(_STAFF_KEY)||'null'); }catch(e){ return null; } }
+  function seedStaffFromDrivers(drivers){ STAFF={}; (drivers||[]).forEach(function(d){ if(d&&d.name) STAFF[d.name]=d.staffId||''; }); }
+
+  function fmtUpdated(){
+    if(!LAST_UPDATED){ return ''; }
+    var d = new Date(LAST_UPDATED);
+    var hm = ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+    var ageMin = Math.floor((Date.now()-LAST_UPDATED)/60000);
+    return 'Updated '+hm+(ageMin>=2 ? ' ('+(ageMin>=60 ? Math.floor(ageMin/60)+'h '+(ageMin%60)+'m' : ageMin+'m')+' ago)' : '');
+  }
+  // [F1] "Saved view 10:42 — updating" while a board painted from this device's saved copy is refreshing
+  function savedPill(){
+    if(!FROM_SNAPSHOT || !LAST_UPDATED) return '';
+    var d = new Date(LAST_UPDATED), hm = ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+    return '<span class="pill'+(Date.now()-LAST_UPDATED > 15*60000 ? ' old' : '')+'">Saved view '+hm+' — updating</span>';
+  }
+  function paintUpdated(){
+    var el = $('lastRefresh'); if(!el) return;
+    el.innerHTML = esc(fmtUpdated()) + savedPill();
+    el.style.color = (LAST_UPDATED && Date.now()-LAST_UPDATED > 15*60000) ? 'var(--amber-700)' : '';
+  }
+  // [F1] "Still loading: deliveries · fuel — 8 s" once a load passes 5 s, so a slow board doesn't look dead.
+  function paintLoadLine(){
+    var el = $('loadLine'); if(!el) return;
+    var left = Object.keys(_pending).filter(function(k){ return _pending[k]; });
+    if(!left.length){ el.textContent = ''; if(_loadTick){ clearInterval(_loadTick); _loadTick = null; } return; }
+    var secs = Math.round((Date.now() - _loadStartedAt)/1000);
+    el.textContent = secs >= 5 ? ('Still loading: ' + left.map(function(k){ return ZONE_LABEL[k]; }).join(' · ') + ' — ' + secs + ' s') : '';
+  }
+  function syncDayButtons(){
+    var t = fmtToday(), y = fmtYesterday();
+    $('daySeg').querySelectorAll('.seg-btn').forEach(function(b){
+      var d = b.getAttribute('data-day');
+      b.classList.toggle('active', (d==='today' && selectedDate===t) || (d==='yesterday' && selectedDate===y));
+    });
+  }
+  function goDate(ymd, follow){ selectedDate = ymd; followToday = !!follow; $('dateInput').value = ymd; load(); }
+
+  // Each source, fetched for the CURRENT selection. Retry reuses this, so a retried zone asks for exactly
+  // what a full load would have asked for.
+  function zoneRequest(zone, sig, forceFresh){
+    var periodParam = selectedView==='daily'  ? ('&date='+encodeURIComponent(selectedDate))
+                    : selectedView==='weekly' ? ('&period='+encodeURIComponent(isoWeekKey(selectedDate)))
+                    :                            ('&period='+encodeURIComponent(selectedDate.slice(0,7)));
+    var fp = forceFresh ? '&fresh=1' : '';   // ↻ Refresh forces the backend to skip its cache
+    var bp = '&branch=' + encodeURIComponent(selectedBranch);   // branch filter rides on every read (ALL = combined)
+    if(zone==='dash') return api(['action=getDashboardData','view='+selectedView + periodParam + bp + fp], sig);
+    if(zone==='ship') return api(['action=getShipmentsForDate','date='+encodeURIComponent(selectedDate) + bp + fp], sig);
+    if(zone==='fuel') return api(['action=getFuelOps','view='+selectedView + periodParam + bp + fp], sig);
+    return api(['action=getLeaveToday' + bp], sig);
+  }
+  function draw(fn){ try{ fn(); }catch(e){ if(window.console)console.error('render failed', e); } }
+
+  // Progressive render (FN-2/FR-1): paint each ZONE the instant ITS OWN primary source lands, rather
+  // than waiting for the slowest of the four. Each zone is rendered by exactly one primary source so a
+  // slower/secondary source can never blank a zone another source already filled (verify: R1/R2/R6):
+  //   • meta + POD + driver board  ← ship    • fuel charts/tables ← fuel
+  //   • driver summary + no-fuel card ← dash  • (leave & dash only REFINE the board, never blank it)
+  // A null source paints its own zones "unavailable" (+ Retry) and touches nothing else.
+  function land(zone, data){
+    CUR[zone] = data;
+    if(zone==='ship'){
+      draw(function(){ renderTop(data, CUR.fuel); });     // meta's lorry count is ship's; fuelScope filled if fuel already in
+      draw(function(){ renderPod(data); });               // rendered once here only — dash re-render removed (R6: kept accordion/route state)
+      draw(function(){ renderBoard(data, CUR.dash, CUR.leave); });
+    } else if(zone==='fuel'){
+      if(CUR.ship!=null) draw(function(){ renderTop(CUR.ship, data); });   // only refine fuelScope; don't blank ship's meta before ship lands (R3)
+      draw(function(){ renderFuel(data, CUR.dash, CUR.dash==null); });     // fuel charts are fuel's; the no-fuel card waits for dash
+    } else if(zone==='dash'){
+      if(data && data.drivers && data.drivers.length){ seedStaffFromDrivers(data.drivers); saveStaff(); }  // (R5) empty [] must not wipe the cached IDs
+      draw(function(){ renderDriverSummary(data); });     // this zone IS dash's — null → its own unavailable
+      if(CUR.ship!=null) draw(function(){ renderBoard(CUR.ship, data, CUR.leave); });  // only REFINE the board (add No-route/leave); never blank it (R1/R2)
+      draw(function(){ renderNoFuel(data); });            // just the no-fuel card — not a full renderFuel (avoids chart flicker + R1 fuel-blanking)
+    } else if(zone==='leave'){
+      if(CUR.ship!=null) draw(function(){ renderBoard(CUR.ship, CUR.dash, data); });  // board needs ship; leave only refines the On-leave group
+    }
+  }
+
+  // [F1] Placeholders for a selection this device has no saved view of — the previous selection's numbers
+  // must never sit under the new date/branch while its data loads.
+  function renderSkeleton(){
+    var L = '<div class="empty">Loading…</div>';
+    POD_OK = true; NA_GROUPS = []; NA_EMPTY_DAY = false; NA_LOADING = true;
+    $('podPct').textContent = '…'; $('podPct').style.color = ''; $('podFrac').textContent = 'loading…'; $('podChips').innerHTML = '';
+    $('driverBoard').innerHTML = L;
+    $('needsActionBody').innerHTML = '<tr><td colspan="6" class="empty">Loading…</td></tr>';
+    $('podNotSubmitted').innerHTML = L; $('podNotSubmittedNote').textContent = '';
+    ['lorrySuccess','fuelCostLorry','fuelPerKm'].forEach(function(id){ dropChart(id); $(id).innerHTML = L; });
+    $('lorrySuccessEmpty').style.display = 'none'; $('fuelCostEmpty').style.display = 'none'; $('fuelPerKmEmpty').style.display = 'none';
+    $('crewRows').innerHTML = '<tr><td colspan="4" class="empty">Loading…</td></tr>';
+    $('dsumRows').innerHTML = '<tr><td colspan="5" class="empty">Loading…</td></tr>';
+    $('routePicker').innerHTML = L; $('routeStops').innerHTML = '';
+    $('fuelPerKmHero').textContent = '…'; $('fuelKmPerL').textContent = 'loading…'; $('fuelTotal').textContent = '…';
+    $('fuelScope').textContent = ''; $('fuelHeroTitle').textContent = 'Fuel cost';   // period labels come with the fuel data
+    $('noFuelChips').innerHTML = L; $('noFuelNote').textContent = '';
+    $('tankRows').innerHTML = '<tr><td colspan="5" class="empty">Loading…</td></tr>'; $('tankEmpty').style.display = 'none';
+    $('fuelRows').innerHTML = '<tr><td colspan="7" class="empty">Loading…</td></tr>';
+  }
+
+  function load(forceFresh){
+    hideErr();
+    // [F1] follow today across midnight unless someone picked another date
+    if(followToday && selectedDate !== fmtToday()){ selectedDate = fmtToday(); var _di = $('dateInput'); if(_di) _di.value = selectedDate; }
+    syncDayButtons();
+    paintLabels();   // [F1] selection-only labels first, so the old view's wording never sits over the new one
+    // [F1] A different date / view / branch paints its saved view if this device has one, else placeholders.
+    var key = snapKey();
+    if(key !== ON_SCREEN_KEY){
+      CUR = { ship:null, fuel:null, dash:null, leave:null };
+      if(!paintSnapshot()){ LAST_UPDATED = null; FROM_SNAPSHOT = false; renderSkeleton(); paintUpdated(); }
+      ON_SCREEN_KEY = key;
+    }
+    // Don't wipe the meta to "Loading…" if we already have data on screen — show a subtle "refreshing…"
+    // next to the timestamp instead, so an auto-refresh doesn't blank the board (pairs with FN-4).
+    if(!LAST_UPDATED) $('dashMeta').textContent = 'Loading… · ' + branchLabel();
+    else { var _lr=$('lastRefresh'); if(_lr) _lr.innerHTML = esc(fmtUpdated())+' · refreshing…'+savedPill(); }
+
+    var seq = ++LOAD_SEQ;
+    // Cancel the previous load's in-flight requests so fast Date/View/Branch clicks (or an overlapping
+    // auto-refresh) don't pile up 4+ requests each (FN-3).
+    if(_curAbort){ try{ _curAbort.abort(); }catch(e){} }
+    var ac  = (window.AbortController ? new AbortController() : null);
+    _curAbort = ac;
+    var sig = ac ? ac.signal : null;
+
+    // Show cached worker IDs immediately if STAFF is empty, so names aren't ID-less while dash loads (FN-5).
+    if(!STAFF || !Object.keys(STAFF).length){ var cs=loadStaff(); if(cs) STAFF=cs; }
+
+    var got = {};
+    var authBox = { denied:false };   // _rgSeen() sets this if any read came back READ_AUTH
+    function fresh(){ return seq === LOAD_SEQ; }   // a newer load started → this one's late arrivals are ignored
+
+    if (!_rgAuth()) { _pending = {}; paintLoadLine(); _rgShowLock(); return; }   // no fetch → nothing is "still loading"
+    _lastLoadAt = Date.now();   // stamped only where requests are actually issued (see visibilitychange)
+    _pending = { ship:1, fuel:1, dash:1, leave:1 }; _loadStartedAt = Date.now();
+    if(!_loadTick) _loadTick = setInterval(paintLoadLine, 1000);
+    var ps = ['dash','ship','fuel','leave'].map(function(z){
+      return zoneRequest(z, sig, forceFresh).then(_rgSeen(authBox), function(){ return null; }).then(function(data){
+        if(!fresh()) return;
+        _pending[z] = 0; paintLoadLine();
+        // A Retry already refilled this zone during THIS load — its own late failure must not blank it.
+        if(!data && RETRY_OK[z] === seq){ got[z] = CUR[z]; return; }
+        got[z] = data;
+        land(z, data);
+      });
+    });
+
+    // All settled: banner + "updated" stamp + saved view for the next instant open (FN-4).
+    Promise.all(ps).then(function(){
+      if(!fresh()) return;
+      var dash=got.dash, ship=got.ship, fuel=got.fuel, leave=got.leave;
+      FROM_SNAPSHOT = false;
+      // [2026-08-10] A READ_AUTH refusal is an AUTH problem, not a network one. Recover instead of
+      // sending the office to look at the router. Guarded on "nothing loaded" so a (theoretically
+      // impossible, all four carry the same grant) partial refusal still falls through to the
+      // normal partial-failure banner rather than throwing away good data.
+      if(authBox.denied && !ship && !fuel && !dash){ paintUpdated(); _rgOnDenied(forceFresh); return; }
+      if(!ship && !fuel){ showErr('Cannot reach server. Please check connection, then tap Retry or Refresh.'); $('dashMeta').textContent=''; }
+      else if(!ship || !fuel || !dash){ showErr('Some data failed to load — sections marked "unavailable" are NOT empty, just not loaded. Tap Retry on them.'); }
+      if(ship || fuel){
+        LAST_UPDATED = Date.now();
+        saveSnapshot(snapOf(CUR));   // from CUR: includes any zone a Retry refilled during this load
+      }
+      paintUpdated();
+    }).catch(function(e){ if(!fresh()) return; showErr('Something went wrong loading the dashboard. Please Refresh.'); $('dashMeta').textContent=''; });
+  }
+
+  // [F1] Retry one zone: refetch only its own source for the current selection. No fresh=1 — the server
+  // usually finished (and cached) the run whose answer timed out here, so this is often instant.
+  function retryZone(zone){
+    if(!_rgAuth()){ _rgShowLock(); return; }
+    var seq = LOAD_SEQ;
+    document.querySelectorAll('.retry[data-zone="'+zone+'"]').forEach(function(b){ b.disabled = true; b.textContent = 'Loading…'; });
+    var authBox = { denied:false };
+    // Rides on the current load's AbortController, so a newer load (date / branch switch) cancels it too.
+    zoneRequest(zone, _curAbort ? _curAbort.signal : null, false).then(_rgSeen(authBox), function(){ return null; }).then(function(data){
+      if(seq !== LOAD_SEQ) return;                         // a newer load took over
+      if(!data && CUR[zone]) return;                       // a late failed retry must not blank data a load has painted since
+      if(authBox.denied && !data){ _rgOnDenied(false); return; }
+      if(data) RETRY_OK[zone] = seq;                       // ...and the running load's own late failure must not blank this one
+      land(zone, data);
+      // Stamp + save only once nothing of this load is still in flight; otherwise the load's
+      // Promise.all does it (from CUR), so hours-old saved-view zones are never labelled fresh.
+      var inFlight = Object.keys(_pending).some(function(k){ return _pending[k]; });
+      if(data && !inFlight && (CUR.ship || CUR.fuel)){
+        if(CUR.ship && CUR.fuel && CUR.dash) hideErr();
+        LAST_UPDATED = Date.now(); FROM_SNAPSHOT = false;
+        saveSnapshot(snapOf(CUR));
+        paintUpdated();
+      }
+    });
+  }
+
+  // Paint the saved view for the current selection before the network round-trip (FN-4) — an instant
+  // open instead of a blank "Loading…". Returns true if it painted, so the caller can skip placeholders.
+  function paintSnapshot(){
+    var s = loadSnapshot();
+    if(!s) return false;
+    // [F1] A view saved on another day (yesterday's "Today" is exactly what the Yesterday button opens)
+    // carries THAT day's "today only" parts — fuel slips not in, the fuel submissions list, leave. Drop
+    // them: those cards show "Loading…" until today's own sources land, never another day's names.
+    if(s.day !== fmtToday()){
+      s.leave = null;
+      if(s.dash) s.dash = Object.assign({}, s.dash, { notSubmittedToday:null, isPublicHoliday:false, staleToday:true });
+      if(s.fuel) s.fuel = Object.assign({}, s.fuel, { submissions:null, staleToday:true });
+    }
+    if(s.dash && s.dash.drivers && s.dash.drivers.length) seedStaffFromDrivers(s.dash.drivers);
+    CUR = { ship:s.ship||null, fuel:s.fuel||null, dash:s.dash||null, leave:s.leave||null };
+    try{ renderTop(s.ship, s.fuel); }catch(e){}
+    try{ renderPod(s.ship); }catch(e){}
+    try{ renderBoard(s.ship, s.dash, s.leave); }catch(e){}
+    try{ renderDriverSummary(s.dash); }catch(e){}
+    try{ renderFuel(s.fuel, s.dash); }catch(e){}
+    LAST_UPDATED = s.ts || Date.now(); FROM_SNAPSHOT = true;
+    paintUpdated();
+    return true;
+  }
+
+  function renderTop(ship, fuel){
+    // Reflect the branch selection in the title and the meta line, keeping the date/lorry-count text.
+    var bSuffix = ' · ' + branchLabel();
+    var h1 = document.querySelector('.topbar h1');
+    if(h1) h1.textContent = 'CLF Fleet Dashboard' + (selectedBranch==='ALL' ? '' : ' · ' + branchLabel());
+    if(ship){
+      var routes = ship.shipments || [];
+      var n = routes.length + routes.filter(function(s){ return s.lorry2; }).length;  // +1 per shared route's 2nd lorry
+      $('dashMeta').textContent = niceDate(selectedDate) + ' · ' + (n ? (n + ' lorries dispatched') : 'no delivery orders imported') + bSuffix;
+    } else {
+      $('dashMeta').textContent = niceDate(selectedDate) + ' · data unavailable' + bSuffix;   // NOT "0 lorries" — that reads as a real zero
+    }
+    // B2: the POD half is daily-only — flag it loudly in Weekly/Monthly so the boss doesn't
+    // read a single day's delivery % as the weekly/monthly number.
+    var podScope = $('podScope');
+    if(selectedView==='daily'){ podScope.textContent = '— for ' + niceDate(selectedDate); podScope.style.color=''; }
+    else { podScope.textContent = '— ⚠ daily view only: showing ' + niceDate(selectedDate) + ' (fuel below follows the ' + selectedView + ' period)'; podScope.style.color='var(--amber-700)'; }
+    $('fuelScope').textContent = (fuel && fuel.periodLabel) ? ('— ' + fuel.periodLabel) : '';
+  }
+
+  // ---------- Driver board (who is free for a 2nd trip right now) ----------
+  // Standby = route fully processed (delivered+failed >= planned). Names only (no staff IDs),
+  // no emoji — professional dots. Leave list is today-only (backend getLeaveToday).
+  var NONE_OPEN = false;              // [F1] the collapsed "No route" list was expanded by the user
+  function renderBoard(ship, dash, leave){
+    var el = $('driverBoard'); if(!el) return;
+    var past = isPast();   // the card title comes from paintLabels()
+    if(!ship){ el.innerHTML = unavail('ship'); return; }
+    // leave list is valid only for the date the BACKEND says it covers (KL-timezone-exact)
+    var leaveValid = !!(leave && leave.onLeave && leave.date === selectedDate);
+    var groups = { standby:[], route:[], trip2:[], leave:[], none:[] };
+    var assigned = {};
+    (ship.shipments||[]).forEach(function(s){
+      var fin = (s.planned||0) > 0 && ((s.delivered||0)+(s.failed||0)) >= s.planned;
+      var doneTime = '';
+      if(fin){ var ts=(s.arrivals||[]).map(function(a){return a.time||'';}).filter(Boolean).sort(); doneTime = ts.length?ts[ts.length-1]:''; }
+      // [F1] helpers count with their lorry too — they used to fall into "No route" (~7 people a day)
+      [{n:s.assignedPrimary},{n:s.assignedSecondary,h:1},{n:s.lorry2Primary},{n:s.lorry2Secondary,h:1}].forEach(function(c){
+        var nm = String(c.n||'').trim(); if(!nm) return;
+        assigned[nm] = 1;
+        var it = { name:nm, frac:(s.delivered||0)+'/'+(s.planned||0), time:doneTime, trips:(s.trips||1), helper:!!c.h };
+        if(fin) groups.standby.push(it);
+        else if((s.trips||1) > 1) groups.trip2.push(it);
+        else groups.route.push(it);
+      });
+    });
+    var leaveSet = {};
+    if(leaveValid){
+      leave.onLeave.forEach(function(x){
+        var nm = String(x.driverName||'').trim(); if(!nm) return;
+        leaveSet[nm] = 1;
+        if(!assigned[nm]) groups.leave.push({ name:nm });
+      });
+    }
+    ((dash && dash.drivers) || []).forEach(function(d){
+      if(d && d.name && !assigned[d.name] && !leaveSet[d.name]) groups.none.push({ name:d.name });
+    });
+    // A driver can sit on several shipments (2nd trip rows, shared routes): still BUSY on one
+    // route → not standby; and never list the same name twice within a group.
+    var busy = {};
+    groups.route.concat(groups.trip2).forEach(function(x){ busy[x.name] = 1; });
+    groups.standby = groups.standby.filter(function(x){ return !busy[x.name]; });
+    ['standby','route','trip2','leave','none'].forEach(function(k){
+      var seen = {};
+      groups[k] = groups[k].filter(function(x){ if(seen[x.name]) return false; seen[x.name] = 1; return true; });
+    });
+    groups.standby.sort(function(a,b){ return String(a.time).localeCompare(String(b.time)); });   // earliest finisher first
+
+    function role(x){ return x.helper ? ' <span class="b-role">· helper</span>' : ''; }   // inside the name span, so it wraps with the name
+    function row(color, label, arr, fmt, collapsible){
+      if(!arr.length) return '';
+      var hide = collapsible && !NONE_OPEN;
+      return '<div class="b-row"><div class="b-label"><i class="dot" style="background:'+color+';"></i>'+label+'<span class="cnt">'+arr.length+'</span></div>'
+        + '<div class="b-list"'+(hide?' style="display:none;"':'')+'>'+arr.map(function(x){ return '<div class="b-item">'+fmt(x)+'</div>'; }).join('')+'</div>'
+        + (collapsible ? '<div class="b-more" data-more="1">'+(hide?'show ▸':'hide ▾')+'</div>' : '') + '</div>';
+    }
+    var html =
+      row(GREEN,    'Standby',  groups.standby, function(x){ return idCol(x.name, role(x))+' <span class="meta">'+(x.time?('done '+esc(x.time)):'done')+(x.trips>1?' · '+x.trips+' trips':'')+'</span>'; }) +
+      row('#1A56DB','2nd trip', groups.trip2,   function(x){ return idCol(x.name, role(x))+' <span class="meta">'+esc(x.frac)+'</span>'; }) +
+      row('#60A5FA','On route', groups.route,   function(x){ return idCol(x.name, role(x))+' <span class="meta">'+esc(x.frac)+'</span>'; }) +
+      row('#9CA3AF','On leave', groups.leave,   function(x){ return idCol(x.name); }) +
+      row('#D1D5DB', past ? 'Not on a lorry' : 'No route', groups.none, function(x){ return idCol(x.name); }, true);   // [F1] collapsed: a phone no longer scrolls past ~48 names
+    if(past && groups.none.length) html += '<div class="note-line">Leave is only recorded for today, so on a past date anyone on leave is listed under "Not on a lorry".</div>';
+    el.innerHTML = html || '<div class="empty">'+((ship.shipments||[]).length ? 'No crew assigned yet.' : 'No delivery orders imported for this date.')+'</div>';
+  }
+
+  // ---------- Driver summary (routes / 2nd trips / leave — follows the period selector) ----------
+  function renderDriverSummary(dash){
+    var body = $('dsumRows'); if(!body) return;
+    if(!dash || !dash.drivers || !dash.drivers.length){
+      body.innerHTML = '<tr><td colspan="5">'+(dash?'<span class="empty">No driver data for this period.</span>':unavail('dash'))+'</td></tr>';
+      return;
+    }
+    // [F1] by staff ID, not by 2nd trips — the old order read as a ranking
+    var rows = dash.drivers.slice().sort(function(a,b){
+      var sa = String(STAFF[a.name] || a.staffId || '~'), sb = String(STAFF[b.name] || b.staffId || '~');
+      return sa.localeCompare(sb, undefined, {numeric:true}) || String(a.name).localeCompare(String(b.name));
+    });
+    body.innerHTML = rows.map(function(d){
+      return '<tr><td>'+idShort(d.name)+'</td>'
+        + '<td class="rm">'+(d.routesDone||0)+'</td>'
+        + '<td class="rm">'+(d.secondTrips||0)+'</td>'
+        + '<td class="rm">'+(d.leaveDays||0)+'</td>'
+        + '<td class="rm">'+(d.podTrips||0)+'</td></tr>';
+    }).join('');
+  }
+
+  // ---------- POD ----------
+  var NA_GROUPS = [];                 // needs-action groups (per lorry), kept for the filter chips
+  var NA_FILTER = 'all';
+  var POD_OK = false;                 // last load had usable POD data (guards the filter chips re-render)
+
+  var NA_EMPTY_DAY = false;           // [F1] the date has no delivery orders at all (KTN, Sundays, before the import)
+  var NA_LOADING = false;             // [F1] placeholders are up — the filter chips must not claim "all good"
+
+  function renderNeedsAction(){
+    var body = $('needsActionBody');
+    if(NA_LOADING){ body.innerHTML = '<tr><td colspan="6" class="empty">Loading…</td></tr>'; return; }
+    if(!POD_OK){ body.innerHTML = '<tr><td colspan="6">'+unavail('ship','POD data unavailable')+'</td></tr>'; return; }
+    var past = isPast(), late = podLate();   // the column head comes from paintLabels()
+    if(NA_EMPTY_DAY){ body.innerHTML = '<tr><td colspan="6" class="empty">No delivery orders imported for this date.</td></tr>'; return; }
+    var groups = (NA_FILTER==='failed') ? NA_GROUPS.filter(function(g){ return g.failed>0; }) : NA_GROUPS;
+    if(!groups.length){
+      body.innerHTML = '<tr><td colspan="6" class="empty">'+(NA_FILTER==='failed'
+        ? 'No problem stops ✓'+(NA_GROUPS.length?(' — '+NA_GROUPS.length+' lorr'+(NA_GROUPS.length>1?'ies':'y')+(past?' have invoices with no POD record':' still have stops not yet confirmed')+' (tap All)'):'')
+        : (past ? 'No problem stops and every invoice has a POD record ✓' : 'No problem stops and nothing left to confirm ✓'))+'</td></tr>';
+      return;
+    }
+    // [F1] a stop nobody has reached yet is "Not yet" (grey until 3 pm today, then amber; grey for a future
+    // date); on a past date it is "No POD record" (amber). Red stays for failed stops only.
+    var pendLabel = past ? 'No POD record' : 'Not yet';
+    var pendCls = late ? 'st-pend' : 'st-wait';
+    var html = '';
+    groups.forEach(function(g, gi){
+      html += '<tr class="na-sum'+(g.failed>0?' fail':'')+'" data-g="'+gi+'"><td><span class="caret">▸</span></td>'
+        + '<td>'+esc(g.lorryNo)+'</td><td>'+idName(g.driver)+'</td>'
+        + '<td class="rm">'+(g.failed>0?('<span class="st-fail">'+g.failed+'</span>'):'0')+'</td>'
+        + '<td class="rm">'+g.pending+'</td>'
+        + '<td class="rm">'+(g.rm>0?g.rm.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}):'—')+'</td></tr>';
+      g.items.forEach(function(f){
+        var st = f.status==='failed' ? ('<span class="st-fail">Problem'+(f.reason?(' · '+esc(f.reason)):'')+'</span>') : '<span class="'+pendCls+'">'+pendLabel+'</span>';
+        html += '<tr class="na-det g'+gi+(f.status==='failed'?' fail':'')+'"><td></td>'
+          + '<td colspan="2" style="padding-left:22px;">'+esc(f.customer)+' <span class="route-area">· '+esc(f.area||'')+'</span></td>'
+          + '<td colspan="2">'+st+'</td>'
+          + '<td class="rm">'+(num(f.amount)==null?'—':num(f.amount).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}))+'</td></tr>';
+      });
+    });
+    body.innerHTML = html;
+    body.querySelectorAll('tr.na-sum').forEach(function(row){
+      row.addEventListener('click', function(){
+        var gi = row.getAttribute('data-g');
+        var open = !row.classList.contains('open');
+        row.classList.toggle('open', open);
+        row.querySelector('.caret').textContent = open ? '▾' : '▸';
+        body.querySelectorAll('tr.na-det.g'+gi).forEach(function(d){ d.classList.toggle('open', open); });
+      });
+    });
+  }
+
+  function renderPod(ship){
+    POD_OK = !!ship; NA_LOADING = false;
+    var today = isToday(), past = isPast(), late = podLate();   // card titles come from paintLabels()
+    if(!ship){
+      dropChart('lorrySuccess');
+      $('podPct').textContent='—'; $('podPct').style.color=''; $('podFrac').textContent='data unavailable'; $('podChips').innerHTML='';
+      $('needsActionBody').innerHTML = '<tr><td colspan="6">'+unavail('ship','POD data unavailable')+'</td></tr>';
+      $('podNotSubmitted').innerHTML = unavail('ship');
+      $('podNotSubmittedNote').textContent='';
+      // UX-5: on FAILURE show "unavailable", not the "no started lorries" empty text (which reads as a real zero).
+      $('lorrySuccessEmpty').style.display='none'; $('lorrySuccess').innerHTML=unavail('ship');
+      $('crewRows').innerHTML = '<tr><td colspan="4">'+unavail('ship')+'</td></tr>';
+      $('routePicker').innerHTML=unavail('ship'); $('routeStops').innerHTML='';
+      NA_GROUPS=[]; NA_EMPTY_DAY=false;
+      return;
+    }
+    var shipments = ship.shipments || [];
+    NA_EMPTY_DAY = !shipments.length;
+    if(NA_EMPTY_DAY){
+      // [F1] An empty day is not "all good". Every KTN day, Sundays, future dates and every morning before
+      // the import used to read "All routes have started ✓" and "Nothing failed or pending — all good ✓".
+      $('podPct').textContent = 'No DLs'; $('podPct').style.color = 'var(--gray-400)';   // neutral, not the hero green
+      $('podFrac').innerHTML = 'No delivery orders imported for ' + esc(niceDate(selectedDate))
+        + ((today && hourNow() < 11 && new Date().getDay() !== 0) ? ' · usually in by 9 am' : '')
+        + (today ? ' · <a href="#" id="seeYesterday">see yesterday ›</a>' : '');
+      $('podChips').innerHTML = '';
+      NA_GROUPS = []; renderNeedsAction();
+      $('podNotSubmitted').innerHTML = '<span class="empty">No delivery orders imported — nothing to check.</span>';
+      $('podNotSubmittedNote').textContent = '';
+      dropChart('lorrySuccess');
+      $('lorrySuccess').innerHTML = '';
+      $('lorrySuccessEmpty').textContent = 'No delivery orders imported for this date.'; $('lorrySuccessEmpty').style.display = 'block';
+      $('crewRows').innerHTML = '<tr><td colspan="4" class="empty">No delivery orders imported for this date.</td></tr>';
+      ROUTE_SHIPMENTS = []; $('routePicker').innerHTML = '<span class="empty">No delivery orders imported for this date.</span>'; $('routeStops').innerHTML = '';
+      return;
+    }
+    var t = ship.totals || {planned:0,delivered:0,failed:0,pending:0,successPct:null};
+    // [F1] Progress, not "success": delivered ÷ planned also counts the stops nobody has reached yet.
+    $('podPct').textContent = fmtInt(t.delivered) + ' / ' + fmtInt(t.planned); $('podPct').style.color = '';
+    // UX-7: in Weekly/Monthly the POD half is still a single day — mark the big number itself, not just the zone header.
+    $('podFrac').textContent = (t.successPct==null ? '—' : t.successPct+'%') + ' confirmed'
+      + (t.pending ? (' · ' + fmtInt(t.pending) + (past ? ' with no POD record' : ' not yet')) : '')
+      + (selectedView!=='daily' ? ' · DAILY '+selectedDate+' only' : '');
+    // UX-4: split the money. Red = FAILED stops only — a real problem. Stops that just haven't been reached
+    // yet are shown separately (grey, amber after 3 pm; amber "no POD record" on a past date). The TOTAL is
+    // anchored to the backend's authoritative t.rmAtRisk (so it never silently shrinks if the per-stop
+    // failedList is missing some amounts); failedList is used only to carve out how much of it is FAILED.
+    var _fl = (ship.failedList||[]), _rmFailList=0;
+    _fl.forEach(function(f){ var a=num(f.amount); if(a!=null && f.status==='failed') _rmFailList+=a; });
+    var _total = num(t.rmAtRisk), _rmFail, _rmPend;
+    if(_total!=null && _total>0){ _rmFail = Math.min(_rmFailList, _total); _rmPend = Math.round((_total - _rmFail)*100)/100; }
+    else { _rmFail = _rmFailList; _rmPend = 0; }   // no backend total → only what the list gives us
+    function _rm(n){ return 'RM '+Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+    var pendCls = late ? 'amber' : 'grey';
+    $('podChips').innerHTML =
+      '<span class="chip green">'+fmtInt(t.delivered)+' delivered</span>' +
+      '<span class="chip '+(t.failed>0?'red':'grey')+'">'+fmtInt(t.failed)+' problem</span>' +
+      '<span class="chip '+pendCls+'">'+fmtInt(t.pending)+(past?' no POD record':' not yet')+'</span>' +
+      (_rmFail>0 ? '<span class="chip red mono">'+_rm(_rmFail)+' on problem stops</span>' : '') +
+      (_rmPend>0 ? '<span class="chip '+pendCls+' mono">'+_rm(_rmPend)+(past?' with no POD record':' not yet delivered')+'</span>' : '');
+
+    // Needs action — group per lorry (accordion): failed lorries first, then by RM at risk
+    var fl = (ship.failedList||[]);
+    var gmap = {}; NA_GROUPS = [];
+    fl.forEach(function(f){
+      var k = String(f.lorryNo||'');
+      if(!gmap[k]){ gmap[k] = { lorryNo:f.lorryNo, driver:f.driver, failed:0, pending:0, rm:0, items:[] }; NA_GROUPS.push(gmap[k]); }
+      var g = gmap[k];
+      if(f.status==='failed') g.failed++; else g.pending++;
+      var a = num(f.amount); if(a!=null) g.rm += a;
+      g.items.push(f);
+    });
+    NA_GROUPS.forEach(function(g){ g.rm = Math.round(g.rm*100)/100; });
+    NA_GROUPS.sort(function(a,b){ return (b.failed>0?1:0)-(a.failed>0?1:0) || b.rm-a.rm; });
+    renderNeedsAction();
+
+    // No POD yet — lorry-first table, driver AND helper shown (nobody singled out)
+    // UX-6: a lorry with ANY confirmed POD (delivered OR failed) has started — drop it from this
+    // list even if the backend's delivered-only notStarted still includes it,
+    // so a driver who logged only failed stops isn't wrongly accused of doing nothing.
+    function _plateKey(v){ return String(v==null?'':v).trim().toUpperCase(); }
+    var _shByLorry = {}; shipments.forEach(function(s){ _shByLorry[_plateKey(s.lorryNo)] = s; });
+    var ns = (ship.notStarted||[]).filter(function(x){ var s=_shByLorry[_plateKey(x.lorryNo)]; return !s || (((s.delivered||0)+(s.failed||0))===0); });
+    if(!ns.length){
+      $('podNotSubmitted').innerHTML = '<span class="chip green">All routes have started ✓</span>';
+    } else {
+      var rowCls = late ? 'pend' : 'wait';   // [F1] never red: neutral until 3 pm, amber after (and on past dates)
+      var nsHtml = '<table class="act"><thead><tr><th style="width:90px;">Lorry</th><th>Driver</th><th>Helper</th></tr></thead><tbody>';
+      ns.forEach(function(x){
+        nsHtml += '<tr class="'+rowCls+'"><td class="plate">'+esc(x.lorryNo)+'</td><td>'+idShort(x.driver)+'</td><td>'+(x.secondary?idShort(x.secondary):'—')+'</td></tr>';
+        if(x.lorry2){
+          nsHtml += '<tr class="sub-lorry"><td class="plate" style="padding-left:18px;font-weight:400;">↳ '+esc(x.lorry2)+'</td><td>'+(x.lorry2Primary?idShort(x.lorry2Primary):'—')+'</td><td>'+(x.lorry2Secondary?idShort(x.lorry2Secondary):'—')+'</td></tr>';
+        }
+      });
+      $('podNotSubmitted').innerHTML = nsHtml + '</tbody></table>';
+    }
+    $('podNotSubmittedNote').textContent = ns.length ? (ns.length+' of '+shipments.length+' routes '+(past ? 'have no POD record for this date.' : 'haven\'t confirmed a POD yet.')) : '';
+
+    // Per-lorry progress (started only, lowest at top)
+    // UX-6: "started" = any POD confirmed, delivered OR failed. A lorry that's all-failed is still working
+    // (and is the most urgent one) — the old delivered-only test hid it from this chart.
+    var started = shipments.filter(function(s){ return (((s.delivered||0)+(s.failed||0)) > 0) && (s.planned||0) > 0; });
+    started.sort(function(a,b){ return (a.pct||0)-(b.pct||0); });
+    if(!started.length){ dropChart('lorrySuccess'); $('lorrySuccess').innerHTML=''; $('lorrySuccessEmpty').textContent='No started lorries for this date.'; $('lorrySuccessEmpty').style.display='block'; }
+    else {
+      $('lorrySuccessEmpty').style.display='none';
+      var plates = started.map(function(s){return s.lorryNo;});
+      var pct = started.map(function(s){return s.pct||0;});
+      var fr = started.map(function(s){return (s.delivered||0)+'/'+(s.planned||0);});
+      // [F1] colour = status, not a % threshold — every lorry still on the road used to be red all day
+      var cols = started.map(function(s){
+        if((s.failed||0) > 0) return RED;
+        if(((s.delivered||0)+(s.failed||0)) >= (s.planned||0)) return GREEN;
+        return past ? AMBER : '#1A56DB';
+      });
+      chart('lorrySuccess', {
+        chart:{type:'bar',height:Math.max(160, started.length*26+40),toolbar:{show:false}},
+        series:[{name:'Confirmed',data:pct}],
+        plotOptions:{bar:{horizontal:true,distributed:true,borderRadius:3,barHeight:'66%'}},
+        colors:cols,
+        dataLabels:{enabled:true,textAnchor:'start',offsetX:2,style:{fontSize:'11px',colors:['#444']},formatter:function(val,o){return '  '+fr[o.dataPointIndex]+'  ·  '+val+'%';}},
+        xaxis:{categories:plates,max:100,labels:{show:false},axisBorder:{show:false},axisTicks:{show:false}},
+        yaxis:{reversed:true,labels:{style:{fontSize:'11.5px'}}},
+        legend:{show:false}, grid:{show:false}
+      });
+    }
+
+    // Crew table — shared routes show the 2nd lorry as its OWN row with its OWN crew
+    // (progress stays on the main row only, so the route is still counted once)
+    var sh = shipments.slice().sort(function(a,b){ return (a.pct||0)-(b.pct||0); });
+    var crew = $('crewRows');
+    crew.innerHTML = sh.length ? sh.map(function(s){
+      var pct = s.planned>0 ? Math.round(((s.delivered||0)/s.planned)*100) : 0;
+      var notStarted = ((s.delivered||0)+(s.failed||0))===0;   // UX-6: an all-failed lorry HAS started
+      var flag = notStarted && late;                            // [F1] amber after 3 pm only, never red
+      var fracHtml = '<span class="prog-mini"><i style="width:'+pct+'%;"></i></span><span class="prog-frac"'+(flag?' style="color:var(--amber-700);font-weight:600;"':'')+'>'+(s.delivered||0)+' / '+(s.planned||0)+'</span>';
+      var rows = '<tr'+(flag?' class="pend"':'')+'><td class="plate">'+esc(s.lorryNo)+((s.trips||1)>1?'<span class="tag2">2ND TRIP</span>':'')+'</td><td>'+idShort(s.assignedPrimary)+'</td><td>'+(s.assignedSecondary?idShort(s.assignedSecondary):'—')+'</td><td>'+fracHtml+'</td></tr>';
+      if(s.lorry2){
+        rows += '<tr class="sub-lorry"><td class="plate" style="padding-left:18px;font-weight:400;">↳ '+esc(s.lorry2)+' <span class="route-area">(same route)</span></td>'
+          + '<td>'+(s.lorry2Primary?idShort(s.lorry2Primary):'<span class="route-area">not assigned yet</span>')+'</td>'
+          + '<td>'+(s.lorry2Secondary?idShort(s.lorry2Secondary):'—')+'</td>'
+          + '<td><span class="route-area">shared ↑</span></td></tr>';
+      }
+      return rows;
+    }).join('') : '<tr><td colspan="4" class="empty">No shipments imported for this date.</td></tr>';
+
+    // Route picker + stops
+    ROUTE_SHIPMENTS = shipments.filter(function(s){ return (s.arrivals||[]).length > 0; });
+    var picker = $('routePicker');
+    if(!ROUTE_SHIPMENTS.length){ picker.innerHTML='<span class="empty">No confirmed stops yet for this date.</span>'; $('routeStops').innerHTML=''; }
+    else {
+      picker.innerHTML = '<span style="font-size:12px;color:var(--gray-500);">Pick a lorry:</span>' + ROUTE_SHIPMENTS.map(function(s,i){ return '<span class="lpick'+(i===0?' active':'')+'" data-i="'+i+'">'+esc(s.lorryNo)+'</span>'; }).join('');
+      picker.querySelectorAll('.lpick').forEach(function(p){ p.addEventListener('click', function(){ picker.querySelectorAll('.lpick').forEach(function(x){x.classList.remove('active');}); p.classList.add('active'); renderRoute(Number(p.getAttribute('data-i'))); }); });
+      renderRoute(0);
+    }
+  }
+
+  function renderRoute(i){
+    var s = ROUTE_SHIPMENTS[i]; if(!s) return;
+    var arr = (s.arrivals||[]).slice().sort(function(a,b){ return String(a.time).localeCompare(String(b.time)); });
+
+    // Merge CONSECUTIVE same-customer confirmations into ONE stop (5 invoices ≠ 5 stops).
+    // A customer visited again later in the day still shows as a separate stop.
+    var stops = [];
+    arr.forEach(function(a){
+      var name = a.customer || a.invoiceNo || '(stop)';
+      var last = stops[stops.length-1];
+      if(last && last.name===name){ last.inv++; if(a.time && (!last.time || a.time<last.time)) last.time=a.time; }
+      else stops.push({ name:name, time:a.time||'', inv:1 });
+    });
+    function mins(t){ var m=String(t||'').match(/^(\d{1,2}):(\d{2})$/); return m ? (Number(m[1])*60+Number(m[2])) : null; }
+
+    var html = '<div style="font-weight:600;margin:10px 0 12px;color:var(--gray-900);">🚚 '+esc(s.lorryNo)+' &nbsp;·&nbsp; '+idName(s.assignedPrimary)
+      + (s.lorry2 ? ' &nbsp;<span class="route-area">+ '+esc(s.lorry2)+' (2nd lorry)</span>' : '')+'</div>';
+    stops.forEach(function(st,idx){
+      if(idx>0){
+        var a=mins(stops[idx-1].time), b=mins(st.time);
+        if(a!=null && b!=null && b>=a){
+          var gap=b-a;
+          html += '<div class="route-gap">↓ '+(gap>=60?(Math.floor(gap/60)+'h '+(gap%60)+'m'):(gap+' min'))+'</div>';   // [F1] plain duration — "long gap" read as a judgement
+        }
+      }
+      html += '<div class="route-stop"><span class="route-time">'+esc(st.time||'—')+'</span><span class="route-dot">'+(idx+1)+'</span><span class="route-name">'+esc(st.name)
+        + (st.inv>1?'<span class="route-inv">('+st.inv+' invoices)</span>':'')+'</span></div>';
+    });
+    var remaining = (s.planned||0) - arr.length;
+    if(remaining>0) html += '<div class="note-line">… '+remaining+' more invoice(s) not yet confirmed ('+(s.delivered||0)+' / '+(s.planned||0)+')</div>';
+    $('routeStops').innerHTML = html;
+  }
+
+  // ---------- FUEL ----------
+  // "Haven't submitted fuel" comes from getDashboardData (dash), NOT getFuelOps — render it from
+  // whichever of the two states we're in, so a fuel-only failure doesn't leave a stale green chip.
+  function renderNoFuel(dash){
+    if(!dash){
+      $('noFuelChips').innerHTML = unavail('dash');
+      $('noFuelNote').textContent = '';
+      return;
+    }
+    if(dash.staleToday){ $('noFuelChips').innerHTML = '<span class="empty">Loading…</span>'; $('noFuelNote').textContent = ''; return; }   // saved on another day
+    // [F1] a rest day / public holiday used to show the green "Everyone submitted ✓" (the backend sends []
+    // when an ALL_DRIVERS PH / OFF_SAT / OFF_SUN row covers today)
+    if(dash.isPublicHoliday){
+      $('noFuelChips').innerHTML = '<span class="chip grey">Rest day / public holiday — fuel slips not expected today</span>';
+      $('noFuelNote').textContent = '';
+      return;
+    }
+    var ns2 = (dash.notSubmittedToday||[]);
+    var sunday = new Date().getDay() === 0;
+    var cls = (sunday || !fuelLate()) ? 'grey' : 'amber';   // [F1] grey until 4 pm, amber after, never red; Sunday stays grey
+    $('noFuelChips').innerHTML = ns2.length ? ns2.map(function(name){ var sid=STAFF[name]; return '<span class="chip '+cls+' mono">'+(sid?esc(sid)+' · ':'')+esc(shortName(name))+'</span>'; }).join('') : '<span class="chip green">Everyone submitted fuel today ✓</span>';
+    $('noFuelNote').textContent = ns2.length ? (ns2.length+' driver(s) not yet submitted'+(sunday ? ' · Sunday (rest day)' : (fuelLate() ? '' : ' · due by 4 pm'))+'.') : '';
+  }
+
+  // ── Manager fuel edit (✏️ on the submissions list; PIN checked server-side) ──
+  var _FUEL_SUBS = [];
+  var _FUEL_PIN = '';
+  // POST a write action (no-cors, blind) + poll getImportResult for the readable result.
+  // The PIN rides in the POST body (not the URL), so it never lands in history/logs.
+  async function postWrite(payload){
+    var token = 'edt_' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
+    payload.clientToken = token;
+    try{
+      await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors',
+        headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
+    }catch(e){ return { status:'error', message:'Network error / Ralat rangkaian' }; }
+    for(var i=0;i<8;i++){
+      await new Promise(function(r){ setTimeout(r,1200); });
+      try{
+        var res = await fetch(SCRIPT_URL + '?action=getImportResult&token=' + encodeURIComponent(token));
+        var data = await res.json();
+        if(data && data.status && data.status !== 'pending') return data;
+      }catch(e){}
+    }
+    return { status:'error', message:'Timeout, please refresh / Tamat masa, sila muat semula' };
+  }
+
+  async function editFuel(i){
+    var s = _FUEL_SUBS[i]; if(!s || !s.rowNum) return;
+    if(!_FUEL_PIN){
+      var p = prompt('Manager PIN to edit fuel / PIN untuk ubah minyak:');
+      if(p===null || !String(p).trim()) return;
+      _FUEL_PIN = String(p).trim();
+    }
+    var curRm = (s.rm==null ? '' : s.rm), curLit = (s.litres==null ? '' : s.litres);
+    var na = prompt('Edit amount RM  ('+s.lorry+' / '+s.driver+')\nNow / Sekarang: '+curRm, curRm);
+    if(na===null) return;
+    var na2 = parseFloat(String(na).replace(/[^0-9.]/g,''));
+    if(isNaN(na2) || na2<=0){ alert('Invalid amount / Jumlah tidak sah'); return; }
+    if(na2>500 && !confirm('RM '+na2.toFixed(2)+' over 500 — sure? / melebihi 500 — pasti?')) return;
+    var nl = prompt('Edit Litres  (blank = keep / kosong = kekal)\nNow / Sekarang: '+curLit, curLit);
+    if(nl===null) return;
+    var res = await postWrite({ formType:'EDIT_FUEL_ENTRY', pin:_FUEL_PIN, rowNum:s.rowNum,
+      amount:na2, litres:String(nl).trim(), driver:s.driver, lorry:s.lorry });
+    if(res && res.status==='success'){ alert('✅ Updated / Dikemaskini: RM '+na2.toFixed(2)); load(true); }
+    else if(res && res.error==='pin'){ _FUEL_PIN=''; alert('❌ Wrong PIN / PIN salah'); }
+    else { alert('❌ '+((res&&res.message)||'Update failed / Gagal kemaskini')); }
+  }
+
+  // One-click: replace the driver amount with the receipt-OCR value (PIN-gated; manager confirms).
+  async function useOcr(i){
+    var s = _FUEL_SUBS[i]; if(!s || !s.rowNum || s.ocrRm==null) return;
+    if(!_FUEL_PIN){
+      var p = prompt('Manager PIN to edit fuel / PIN untuk ubah minyak:');
+      if(p===null || !String(p).trim()) return;
+      _FUEL_PIN = String(p).trim();
+    }
+    var drv = (s.rm==null ? '?' : num(s.rm).toFixed(2)), ocr = num(s.ocrRm).toFixed(2);
+    if(!confirm('Replace / Ganti '+s.driver+' / '+s.lorry+' amount\nRM '+drv+'  →  receipt OCR RM '+ocr+' ?')) return;
+    var res = await postWrite({ formType:'EDIT_FUEL_ENTRY', pin:_FUEL_PIN, rowNum:s.rowNum,
+      amount:num(s.ocrRm), litres:'', driver:s.driver, lorry:s.lorry });
+    if(res && res.status==='success'){ alert('✅ Used receipt / Guna resit: RM '+ocr); load(true); }
+    else if(res && res.error==='pin'){ _FUEL_PIN=''; alert('❌ Wrong PIN / PIN salah'); }
+    else { alert('❌ '+((res&&res.message)||'Failed / Gagal')); }
+  }
+
+  // Manager delete a fuel / no-fuel row (PIN-gated; double-confirm; server re-checks driver+lorry).
+  async function deleteFuel(i){
+    var s = _FUEL_SUBS[i]; if(!s || !s.rowNum) return;
+    if(!_FUEL_PIN){
+      var p = prompt('Manager PIN to delete / PIN untuk padam:');
+      if(p===null || !String(p).trim()) return;
+      _FUEL_PIN = String(p).trim();
+    }
+    var what = s.noFuel ? '"no fuel today"' : ('RM '+(s.rm==null?'?':num(s.rm).toFixed(2))+(s.litres!=null?(' · '+s.litres+' L'):''));
+    if(!confirm('Delete this entry? / Padam rekod ini?\n\n'+s.lorry+' · '+s.driver+'\n'+(s.time||'—')+'   '+what+'\n\n⚠ Cannot be undone / Tidak boleh batal.')) return;
+    var res = await postWrite({ formType:'DELETE_FUEL_ENTRY', pin:_FUEL_PIN, rowNum:s.rowNum, driver:s.driver, lorry:s.lorry });
+    if(res && res.status==='success'){ alert('🗑 Deleted / Dipadam'+((res.deleted>1)?(' ('+res.deleted+' rows incl. helper)'):'')); load(true); }
+    else if(res && res.error==='pin'){ _FUEL_PIN=''; alert('❌ Wrong PIN / PIN salah'); }
+    else { alert('❌ '+((res&&res.message)||'Delete failed / Gagal padam')); }
+  }
+
+  // FIX 2026-07-15: these three are called from inline onclick="editFuel(i)" in the fuel table, but
+  // they live inside this IIFE — inline handlers resolve on window, so without exporting them the
+  // manager ✏️ / 🗑 / ↹Receipt buttons threw ReferenceError and did nothing. Expose them on window.
+  window.editFuel = editFuel;
+  window.useOcr = useOcr;
+  window.deleteFuel = deleteFuel;
+
+  // skipNoFuel: when the fuel request lands before dash, don't let this paint the dash-sourced
+  // "haven't submitted fuel" card as unavailable — leave it for the dash branch to fill (avoids a
+  // transient unavailable flash on that card during a normal load).
+  function renderFuel(fuel, dash, skipNoFuel){
+    if(!fuel){
+      // UX-5: on FAILURE every fuel card shows "unavailable" — not the "no RM recorded yet / needs 2 fills"
+      // empty text, which reads as a real zero and could make the boss wrongly think nobody logged fuel.
+      var _un=unavail('fuel');
+      $('fuelPerKmHero').textContent='—'; $('fuelKmPerL').textContent='data unavailable'; $('fuelTotal').textContent='—';
+      dropChart('fuelCostLorry'); dropChart('fuelPerKm');
+      $('fuelCostEmpty').style.display='none'; $('fuelCostLorry').innerHTML=_un;
+      $('fuelPerKmEmpty').style.display='none'; $('fuelPerKm').innerHTML=_un;
+      $('crossCheckWrap').innerHTML=unavail('fuel','Fuel data unavailable');
+      $('tankEmpty').style.display='none'; $('tankRows').innerHTML='<tr><td colspan="5">'+_un+'</td></tr>';
+      $('fuelRows').innerHTML='<tr><td colspan="7">'+unavail('fuel','Fuel data unavailable')+'</td></tr>';
+      if(!skipNoFuel) renderNoFuel(dash);   // this card's data comes from dash, which may still be fine
+      return;
+    }
+    var t = fuel.totals || {rm:0,litres:0,km:0,rmPerKm:null,kmPerLitre:null};
+    // [D8 2026-10-24] fleet cost only: RM per km and km per litre compare lorries, which waits for 6 months of data
+    $('fuelHeroTitle').textContent = 'Fuel cost' + (fuel.periodLabel?(' ('+fuel.periodLabel+')'):'');
+    var hasRm = num(t.rm)!=null && num(t.rm) > 0;
+    $('fuelPerKmHero').textContent = hasRm ? fmtRM(t.rm) : '—';
+    $('fuelKmPerL').textContent = hasRm ? 'Whole fleet' : 'RM not entered yet';
+    $('fuelTotal').textContent = 'collecting data until Dec 2026';
+
+    var lorries = (fuel.lorries||[]);
+
+    // Fuel cost by lorry
+    var withRm = lorries.filter(function(l){ return num(l.rm)!=null && l.rm>0; }).slice().sort(function(a,b){return String(a.lorry).localeCompare(String(b.lorry));});   // [D8] A-Z, all lorries: never a ranking
+    if(!withRm.length){ dropChart('fuelCostLorry'); $('fuelCostLorry').innerHTML=''; $('fuelCostEmpty').style.display='block'; }
+    else {
+      $('fuelCostEmpty').style.display='none';
+      chart('fuelCostLorry', {
+        chart:{type:'bar',height:Math.max(160, withRm.length*28+30),toolbar:{show:false}},
+        series:[{name:'RM',data:withRm.map(function(l){return Math.round(l.rm);})}],
+        plotOptions:{bar:{horizontal:true,borderRadius:3,barHeight:'62%'}}, colors:[AMBER],
+        dataLabels:{enabled:true,textAnchor:'start',offsetX:2,style:{fontSize:'11px',colors:['#444']},formatter:function(v){return '  RM '+v.toLocaleString();}},
+        xaxis:{categories:withRm.map(function(l){return l.lorry;}),labels:{show:false},axisBorder:{show:false},axisTicks:{show:false}},
+        yaxis:{reversed:true,labels:{style:{fontSize:'11px'}}}, legend:{show:false}, grid:{show:false}
+      });
+    }
+
+    // [D8 2026-10-24] RM per km by lorry: the card is hidden, so no chart is built (and no fleet average line)
+    dropChart('fuelPerKm');
+
+    // Cross-check: km vs stops — only lorries with ≥3 stops are judged; 1-2 stop lorries
+    // are listed greyed-out as "too few stops to compare" (not flagged, not in the average)
+    var flagged  = lorries.filter(function(l){ return l.kmFlag==='HIGH'; }).sort(function(a,b){return (b.kmPerStop||0)-(a.kmPerStop||0);});
+    var lowStops = lorries.filter(function(l){ return l.kmFlag==='LOW_STOPS'; });
+    var cc = $('crossCheckWrap');
+    var ccHtml = '';
+    if(!num(t.avgKmPerStop)){ ccHtml = '<div class="empty">Not enough data yet (needs km + delivered stops on lorries with 3+ stops). Fills in as drivers enter odometer + deliveries.</div>'; }
+    else if(!flagged.length){ ccHtml = '<div class="chip green">All lorries within normal range ✓ — fleet avg '+t.avgKmPerStop+' km / stop (weighted, 3+ stop lorries)</div>'; }
+    else {
+      ccHtml = '<table class="act" style="table-layout:fixed;"><thead><tr><th>Lorry</th><th class="rm">km</th><th class="rm">stops</th><th class="rm">km / stop</th><th class="rm">vs avg ('+t.avgKmPerStop+')</th></tr></thead><tbody>' +
+        flagged.map(function(l){ var x=(l.kmPerStop/t.avgKmPerStop).toFixed(1); return '<tr class="fail"><td class="plate">'+esc(l.lorry)+'</td><td class="rm">'+fmtInt(l.km)+'</td><td class="rm">'+fmtInt(l.stops)+'</td><td class="rm st-fail">'+l.kmPerStop+'</td><td class="rm st-fail">'+x+'×</td></tr>'; }).join('') +
+        '</tbody></table>';
+    }
+    if(lowStops.length){
+      ccHtml += '<div class="note-line">' + lowStops.map(function(l){
+        return esc(l.lorry)+' — '+fmtInt(l.km)+' km · '+l.stops+' stop'+(l.stops>1?'s':'')+' (too few stops to compare)';
+      }).join(' &nbsp;·&nbsp; ') + '</div>';
+    }
+    cc.innerHTML = ccHtml;
+
+    // Per-tank: last fill-up by lorry (fill-to-fill)
+    var tanks = lorries.filter(function(l){ return l.lastFill; }).sort(function(a,b){ return String(a.lorry).localeCompare(String(b.lorry)); });   // [D8] A-Z (the backend sends highest RM first)
+    if(!tanks.length){ $('tankRows').innerHTML=''; $('tankEmpty').style.display='block'; }
+    else {
+      $('tankEmpty').style.display='none';
+      $('tankRows').innerHTML = tanks.map(function(l){
+        var f = l.lastFill;
+        return '<tr><td class="plate">'+esc(l.lorry)+'</td>'
+          + '<td>'+esc(f.date)+'</td>'
+          + '<td class="rm">'+(num(f.rm)==null?'—':num(f.rm).toFixed(2))+'</td>'
+          + '<td class="rm">'+(num(f.litres)==null?'—':num(f.litres))+'</td>'
+          + '<td>'+fmtInt(f.kmSince)+' km · '+f.stopsSince+' stop'+(f.stopsSince===1?'':'s')+' <span class="route-area">(since '+esc(f.prevDate)+')</span></td>'
+          + '</tr>';   // [D8] RM per km and km per litre columns removed
+      }).join('');
+    }
+
+    // Haven't submitted fuel today (from getDashboardData) — if THAT call failed, say so
+    // instead of showing a green "everyone submitted" (A1). Skipped when dash hasn't landed yet
+    // (the dash branch will paint this card) so we don't flash it unavailable mid-load.
+    if(!skipNoFuel) renderNoFuel(dash);
+
+    // Fuel submissions today
+    if(fuel.staleToday){ _FUEL_SUBS = []; $('fuelRows').innerHTML = '<tr><td colspan="7" class="empty">Loading…</td></tr>'; return; }   // [F1] saved on another day
+    var subs = (fuel.submissions||[]);
+    _FUEL_SUBS = subs;
+    var body = $('fuelRows');
+    body.innerHTML = subs.length ? subs.map(function(s, i){
+      if(s.noFuel){ var delNo=(s.rowNum)?' <a href="#" onclick="deleteFuel('+i+');return false;" title="Delete this row (manager)" style="text-decoration:none;color:var(--gray-400);">🗑</a>':''; return '<tr class="pend"><td>—</td><td>'+esc(s.lorry)+'</td><td>'+idName(s.driver)+'</td><td class="rm">—</td><td class="rm">—</td><td class="rm">—</td><td>no fuel today'+delNo+'</td></tr>'; }
+      var flag = s.check==='CHECK' ? ' <span class="st-fail" title="driver vs OCR differ">⚑</span>' : '';
+      var photoCell = /^https?:\/\//i.test(String(s.photo||'')) ? ('<a href="'+esc(s.photo)+'" target="_blank" rel="noopener" style="color:var(--amber-700);">📷 view</a>') : '—';
+      var editBtn = (s.rowNum) ? ' <a href="#" onclick="editFuel('+i+');return false;" title="Edit amount/litres (manager)" style="text-decoration:none;color:var(--gray-400);">✏️</a>' : '';
+      var ocrBtn  = (s.rowNum && s.check==='CHECK' && s.ocrRm!=null) ? ' <a href="#" onclick="useOcr('+i+');return false;" title="Replace driver amount with the receipt OCR value" style="text-decoration:none;color:var(--amber-700);font-size:11px;">↹Receipt '+num(s.ocrRm).toFixed(2)+'</a>' : '';
+      var delBtn = (s.rowNum) ? ' <a href="#" onclick="deleteFuel('+i+');return false;" title="Delete this entry (manager)" style="text-decoration:none;color:var(--gray-400);">🗑</a>' : '';
+      return '<tr><td>'+esc(s.time)+'</td><td>'+esc(s.lorry)+'</td><td>'+idName(s.driver)+'</td><td class="rm">'+fmtInt(s.mileage)+'</td><td class="rm">'+(num(s.rm)==null?'—':num(s.rm).toFixed(2))+flag+'</td><td class="rm">'+(num(s.litres)==null?'—':num(s.litres))+'</td><td>'+photoCell+editBtn+ocrBtn+delBtn+'</td></tr>';
+    }).join('') : '<tr><td colspan="7" class="empty">No fuel submitted today yet.</td></tr>';
+  }
+
+  // ---------- collapsibles ----------
+  function wireCollapse(togId, bodyId, caretId){
+    var t=$(togId); if(!t) return;
+    t.addEventListener('click', function(){ var b=$(bodyId), c=$(caretId); var open=(b.style.display==='none'); b.style.display=open?'block':'none'; if(c) c.textContent=open?'▾':'▸'; });
+  }
+
+  // ---------- init ----------
+  function init(){
+    $('dateInput').value = selectedDate;
+    $('dateInput').addEventListener('change', function(){ var v = this.value || fmtToday(); goDate(v, v === fmtToday()); });
+    // [F1] Today / Yesterday — Today also turns "follow today" back on
+    $('daySeg').querySelectorAll('.seg-btn').forEach(function(b){ b.addEventListener('click', function(){
+      if(b.getAttribute('data-day')==='today') goDate(fmtToday(), true); else goDate(fmtYesterday(), false);
+    }); });
+    $('viewSeg').querySelectorAll('.seg-btn').forEach(function(b){ b.addEventListener('click', function(){ $('viewSeg').querySelectorAll('.seg-btn').forEach(function(x){x.classList.remove('active');}); b.classList.add('active'); selectedView=b.getAttribute('data-view'); load(); }); });
+    // Branch toggle — init the active button from selectedBranch (URL, else this device's last choice), then reload on change
+    $('branchSeg').querySelectorAll('.seg-btn').forEach(function(b){
+      b.classList.toggle('active', b.getAttribute('data-branch')===selectedBranch);
+      b.addEventListener('click', function(){ $('branchSeg').querySelectorAll('.seg-btn').forEach(function(x){x.classList.remove('active');}); b.classList.add('active'); selectedBranch=b.getAttribute('data-branch'); try{ localStorage.setItem(_BRANCH_KEY, selectedBranch); }catch(e){} load(); });
+    });
+    $('refreshBtn').addEventListener('click', function(){ load(true); });
+    wireCollapse('crewToggle','crewBody','crewCaret');
+    wireCollapse('routeToggle','routeBody','routeCaret');
+    wireCollapse('fuelToggle','fuelSubBody','fuelCaret');
+    wireCollapse('tankToggle','tankBody','tankCaret');
+    wireCollapse('dsumToggle','dsumBody','dsumCaret');
+    // Needs-action filter chips (All / Problems only)
+    $('naFilterAll').addEventListener('click', function(){ NA_FILTER='all'; $('naFilterAll').classList.add('active'); $('naFilterFailed').classList.remove('active'); renderNeedsAction(); });
+    $('naFilterFailed').addEventListener('click', function(){ NA_FILTER='failed'; $('naFilterFailed').classList.add('active'); $('naFilterAll').classList.remove('active'); renderNeedsAction(); });
+    // [F1] one delegated handler for controls that renders re-create: per-zone Retry, "see yesterday ›"
+    // on an empty day, and the collapsed "No route" list.
+    document.addEventListener('click', function(e){
+      var t = e.target; if(!t || !t.closest) return;
+      var r = t.closest('.retry');
+      if(r){ e.preventDefault(); if(!r.disabled) retryZone(r.getAttribute('data-zone')); return; }
+      if(t.closest('#seeYesterday')){ e.preventDefault(); goDate(fmtYesterday(), false); return; }
+      var m = t.closest('[data-more]');
+      if(m){ NONE_OPEN = !NONE_OPEN; var list = m.previousElementSibling; if(list) list.style.display = NONE_OPEN ? '' : 'none'; m.textContent = NONE_OPEN ? 'hide ▾' : 'show ▸'; }
+    });
+    // Auto-refresh: every 5 min while visible; on return to the tab if >2 min stale; the
+    // "Updated HH:MM (Xm ago)" label re-ages every minute and turns amber past 15 min.
+    // [F1] The minute tick also rolls a "follow today" board over to the new day just after midnight.
+    setInterval(function(){ if(!document.hidden) load(); }, 5*60000);
+    setInterval(function(){ paintUpdated(); if(followToday && !document.hidden && selectedDate !== fmtToday()) load(); }, 60000);
+    document.addEventListener('visibilitychange', function(){
+      // Retry on return to the tab if the data is stale OR if we never got any (FN-11: previously this
+      // required LAST_UPDATED, so a first load that failed while offline would never auto-retry).
+      // [2026-08-10] Floor it at 20s. When the FIRST load fails LAST_UPDATED stays null, so every
+      // single tab switch fired another 4 requests, and aborting the client request does not cancel
+      // the server round-trip. 20s kills the storm while keeping FN-11's "alt-tab back once the wifi
+      // returns" recovery responsive — 60s was long enough to swallow exactly that case.
+      if(!document.hidden && (!LAST_UPDATED || Date.now()-LAST_UPDATED > 2*60000) && Date.now()-_lastLoadAt > 20000) load();
+      paintUpdated();
+    });
+    paintLabels();
+    var _hadSnap = paintSnapshot();   // instant open from the saved view (FN-4), then fetch fresh below
+    ON_SCREEN_KEY = snapKey();
+    syncDayButtons();
+    // [ReadAuth 2026-07-30] this page shows every driver's compliance ranking and the company's
+    // fuel spend — it now requires the office session before it fetches anything.
+    // [2026-08-10] Say so out loud: minting a grant takes a few seconds and the page used to sit on
+    // a bare "Loading…" the whole time, which reads as "the dashboard is broken".
+    if(!_hadSnap){ renderSkeleton(); $('dashMeta').textContent = 'Checking access… · ' + branchLabel(); }   // [F1] "Loading…", never an empty card that reads as "nothing"
+    _rgBoot().then(function(ok){ if (ok) load(); });
+  }
+  // [F1] init() is called at the very END of this script (below the read-grant section), not on
+  // DOMContentLoaded — see there.
+
+/* ============================================================================
+   READ GRANT (management reads)                                  [2026-07-30]
+   The analytics reads used to answer any anonymous caller — all 59 drivers'
+   compliance rankings and company fuel spend were world-readable. They now need
+   a short-lived grant: POST the office session once, get a 6h grant, append it
+   to the read URLs. The 30-day session token itself never rides in a URL.
+   ============================================================================ */
+var RG_KEY = 'clf_read_grant';
+function _rgCached(){
+  try{
+    var g = JSON.parse(localStorage.getItem(RG_KEY) || 'null');
+    if (g && g.grant && (Date.now() - (g.ts||0)) < 5.5*3600e3) return g.grant;   // refresh before the 6h server TTL
+  }catch(e){}
+  return '';
+}
+function _rgClear(){ try{ localStorage.removeItem(RG_KEY); }catch(e){} }
+function _rgUrl(url){
+  var g = _rgCached();
+  return g ? (url + (url.indexOf('?') >= 0 ? '&' : '?') + 'grant=' + encodeURIComponent(g)) : url;
+}
+var _rgPending = null;   // in-flight handshake — two triggers must not mint two grants (2026-08-10)
+async function _rgEnsure(force){
+  if (!force){ var g = _rgCached(); if (g) return g; }
+  if (_rgPending) return _rgPending;
+  _rgPending = _rgMint();
+  try { return await _rgPending; } finally { _rgPending = null; }
+}
+async function _rgMint(){
+  var a = _rgAuth();
+  if (!a || !a.token) return '';
+  var tok = 'rg_' + Date.now() + '_' + Math.random().toString(36).slice(2,10);
+  function _body(withToken){
+    // clientToken makes doPost stash the WHOLE reply — the grant included — under
+    // ?action=getImportResult&token=..., which is an UNGATED read for 10 minutes. Only the legacy
+    // poll fallback needs that stash; the fast path reads the reply directly, so it must not ask
+    // for it. (Backend treats clientToken as optional: doPost only stashes "if (payload.clientToken)".)
+    var p = { formType:'GET_READ_GRANT', authToken:a.token };
+    if (withToken) p.clientToken = tok;
+    var f = new FormData();
+    f.append('data', JSON.stringify(p));
+    return f;
+  }
+  function _keep(gr){ try{ localStorage.setItem(RG_KEY, JSON.stringify({ grant:gr, ts:Date.now() })); }catch(e){} return gr; }
+  // [2026-08-10] Fast path. /exec answers with Access-Control-Allow-Origin:* on BOTH the 302 and the
+  // final 200 (verified), so a plain CORS POST can read the reply directly — about 4s. The no-cors +
+  // getImportResult poll below costs up to ~27s of dead "Loading…" for the same answer; it stays
+  // only as a fallback in case a future deployment stops sending the CORS header. 12s abort, because
+  // every other fetch on this page is time-boxed (FN-3) and a hung one here parks the whole board.
+  try{
+    var ctl = (window.AbortController ? new AbortController() : null);
+    var to  = ctl ? setTimeout(function(){ try{ ctl.abort(); }catch(e){} }, 12000) : null;
+    var opt = { method:'POST', body:_body(false) }; if (ctl) opt.signal = ctl.signal;
+    var pr = await fetch(SCRIPT_URL, opt);
+    if (to) clearTimeout(to);
+    var pj = await pr.json();
+    if (pj && pj.status === 'success' && pj.grant) return _keep(pj.grant);
+    // Only a genuinely dead SESSION means "stop and ask for the PIN". status:'error' is also the
+    // backend's generic shape for a JSON parse failure or a Sheets/quota blip — those must fall
+    // through to the legacy handshake, not throw an unlock box at the office mid-morning.
+    if (pj && pj.status === 'error' && /session|unlock/i.test(String(pj.message || ''))) return '';
+  }catch(e){ /* CORS blocked, aborted, or a network blip → fall through to the legacy handshake */ }
+  try{ await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body:_body(true) }); }catch(e){ return ''; }
+  for (var t=0; t<8; t++){
+    await new Promise(function(r){ setTimeout(r, 1200); });
+    try{
+      var rb = await fetch(SCRIPT_URL + '?action=getImportResult&token=' + encodeURIComponent(tok));
+      var rd = await rb.json();
+      if (rd && rd.status && rd.status !== 'pending'){
+        if (rd.status === 'success' && rd.grant){
+          try{ localStorage.setItem(RG_KEY, JSON.stringify({ grant:rd.grant, ts:Date.now() })); }catch(e){}
+          return rd.grant;
+        }
+        return '';
+      }
+    }catch(e){}
+  }
+  return '';
+}
+function _rgAuth(){ try{ return JSON.parse(localStorage.getItem('clf_pallet_auth') || 'null'); }catch(e){ return null; } }
+
+/* Unlock gate — these pages previously needed no credential at all. Shares the office
+   session with POD Admin / Pallet Store / Staff Admin, so one unlock covers them. */
+function _rgShowLock(msg){
+  var ov = document.getElementById('rgLock');
+  if (!ov){
+    ov = document.createElement('div'); ov.id = 'rgLock';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(17,24,39,.94);display:flex;align-items:center;justify-content:center;padding:20px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;';
+    ov.innerHTML = '<div style="background:#fff;border-radius:16px;max-width:360px;width:100%;padding:26px 22px;box-shadow:0 20px 60px rgba(0,0,0,.4);">'
+      + '<div style="font-size:34px;text-align:center;">&#128274;</div>'
+      + '<div style="font-weight:800;font-size:17px;text-align:center;margin:6px 0 2px;color:#111827;">Sign in to view this data</div>'
+      + '<div style="font-size:12.5px;color:#6B7280;text-align:center;margin-bottom:14px;">Authorised staff only</div>'
+      + '<label style="display:block;font-size:12px;font-weight:700;color:#374151;">Staff ID</label>'
+      + '<input id="rgEmp" autocomplete="off" placeholder="e.g. TER282" style="width:100%;box-sizing:border-box;margin:4px 0 10px;padding:12px;font-size:15px;border:1.5px solid #D1D5DB;border-radius:9px;">'
+      + '<label style="display:block;font-size:12px;font-weight:700;color:#374151;">PIN</label>'
+      + '<input id="rgPin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN" style="width:100%;box-sizing:border-box;margin:4px 0 6px;padding:12px;font-size:15px;border:1.5px solid #D1D5DB;border-radius:9px;">'
+      + '<div id="rgErr" style="min-height:16px;font-size:12px;color:#B91C1C;font-weight:600;"></div>'
+      + '<button id="rgBtn" style="width:100%;margin-top:8px;background:#1A56DB;color:#fff;border:none;border-radius:10px;padding:14px;font-weight:800;font-size:15px;cursor:pointer;font-family:inherit;">Unlock</button></div>';
+    document.body.appendChild(ov);
+    document.getElementById('rgBtn').onclick = _rgUnlock;
+    document.getElementById('rgPin').addEventListener('keydown', function(e){ if(e.key==='Enter') _rgUnlock(); });
+  }
+  ov.style.display = 'flex';
+  if (msg) document.getElementById('rgErr').textContent = msg;
+  var a = _rgAuth(); var emp = document.getElementById('rgEmp');
+  if (emp && !emp.value && a && a.empNo) emp.value = a.empNo;
+}
+function _rgHideLock(){ var ov = document.getElementById('rgLock'); if (ov) ov.style.display = 'none'; }
+async function _rgUnlock(){
+  var emp = document.getElementById('rgEmp').value.trim().toUpperCase();
+  var pin = document.getElementById('rgPin').value.trim();
+  var err = document.getElementById('rgErr');
+  if (!emp || !pin){ err.textContent = 'Enter Staff ID + PIN'; return; }
+  var btn = document.getElementById('rgBtn'); btn.disabled = true; btn.textContent = 'Checking...';
+  var tok = 'ulk_' + Date.now() + '_' + Math.random().toString(36).slice(2,10);
+  var fd = new FormData();
+  fd.append('data', JSON.stringify({ formType:'PALLET_UNLOCK', empNo:emp, pin:pin, clientToken:tok }));
+  var rd = null;
+  try{
+    await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body:fd });
+    for (var t=0; t<8; t++){
+      await new Promise(function(r){ setTimeout(r, 1200); });
+      try{
+        var rb = await fetch(SCRIPT_URL + '?action=getImportResult&token=' + encodeURIComponent(tok));
+        var j = await rb.json();
+        if (j && j.status && j.status !== 'pending'){ rd = j; break; }
+      }catch(e){}
+    }
+  }catch(e){}
+  btn.disabled = false; btn.textContent = 'Unlock';
+  if (rd && rd.status === 'success' && rd.authToken){
+    try{ localStorage.setItem('clf_pallet_auth', JSON.stringify({ token:rd.authToken, empNo:rd.empNo, name:rd.name })); }catch(e){}
+    document.getElementById('rgPin').value = ''; err.textContent = '';
+    _rgClear();
+    await _rgEnsure();
+    _rgHideLock();
+    load();
+  } else {
+    err.textContent = (rd && rd.message) ? rd.message : 'Could not unlock - check connection';
+  }
+}
+// A READ_AUTH refusal means "unlock", not "no data".
+function _rgIsDenied(d){ return !!(d && d.status === 'error' && d.code === 'READ_AUTH'); }
+
+/* [2026-08-10] Self-heal on a dead grant.
+   The grant lives in the backend's CacheService, which does NOT guarantee it survives its 6h TTL —
+   an Apps Script redeploy or a cache eviction drops it early. The page kept re-sending the dead
+   grant (localStorage only checks its own 5.5h timestamp), so every gated read failed, Refresh
+   re-sent the same dead grant, and even F5 did not help: the board stayed broken for up to 5.5h
+   while blaming the network. Now: drop it, mint a fresh one, reload once. If that is refused too
+   (the 30-day session itself expired) ask for Staff ID + PIN.
+   _rgRetryAt floors the silent recovery at one per minute so it can never become a re-mint loop. */
+var _rgRecovering = false, _rgRetryAt = 0;
+function _rgOnDenied(forceFresh){
+  var now = Date.now();
+  if (_rgRecovering) return;
+  if (now < _rgRetryAt){ _rgShowLock('Session expired - please unlock again'); return; }
+  _rgRecovering = true; _rgRetryAt = now + 60000;
+  _rgClear();
+  var _m = $('dashMeta'); if (_m) _m.textContent = 'Renewing access…';
+  var settled = false;
+  function finish(g){
+    if (settled) return; settled = true;
+    _rgRecovering = false;
+    if (g){
+      _rgRetryAt = Date.now() + 10000;   // recovered — drop the floor to 10s so a genuine SECOND
+      _rgHideLock();                     // eviction minutes later self-heals instead of demanding a
+      load(forceFresh);                  // PIN, while still refusing to spin on an instant re-denial
+    } else {
+      _rgShowLock('Session expired - please unlock again');
+    }
+  }
+  // Hard bound: an un-settling handshake must never strand _rgRecovering=true, or every later
+  // denial hits the early return above and the page shows nothing at all.
+  setTimeout(function(){ finish(''); }, 45000);
+  _rgEnsure(true).then(finish, function(){ finish(''); });
+}
+
+async function _rgBoot(){
+  if (!_rgAuth()){ _rgShowLock(); return false; }
+  await _rgEnsure();
+  return true;
+}
+
+// [F1] Start here, at the end: this script sits at the end of <body>, so every element it needs exists,
+// and only from this line on are the read-grant vars above initialised (RG_KEY, _rgPending, _rgRetryAt —
+// starting any earlier made every open mint a fresh grant, ~4 s). Not waiting for DOMContentLoaded means
+// the reads no longer wait for the 534 KB deferred chart library; charts asked for before it has run are
+// queued by chart() and drawn when it has.
+init();
+
+})();
+</script>
+</body>
+</html>
