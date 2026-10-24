@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#141C77">
+<title>Panduan Pemandu: Borang POD (CLF Trading)</title>
+<style>
+  :root{
+    --navy:#141C77; --navy-2:#0E1458; --navy-50:#EEF0FA;
+    --red:#FC091B; --red-700:#C8101E; --red-50:#FEF2F2;
+    --green:#15803D; --green-50:#ECFDF3;
+    --amber:#B45309; --amber-50:#FFFBEB;
+    --ink:#0F172A; --ink-2:#475569; --ink-3:#64748B;
+    --line:#E2E8F0; --bg:#FFFFFF; --bg-2:#F4F6FA;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg-2);color:var(--ink);font:17px/1.6 var(--font)}
+  a{color:var(--navy)}
+  .top{background:var(--navy);color:#fff}
+  .top-in{max-width:760px;margin:0 auto;padding:22px 16px 24px}
+  .kicker{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;opacity:.85}
+  h1{font-size:28px;line-height:1.2;margin:6px 0 8px;font-weight:800}
+  .lead{margin:0;font-size:16px;opacity:.92}
+  .lang{display:inline-block;margin-top:14px;padding:6px 14px;border:1px solid rgba(255,255,255,.6);border-radius:999px;color:#fff;text-decoration:none;font-weight:700;font-size:14px}
+  main{max-width:760px;margin:0 auto;background:var(--bg);padding:6px 16px 40px}
+  .summary{background:var(--navy-50);border-radius:14px;padding:14px 16px;margin:16px 0}
+  .summary h2{margin:0 0 6px;font-size:19px}
+  .summary ol{margin:0;padding-left:22px}
+  .summary li{margin:5px 0}
+  nav.toc{margin:18px 0 6px}
+  nav.toc ol{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+  nav.toc a{display:flex;gap:8px;align-items:center;height:100%;padding:7px 9px;border:1px solid var(--line);border-radius:10px;text-decoration:none;color:var(--ink);font-weight:700;font-size:14px;line-height:1.3;background:#fff}
+  nav.toc a span{flex:none;width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+  @media (min-width:350px){ nav.toc ol{grid-template-columns:1fr 1fr} }
+  a.open{display:block;margin:8px 0;padding:10px 14px;border:1.5px solid var(--navy);border-radius:12px;background:var(--navy-50);color:var(--navy);text-decoration:none}
+  a.open b{display:block;font-size:17px}
+  a.open small{display:block;font-size:13px;line-height:1.4;color:var(--ink-2);overflow-wrap:anywhere}
+  section{border-top:1px solid var(--line);margin-top:30px;padding-top:4px}
+  h2{display:flex;align-items:center;gap:10px;font-size:22px;line-height:1.25;margin:20px 0 10px}
+  h2 .n{flex:none;width:34px;height:34px;border-radius:50%;background:var(--navy);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:17px}
+  h2 .new{font-size:12px;font-weight:800;letter-spacing:.04em;padding:2px 8px;border-radius:999px;background:var(--green);color:#fff}
+  h3{font-size:18px;line-height:1.3;margin:24px 0 6px}
+  p{margin:10px 0}
+  ol,ul{padding-left:24px;margin:10px 0}
+  li{margin:7px 0}
+  code{font:15px/1.4 Consolas,Menlo,monospace;background:var(--bg-2);border:1px solid var(--line);border-radius:6px;padding:1px 5px;word-break:break-all}
+  .ui{display:inline-block;padding:0 7px;border:1.5px solid #CBD5E1;border-radius:7px;background:#fff;font-weight:800;font-size:.9em;line-height:1.55;white-space:nowrap;color:var(--ink)}
+  .ui.go{background:var(--green);border-color:var(--green);color:#fff}
+  .ui.pri{background:var(--navy);border-color:var(--navy);color:#fff}
+  .ui.red{color:var(--red-700)}
+  .ui.danger{background:var(--red-700);border-color:var(--red-700);color:#fff}
+  .tag{display:inline-block;padding:0 8px;border-radius:999px;font-weight:800;font-size:.85em;line-height:1.6;white-space:nowrap}
+  .tag.wait{background:var(--amber-50);color:var(--amber)}
+  .tag.done{background:var(--green-50);color:var(--green)}
+  .tag.fail{background:var(--red-50);color:var(--red-700)}
+  .msg{font-weight:700}
+  svg.i{width:18px;height:18px;vertical-align:-3px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .box{border-radius:12px;padding:12px 14px;margin:16px 0;border-left:5px solid}
+  .box p{margin:6px 0}
+  .box.tip{background:var(--navy-50);border-color:var(--navy)}
+  .box.warn{background:var(--amber-50);border-color:var(--amber)}
+  .box.stop{background:var(--red-50);border-color:var(--red-700)}
+  .box.good{background:var(--green-50);border-color:var(--green)}
+  figure{margin:18px auto;text-align:center}
+  figure img{display:block;width:100%;height:auto;margin:0 auto;background:#fff}
+  figure.phone{max-width:290px}
+  figure.phone img{border-radius:22px;border:1px solid #CBD5E1;box-shadow:0 6px 18px rgba(15,23,42,.15)}
+  figure.crop{max-width:400px}
+  figure.crop img{border-radius:14px;border:1px solid var(--line);box-shadow:0 3px 10px rgba(15,23,42,.08)}
+  figure.bar{max-width:560px}
+  figure.bar img{border-radius:10px;border:1px solid var(--line)}
+  figure.tall{max-width:230px}
+  figure.tall img{border-radius:12px;border:1px solid var(--line)}
+  figcaption{font-size:14px;color:var(--ink-3);margin-top:8px;line-height:1.45}
+  .pair{display:grid;gap:4px}
+  @media (min-width:640px){ .pair{grid-template-columns:1fr 1fr;align-items:start;gap:18px} .pair figure{margin:18px 0} }
+  ol.legend{list-style:none;padding:0;counter-reset:lg}
+  ol.legend > li{position:relative;padding-left:40px;min-height:30px;counter-increment:lg}
+  ol.legend > li::before{content:counter(lg);position:absolute;left:0;top:0;width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;font-weight:800;font-size:15px;line-height:28px;text-align:center;box-shadow:0 0 0 2px #fff,0 1px 4px rgba(0,0,0,.35)}
+  table{border-collapse:collapse;width:100%;margin:12px 0;font-size:16px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--bg-2)}
+  footer{max-width:760px;margin:0 auto;padding:18px 16px 40px;color:var(--ink-3);font-size:14px}
+  @media print{
+    body{background:#fff;font-size:11.5pt}
+    .top{background:#fff;color:var(--navy);border-bottom:3px solid var(--navy)}
+    .top-in{padding:0 0 10px}
+    .lang,nav.toc{display:none}
+    main{max-width:none;padding:0}
+    section{border-top:1px solid #999}
+    figure,.box,.summary,table,ol.legend > li{break-inside:avoid}
+    h2,h3{break-after:avoid}
+    figure.phone{max-width:58mm} figure.crop{max-width:95mm} figure.tall{max-width:50mm} figure.bar{max-width:120mm}
+    figure img{box-shadow:none !important}
+    a{color:inherit;text-decoration:none}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in">
+    <div class="kicker">CLF Trading &middot; Panduan Pemandu</div>
+    <h1>Borang POD: Bukti Penghantaran</h1>
+    <p class="lead">Cara menghantar bukti penghantaran dengan telefon, langkah demi langkah. Untuk borang POD versi baharu.</p>
+    <a class="lang" href="POD_Driver_Manual_EN.html" lang="en">English version</a>
+  </div>
+</header>
+
+<main>
+
+<div class="summary">
+  <h2>Ringkasnya</h2>
+  <ol>
+    <li>Buka pautan borang. Semak <b>tarikh</b>, <b>lori</b> dan <b>nama anda</b>.</li>
+    <li>Di setiap kedai: dapatkan tandatangan dan cop, kemudian ambil foto <b>setiap invois</b> (1 invois = 1 foto).</li>
+    <li>Isi pallet jika ada, kemudian tekan <span class="ui go">Simpan</span>.</li>
+    <li>Tunggu sehingga kedai bertanda <span class="tag done">Dihantar</span>.</li>
+    <li>Tidak dapat hantar? Tekan <span class="ui red">Masalah</span>.</li>
+  </ol>
+</div>
+
+<nav class="toc" aria-label="Kandungan">
+  <ol>
+    <li><a href="#buka"><span>1</span>Buka borang</a></li>
+    <li><a href="#perjalanan"><span>2</span>Tarikh, lori dan pemandu</a></li>
+    <li><a href="#pallet-lori"><span>3</span>Pallet atas lori</a></li>
+    <li><a href="#senarai"><span>4</span>Senarai penghantaran</a></li>
+    <li><a href="#foto"><span>5</span>Ambil foto invois</a></li>
+    <li><a href="#kodbar"><span>6</span>Kod bar invois</a></li>
+    <li><a href="#pallet-kedai"><span>7</span>Pallet di kedai</a></li>
+    <li><a href="#simpan"><span>8</span>Simpan</a></li>
+    <li><a href="#masalah"><span>9</span>Masalah: tidak dapat hantar</a></li>
+    <li><a href="#soalan"><span>10</span>Soalan lazim</a></li>
+    <li><a href="#peraturan"><span>11</span>Peraturan penting</a></li>
+  </ol>
+</nav>
+
+<!-- 1 -->
+<section id="buka">
+  <h2><span class="n">1</span>Buka borang</h2>
+  <p>Buka pautan cawangan <b>anda</b>:</p>
+  <a class="open" href="https://clfproject01.github.io/clf-transport-forms/CLF_POD_Form.html"><b>Buka borang Mentakab</b><small>clfproject01.github.io/clf-transport-forms/CLF_POD_Form.html</small></a>
+  <a class="open" href="https://clfproject01.github.io/clf-transport-forms/CLF_POD_Form.html?branch=KTN"><b>Buka borang Kuantan</b><small>clfproject01.github.io/clf-transport-forms/CLF_POD_Form.html?branch=KTN</small></a>
+  <p>Pautan Kuantan berakhir dengan <code>?branch=KTN</code>. Simpan pautan anda (bookmark) supaya senang dibuka setiap hari.</p>
+  <figure class="bar">
+    <img src="img/pod/bm-bar.jpg" width="780" height="184" loading="lazy" decoding="async" alt="Bar biru di atas borang: logo, POD, nama cawangan Mentakab, titik hijau, butang BM dan EN">
+  </figure>
+  <ol class="legend">
+    <li><b>Nama cawangan.</b> Mesti cawangan anda. Jika tertulis cawangan lain, anda buka pautan yang salah.</li>
+    <li><b>Titik hijau</b> = ada internet. <b>Titik kelabu</b> = tiada internet, atau senarai di skrin ialah salinan lama dalam telefon (lihat <a href="#senarai">bahagian 4</a>).</li>
+    <li><span class="ui">BM</span> <span class="ui">EN</span> untuk tukar bahasa. Telefon ingat pilihan anda.</li>
+  </ol>
+  <figure class="bar">
+    <img src="img/pod/bm-bar-ktn.jpg" width="780" height="112" loading="lazy" decoding="async" alt="Bar borang untuk cawangan Kuantan">
+    <figcaption>Pautan Kuantan menunjukkan <b>Kuantan</b>.</figcaption>
+  </figure>
+</section>
+
+<!-- 2 -->
+<section id="perjalanan">
+  <h2><span class="n">2</span>Tarikh, lori dan pemandu</h2>
+  <p>Kotak <b>Maklumat perjalanan</b> berada di atas sekali. Kali pertama, kotak ini terbuka dan kosong.</p>
+  <figure class="crop">
+    <img src="img/pod/bm-trip-start.jpg" width="573" height="705" loading="lazy" decoding="async" alt="Kotak Maklumat perjalanan yang belum diisi: tarikh, pemandu, pemandu kedua dan lori">
+  </figure>
+  <ol>
+    <li><b>Tarikh penghantaran:</b> sudah diisi dengan tarikh hari ini (tertulis <span class="msg">Hari ini</span>). Biasanya tidak perlu diubah. Tarikh esok tidak boleh dipilih.</li>
+    <li><b>Lori:</b> pilih nombor lori anda. Senarai kedai hari ini akan keluar di bawah.</li>
+    <li><b>Pemandu:</b> taip ID staf anda (contoh <code>901</code>) atau nama anda. Tekan nama anda dalam senarai yang keluar.</li>
+    <li><b>Pemandu kedua (jika dua):</b> isi hanya jika dua orang dalam lori. Jika seorang, biarkan kosong. Jangan pilih nama yang sama dua kali.</li>
+  </ol>
+  <div class="box warn">
+    <p><b>Pilih lori dahulu, kemudian nama.</b> Setiap kali lori ditukar, kotak pemandu dikosongkan. Selepas tukar lori, pilih nama anda sekali lagi. Jika pejabat sudah menetapkan pemandu untuk lori itu, nama mungkin terisi sendiri. Semak betul atau tidak.</p>
+  </div>
+  <div class="pair">
+    <figure class="crop">
+      <img src="img/pod/bm-trip-driver.jpg" width="573" height="630" loading="lazy" decoding="async" alt="Taip 901 dalam kotak Pemandu, senarai menunjukkan TER 901 ALI BIN AHMAD">
+      <figcaption>Taip ID staf, kemudian tekan nama anda.</figcaption>
+    </figure>
+    <figure class="crop">
+      <img src="img/pod/bm-trip-filled.jpg" width="573" height="698" loading="lazy" decoding="async" alt="Nama sudah dipilih, ada tanda Diingati dan butang Siap">
+      <figcaption>Nama dipilih: tanda <b>&#10003; Diingati</b>. Tekan <b>Siap</b>.</figcaption>
+    </figure>
+  </div>
+  <p>Telefon <b>ingat</b> nama dan lori anda. Esok, semuanya sudah terisi. Semak sahaja, kemudian terus ke senarai.</p>
+  <h3>Kotak dilipat jadi 3 baris</h3>
+  <p>Bila tarikh, lori dan nama sudah lengkap, kotak dilipat jadi 3 baris: lori, tarikh, nama. Tekan <b>Ubah</b> untuk buka semula. Tekan <b>Siap</b> untuk lipat semula. Tiada apa yang terpadam.</p>
+  <div class="pair">
+    <figure class="crop">
+      <img src="img/pod/bm-trip-folded.jpg" width="573" height="162" loading="lazy" decoding="async" alt="Kotak dilipat: VHT 4642, Hari ini, ALI BIN AHMAD, butang Ubah">
+      <figcaption>Semua betul: tarikh tertulis <b>Hari ini</b>.</figcaption>
+    </figure>
+    <figure class="crop">
+      <img src="img/pod/bm-trip-amber.jpg" width="573" height="162" loading="lazy" decoding="async" alt="Kotak dilipat dengan tarikh semalam berwarna oren">
+      <figcaption>Tarikh <b>bukan hari ini</b> bertukar oren. Tekan <b>Ubah</b> dan betulkan.</figcaption>
+    </figure>
+  </div>
+  <h3>Lupa pilih nama?</h3>
+  <p>Borang tidak akan simpan tanpa nama pemandu (penghantaran itu tidak dikira untuk sesiapa). Bila anda tekan <span class="ui go">Simpan</span>, kotak ini terbuka sendiri di bahagian <b>Pemandu</b>, dengan tulisan merah <span class="msg">Sila pilih nama anda</span>. Pilih nama anda, kemudian tekan <span class="ui go">Simpan</span> semula. Foto anda tidak hilang.</p>
+  <figure class="phone">
+    <img src="img/pod/bm-no-driver.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Mesej merah: Pilih pemandu dulu, kemudian tekan Simpan semula. Kotak Pemandu terbuka dengan tulisan Sila pilih nama anda">
+  </figure>
+</section>
+
+<!-- 3 -->
+<section id="pallet-lori">
+  <h2><span class="n">3</span>Pallet atas lori</h2>
+  <p>Kotak <b>Pallet atas lori</b> menunjukkan pallet yang stor naikkan ke lori anda.</p>
+  <ul>
+    <li>Jumlah <b>betul</b>: tak perlu buat apa-apa.</li>
+    <li>Jumlah <b>salah</b>: tekan <span class="ui red">Jumlah salah? Betulkan</span>, tukar nombor kepada jumlah yang anda terima, kemudian tekan <span class="ui pri">Hantar jumlah sebenar</span>.</li>
+  </ul>
+  <figure class="crop">
+    <img src="img/pod/bm-pallet-onboard.jpg" width="573" height="495" loading="lazy" decoding="async" alt="Kotak Pallet atas lori: LOSCAM 6, CHEP 4, dengan kotak nombor untuk betulkan jumlah">
+  </figure>
+</section>
+
+<!-- 4 -->
+<section id="senarai">
+  <h2><span class="n">4</span>Senarai penghantaran</h2>
+  <p>Selepas lori dipilih, senarai kedai hari ini keluar. Senarai ini datang dari pejabat.</p>
+  <figure class="phone">
+    <img src="img/pod/bm-list.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Bahagian atas senarai: 1 / 6 kedai siap, 1 masalah, 4 lagi, kotak carian dan kedai pertama">
+  </figure>
+  <ul>
+    <li><b>1 / 6 kedai siap</b>: berapa kedai sudah selesai. Di kanan: berapa kedai <b>masalah</b> dan berapa kedai <b>lagi</b>.</li>
+    <li><b>Cari kedai atau invois</b>: taip nama kedai, kawasan atau nombor invois.</li>
+    <li><b>&#8635;</b> (Muat semula senarai): ambil senarai terbaru dari pejabat. Senarai juga dikemas kini sendiri setiap kali anda kembali ke borang.</li>
+  </ul>
+  <div class="pair">
+    <figure class="crop">
+      <img src="img/pod/bm-search.jpg" width="573" height="513" loading="lazy" decoding="async" alt="Carian aman menunjukkan KEDAI RUNCIT AMAN sahaja">
+      <figcaption>Taip <b>aman</b>: hanya kedai itu ditunjukkan.</figcaption>
+    </figure>
+    <figure class="tall">
+      <img src="img/pod/bm-list-full.jpg" width="382" height="1669" loading="lazy" decoding="async" alt="Seluruh senarai: kedai Belum di atas, kedai Masalah, kemudian kedai Dihantar di bawah">
+      <figcaption>Susunan senarai.</figcaption>
+    </figure>
+  </div>
+  <p><b>Susunan:</b> kedai yang belum siap di atas, kedai yang ada masalah selepas itu, kedai yang sudah dihantar (kelabu) di bawah sekali. Label setiap kedai:</p>
+  <ul>
+    <li><span class="tag wait">Belum</span> = belum selesai</li>
+    <li><span class="tag done">Dihantar</span> = sudah selesai</li>
+    <li><span class="tag fail">Masalah</span> atau sebabnya, contoh <span class="tag fail">Kedai tutup</span> = tidak dapat hantar</li>
+  </ul>
+  <h3>Salinan luar talian</h3>
+  <p>Tiada internet? Borang menunjukkan senarai yang disimpan dalam telefon. Titik di atas jadi kelabu dan ada nota <span class="msg">Salinan luar talian, belum disegerak.</span> Anda boleh terus bekerja. Bila ada liputan, tekan <b>&#8635;</b>.</p>
+  <figure class="phone">
+    <img src="img/pod/bm-offline.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Titik kelabu dan nota Salinan luar talian, belum disegerak">
+  </figure>
+  <div class="box tip"><p>Kedai tiada dalam senarai? <b>Minta pejabat tambah.</b> Jangan hantar dengan cara lain.</p></div>
+</section>
+
+<!-- 5 -->
+<section id="foto">
+  <h2><span class="n">5</span>Di setiap kedai: ambil foto invois</h2>
+  <div class="box warn"><p><b>Tandatangan dan cop dahulu.</b> Pastikan pelanggan sudah tandatangan dan cop invois sebelum anda ambil foto.</p></div>
+  <figure class="crop">
+    <img src="img/pod/bm-stop-card.jpg" width="573" height="423" loading="lazy" decoding="async" alt="Kad kedai PASARAYA MAJU JAYA dengan 3 nombor invois, satu bergaris, butang kamera dan butang Masalah">
+  </figure>
+  <ol class="legend">
+    <li><b>Nombor invois.</b> Semua bertanda &#10003; = semua dihantar. Ada invois yang <b>tidak</b> dihantar? Tekan nombornya: tanda &#10003; hilang dan nombor bergaris. Tekan sekali lagi untuk tanda semula.</li>
+    <li><b>Butang kamera</b> (biru besar): buka kamera.</li>
+    <li><span class="ui red">Masalah</span>: tidak dapat hantar (lihat <a href="#masalah">bahagian 9</a>).</li>
+  </ol>
+  <p><b>Foto 0/2</b> bermaksud: 0 foto sudah diambil, 2 foto diperlukan. <b>1 invois = 1 foto.</b></p>
+  <div class="box warn"><p>Buang tanda &#10003; invois yang tidak dihantar <b>sejurus sebelum</b> ambil foto, dan semak nombor <b>Foto 0/2</b>. Bila senarai dikemas kini (contoh selepas Simpan kedai lain), tanda &#10003; boleh muncul semula.</p></div>
+
+  <h3>Kamera borang</h3>
+  <ol>
+    <li>Tekan butang kamera. Kamera borang dibuka dengan <b>bingkai A4</b>.</li>
+    <li>Gambar invois contoh yang <b>pudar</b> muncul sekejap dalam bingkai, kemudian hilang. Itu hanya contoh, <b>bukan</b> invois anda.</li>
+    <li>Letak invois <b>sebenar</b> rata (di atas paha atau papan). Seluruh muka surat dalam bingkai. Satu invois sahaja.</li>
+    <li>Pegang telefon stabil. Bingkai jadi <b>hijau</b> dan tertulis <span class="msg">Tahan…</span> Kamera mengambil gambar <b>sendiri</b>, kemudian skrin <b>Semak imbasan</b> keluar.</li>
+  </ol>
+  <div class="pair">
+    <figure class="phone">
+      <img src="img/pod/bm-cam-ghost.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Kamera baru dibuka: invois contoh pudar dalam bingkai A4, tulisan Letak invois dalam bingkai">
+      <figcaption>Baru dibuka: invois contoh yang pudar.</figcaption>
+    </figure>
+    <figure class="phone">
+      <img src="img/pod/bm-cam-hold.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Invois sebenar dalam bingkai hijau, tulisan Tahan">
+      <figcaption>Invois sebenar dalam bingkai: <b>Tahan…</b></figcaption>
+    </figure>
+  </div>
+  <ol class="legend">
+    <li><b>Lampu suluh.</b> Tekan jika gelap. (Hanya pada telefon yang ada lampu.)</li>
+    <li><b>Butang bulat.</b> Tekan untuk ambil gambar sendiri jika kamera lambat. Butang ini berdenyut jika lama tiada gambar.</li>
+    <li><b>Kiraan foto</b>: sudah diambil / diperlukan.</li>
+  </ol>
+  <p>Di atas skrin: nombor foto, nombor invois dan nama kedai. Butang <b>&times;</b> menutup kamera. Foto yang sudah diambil tidak hilang.</p>
+  <p>Kamera juga memberi arahan, contoh: <span class="msg">Terlalu gelap, perlu cahaya</span>, <span class="msg">Terlalu terang atau silau</span>, <span class="msg">Masukkan seluruh invois dalam bingkai</span>, <span class="msg">Dekat sikit dan pegang stabil</span>. Ikut arahan itu.</p>
+
+  <h3>Semak imbasan</h3>
+  <p>Selepas gambar diambil, borang menunjukkan hasilnya: bersih seperti salinan imbasan (scan).</p>
+  <div class="pair">
+    <figure class="phone">
+      <img src="img/pod/bm-review.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Skrin Semak imbasan dengan invois putih bersih dan butang Ambil semula, Laras dan Guna">
+      <figcaption>Semak imbasan.</figcaption>
+    </figure>
+    <figure class="phone">
+      <img src="img/pod/bm-adjust.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Skrin Laras dengan 4 titik di sudut kertas">
+      <figcaption>Laras: tarik 4 titik ke sudut kertas.</figcaption>
+    </figure>
+  </div>
+  <ul>
+    <li><span class="ui go">&#10003; Guna</span>: imbasan jelas, simpan foto ini.</li>
+    <li><span class="ui">&#8635; Ambil semula</span>: ambil gambar invois yang <b>sama</b> sekali lagi.</li>
+    <li><span class="ui">Laras</span>: ada tepi terpotong? Tarik 4 titik ke sudut kertas, kemudian tekan <b>&#10003;</b> (Siap).</li>
+    <li><span class="ui">Asal</span>: lihat foto asal sebelum imbasan.</li>
+  </ul>
+  <p>Label di atas: <b>&#10003; Diimbas</b> = baik. <b>&#9888; Semak tepi</b> atau <b>&#9888; Tepi tidak dikesan</b> = semak betul-betul, tekan <span class="ui">Laras</span> atau <span class="ui">Ambil semula</span>.</p>
+
+  <h3>Invois seterusnya</h3>
+  <p>Selepas <span class="ui go">&#10003; Guna</span>, letak <b>invois seterusnya</b>. Tulisan <span class="msg">Letak invois SETERUSNYA dalam bingkai</span> bermaksud kamera masih nampak invois tadi. Tukar kertas.</p>
+  <figure class="phone">
+    <img src="img/pod/bm-cam-next.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Kamera dengan tulisan Letak invois SETERUSNYA dalam bingkai, kiraan 1/2">
+  </figure>
+  <p>Bila semua foto siap, kamera tutup sendiri: <span class="msg">Semua foto siap &#10003; Tekan Simpan.</span></p>
+  <figure class="phone">
+    <img src="img/pod/bm-card-ready.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Kad kedai dengan Foto 2/2, dua gambar kecil dan butang hijau Simpan">
+  </figure>
+  <ul>
+    <li>Tersalah foto? Tekan <b>&times;</b> pada gambar kecil untuk buang, kemudian ambil semula.</li>
+    <li>Tekan gambar kecil untuk lihat besar.</li>
+  </ul>
+
+  <h3>Foto tidak jelas</h3>
+  <p>Jika gambar kabur, terlalu gelap atau terpotong, kamera tulis <span class="msg">Tidak jelas: …</span> dan minta ambil semula. Selepas <b>3 kali</b>, butang <span class="ui">Hantar juga</span> keluar. Guna hanya jika invois memang sukar difoto (contoh kertas berkilat). Foto itu ditanda <b>!</b> untuk pejabat.</p>
+  <figure class="phone">
+    <img src="img/pod/bm-not-clear.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Foto kabur: tulisan Tidak jelas, kabur, dan butang Hantar juga">
+  </figure>
+</section>
+
+<!-- 6 -->
+<section id="kodbar">
+  <h2><span class="n">6</span>Kod bar invois <span class="new">BAHARU</span></h2>
+  <p>Setiap invois CLF ada <b>kod bar</b>. Kamera membaca kod bar itu, jadi borang tahu foto itu untuk invois mana.</p>
+  <ul>
+    <li><b>Susunan foto tidak penting lagi.</b> Ambil foto ikut mana-mana susunan.</li>
+    <li>Pastikan kod bar nampak jelas dalam foto. Jangan tutup dengan jari. Jangan lipat kertas di situ.</li>
+  </ul>
+  <figure class="crop">
+    <img src="img/pod/bm-barcode-labels.jpg" width="573" height="585" loading="lazy" decoding="async" alt="Kad kedai: nombor invois yang sudah difoto bertanda kamera, dan setiap gambar kecil menunjukkan nombor invoisnya">
+    <figcaption>Foto diambil ikut mana-mana susunan: setiap gambar kecil menunjukkan nombor invoisnya.</figcaption>
+  </figure>
+  <ul>
+    <li>Selepas <span class="ui go">&#10003; Guna</span>, kamera tulis <span class="msg">Membaca kod bar…</span> sekejap.</li>
+    <li>Nombor invois yang sudah ada foto bertanda <b>kamera</b>.</li>
+    <li>Di bawah setiap gambar kecil: nombor invoisnya (6 aksara terakhir).</li>
+  </ul>
+  <h3>Invois … sudah ada foto</h3>
+  <p>Invois ini sudah difoto. Pilih:</p>
+  <ul>
+    <li><span class="ui pri">Ganti foto lama</span>: foto baharu ini mengganti foto lama (contoh foto lama kurang jelas).</li>
+    <li><span class="ui">Buang foto baru</span>: simpan foto lama. Kemudian letak invois lain.</li>
+  </ul>
+  <h3>Invois … bukan untuk kedai ini</h3>
+  <p>Ini invois kedai lain! Semak kertas anda.</p>
+  <ul>
+    <li><span class="ui pri">Ambil semula</span>: pilihan biasa. Ambil foto invois kedai <b>ini</b>.</li>
+    <li><span class="ui">Simpan juga</span>: hanya jika anda pasti invois ini betul untuk kedai ini. Foto itu ditanda merah untuk pejabat.</li>
+  </ul>
+  <div class="pair">
+    <figure class="phone">
+      <img src="img/pod/bm-barcode-dup.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Soalan Invois DO-10061 sudah ada foto, dengan butang Buang foto baru dan Ganti foto lama">
+      <figcaption>Sudah ada foto.</figcaption>
+    </figure>
+    <figure class="phone">
+      <img src="img/pod/bm-barcode-wrong.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Soalan Invois DO-10021 bukan untuk kedai ini, dengan butang Simpan juga dan Ambil semula">
+      <figcaption>Invois kedai lain.</figcaption>
+    </figure>
+  </div>
+  <h3>Tanda ? pada foto</h3>
+  <p>Kod bar tidak dapat dibaca (contoh kotor, terlipat atau tertutup jari). Foto itu tetap disimpan, dengan tanda <b>?</b> di bawahnya. Tekan <b>?</b>, kemudian pilih nombor invois yang betul di <span class="msg">Foto ini untuk invois mana?</span>. Invois bertanda <b>&#10003; kod bar</b> sudah ada foto yang dibaca daripada kod bar.</p>
+  <figure class="phone">
+    <img src="img/pod/bm-barcode-unknown.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Senarai Foto ini untuk invois mana: DO-10061 dan DO-10062 kod bar, DO-10063 foto ini, DO-10064 belum ada foto">
+  </figure>
+  <div class="box warn"><p><b>Foto bertanda merah</b> = foto untuk invois yang tidak bertanda &#10003;. Tanda semula invois itu, atau buang foto itu (&times;). Simpan hanya boleh bila setiap invois ada fotonya sendiri: <span class="msg">Setiap invois perlu fotonya sendiri. Semak foto bertanda merah.</span></p></div>
+</section>
+
+<!-- 7 -->
+<section id="pallet-kedai">
+  <h2><span class="n">7</span>Pallet di kedai</h2>
+  <p>Ada pallet diberi atau diambil di kedai ini? Isi <b>sebelum</b> tekan <span class="ui go">Simpan</span>. Pallet dihantar bersama Simpan.</p>
+  <ol>
+    <li>Tekan <b>Ada pallet di kedai ini?</b></li>
+    <li>Pilih jenis pallet.</li>
+    <li><b>Beri</b> = berapa pallet anda tinggalkan di kedai. <b>Ambil</b> = berapa pallet kosong anda ambil balik.</li>
+    <li><b>Foto pallet (pilihan)</b>: digalakkan, sebagai bukti.</li>
+  </ol>
+  <figure class="crop">
+    <img src="img/pod/bm-pallet-stop.jpg" width="573" height="806" loading="lazy" decoding="async" alt="Bahagian pallet di kad kedai: jenis LOSCAM, Beri 2, Ambil 1, Foto pallet pilihan, kemudian butang Simpan">
+  </figure>
+  <p>Selepas Simpan: mesej hijau <span class="msg">Pallet direkod</span>. Jika keluar mesej merah <span class="msg">Pallet TIDAK direkod</span>, POD anda tetap sudah disimpan. Beritahu pejabat jumlah pallet.</p>
+</section>
+
+<!-- 8 -->
+<section id="simpan">
+  <h2><span class="n">8</span>Simpan</h2>
+  <p>Butang hijau <span class="ui go">Simpan</span> hanya keluar bila bilangan foto sama dengan bilangan invois (contoh <b>Foto 2/2 &#10003;</b>).</p>
+  <ol>
+    <li>Tekan <span class="ui go">Simpan</span>.</li>
+    <li>Skrin biru <span class="msg">Menyimpan…</span> (kemudian <span class="msg">Mengesahkan…</span>). <b>Jangan tutup borang.</b></li>
+    <li>Siap: kedai bertanda <span class="tag done">Dihantar</span> dan pindah ke bawah senarai.</li>
+  </ol>
+  <div class="pair">
+    <figure class="phone">
+      <img src="img/pod/bm-saving.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Skrin biru dengan tulisan Menyimpan">
+      <figcaption>Menyimpan…</figcaption>
+    </figure>
+    <figure class="crop">
+      <img src="img/pod/bm-delivered.jpg" width="573" height="176" loading="lazy" decoding="async" alt="Kad kedai KEDAI RUNCIT AMAN dengan label Dihantar">
+      <figcaption>Siap: <b>Dihantar</b>.</figcaption>
+    </figure>
+  </div>
+
+  <h3>Belum disahkan</h3>
+  <p>Kadang-kadang liputan hilang selepas foto dihantar, dan telefon tidak dapat pengesahan. Kedai itu tidak akan bertanda Dihantar. Ia bertanda <span class="tag wait">Belum disahkan</span> dengan nota <span class="msg">Simpanan belum disahkan. Foto masih ada. Tekan Semak.</span></p>
+  <figure class="crop">
+    <img src="img/pod/bm-save-unconfirmed.jpg" width="573" height="627" loading="lazy" decoding="async" alt="Kad kedai bertanda Belum disahkan, nota Simpanan belum disahkan, foto masih ada, dan butang Semak">
+  </figure>
+  <ol>
+    <li>Foto anda masih disimpan dalam borang. <b>Jangan ambil foto semula.</b></li>
+    <li>Bila ada liputan, tekan <span class="ui pri">Semak</span>.</li>
+    <li>Jika disahkan, kedai bertukar <span class="tag done">Dihantar</span>.</li>
+    <li>Jika tertulis <span class="msg">Masih belum disahkan</span>, tunggu liputan dan tekan <span class="ui go">Simpan</span> semula. Foto yang sama dihantar semula. Tak perlu ambil foto baharu.</li>
+  </ol>
+  <div class="box stop"><p>Hanya kedai bertanda <span class="tag done">Dihantar</span> sudah selesai. Jangan tutup atau muat semula borang selagi ada kedai <b>Belum disahkan</b> atau foto yang belum disimpan. Foto itu ada dalam borang sahaja.</p></div>
+
+  <h3>Simpan gagal</h3>
+  <p>Jika keluar mesej <span class="msg">TIDAK disimpan!</span> atau <span class="msg">Simpan gagal</span>, foto anda masih ada. Cari liputan dan tekan <span class="ui go">Simpan</span> semula.</p>
+
+  <h3>Sebahagian invois sahaja dihantar</h3>
+  <p>Contoh: 3 invois, hanya 2 dihantar. Tekan nombor invois yang <b>tidak</b> dihantar (bergaris), ambil 2 foto, tekan <span class="ui go">Simpan</span>. Dua invois jadi hijau. Invois yang tinggal masih perlu diselesaikan: hantar kemudian, atau tekan <span class="ui red">Masalah</span> dan pilih sebab.</p>
+  <figure class="crop">
+    <img src="img/pod/bm-saved-partial.jpg" width="573" height="704" loading="lazy" decoding="async" alt="Kad kedai: DO-10031 dan DO-10032 hijau (dihantar), DO-10033 masih belum, Foto 0/1">
+  </figure>
+</section>
+
+<!-- 9 -->
+<section id="masalah">
+  <h2><span class="n">9</span>Masalah: tidak dapat hantar</h2>
+  <ol>
+    <li>Tekan <span class="ui red">Masalah</span> pada kad kedai.</li>
+    <li>Tekan <b>Foto bukti</b>. Ambil gambar kedai atau masalah (contoh kedai tutup). Kamera ini tiada bingkai: tekan butang bulat.</li>
+    <li>Pilih sebab (lihat jadual).</li>
+    <li>Borang bertanya dahulu, contoh: <span class="msg">Tandakan 1 invois sebagai “Kedai tutup”?</span> Tekan <span class="ui danger">Ya, tandakan</span> atau <span class="ui">Batal</span>.</li>
+    <li>Kedai bertanda merah dengan sebabnya.</li>
+  </ol>
+  <div class="pair">
+    <figure class="crop">
+      <img src="img/pod/bm-problem.jpg" width="573" height="572" loading="lazy" decoding="async" alt="Kad dalam mod Masalah: Foto bukti, empat sebab dan Kembali">
+      <figcaption>Apa masalahnya?</figcaption>
+    </figure>
+    <figure class="phone">
+      <img src="img/pod/bm-proof-cam.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Kamera Foto bukti menunjukkan kedai tutup">
+      <figcaption>Foto bukti: kedai tutup.</figcaption>
+    </figure>
+  </div>
+  <table>
+    <tr><th>Sebab</th><th>Bila guna</th></tr>
+    <tr><td><b>Kedai tutup</b></td><td>Kedai tutup, atau tiada orang untuk terima.</td></tr>
+    <tr><td><b>Ditolak</b></td><td>Pelanggan tidak mahu terima barang.</td></tr>
+    <tr><td><b>Sebahagian</b></td><td>Pelanggan terima sebahagian barang sahaja. Ambil foto bukti invois itu dan beritahu pejabat apa yang kurang.</td></tr>
+    <tr><td><b>Jadual semula</b></td><td>Barang akan dihantar hari lain.</td></tr>
+  </table>
+  <div class="pair">
+    <figure class="phone">
+      <img src="img/pod/bm-confirm.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Soalan Tandakan 1 invois sebagai Kedai tutup, dengan butang Batal dan Ya, tandakan">
+      <figcaption>Sahkan dahulu.</figcaption>
+    </figure>
+    <figure class="crop">
+      <img src="img/pod/bm-problem-done.jpg" width="573" height="423" loading="lazy" decoding="async" alt="Kad KEDAI MESRA dengan label merah Kedai tutup">
+      <figcaption>Ditanda: <b>Kedai tutup</b>.</figcaption>
+    </figure>
+  </div>
+  <ul>
+    <li><b>Kembali</b> = keluar tanpa menandakan apa-apa.</li>
+    <li>Selalu ambil <b>Foto bukti</b>. Tanpa foto, borang menunjukkan nota merah <span class="msg">Tiada foto bukti.</span></li>
+    <li><span class="ui red">Masalah</span> menandakan <b>semua</b> invois kedai itu yang belum dihantar. Jika sebahagian invois dihantar, <span class="ui go">Simpan</span> invois itu dahulu (<a href="#simpan">bahagian 8</a>), kemudian tekan Masalah untuk yang tinggal.</li>
+    <li>Jika keluar mesej tidak disimpan atau belum disahkan, foto bukti masih ada. Cari liputan dan pilih sebab sekali lagi.</li>
+  </ul>
+</section>
+
+<!-- 10 -->
+<section id="soalan">
+  <h2><span class="n">10</span>Soalan lazim</h2>
+
+  <h3>Kamera tidak dibuka</h3>
+  <p>Bila telefon bertanya, tekan <b>Allow / Benarkan</b> untuk kamera. Jika kamera disekat, borang menunjukkan mesej <span class="msg">Kamera tidak dapat dibuka di sini…</span> Tekan butang kamera sekali lagi: kamera telefon dibuka dan anda boleh terus bekerja.</p>
+  <figure class="phone">
+    <img src="img/pod/bm-cam-blocked.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Mesej oren: Kamera tidak dapat dibuka di sini">
+  </figure>
+  <p>Mahu guna kamera borang semula? Benarkan kamera dalam tetapan laman (ikon di sebelah alamat laman, kemudian Kamera, Benarkan). Kemudian buka borang semula, selepas semua kedai disimpan.</p>
+  <p>Kamera tertulis <span class="msg">Kamera tidak respon</span>? Tekan <b>&times;</b> dan tekan butang kamera semula.</p>
+
+  <h3>Senarai tidak keluar</h3>
+  <p><span class="msg">Senarai penghantaran tidak dapat dimuat sekarang</span> bermaksud masalah <b>sambungan</b>, <b>bukan</b> pesanan hilang. Cari liputan, kemudian tekan <span class="ui">Tekan untuk cuba lagi</span>.</p>
+  <figure class="crop">
+    <img src="img/pod/bm-list-error.jpg" width="573" height="441" loading="lazy" decoding="async" alt="Mesej Senarai penghantaran tidak dapat dimuat sekarang, ini masalah sambungan, dengan butang Tekan untuk cuba lagi">
+  </figure>
+
+  <h3>Tiada senarai untuk lori ini</h3>
+  <p><span class="msg">Tiada senarai penghantaran untuk lori ini</span>: semak nombor lori dan tarikh. Jika kedua-duanya betul, minta pejabat semak pesanan.</p>
+  <figure class="crop">
+    <img src="img/pod/bm-list-empty.jpg" width="573" height="402" loading="lazy" decoding="async" alt="Mesej Tiada senarai penghantaran untuk lori ini (VHT 4642)">
+  </figure>
+
+  <h3>Tarikh salah</h3>
+  <p>Tarikh berwarna oren = bukan hari ini. Tekan <b>Ubah</b>, betulkan tarikh, kemudian tekan <b>Siap</b>.</p>
+
+  <h3>Foto tidak jelas</h3>
+  <p>Cari cahaya yang cukup (atau tekan lampu suluh), elak silau, letak kertas rata dan pegang telefon stabil. Selepas 3 kali, <span class="ui">Hantar juga</span> boleh digunakan (lihat <a href="#foto">bahagian 5</a>).</p>
+
+  <h3>Pallet TIDAK direkod</h3>
+  <p>POD anda sudah disimpan. Beritahu pejabat jumlah pallet yang diberi atau diambil.</p>
+
+  <h3>Tersalah tanda Masalah, atau kedai tiada dalam senarai</h3>
+  <p>Hubungi pejabat.</p>
+</section>
+
+<!-- 11 -->
+<section id="peraturan">
+  <h2><span class="n">11</span>Peraturan penting</h2>
+  <div class="box good">
+    <p><b>Sila muat naik invois bertandatangan pada hari yang sama. Terima kasih!</b> Hantar di setiap kedai, semasa anda di sana. Jangan tunggu hujung hari.</p>
+  </div>
+  <ul>
+    <li>Tandatangan dan cop dahulu, kemudian foto.</li>
+    <li><b>1 invois = 1 foto.</b> Seluruh muka surat dalam bingkai, kod bar jelas.</li>
+    <li>Isi pallet <b>sebelum</b> tekan Simpan.</li>
+    <li>Tunggu sehingga kedai bertanda <span class="tag done">Dihantar</span>. Jika <span class="tag wait">Belum disahkan</span>, tekan <span class="ui pri">Semak</span> bila ada liputan. Jangan ambil foto semula.</li>
+    <li>Jangan tutup borang semasa skrin <span class="msg">Menyimpan…</span> keluar. Selesaikan satu kedai sebelum buka aplikasi lain.</li>
+    <li>Tidak dapat hantar? Tekan <span class="ui red">Masalah</span>, ambil foto bukti dan pilih sebab.</li>
+    <li>Kedai tiada dalam senarai? Minta pejabat tambah.</li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  CLF Trading Sdn. Bhd. &middot; Panduan pemandu, borang POD &middot; Oktober 2026<br>
+  Gambar skrin menggunakan kedai, invois dan pemandu <b>contoh</b>, bukan data sebenar. Jika skrin anda berbeza sedikit, ikut skrin.
+</footer>
+
+</body>
+</html>

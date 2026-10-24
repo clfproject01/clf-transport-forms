@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#141C77">
+<title>Driver Manual: POD Form (CLF Trading)</title>
+<style>
+  :root{
+    --navy:#141C77; --navy-2:#0E1458; --navy-50:#EEF0FA;
+    --red:#FC091B; --red-700:#C8101E; --red-50:#FEF2F2;
+    --green:#15803D; --green-50:#ECFDF3;
+    --amber:#B45309; --amber-50:#FFFBEB;
+    --ink:#0F172A; --ink-2:#475569; --ink-3:#64748B;
+    --line:#E2E8F0; --bg:#FFFFFF; --bg-2:#F4F6FA;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg-2);color:var(--ink);font:17px/1.6 var(--font)}
+  a{color:var(--navy)}
+  .top{background:var(--navy);color:#fff}
+  .top-in{max-width:760px;margin:0 auto;padding:22px 16px 24px}
+  .kicker{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;opacity:.85}
+  h1{font-size:28px;line-height:1.2;margin:6px 0 8px;font-weight:800}
+  .lead{margin:0;font-size:16px;opacity:.92}
+  .lang{display:inline-block;margin-top:14px;padding:6px 14px;border:1px solid rgba(255,255,255,.6);border-radius:999px;color:#fff;text-decoration:none;font-weight:700;font-size:14px}
+  main{max-width:760px;margin:0 auto;background:var(--bg);padding:6px 16px 40px}
+  .summary{background:var(--navy-50);border-radius:14px;padding:14px 16px;margin:16px 0}
+  .summary h2{margin:0 0 6px;font-size:19px}
+  .summary ol{margin:0;padding-left:22px}
+  .summary li{margin:5px 0}
+  nav.toc{margin:18px 0 6px}
+  nav.toc ol{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+  nav.toc a{display:flex;gap:8px;align-items:center;height:100%;padding:7px 9px;border:1px solid var(--line);border-radius:10px;text-decoration:none;color:var(--ink);font-weight:700;font-size:14px;line-height:1.3;background:#fff}
+  nav.toc a span{flex:none;width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+  @media (min-width:350px){ nav.toc ol{grid-template-columns:1fr 1fr} }
+  a.open{display:block;margin:8px 0;padding:10px 14px;border:1.5px solid var(--navy);border-radius:12px;background:var(--navy-50);color:var(--navy);text-decoration:none}
+  a.open b{display:block;font-size:17px}
+  a.open small{display:block;font-size:13px;line-height:1.4;color:var(--ink-2);overflow-wrap:anywhere}
+  section{border-top:1px solid var(--line);margin-top:30px;padding-top:4px}
+  h2{display:flex;align-items:center;gap:10px;font-size:22px;line-height:1.25;margin:20px 0 10px}
+  h2 .n{flex:none;width:34px;height:34px;border-radius:50%;background:var(--navy);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:17px}
+  h2 .new{font-size:12px;font-weight:800;letter-spacing:.04em;padding:2px 8px;border-radius:999px;background:var(--green);color:#fff}
+  h3{font-size:18px;line-height:1.3;margin:24px 0 6px}
+  p{margin:10px 0}
+  ol,ul{padding-left:24px;margin:10px 0}
+  li{margin:7px 0}
+  code{font:15px/1.4 Consolas,Menlo,monospace;background:var(--bg-2);border:1px solid var(--line);border-radius:6px;padding:1px 5px;word-break:break-all}
+  .ui{display:inline-block;padding:0 7px;border:1.5px solid #CBD5E1;border-radius:7px;background:#fff;font-weight:800;font-size:.9em;line-height:1.55;white-space:nowrap;color:var(--ink)}
+  .ui.go{background:var(--green);border-color:var(--green);color:#fff}
+  .ui.pri{background:var(--navy);border-color:var(--navy);color:#fff}
+  .ui.red{color:var(--red-700)}
+  .ui.danger{background:var(--red-700);border-color:var(--red-700);color:#fff}
+  .tag{display:inline-block;padding:0 8px;border-radius:999px;font-weight:800;font-size:.85em;line-height:1.6;white-space:nowrap}
+  .tag.wait{background:var(--amber-50);color:var(--amber)}
+  .tag.done{background:var(--green-50);color:var(--green)}
+  .tag.fail{background:var(--red-50);color:var(--red-700)}
+  .msg{font-weight:700}
+  .box{border-radius:12px;padding:12px 14px;margin:16px 0;border-left:5px solid}
+  .box p{margin:6px 0}
+  .box.tip{background:var(--navy-50);border-color:var(--navy)}
+  .box.warn{background:var(--amber-50);border-color:var(--amber)}
+  .box.stop{background:var(--red-50);border-color:var(--red-700)}
+  .box.good{background:var(--green-50);border-color:var(--green)}
+  figure{margin:18px auto;text-align:center}
+  figure img{display:block;width:100%;height:auto;margin:0 auto;background:#fff}
+  figure.phone{max-width:290px}
+  figure.phone img{border-radius:22px;border:1px solid #CBD5E1;box-shadow:0 6px 18px rgba(15,23,42,.15)}
+  figure.crop{max-width:400px}
+  figure.crop img{border-radius:14px;border:1px solid var(--line);box-shadow:0 3px 10px rgba(15,23,42,.08)}
+  figure.bar{max-width:560px}
+  figure.bar img{border-radius:10px;border:1px solid var(--line)}
+  figure.tall{max-width:230px}
+  figure.tall img{border-radius:12px;border:1px solid var(--line)}
+  figcaption{font-size:14px;color:var(--ink-3);margin-top:8px;line-height:1.45}
+  .pair{display:grid;gap:4px}
+  @media (min-width:640px){ .pair{grid-template-columns:1fr 1fr;align-items:start;gap:18px} .pair figure{margin:18px 0} }
+  ol.legend{list-style:none;padding:0;counter-reset:lg}
+  ol.legend > li{position:relative;padding-left:40px;min-height:30px;counter-increment:lg}
+  ol.legend > li::before{content:counter(lg);position:absolute;left:0;top:0;width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;font-weight:800;font-size:15px;line-height:28px;text-align:center;box-shadow:0 0 0 2px #fff,0 1px 4px rgba(0,0,0,.35)}
+  table{border-collapse:collapse;width:100%;margin:12px 0;font-size:16px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--bg-2)}
+  footer{max-width:760px;margin:0 auto;padding:18px 16px 40px;color:var(--ink-3);font-size:14px}
+  @media print{
+    body{background:#fff;font-size:11.5pt}
+    .top{background:#fff;color:var(--navy);border-bottom:3px solid var(--navy)}
+    .top-in{padding:0 0 10px}
+    .lang,nav.toc{display:none}
+    main{max-width:none;padding:0}
+    section{border-top:1px solid #999}
+    figure,.box,.summary,table,ol.legend > li{break-inside:avoid}
+    h2,h3{break-after:avoid}
+    figure.phone{max-width:58mm} figure.crop{max-width:95mm} figure.tall{max-width:50mm} figure.bar{max-width:120mm}
+    figure img{box-shadow:none !important}
+    a{color:inherit;text-decoration:none}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in">
+    <div class="kicker">CLF Trading &middot; Driver Manual</div>
+    <h1>POD Form: Proof of Delivery</h1>
+    <p class="lead">How to send your proof of delivery with your phone, step by step. For the new version of the POD form.</p>
+    <a class="lang" href="POD_Driver_Manual_BM.html" lang="ms">Versi Bahasa Melayu</a>
+  </div>
+</header>
+
+<main>
+
+<div class="summary">
+  <h2>In short</h2>
+  <ol>
+    <li>Open the form link. Check the <b>date</b>, the <b>lorry</b> and <b>your name</b>.</li>
+    <li>At every shop: get the signature and stamp, then take a photo of <b>each invoice</b> (1 invoice = 1 photo).</li>
+    <li>Fill in pallets if any, then tap <span class="ui go">Save</span>.</li>
+    <li>Wait until the shop shows <span class="tag done">Delivered</span>.</li>
+    <li>Cannot deliver? Tap <span class="ui red">Problem</span>.</li>
+  </ol>
+</div>
+
+<nav class="toc" aria-label="Contents">
+  <ol>
+    <li><a href="#open"><span>1</span>Open the form</a></li>
+    <li><a href="#trip"><span>2</span>Date, lorry and driver</a></li>
+    <li><a href="#lorry-pallets"><span>3</span>Pallets on lorry</a></li>
+    <li><a href="#list"><span>4</span>Delivery list</a></li>
+    <li><a href="#photos"><span>5</span>Invoice photos</a></li>
+    <li><a href="#barcode"><span>6</span>Invoice barcode</a></li>
+    <li><a href="#stop-pallets"><span>7</span>Pallets at a shop</a></li>
+    <li><a href="#save"><span>8</span>Save</a></li>
+    <li><a href="#problem"><span>9</span>Problem: cannot deliver</a></li>
+    <li><a href="#faq"><span>10</span>Common situations</a></li>
+    <li><a href="#rules"><span>11</span>Important rules</a></li>
+  </ol>
+</nav>
+
+<!-- 1 -->
+<section id="open">
+  <h2><span class="n">1</span>Open the form</h2>
+  <p>Open the link of <b>your</b> branch:</p>
+  <a class="open" href="https://clfproject01.github.io/clf-transport-forms/CLF_POD_Form.html"><b>Open the Mentakab form</b><small>clfproject01.github.io/clf-transport-forms/CLF_POD_Form.html</small></a>
+  <a class="open" href="https://clfproject01.github.io/clf-transport-forms/CLF_POD_Form.html?branch=KTN"><b>Open the Kuantan form</b><small>clfproject01.github.io/clf-transport-forms/CLF_POD_Form.html?branch=KTN</small></a>
+  <p>The Kuantan link ends with <code>?branch=KTN</code>. Save your link (bookmark) so it is easy to open every day.</p>
+  <figure class="bar">
+    <img src="img/pod/en-bar.jpg" width="780" height="184" loading="lazy" decoding="async" alt="The blue bar at the top of the form: logo, POD, branch name Mentakab, green dot, BM and EN buttons">
+  </figure>
+  <ol class="legend">
+    <li><b>Branch name.</b> It must be your branch. If it shows another branch, you opened the wrong link.</li>
+    <li><b>Green dot</b> = internet is on. <b>Grey dot</b> = no internet, or the list on screen is the old copy kept on the phone (see <a href="#list">part 4</a>).</li>
+    <li><span class="ui">BM</span> <span class="ui">EN</span> to change the language. The phone remembers your choice.</li>
+  </ol>
+  <figure class="bar">
+    <img src="img/pod/en-bar-ktn.jpg" width="780" height="112" loading="lazy" decoding="async" alt="The form bar for the Kuantan branch">
+    <figcaption>The Kuantan link shows <b>Kuantan</b>.</figcaption>
+  </figure>
+</section>
+
+<!-- 2 -->
+<section id="trip">
+  <h2><span class="n">2</span>Date, lorry and driver</h2>
+  <p>The <b>Trip details</b> box is at the very top. The first time, it is open and empty.</p>
+  <figure class="crop">
+    <img src="img/pod/en-trip-start.jpg" width="573" height="705" loading="lazy" decoding="async" alt="The empty Trip details box: date, driver, second driver and lorry">
+  </figure>
+  <ol>
+    <li><b>Delivery date:</b> already filled in with today's date (it says <span class="msg">Today</span>). Usually you do not change it. A future date cannot be chosen.</li>
+    <li><b>Lorry:</b> choose your lorry number. Today's shop list appears below.</li>
+    <li><b>Driver:</b> type your staff ID (for example <code>901</code>) or your name. Tap your name in the list that appears.</li>
+    <li><b>Second driver (only if two):</b> fill in only when two people are on the lorry. If you are alone, leave it empty. Never choose the same name twice.</li>
+  </ol>
+  <div class="box warn">
+    <p><b>Choose the lorry first, then your name.</b> Every time the lorry is changed, the driver boxes are emptied. After changing the lorry, choose your name again. If the office has set the drivers for that lorry, the names may fill in by themselves. Check they are right.</p>
+  </div>
+  <div class="pair">
+    <figure class="crop">
+      <img src="img/pod/en-trip-driver.jpg" width="573" height="630" loading="lazy" decoding="async" alt="Typing 901 in the Driver box, the list shows TER 901 ALI BIN AHMAD">
+      <figcaption>Type your staff ID, then tap your name.</figcaption>
+    </figure>
+    <figure class="crop">
+      <img src="img/pod/en-trip-filled.jpg" width="573" height="698" loading="lazy" decoding="async" alt="Name chosen, with the Remembered tag and the Done button">
+      <figcaption>Name chosen: <b>&#10003; Remembered</b>. Tap <b>Done</b>.</figcaption>
+    </figure>
+  </div>
+  <p>The phone <b>remembers</b> your name and lorry. Tomorrow, everything is already filled in. Just check it, then go to the list.</p>
+  <h3>The box folds into 3 lines</h3>
+  <p>When the date, lorry and name are complete, the box folds into 3 lines: lorry, date, name. Tap <b>Change</b> to open it again. Tap <b>Done</b> to fold it again. Nothing is deleted.</p>
+  <div class="pair">
+    <figure class="crop">
+      <img src="img/pod/en-trip-folded.jpg" width="573" height="162" loading="lazy" decoding="async" alt="Folded box: VHT 4642, Today, ALI BIN AHMAD, Change button">
+      <figcaption>All correct: the date says <b>Today</b>.</figcaption>
+    </figure>
+    <figure class="crop">
+      <img src="img/pod/en-trip-amber.jpg" width="573" height="162" loading="lazy" decoding="async" alt="Folded box with yesterday's date in orange">
+      <figcaption>A date that is <b>not today</b> turns orange. Tap <b>Change</b> and fix it.</figcaption>
+    </figure>
+  </div>
+  <h3>Forgot to choose your name?</h3>
+  <p>The form will not save without a driver name (the delivery would count for nobody). When you tap <span class="ui go">Save</span>, the box opens by itself at the <b>Driver</b> field, with the red text <span class="msg">Please select your name</span>. Choose your name, then tap <span class="ui go">Save</span> again. Your photos are not lost.</p>
+  <figure class="phone">
+    <img src="img/pod/en-no-driver.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Red message: Choose the driver first, then tap Save again. The Driver box is open with the text Please select your name">
+  </figure>
+</section>
+
+<!-- 3 -->
+<section id="lorry-pallets">
+  <h2><span class="n">3</span>Pallets on lorry</h2>
+  <p>The <b>Pallets on lorry</b> box shows the pallets the store loaded on your lorry.</p>
+  <ul>
+    <li>Count <b>correct</b>: do nothing.</li>
+    <li>Count <b>wrong</b>: tap <span class="ui red">Wrong count? Fix here</span>, change the numbers to what you really received, then tap <span class="ui pri">Send the count you received</span>.</li>
+  </ul>
+  <figure class="crop">
+    <img src="img/pod/en-pallet-onboard.jpg" width="573" height="495" loading="lazy" decoding="async" alt="Pallets on lorry box: LOSCAM 6, CHEP 4, with number boxes to fix the count">
+  </figure>
+</section>
+
+<!-- 4 -->
+<section id="list">
+  <h2><span class="n">4</span>Delivery list</h2>
+  <p>After you choose the lorry, today's shop list appears. The list comes from the office.</p>
+  <figure class="phone">
+    <img src="img/pod/en-list.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Top of the list: 1 / 6 stops done, 1 problem, 4 to go, the search box and the first shop">
+  </figure>
+  <ul>
+    <li><b>1 / 6 stops done</b>: how many shops are finished. On the right: how many shops have a <b>problem</b> and how many are still <b>to go</b>.</li>
+    <li><b>Find shop or invoice</b>: type a shop name, an area or an invoice number.</li>
+    <li><b>&#8635;</b> (Refresh list): get the newest list from the office. The list also refreshes by itself every time you come back to the form.</li>
+  </ul>
+  <div class="pair">
+    <figure class="crop">
+      <img src="img/pod/en-search.jpg" width="573" height="513" loading="lazy" decoding="async" alt="Searching aman shows only KEDAI RUNCIT AMAN">
+      <figcaption>Type <b>aman</b>: only that shop is shown.</figcaption>
+    </figure>
+    <figure class="tall">
+      <img src="img/pod/en-list-full.jpg" width="382" height="1669" loading="lazy" decoding="async" alt="The whole list: Not yet shops at the top, then Problem shops, then Delivered shops at the bottom">
+      <figcaption>The order of the list.</figcaption>
+    </figure>
+  </div>
+  <p><b>Order:</b> shops still to do at the top, shops with a problem next, delivered shops (grey) at the very bottom. The label of each shop:</p>
+  <ul>
+    <li><span class="tag wait">Not yet</span> = not finished</li>
+    <li><span class="tag done">Delivered</span> = finished</li>
+    <li><span class="tag fail">Problem</span> or the reason, for example <span class="tag fail">Shop closed</span> = could not deliver</li>
+  </ul>
+  <h3>Offline copy</h3>
+  <p>No internet? The form shows the list kept on the phone. The dot at the top turns grey and a note says <span class="msg">Offline copy, not synced yet.</span> You can keep working. When you have signal, tap <b>&#8635;</b>.</p>
+  <figure class="phone">
+    <img src="img/pod/en-offline.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Grey dot and the note Offline copy, not synced yet">
+  </figure>
+  <div class="box tip"><p>A shop is not on the list? <b>Ask the office to add it.</b> Do not send it any other way.</p></div>
+</section>
+
+<!-- 5 -->
+<section id="photos">
+  <h2><span class="n">5</span>At every shop: invoice photos</h2>
+  <div class="box warn"><p><b>Signature and stamp first.</b> Make sure the customer has signed and stamped the invoice before you take the photo.</p></div>
+  <figure class="crop">
+    <img src="img/pod/en-stop-card.jpg" width="573" height="423" loading="lazy" decoding="async" alt="Shop card PASARAYA MAJU JAYA with 3 invoice numbers, one crossed out, the camera button and the Problem button">
+  </figure>
+  <ol class="legend">
+    <li><b>Invoice numbers.</b> All ticked &#10003; = all delivered. An invoice was <b>not</b> delivered? Tap its number: the tick goes away and the number is crossed out. Tap again to tick it again.</li>
+    <li><b>Camera button</b> (big, blue): opens the camera.</li>
+    <li><span class="ui red">Problem</span>: you cannot deliver (see <a href="#problem">part 9</a>).</li>
+  </ol>
+  <p><b>Photos 0/2</b> means: 0 photos taken, 2 photos needed. <b>1 invoice = 1 photo.</b></p>
+  <div class="box warn"><p>Untick an invoice that is not delivered <b>just before</b> you take the photos, and check the <b>Photos 0/2</b> number. When the list refreshes (for example after you save another shop), the tick can come back.</p></div>
+
+  <h3>The form's camera</h3>
+  <ol>
+    <li>Tap the camera button. The form's camera opens with an <b>A4 frame</b>.</li>
+    <li>A <b>faint</b> sample invoice shows in the frame for a moment, then disappears. It is only a sample, <b>not</b> your invoice.</li>
+    <li>Lay the <b>real</b> invoice flat (on your lap or a board). The whole page inside the frame. One invoice only.</li>
+    <li>Hold the phone steady. The frame turns <b>green</b> and says <span class="msg">Hold…</span> The camera takes the photo <b>by itself</b>, then the <b>Check the scan</b> screen opens.</li>
+  </ol>
+  <div class="pair">
+    <figure class="phone">
+      <img src="img/pod/en-cam-ghost.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Camera just opened: faint sample invoice in the A4 frame, text Put the invoice in the frame">
+      <figcaption>Just opened: the faint sample invoice.</figcaption>
+    </figure>
+    <figure class="phone">
+      <img src="img/pod/en-cam-hold.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Real invoice in the green frame, text Hold">
+      <figcaption>Real invoice in the frame: <b>Hold…</b></figcaption>
+    </figure>
+  </div>
+  <ol class="legend">
+    <li><b>Torch.</b> Tap it when it is dark. (Only on phones that have a torch.)</li>
+    <li><b>Round button.</b> Tap it to take the photo yourself if the camera is slow. It pulses when no photo was taken for a while.</li>
+    <li><b>Photo count</b>: taken / needed.</li>
+  </ol>
+  <p>At the top of the screen: the photo number, the invoice number and the shop name. The <b>&times;</b> button closes the camera. Photos already taken are kept.</p>
+  <p>The camera also gives instructions, for example: <span class="msg">Too dark, more light please</span>, <span class="msg">Too bright or glare</span>, <span class="msg">Fit the whole invoice in the frame</span>, <span class="msg">Move closer and hold steady</span>. Follow them.</p>
+
+  <h3>Check the scan</h3>
+  <p>After the photo is taken, the form shows the result: clean, like a page that went through a scanner.</p>
+  <div class="pair">
+    <figure class="phone">
+      <img src="img/pod/en-review.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Check the scan screen with a clean white invoice and the buttons Retake, Adjust and Use">
+      <figcaption>Check the scan.</figcaption>
+    </figure>
+    <figure class="phone">
+      <img src="img/pod/en-adjust.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Adjust screen with 4 dots on the paper corners">
+      <figcaption>Adjust: drag the 4 dots onto the paper corners.</figcaption>
+    </figure>
+  </div>
+  <ul>
+    <li><span class="ui go">&#10003; Use</span>: the scan is clear, keep this photo.</li>
+    <li><span class="ui">&#8635; Retake</span>: take the <b>same</b> invoice again.</li>
+    <li><span class="ui">Adjust</span>: an edge is cut off? Drag the 4 dots onto the paper corners, then tap <b>&#10003;</b> (Done).</li>
+    <li><span class="ui">Original</span>: see the photo as it was before the scan.</li>
+  </ul>
+  <p>The label at the top: <b>&#10003; Scanned</b> = good. <b>&#9888; Check the edges</b> or <b>&#9888; Edges not found</b> = look carefully, tap <span class="ui">Adjust</span> or <span class="ui">Retake</span>.</p>
+
+  <h3>Next invoice</h3>
+  <p>After <span class="ui go">&#10003; Use</span>, put the <b>next invoice</b> down. The text <span class="msg">Put the NEXT invoice in the frame</span> means the camera still sees the invoice you just took. Change the paper.</p>
+  <figure class="phone">
+    <img src="img/pod/en-cam-next.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Camera with the text Put the NEXT invoice in the frame, count 1/2">
+  </figure>
+  <p>When all photos are taken, the camera closes by itself: <span class="msg">All photos taken &#10003; Tap Save.</span></p>
+  <figure class="phone">
+    <img src="img/pod/en-card-ready.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Shop card with Photos 2/2, two small pictures and the green Save button">
+  </figure>
+  <ul>
+    <li>Wrong photo? Tap the <b>&times;</b> on the small picture to remove it, then take it again.</li>
+    <li>Tap a small picture to see it big.</li>
+  </ul>
+
+  <h3>Photo not clear</h3>
+  <p>If the picture is blurry, too dark or cut off, the camera says <span class="msg">Not clear: …</span> and asks you to retake. After <b>3 tries</b>, the <span class="ui">Upload anyway</span> button appears. Use it only when the invoice really is hard to photograph (for example shiny paper). That photo is marked <b>!</b> for the office.</p>
+  <figure class="phone">
+    <img src="img/pod/en-not-clear.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Blurry photo: text Not clear, blurry, and the Upload anyway button">
+  </figure>
+</section>
+
+<!-- 6 -->
+<section id="barcode">
+  <h2><span class="n">6</span>Invoice barcode <span class="new">NEW</span></h2>
+  <p>Every CLF invoice has a <b>barcode</b>. The camera reads it, so the form knows which invoice each photo belongs to.</p>
+  <ul>
+    <li><b>The order of the photos does not matter any more.</b> Take them in any order.</li>
+    <li>Keep the barcode clear in the photo. Do not cover it with your finger. Do not fold the paper there.</li>
+  </ul>
+  <figure class="crop">
+    <img src="img/pod/en-barcode-labels.jpg" width="573" height="585" loading="lazy" decoding="async" alt="Shop card: photographed invoice numbers carry a camera mark, and every small picture shows its invoice number">
+    <figcaption>Photos taken in any order: every small picture shows its invoice number.</figcaption>
+  </figure>
+  <ul>
+    <li>After <span class="ui go">&#10003; Use</span>, the camera says <span class="msg">Reading the barcode…</span> for a moment.</li>
+    <li>Invoice numbers that already have a photo carry a <b>camera</b> mark.</li>
+    <li>Under every small picture: its invoice number (the last 6 characters).</li>
+  </ul>
+  <h3>Invoice … already has a photo</h3>
+  <p>This invoice was already photographed. Choose:</p>
+  <ul>
+    <li><span class="ui pri">Replace old photo</span>: this new photo takes the place of the old one (for example the old one was not clear).</li>
+    <li><span class="ui">Discard new photo</span>: keep the old photo. Then put another invoice down.</li>
+  </ul>
+  <h3>Invoice … is not for this shop</h3>
+  <p>This is another shop's invoice! Check your papers.</p>
+  <ul>
+    <li><span class="ui pri">Retake</span>: the normal choice. Take the photo of <b>this</b> shop's invoice.</li>
+    <li><span class="ui">Keep anyway</span>: only if you are sure this invoice really belongs to this shop. The photo is marked red for the office.</li>
+  </ul>
+  <div class="pair">
+    <figure class="phone">
+      <img src="img/pod/en-barcode-dup.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Question Invoice DO-10061 already has a photo, with the buttons Discard new photo and Replace old photo">
+      <figcaption>Already has a photo.</figcaption>
+    </figure>
+    <figure class="phone">
+      <img src="img/pod/en-barcode-wrong.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Question Invoice DO-10021 is not for this shop, with the buttons Keep anyway and Retake">
+      <figcaption>Another shop's invoice.</figcaption>
+    </figure>
+  </div>
+  <h3>A ? on a photo</h3>
+  <p>The barcode could not be read (for example dirty, folded or under a finger). The photo is still kept, with a <b>?</b> under it. Tap the <b>?</b>, then choose the right invoice number under <span class="msg">Which invoice is this photo?</span>. Invoices marked <b>&#10003; barcode</b> already have a photo read from its barcode.</p>
+  <figure class="phone">
+    <img src="img/pod/en-barcode-unknown.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="The list Which invoice is this photo: DO-10061 and DO-10062 barcode, DO-10063 this photo, DO-10064 no photo yet">
+  </figure>
+  <div class="box warn"><p><b>A photo marked red</b> = a photo for an invoice that is not ticked &#10003;. Tick that invoice again, or remove the photo (&times;). Save only works when every invoice has its own photo: <span class="msg">Each invoice needs its own photo. Check the photos marked in red.</span></p></div>
+</section>
+
+<!-- 7 -->
+<section id="stop-pallets">
+  <h2><span class="n">7</span>Pallets at a shop</h2>
+  <p>Did you drop or collect pallets at this shop? Fill it in <b>before</b> you tap <span class="ui go">Save</span>. The pallets are sent together with the Save.</p>
+  <ol>
+    <li>Tap <b>Pallets at this stop?</b></li>
+    <li>Choose the pallet type.</li>
+    <li><b>Drop</b> = how many pallets you leave at the shop. <b>Collect</b> = how many empty pallets you take back.</li>
+    <li><b>Pallet photo (optional)</b>: recommended, as proof.</li>
+  </ol>
+  <figure class="crop">
+    <img src="img/pod/en-pallet-stop.jpg" width="573" height="806" loading="lazy" decoding="async" alt="Pallet part of the shop card: type LOSCAM, Drop 2, Collect 1, optional pallet photo, then the Save button">
+  </figure>
+  <p>After Save: a green message <span class="msg">Pallet recorded</span>. If a red message says <span class="msg">Pallet NOT recorded</span>, your POD is still saved. Tell the office the pallet count.</p>
+</section>
+
+<!-- 8 -->
+<section id="save">
+  <h2><span class="n">8</span>Save</h2>
+  <p>The green <span class="ui go">Save</span> button only appears when the number of photos equals the number of invoices (for example <b>Photos 2/2 &#10003;</b>).</p>
+  <ol>
+    <li>Tap <span class="ui go">Save</span>.</li>
+    <li>A blue screen says <span class="msg">Saving…</span> (then <span class="msg">Confirming…</span>). <b>Do not close the form.</b></li>
+    <li>Done: the shop shows <span class="tag done">Delivered</span> and moves to the bottom of the list.</li>
+  </ol>
+  <div class="pair">
+    <figure class="phone">
+      <img src="img/pod/en-saving.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Blue screen with the text Saving">
+      <figcaption>Saving…</figcaption>
+    </figure>
+    <figure class="crop">
+      <img src="img/pod/en-delivered.jpg" width="573" height="176" loading="lazy" decoding="async" alt="Shop card KEDAI RUNCIT AMAN with the label Delivered">
+      <figcaption>Done: <b>Delivered</b>.</figcaption>
+    </figure>
+  </div>
+
+  <h3>Not confirmed</h3>
+  <p>Sometimes the signal drops after the photos went out, and the phone gets no confirmation. That shop will not show Delivered. It shows <span class="tag wait">Not confirmed</span> with the note <span class="msg">Save not confirmed yet. Your photos are kept. Tap Check.</span></p>
+  <figure class="crop">
+    <img src="img/pod/en-save-unconfirmed.jpg" width="573" height="627" loading="lazy" decoding="async" alt="Shop card marked Not confirmed, the note Save not confirmed yet, photos kept, and the Check button">
+  </figure>
+  <ol>
+    <li>Your photos are still kept in the form. <b>Do not take the photos again.</b></li>
+    <li>When you have signal, tap <span class="ui pri">Check</span>.</li>
+    <li>If it is confirmed, the shop turns <span class="tag done">Delivered</span>.</li>
+    <li>If it says <span class="msg">Still not confirmed</span>, wait for signal and tap <span class="ui go">Save</span> again. The same photos are sent again. No new photos are needed.</li>
+  </ol>
+  <div class="box stop"><p>Only a shop marked <span class="tag done">Delivered</span> is finished. Do not close or reload the form while a shop is <b>Not confirmed</b> or has photos that are not saved yet. Those photos exist only in the form.</p></div>
+
+  <h3>Save failed</h3>
+  <p>If you see the message <span class="msg">NOT saved!</span> or <span class="msg">Save failed</span>, your photos are still there. Find signal and tap <span class="ui go">Save</span> again.</p>
+
+  <h3>Only some invoices delivered</h3>
+  <p>Example: 3 invoices, only 2 delivered. Tap the number of the invoice that was <b>not</b> delivered (crossed out), take 2 photos, tap <span class="ui go">Save</span>. The two invoices turn green. The invoice left over still has to be finished: deliver it later, or tap <span class="ui red">Problem</span> and choose a reason.</p>
+  <figure class="crop">
+    <img src="img/pod/en-saved-partial.jpg" width="573" height="704" loading="lazy" decoding="async" alt="Shop card: DO-10031 and DO-10032 green (delivered), DO-10033 still to do, Photos 0/1">
+  </figure>
+</section>
+
+<!-- 9 -->
+<section id="problem">
+  <h2><span class="n">9</span>Problem: cannot deliver</h2>
+  <ol>
+    <li>Tap <span class="ui red">Problem</span> on the shop card.</li>
+    <li>Tap <b>Proof photo</b>. Take a photo of the shop or the problem (for example the closed shop). This camera has no frame: tap the round button.</li>
+    <li>Choose the reason (see the table).</li>
+    <li>The form asks first, for example: <span class="msg">Mark 1 invoice as “Shop closed”?</span> Tap <span class="ui danger">Yes, mark</span> or <span class="ui">Cancel</span>.</li>
+    <li>The shop is marked red with the reason.</li>
+  </ol>
+  <div class="pair">
+    <figure class="crop">
+      <img src="img/pod/en-problem.jpg" width="573" height="572" loading="lazy" decoding="async" alt="Card in Problem mode: Proof photo, four reasons and Back">
+      <figcaption>What went wrong?</figcaption>
+    </figure>
+    <figure class="phone">
+      <img src="img/pod/en-proof-cam.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Proof photo camera showing a closed shop">
+      <figcaption>Proof photo: closed shop.</figcaption>
+    </figure>
+  </div>
+  <table>
+    <tr><th>Reason</th><th>When to use it</th></tr>
+    <tr><td><b>Shop closed</b></td><td>The shop is closed, or nobody is there to receive.</td></tr>
+    <tr><td><b>Rejected</b></td><td>The customer does not accept the goods.</td></tr>
+    <tr><td><b>Partial</b></td><td>The customer accepted only part of the goods. Take a proof photo of that invoice and tell the office what was short.</td></tr>
+    <tr><td><b>Reschedule</b></td><td>The goods will be delivered another day.</td></tr>
+  </table>
+  <div class="pair">
+    <figure class="phone">
+      <img src="img/pod/en-confirm.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Question Mark 1 invoice as Shop closed, with the buttons Cancel and Yes, mark">
+      <figcaption>Confirm first.</figcaption>
+    </figure>
+    <figure class="crop">
+      <img src="img/pod/en-problem-done.jpg" width="573" height="423" loading="lazy" decoding="async" alt="Card KEDAI MESRA with the red label Shop closed">
+      <figcaption>Marked: <b>Shop closed</b>.</figcaption>
+    </figure>
+  </div>
+  <ul>
+    <li><b>Back</b> = leave without marking anything.</li>
+    <li>Always take a <b>Proof photo</b>. Without one, the form shows the red note <span class="msg">No proof photo added.</span></li>
+    <li><span class="ui red">Problem</span> marks <b>all</b> invoices of that shop that are not delivered yet. If some invoices were delivered, <span class="ui go">Save</span> those first (<a href="#save">part 8</a>), then tap Problem for the rest.</li>
+    <li>If a message says it was not saved or not confirmed, the proof photo is still there. Find signal and choose the reason again.</li>
+  </ul>
+</section>
+
+<!-- 10 -->
+<section id="faq">
+  <h2><span class="n">10</span>Common situations</h2>
+
+  <h3>The camera does not open</h3>
+  <p>When the phone asks, tap <b>Allow</b> for the camera. If the camera is blocked, the form shows the message <span class="msg">The camera cannot open here…</span> Tap the camera button again: the phone's own camera opens and you can keep working.</p>
+  <figure class="phone">
+    <img src="img/pod/en-cam-blocked.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Orange message: The camera cannot open here">
+  </figure>
+  <p>Want the form's camera back? Allow the camera in the site settings (the icon next to the web address, then Camera, Allow). Then open the form again, after all shops are saved.</p>
+  <p>The camera says <span class="msg">Camera not responding</span>? Tap <b>&times;</b> and tap the camera button again.</p>
+
+  <h3>The list does not appear</h3>
+  <p><span class="msg">Cannot load the delivery list right now</span> means a <b>connection</b> problem, <b>not</b> a missing order. Find signal, then tap <span class="ui">Tap to retry</span>.</p>
+  <figure class="crop">
+    <img src="img/pod/en-list-error.jpg" width="573" height="410" loading="lazy" decoding="async" alt="Message Cannot load the delivery list right now, this is a connection problem, with the Tap to retry button">
+  </figure>
+
+  <h3>No list for this lorry</h3>
+  <p><span class="msg">No delivery list for this lorry</span>: check the lorry number and the date. If both are right, ask the office to check the order.</p>
+  <figure class="crop">
+    <img src="img/pod/en-list-empty.jpg" width="573" height="369" loading="lazy" decoding="async" alt="Message No delivery list for this lorry (VHT 4642)">
+  </figure>
+
+  <h3>Wrong date</h3>
+  <p>An orange date = not today. Tap <b>Change</b>, fix the date, then tap <b>Done</b>.</p>
+
+  <h3>Photo not clear</h3>
+  <p>Find enough light (or tap the torch), avoid glare, lay the paper flat and hold the phone steady. After 3 tries, <span class="ui">Upload anyway</span> can be used (see <a href="#photos">part 5</a>).</p>
+
+  <h3>Pallet NOT recorded</h3>
+  <p>Your POD is already saved. Tell the office how many pallets you dropped or collected.</p>
+
+  <h3>Marked a Problem by mistake, or a shop is not on the list</h3>
+  <p>Call the office.</p>
+</section>
+
+<!-- 11 -->
+<section id="rules">
+  <h2><span class="n">11</span>Important rules</h2>
+  <div class="box good">
+    <p><b>Please upload the signed invoice on the same day. Thank you!</b> Send it at every shop, while you are there. Do not wait for the end of the day.</p>
+  </div>
+  <ul>
+    <li>Signature and stamp first, then the photo.</li>
+    <li><b>1 invoice = 1 photo.</b> The whole page inside the frame, the barcode clear.</li>
+    <li>Fill in pallets <b>before</b> you tap Save.</li>
+    <li>Wait until the shop shows <span class="tag done">Delivered</span>. If it shows <span class="tag wait">Not confirmed</span>, tap <span class="ui pri">Check</span> when you have signal. Do not take the photos again.</li>
+    <li>Do not close the form while the <span class="msg">Saving…</span> screen shows. Finish one shop before you open another app.</li>
+    <li>Cannot deliver? Tap <span class="ui red">Problem</span>, take a proof photo and choose the reason.</li>
+    <li>A shop is not on the list? Ask the office to add it.</li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  CLF Trading Sdn. Bhd. &middot; Driver manual, POD form &middot; October 2026<br>
+  The screenshots use <b>sample</b> shops, invoices and drivers, not real data. If your screen looks a little different, follow your screen.
+</footer>
+
+</body>
+</html>

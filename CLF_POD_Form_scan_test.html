@@ -122,6 +122,10 @@
   .p-wait{background:var(--amber-50);color:var(--amber)}
   .p-done{background:var(--green-50);color:var(--green)}
   .p-fail{background:var(--red-50);color:var(--red-700)}
+  /* [R3 2026-10-24] a Save the server has not confirmed yet: amber note on the card (pill = p-wait, Semak button) */
+  .unc{display:flex;gap:8px;align-items:flex-start;margin:0 0 10px;padding:10px 12px;border-radius:10px;background:var(--amber-50);color:var(--amber);font-size:13px;font-weight:700;line-height:1.45}
+  .unc svg{margin-top:1px}
+  .unc .retry{margin-top:8px;min-height:44px}
   .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px;margin:12px 0 10px}
   .chip{min-width:0;height:34px;border-radius:8px;border:1.5px solid var(--navy);background:var(--navy-50);color:var(--navy);font-size:12.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:3px;padding:0 4px;white-space:nowrap;overflow:hidden}
   .chip .t{overflow:hidden;text-overflow:ellipsis}
@@ -135,6 +139,21 @@
   .th img{width:100%;height:100%;object-fit:cover;display:block}
   .th button{position:absolute;top:2px;right:2px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(15,23,42,.72);color:#fff;font-size:15px;line-height:1;padding:0}
   .th .flag{position:absolute;left:2px;bottom:2px;width:16px;height:16px;border-radius:50%;background:var(--red-700);color:#fff;font-size:11px;font-weight:800;line-height:16px;text-align:center}
+  /* [R3 2026-10-24] barcode → invoice: photographed chips carry a camera mark, each thumbnail names its invoice
+     ("?" = not read, the driver taps it to choose); the label is a button only where the driver may change it */
+  .chip.ph{background:var(--navy);color:#fff}
+  .chip.ph.q{background:var(--amber-50);color:var(--amber);border-color:var(--amber)}
+  .th .inv{position:absolute;top:auto;left:0;right:0;bottom:0;width:auto;height:17px;border:0;border-radius:0;background:rgba(20,28,119,.88);color:#fff;font-size:10px;font-weight:800;line-height:17px;text-align:center;padding:0;white-space:nowrap;overflow:hidden}
+  .th .inv.q{background:var(--amber);font-size:13px}
+  .th .inv.bad{background:var(--red-700)}
+  .th.lb .flag{bottom:19px}
+  .sheet p.bc-note{color:var(--ink-2)}
+  .sheet .row .yes.bc-pri{background:var(--navy)}
+  .bc-list{display:grid;gap:8px;margin-top:12px;max-height:52vh;overflow-y:auto}
+  .bc-row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:50px;padding:0 14px;border-radius:10px;border:1.5px solid var(--line);background:#fff;font-size:15px;font-weight:800;color:var(--ink);text-align:left}
+  .bc-row em{font-style:normal;font-size:12px;font-weight:700;color:var(--ink-2);white-space:nowrap}
+  .bc-row.on{border-color:var(--navy);background:var(--navy-50);color:var(--navy)}
+  .bc-row:disabled{opacity:.5}
   .acts{display:flex;gap:8px}
   .btn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:54px;border-radius:12px;border:0;font-weight:800;font-size:15px;padding:0 16px}
   .btn svg{width:24px;height:24px}
@@ -375,7 +394,7 @@ var ICO_PATHS = {
   wifiOff:'<line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/>'
 };
 function _ico(k, cls){ return '<svg class="i' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" aria-hidden="true">' + (ICO_PATHS[k] || '') + '</svg>'; }
-var ICO = { cam: _ico('cam'), camS: _ico('cam', 's'), warn: _ico('warn'), back: _ico('back'), check: _ico('check'), checkS: _ico('check', 'xs'), box: _ico('box'), down: _ico('down', 'dn') };
+var ICO = { cam: _ico('cam'), camS: _ico('cam', 's'), camXs: _ico('cam', 'xs'), warn: _ico('warn'), back: _ico('back'), check: _ico('check'), checkS: _ico('check', 'xs'), box: _ico('box'), down: _ico('down', 'dn') };   // camXs [R3]: photographed chip
 
 // [Round2 2026-10-23] trip card: date, driver and lorry fold into a 3-line summary once all three are set, so the
 // delivery list starts high on the screen. Touching a field means "editing": the card then stays open until the
@@ -1030,6 +1049,7 @@ async function checkShipmentForVehicle(keepListOnFail, isRetry){
       fetchPalletOnboard();   // pallets-on-board banner (default-accept; driver only acts on a wrong count)
       _autoFillAssignedDrivers(data.shipments[0]);
       _buildGroups(data.items);
+      _unconfReconcile_();   // [R3] a Save whose answer was lost counts once THIS server list shows all its invoices delivered
       sec.style.display='block'; man.style.display='none';   // has a list -> use it (manual reachable via walk-in link)
       renderShipmentList();
     } else if (data && data.status === 'ok'){
@@ -1085,12 +1105,13 @@ function _autoFillAssignedDrivers(shipment){
 function _buildGroups(items){
   // A2: carry over photos the driver snapped but hasn't successfully saved yet — the post-save
   // read-back rebuilds this list and used to silently discard them (driver had to re-take).
-  var prevPhotos = {}, prevProof = {}, prevPallet = {};
+  var prevPhotos = {}, prevProof = {}, prevPallet = {}, prevUntag = {};
   (_shipGroups || []).forEach(function(g){
     if (!g.key) return;
     if (g.photos && g.photos.length) prevPhotos[g.key] = g.photos;
     if (g._failProof) prevProof[g.key] = g._failProof;     // [Round1] Problem proof photo (taken, reason not yet tapped)
     if (g._pallet) prevPallet[g.key] = g._pallet;          // [Round1] pallet type / counts / photo typed in but not yet saved
+    (g.invs || []).forEach(function(x){ if (x._untag) prevUntag[g.key + '|' + x.invoiceNo] = true; });   // [R3] an un-ticked invoice stayed ticked again after every re-sync
   });
   var map = {}; _shipGroups = [];
   items.forEach(function(it){
@@ -1105,8 +1126,26 @@ function _buildGroups(items){
     if (hasPending && prevPhotos[g.key]) g.photos = prevPhotos[g.key];
     if (hasPending && prevProof[g.key]) g._failProof = prevProof[g.key];
     if (hasPending && prevPallet[g.key]) g._pallet = prevPallet[g.key];
+    g.invs.forEach(function(x){ if (prevUntag[g.key + '|' + x.invoiceNo] && String(x.status).toLowerCase() !== 'delivered') x._untag = true; });
   });
 }
+// [R3 2026-10-24] the DL (shipmentKey) a set of this stop's invoices is on. A lorry can carry 2 DLs on one day; the
+// form used to send the list's FIRST DL key for every stop, so the second DL's invoices came back "not found".
+// {key, mixed, groups}: groups = DL key → its invoice numbers (list order); mixed = the invoices sit on 2+ DLs (one
+// Save cannot carry both); an item without a key (old offline copy) counts as the list's DL.
+function _stopShipKey_(g, invNos){
+  var want = {}, groups = {}, order = [];
+  (invNos || []).forEach(function(v){ want[String(v)] = true; });
+  ((g && g.invs) || []).forEach(function(x){
+    if (!want[String(x.invoiceNo)]) return;
+    var k = x.shipmentKey || _shipKey;
+    if (!groups[k]){ groups[k] = []; order.push(k); }
+    groups[k].push(x.invoiceNo);
+  });
+  return { key: order.length === 1 ? order[0] : _shipKey, mixed: order.length > 1, groups: groups, order: order };
+}
+// "DL 1: A, B / DL 2: C" — so a driver can split a stop that sits on two delivery orders
+function _dlLines_(sk){ return sk.order.map(function(k, n){ return 'DL ' + (n + 1) + ': ' + sk.groups[k].join(', '); }).join('\n'); }
 
 var _shipFilter = '';   // B4: live customer search (kept across re-renders)
 
@@ -1403,7 +1442,9 @@ function renderShipGroups(){
     var g = d.g, i = d.i, n = g.invs.length;
     var gDone = g.invs.every(function(x){ return String(x.status).toLowerCase()==='delivered'; });
     var gFail = !gDone && g.invs.some(function(x){ return String(x.status).toLowerCase()==='failed'; });
+    var unc = gDone ? null : _uncOf_(g.key);   // [R3] Saved, but the server has not confirmed it (yet): never "Dihantar"
     var pill = gDone ? '<span class="pill p-done">' + L('Delivered', 'Dihantar') + '</span>'
+             : unc ? '<span class="pill p-wait p-unc">' + L('Not confirmed', 'Belum disahkan') + '</span>'
              : gFail ? '<span class="pill p-fail">' + _esc(_shipFailReason[g.key] ? _reasonLabel(_shipFailReason[g.key]) : L('Problem', 'Masalah')) + '</span>'
              : '<span class="pill p-wait">' + L('Not yet', 'Belum') + '</span>';
     html += '<article class="card' + (gDone ? ' done' : '') + '"><div class="c-top"><div class="c-main"><div class="c-name">' + _esc(g.name) + '</div>'
@@ -1432,27 +1473,37 @@ function renderShipGroups(){
     var _ord = g.invs.map(function(_x, _xi){ return _xi; }).sort(function(a, b){
       return String(g.invs[a].invoiceNo).localeCompare(String(g.invs[b].invoiceNo));
     });
+    _bcReconcile_(g);   // [R3] every photo sits on one ticked invoice (barcode / driver's choice / list order "?")
     html += '<div class="chips">' + _ord.map(function(xi){
         var x = g.invs[xi];
         if (String(x.status).toLowerCase()==='delivered') return '<span class="chip dv">' + ICO.checkS + '<span class="t">' + _esc(x.invoiceNo) + '</span></span>';
-        var ut = !!x._untag;
-        return '<button type="button" class="chip ship-untag' + (ut ? ' off' : '') + '" data-i="'+i+'" data-x="'+xi+'" aria-pressed="' + (ut ? 'false' : 'true') + '">'
-          + (ut ? '' : ICO.checkS) + '<span class="t">' + _esc(x.invoiceNo) + '</span></button>';
+        var ut = !!x._untag, _ph = ut ? null : _bcPhotoFor_(g, String(x.invoiceNo));   // [R3] photographed → camera mark ("?" photo: amber)
+        return '<button type="button" class="chip ship-untag' + (ut ? ' off' : '') + (_ph ? ' ph' + (_ph.bcHow === 'guess' || _ph.forced ? ' q' : '') : '') + '" data-i="'+i+'" data-x="'+xi+'" aria-pressed="' + (ut ? 'false' : 'true') + '">'
+          + (ut ? '' : (_ph ? ICO.camXs : ICO.checkS)) + '<span class="t">' + _esc(x.invoiceNo) + '</span></button>';
       }).join('') + '</div>';
     var toDeliver = g.invs.filter(function(x){ return String(x.status).toLowerCase()!=='delivered' && !x._untag; }).length;
     var photos = g.photos || [];
-    var matchCount = (photos.length===toDeliver && toDeliver>0);
+    var matchCount = (photos.length===toDeliver && toDeliver>0 && _bcReady_(g));   // [R3] + every ticked invoice has exactly one photo
+    // [R3 2026-10-24] the Save got no answer: say so, and offer Semak. Until one Semak could not settle it, the photos
+    // stay exactly as sent (no remove buttons, no invoice changes) and Semak is the main button; after that, Save again is the way on.
+    var uncFresh = !!(unc && !unc.checked);
+    if (unc) html += '<div class="unc">' + _ico('warn', 's') + '<div>' + (unc.checked
+        ? L('Still not confirmed. When you have signal, tap Save again.', 'Masih belum disahkan. Bila ada liputan, tekan Simpan semula.')
+          + '<br><button type="button" class="retry ship-check" data-i="'+i+'">' + _ico('refresh', 's') + L('Check again', 'Semak lagi') + '</button>'
+        : L('Save not confirmed yet. Your photos are kept. Tap Check.', 'Simpanan belum disahkan. Foto masih ada. Tekan Semak.')) + '</div></div>';
     // one short line: photos taken / needed (and the 1-invoice-1-photo rule while it still matters)
     html += '<div class="count ' + (matchCount ? 'ok' : (photos.length > toDeliver ? 'bad' : 'no')) + '">'
       + L('Photos', 'Foto') + ' ' + photos.length + '/' + toDeliver + (matchCount ? ' &#10003;' : '')
       + (photos.length > toDeliver ? ' &middot; ' + L('remove ' + (photos.length - toDeliver), 'buang ' + (photos.length - toDeliver)) : '')
       + (toDeliver > 1 && photos.length < toDeliver ? ' <em>&middot; ' + L('1 invoice = 1 photo', '1 invois = 1 foto') + '</em>' : '')
+      + (photos.length === toDeliver && toDeliver > 0 && !matchCount ? ' &middot; ' + L('a red photo is for an invoice not ticked', 'foto merah untuk invois yang tidak ditanda') : '')   // [R3]
       + '</div>';
     if (photos.length){
       html += '<div class="thumbs">' + photos.map(function(p, pi){
-          return '<span class="th"><img src="' + p.dataUrl + '" alt="">'
+          return '<span class="th lb"><img src="' + p.dataUrl + '" alt="">'
             + (p.qualityFlag ? '<span class="flag" title="' + _escA(L('Sent although not clear', 'Dihantar walaupun tidak jelas')) + '">!</span>' : '')
-            + '<button type="button" class="ship-photo-x" data-g="'+i+'" data-p="'+pi+'" aria-label="' + _escA(L('Remove', 'Buang')) + '">&times;</button></span>';
+            + _bcThumbLabel_(p, i, pi, uncFresh)   // [R3] the invoice this photo is filed as ("?" = tap to choose; fixed while a Save is unconfirmed)
+            + (uncFresh ? '' : '<button type="button" class="ship-photo-x" data-g="'+i+'" data-p="'+pi+'" aria-label="' + _escA(L('Remove', 'Buang')) + '">&times;</button>') + '</span>';
         }).join('') + '</div>';
     }
     // pallets come BEFORE Save: they are sent together with the Save, so a driver who saves first loses them
@@ -1474,7 +1525,8 @@ function renderShipGroups(){
         + '</div>';
     }
     // actions: the camera icon while photos are missing, Save once photos = invoices, Problem always
-    var primary = photos.length < toDeliver
+    var primary = uncFresh ? '<button type="button" class="btn b-pri ship-check" data-i="'+i+'">' + _ico('refresh') + L('Check', 'Semak') + '</button>'   // [R3]
+      : photos.length < toDeliver
       ? '<button type="button" class="btn b-pri ship-photo" data-i="'+i+'" aria-label="' + _escA(L('Take photo', 'Ambil foto')) + '">' + ICO.cam + '</button>'
       : (matchCount ? '<button type="button" class="btn b-save ship-save" data-i="'+i+'">' + ICO.check + L('Save', 'Simpan') + '</button>' : '');
     html += '<div class="acts">' + primary
@@ -1581,6 +1633,8 @@ document.getElementById('shipmentSection').addEventListener('click', function(e)
     }
     return;
   }
+  var ivb = e.target.closest('.ship-photo-inv');   // [R3] "?" (or a hand-picked invoice) under a thumbnail → choose the invoice
+  if (ivb){ _bcPick_(parseInt(ivb.getAttribute('data-g'), 10), parseInt(ivb.getAttribute('data-p'), 10)); return; }
   var ph = e.target.closest('.ship-photo');
   if (ph){ _deliverIdx = parseInt(ph.getAttribute('data-i'),10);
     // [AutoCap 2026-09-09] in-page camera (guide frame + auto shutter); the phone camera only when this phone cannot run it
@@ -1601,6 +1655,8 @@ document.getElementById('shipmentSection').addEventListener('click', function(e)
     if (_shipGroups[_gi] && _shipGroups[_gi].invs[_xi]){ _shipGroups[_gi].invs[_xi]._untag = !_shipGroups[_gi].invs[_xi]._untag; renderShipGroups(); } return; }
   var sv = e.target.closest('.ship-save');
   if (sv){ saveDelivery(parseInt(sv.getAttribute('data-i'),10)); return; }
+  var ck = e.target.closest('.ship-check');   // [R3] Semak: settle a Save the server has not confirmed yet
+  if (ck){ checkUnconfirmed(parseInt(ck.getAttribute('data-i'),10)); return; }
   // [Round1] Problem = its own mode on the card (invoice camera, Save and pallets step aside)
   var fb = e.target.closest('.ship-fail');
   if (fb){ var _fg = _shipGroups[parseInt(fb.getAttribute('data-i'),10)]; if (_fg){ _shipProblem[_fg.key] = true; renderShipGroups(); } return; }
@@ -1654,12 +1710,233 @@ function _addPhotoToGroup(gKey, entry, fallbackGroup){
   var _cap = (cur.invs && cur.invs.length)
     ? cur.invs.filter(function(x){ return String(x.status).toLowerCase() !== 'delivered'; }).length
     : 99;
+  // [Scanner] backup original rides along; [R3] invoiceNo / bcHow / forced / barcode = which invoice this photo is
+  var ph = { dataUrl: entry.dataUrl, name: entry.name, type: entry.type, qualityFlag: !!entry.qualityFlag, origDataUrl: entry.origDataUrl || null, scan: entry.scan || null,
+             invoiceNo: entry.invoiceNo || null, bcHow: entry.bcHow || 'guess', forced: !!entry.forced, barcode: entry.barcode || '' };
+  if (entry._bcReplace){   // [R3] "Replace old photo": the new photo takes the old one's place (the count does not change)
+    _bcReconcile_(cur);
+    var _old = _bcPhotoFor_(cur, entry._bcReplace), _oi = _old ? cur.photos.indexOf(_old) : -1;
+    if (_oi >= 0){ cur.photos[_oi] = ph; _bcReconcile_(cur); return { added: true, group: cur, photo: ph }; }
+  }
   if (cur.photos.length >= _cap){
     _palletToast('err', L('Limit reached: ' + _cap + (_cap === 1 ? ' photo for ' : ' photos for ') + _cap + (_cap === 1 ? ' invoice' : ' invoices') + ' at this stop', 'Had: ' + _cap + ' foto untuk ' + _cap + ' invois di kedai ini'));
     return { added: false, group: cur };
   }
-  cur.photos.push({ dataUrl: entry.dataUrl, name: entry.name, type: entry.type, qualityFlag: !!entry.qualityFlag, origDataUrl: entry.origDataUrl || null, scan: entry.scan || null });   // [Scanner] backup original rides along
-  return { added: true, group: cur };
+  cur.photos.push(ph);
+  _bcReconcile_(cur);
+  if (entry._bcLate && entry._bcP) entry._bcP.then(function(r){ _bcLateApply_(gKey, ph, r); });   // [R3] answer came after the wait
+  return { added: true, group: cur, photo: ph };
+}
+
+// ══════════════════════════════════════════════════════════════════════════════════════
+// [R3 2026-10-24] every invoice photo is filed as THAT invoice's photo.
+// Field evidence 2026-10-22: the per-invoice scan archive of a big stop was scrambled (the file named for
+// invoice A held invoice B). The server pairs photos with invoices purely by POSITION: Save writes the stop's
+// photo links (payload order) into every invoice row of the submission, and the nightly PodScanCopy gives the
+// Nth row of the sheet the Nth photo. Sheet order = the order getShipmentForLorry lists the items = g.invs.
+// So: the barcode on each photo (barcode_block.js) says which invoice it is, and Save sends the photos AND
+// invoiceNos in g.invs order of each photo's own invoice — the existing pairing then comes out right with
+// no backend change. barcodeMap / forcedMismatch go along (Shipment_Items col 18 / 19).
+// Each photo: invoiceNo + bcHow 'barcode' (read off the paper) | 'picked' (the driver chose) | 'guess'
+// (unreadable: next free invoice in list order, today's behaviour, shown as "?"); forced = the driver kept a
+// photo whose barcode names another shop's invoice.
+// ══════════════════════════════════════════════════════════════════════════════════════
+var BC_WAIT_MS = 4000;   // after "Use", wait at most this long for the barcode; then the photo goes in as "?" (a late answer still lands)
+function _bcTaggedNos_(g){ return _acPending(g).map(function(x){ return String(x.invoiceNo); }); }
+function _bcSure_(p){ return !!p && (p.bcHow === 'barcode' || p.bcHow === 'picked'); }
+// Re-deal the photos over the ticked invoices: sure photos keep theirs, guesses keep theirs while still free, the
+// rest take the free invoices in list order as guesses. A barcode photo whose invoice was un-ticked stays put as
+// an orphan (red) — the driver ticks the invoice again or removes the photo; Save waits for that.
+function _bcReconcile_(g){
+  if (!g || !g.photos || !g.photos.length) return;
+  var tagged = _bcTaggedNos_(g), taken = {}, deal = [];
+  g.photos.forEach(function(p){
+    p._orphan = false;
+    if (_bcSure_(p) && p.invoiceNo && tagged.indexOf(p.invoiceNo) >= 0 && !taken[p.invoiceNo]){ taken[p.invoiceNo] = p; return; }
+    if (p.bcHow === 'barcode' && p.invoiceNo && tagged.indexOf(p.invoiceNo) < 0){ p._orphan = true; return; }
+  });
+  g.photos.forEach(function(p){
+    if (p._orphan || taken[p.invoiceNo] === p) return;
+    if (!_bcSure_(p) && p.invoiceNo && tagged.indexOf(p.invoiceNo) >= 0 && !taken[p.invoiceNo]){ taken[p.invoiceNo] = p; return; }
+    deal.push(p);
+  });
+  var free = tagged.filter(function(n){ return !taken[n]; });
+  deal.forEach(function(p){
+    var n = free.shift() || null;
+    if (p.invoiceNo !== n || _bcSure_(p)){ p.invoiceNo = n; p.bcHow = 'guess'; }
+    if (n) taken[n] = p;
+  });
+}
+function _bcPhotoFor_(g, invNo){
+  var ps = (g && g.photos) || [];
+  for (var i = 0; i < ps.length; i++) if (ps[i].invoiceNo === invNo && !ps[i]._orphan) return ps[i];
+  return null;
+}
+// Save only when photos = ticked invoices and every ticked invoice has exactly one photo
+function _bcReady_(g){
+  _bcReconcile_(g);
+  var tagged = _bcTaggedNos_(g), ps = (g && g.photos) || [];
+  return tagged.length > 0 && ps.length === tagged.length && tagged.every(function(n){ return ps.filter(function(p){ return p.invoiceNo === n && !p._orphan; }).length === 1; });
+}
+function _bcNextFree_(g){
+  _bcReconcile_(g);
+  var pend = _acPending(g);
+  for (var i = 0; i < pend.length; i++) if (!_bcPhotoFor_(g, String(pend[i].invoiceNo))) return pend[i];
+  return null;
+}
+// a decoded barcode → the invoice on this lorry's list (this stop first), or null
+function _bcFind_(text, pref){
+  var want = bcNorm_(text), hit = null;
+  if (!want) return null;
+  [pref].concat(_shipGroups).forEach(function(g){
+    if (hit || !g || !g.invs) return;
+    for (var i = 0; i < g.invs.length; i++) if (bcNorm_(g.invs[i].invoiceNo) === want){ hit = { g: g, x: g.invs[i] }; return; }
+  });
+  return hit;
+}
+// thumbnail label: the invoice's last 6 characters (the chip above shows the full number), "?" when not read.
+// Read off the barcode = fixed (red while its invoice is un-ticked); "?" and hand-picked ones are buttons.
+function _bcThumbLabel_(p, gi, pi, locked){
+  var no = String(p.invoiceNo || ''), short = no.length > 6 ? no.slice(-6) : no;
+  var q = p.bcHow === 'guess' || !no;
+  if (p.bcHow === 'barcode' || locked)   // locked: a Save of these photos is waiting for the server's answer
+    return '<span class="inv' + (p._orphan || p.forced ? ' bad' : (p.bcHow !== 'barcode' && q ? ' q' : '')) + '" title="' + _escA(no) + '">' + (p.bcHow !== 'barcode' && q ? '?' : _esc(short)) + '</span>';
+  return '<button type="button" class="inv ship-photo-inv' + (p.forced ? ' bad' : (q ? ' q' : '')) + '" data-g="' + gi + '" data-p="' + pi + '" aria-label="'
+    + _escA(L('Which invoice is this photo?', 'Foto ini untuk invois mana?')) + '">' + (q ? '?' : _esc(short)) + '</button>';
+}
+// two-button sheet in the driver's language; tapping outside = the safe choice. Resolves 'primary' | 'secondary'.
+function _bcAsk_(title, note, primaryTxt, secondaryTxt, safe){
+  return new Promise(function(resolve){
+    var ov = document.createElement('div');
+    ov.id = 'bcAskSheet'; ov.className = 'scrim';
+    ov.innerHTML = '<div class="sheet" role="dialog" aria-modal="true"><h3>' + _esc(title) + '</h3>'
+      + (note ? '<p class="bc-note">' + _esc(note) + '</p>' : '')
+      + '<div class="row"><button type="button" class="no" data-a="secondary">' + _esc(secondaryTxt) + '</button>'
+      + '<button type="button" class="yes bc-pri" data-a="primary">' + _esc(primaryTxt) + '</button></div></div>';
+    function done(v){ try{ ov.remove(); }catch(e){} resolve(v); }
+    ov.addEventListener('click', function(e){ var b = e.target.closest('button'); if (b) done(b.getAttribute('data-a')); else if (e.target === ov) done(safe); });
+    document.body.appendChild(ov);
+  });
+}
+// After "Use": the barcode decides which invoice this photo is. May ask the driver. Returns
+// 'add' (entry.invoiceNo / bcHow / forced / barcode set) | 'replace' (entry._bcReplace) | 'retake' | 'discard'.
+async function _bcPlace_(gKey, entry, s){
+  if (!entry) return 'add';
+  entry.invoiceNo = null; entry.bcHow = 'guess'; entry.forced = false; entry.barcode = '';
+  if (typeof bcStart_ !== 'function' || typeof BC_ON === 'undefined' || !BC_ON) return 'add';   // reader off: today's flow
+  var p = null, res = null;
+  try{ p = bcStart_(entry); }catch(e){ p = null; }
+  if (p){
+    var ov = null;
+    if (!entry._bcDone){
+      if (s && _acLive(s)) _acStatus(L('Reading the barcode…', 'Membaca kod bar…'), 0);
+      else { ov = document.getElementById('loadingOverlay'); if (ov){ var lt = ov.querySelector('.loading-text'); if (lt) lt.textContent = L('Reading the barcode…', 'Membaca kod bar…'); ov.classList.add('show'); } }
+    }
+    res = await Promise.race([p, new Promise(function(ok){ setTimeout(function(){ ok(undefined); }, BC_WAIT_MS); })]);
+    if (ov) ov.classList.remove('show');
+    if (res === undefined){ entry._bcLate = true; res = null; }   // still reading on a slow phone: in as "?", _bcLateApply_ may fix it
+  }
+  var g = _groupByKey(gKey);
+  if (!res || !g) return 'add';
+  if (s && _acLive(s)) _acStatus('', 0);   // the question below answers it; "Reading…" must not stay behind it
+  var hit = _bcFind_(res.text, g);
+  if (hit && hit.g === g && _bcTaggedNos_(g).indexOf(String(hit.x.invoiceNo)) >= 0){
+    var inv = String(hit.x.invoiceNo);
+    entry.barcode = res.raw;
+    _bcReconcile_(g);
+    var cur = _bcPhotoFor_(g, inv);
+    if (!cur || !_bcSure_(cur)){ entry.invoiceNo = inv; entry.bcHow = 'barcode'; return 'add'; }   // a "?" photo sitting there moves on
+    var a = await _bcAsk_(L('Invoice ' + inv + ' already has a photo', 'Invois ' + inv + ' sudah ada foto'), '',
+      L('Replace old photo', 'Ganti foto lama'), L('Discard new photo', 'Buang foto baru'), 'secondary');
+    if (a !== 'primary') return 'discard';
+    entry.invoiceNo = inv; entry.bcHow = 'barcode'; entry._bcReplace = inv;
+    return 'replace';
+  }
+  // not one of this stop's ticked invoices: another shop's, un-ticked or already delivered. A code that does not
+  // even look like an invoice number (some other barcode on the paper) counts as not read.
+  if (!hit && !/^[A-Z]{2,6}[0-9]{4,8}$/.test(res.text)) return 'add';
+  var shown = hit ? String(hit.x.invoiceNo) : res.text;
+  // [R3] same shop but un-ticked / already delivered is not "another shop": say what it really is
+  var sameShop = !!(hit && hit.g === g), dlv = sameShop && String(hit.x.status).toLowerCase() === 'delivered';
+  var b = await _bcAsk_(
+    dlv ? L('Invoice ' + shown + ' is already delivered', 'Invois ' + shown + ' sudah dihantar')
+        : sameShop ? L('Invoice ' + shown + ' is not ticked', 'Invois ' + shown + ' tidak ditanda')
+        : L('Invoice ' + shown + ' is not for this shop', 'Invois ' + shown + ' bukan untuk kedai ini'),
+    dlv ? L('Take a photo of an invoice not yet delivered.', 'Ambil foto invois yang belum dihantar.')
+        : sameShop ? L('If you are delivering it, tick it first, then retake.', 'Jika anda menghantarnya, tanda dulu, kemudian ambil semula.')
+        : L('Take the photo of this shop\'s invoice.', 'Ambil foto invois kedai ini.'),
+    L('Retake', 'Ambil semula'), L('Keep anyway', 'Simpan juga'), 'primary');
+  if (b === 'primary') return 'retake';
+  entry.forced = true; entry.barcode = res.raw;   // kept by the driver: goes in as "?" and the stop is flagged DRIVER_FORCED
+  return 'add';
+}
+// a barcode answer that arrived after the wait: fix a "?" photo silently when the code names a free (or "?")
+// invoice of the same stop; anything else stays a "?" for the driver
+function _bcLateApply_(gKey, ph, res){
+  try{
+    var g = _groupByKey(gKey);
+    if (!res || !g || !g.photos || g.photos.indexOf(ph) < 0 || ph.bcHow !== 'guess' || ph.forced) return;
+    var hit = _bcFind_(res.text, g);
+    if (!hit || hit.g !== g || _bcTaggedNos_(g).indexOf(String(hit.x.invoiceNo)) < 0) return;
+    var inv = String(hit.x.invoiceNo), cur = _bcPhotoFor_(g, inv);
+    if (cur && cur !== ph && _bcSure_(cur)) return;
+    if (cur && cur !== ph) cur.invoiceNo = null;   // the "?" photo there takes this one's old place
+    ph.invoiceNo = inv; ph.bcHow = 'barcode'; ph.barcode = res.raw;
+    _bcReconcile_(g);
+    renderShipGroups();
+    if (_ac) _acHeader(_ac);
+  }catch(e){ console.warn('late barcode answer ignored:', e); }
+}
+// "?" under a thumbnail → "Which invoice is this photo?" — the stop's ticked invoices; an invoice whose photo was
+// read by barcode cannot be taken; choosing one held by another hand-filed photo swaps the two.
+function _bcPick_(gi, pi){
+  var g = _shipGroups[gi], ph = g && g.photos && g.photos[pi];
+  if (!ph) return;
+  _bcReconcile_(g);
+  var rows = _acPending(g).map(function(x){
+    var n = String(x.invoiceNo), o = _bcPhotoFor_(g, n), mine = o === ph, lock = !!o && !mine && o.bcHow === 'barcode';
+    var tag = mine ? L('this photo', 'foto ini') : (lock ? '&#10003; ' + L('barcode', 'kod bar') : (o ? L('other photo', 'foto lain') : L('no photo yet', 'belum ada foto')));
+    return '<button type="button" class="bc-row' + (mine ? ' on' : '') + '" data-n="' + _escA(n) + '"' + (lock ? ' disabled' : '') + '><span>' + _esc(n) + '</span><em>' + tag + '</em></button>';
+  }).join('');
+  var ov = document.createElement('div');
+  ov.id = 'bcPickSheet'; ov.className = 'scrim';
+  ov.innerHTML = '<div class="sheet" role="dialog" aria-modal="true"><h3>' + _esc(L('Which invoice is this photo?', 'Foto ini untuk invois mana?')) + '</h3>'
+    + '<div class="bc-list">' + rows + '</div>'
+    + '<div class="row"><button type="button" class="no" data-a="no">' + _esc(L('Cancel', 'Batal')) + '</button></div></div>';
+  ov.addEventListener('click', function(e){
+    var b = e.target.closest('button');
+    if (!b && e.target !== ov) return;
+    var n = b ? b.getAttribute('data-n') : null;
+    try{ ov.remove(); }catch(er){}
+    if (!n || b.disabled) return;
+    var cur = _groupByKey(g.key) || g;   // by key: a re-sync may have rebuilt the list while the sheet was open
+    if (!cur.photos || cur.photos.indexOf(ph) < 0) return;
+    var o = _bcPhotoFor_(cur, n);
+    if (o && o !== ph){ if (o.bcHow === 'barcode') return; o.invoiceNo = ph.invoiceNo; o.bcHow = 'guess'; }
+    ph.invoiceNo = n; ph.bcHow = 'picked';
+    _bcReconcile_(cur);
+    renderShipmentList();
+  });
+  document.body.appendChild(ov);
+}
+// Save payload, built in list order (g.invs) of each photo's invoice; file names start with the invoice number.
+// Returns null unless every ticked invoice has exactly one photo.
+function _bcPayload_(g, withOriginals){
+  if (!_bcReady_(g)) return null;
+  var order = _bcTaggedNos_(g).map(function(n){ return _bcPhotoFor_(g, n); });
+  var photos = order.map(function(p){ return { base64: p.dataUrl.split(',')[1], name: _bcFileName_(p.invoiceNo, p.name), type: p.type }; });
+  // [Scanner] backup originals, index-aligned with photos[] (forIndex) — built only when asked (TEST summary): they do
+  // not ride in the Save, and a copy of every original is megabytes a cheap phone should not hold for nothing
+  var originals = !withOriginals ? [] : order.map(function(p, k){ return p.origDataUrl ? { base64: p.origDataUrl.split(',')[1],
+    name: _bcFileName_(p.invoiceNo, String(p.name || ('invoice_' + k)).replace(/(_scan[CF])?\.jpg$/i, '') + '_orig.jpg'), type: 'image/jpeg', forIndex: k } : null; }).filter(Boolean);
+  var map = {};
+  order.forEach(function(p){ if (p.barcode) map[p.invoiceNo] = p.barcode; });
+  return { photos: photos, originals: originals, invoiceNos: order.map(function(p){ return p.invoiceNo; }), barcodeMap: map,
+           forcedMismatch: order.some(function(p){ return !!p.forced; }), order: order };
+}
+function _bcFileName_(invNo, name){
+  var safe = String(invNo || '').replace(/[^A-Za-z0-9-]/g, ''), n = String(name || 'invoice.jpg');
+  return safe && n.indexOf(safe + '_') !== 0 ? safe + '_' + n : n;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════════════
@@ -2240,6 +2517,7 @@ function _srTag_(entry){
 // never change a photo the driver already kept.
 function scanAndReview_(blob, plainEntry){
   if (!SCANNER_ON) return Promise.resolve(plainEntry);    // kill switch = today's flow, no review screen
+  try{ if (typeof bcWarm_ === 'function') bcWarm_(); }catch(e){}   // [R3] barcode reader downloads while this scan runs
   var ov = _srBuild_();
   var img = document.getElementById('srImg'), busy = document.getElementById('srBusy'), ed = document.getElementById('srEditor');
   var btns = document.getElementById('srBtns'), hint = document.getElementById('srHint'), tag = document.getElementById('srTag');
@@ -2262,7 +2540,11 @@ function scanAndReview_(blob, plainEntry){
       try{ if (editor) editor.destroy(); }catch(e){}
       ed.innerHTML = ''; ov.style.display = 'none'; img.removeAttribute('src');
       if (!_ac){ try{ document.documentElement.style.overflow = ''; document.body.style.overflow = ''; }catch(e){} }
-      if (work._scanSrc){ try{ work._scanSrc.width = 0; }catch(e){} work._scanSrc = null; }   // Retake included
+      // Retake included. [R3] a barcode read still running uses the full-size photo: free it when that read ends
+      // (Retake / skip: the read is stopped first — a thrown-away photo needs no barcode)
+      if (val !== work && typeof bcCancel_ === 'function') bcCancel_(work);
+      if (work._scanSrc){ var ss = work._scanSrc, free = function(){ try{ ss.width = 0; }catch(e){} };
+        work._scanSrc = null; if (work._bcP && !work._bcDone) work._bcP.then(free, free); else free(); }
       resolve(val);
     }
     function show(entry){
@@ -2275,6 +2557,7 @@ function scanAndReview_(blob, plainEntry){
       if (done){ if (entry && entry._scanSrc){ try{ entry._scanSrc.width = 0; }catch(e){} entry._scanSrc = null; } return; }   // driver already moved on
       scanned = entry;
       show(entry);
+      try{ if (typeof bcStart_ === 'function') bcStart_(entry); }catch(e){}   // [R3] read the invoice barcode while the driver looks
       document.getElementById('srUse').onclick = function(){ finish(entry); };
       document.getElementById('srRetake').onclick = function(){ finish(null); };
       document.getElementById('srToggle').onclick = function(){ showingOrig = !showingOrig; show(entry);
@@ -2307,6 +2590,8 @@ function scanAndReview_(blob, plainEntry){
                   }
                   scan.width = 0;
                 }catch(e){ console.warn('re-scan failed:', e); }
+                // [R3] the barcode was not found with the old corners: try again with the driver's
+                if (entry._bcDone && !entry._bc && typeof bcStart_ === 'function'){ entry._bcP = null; entry._bcDone = false; try{ bcStart_(entry); }catch(e){} }
                 showingOrig = false; document.getElementById('srToggle').innerHTML = L('Original', 'Asal');
                 show(entry);
               }, 30);
@@ -2325,10 +2610,336 @@ function _scanDebug_(){
   var s = _scanLast, cam = window._acCamRes ? (window._acCamRes[0] + '×' + window._acCamRes[1]) : '—';
   el.textContent = 'scanner: ' + _scanicState + ' · camera: ' + cam
     + (s ? ' · last: ' + (s.ok ? (s.cropped ? 'cropped ' + s.how + ' ' + s.score : 'whitened') : 'plain') + ' ' + s.ms + ' ms' + (s.src ? ' src ' + s.src[0] + '×' + s.src[1] : '') + (s.out ? ' → ' + s.out[0] + '×' + s.out[1] : '')
-      + (typeof s.clip === 'number' ? ' · blown ' + Math.round(s.clip * 100) + '%' : '') + (s.err ? ' (' + s.err + ')' : '') : '');
+      + (typeof s.clip === 'number' ? ' · blown ' + Math.round(s.clip * 100) + '%' : '') + (s.err ? ' (' + s.err + ')' : '') : '')
+    // [R3] barcode reader state + last read (test build only shows this line)
+    + (typeof _bcZXState !== 'undefined' ? ' · barcode: ' + (_bcLast && _bcLast.ms ? (_bcLast.ok ? _bcLast.text + ' ' + _bcLast.how : 'not read' + (_bcLast.err ? ' (' + _bcLast.err + ')' : '')) + ' ' + _bcLast.ms + ' ms' : _bcZXState) : '');
 }
 // warm the scanner up in the background so the first photo does not wait for the download
 setTimeout(function(){ _scanicLoad_(); }, 1500);
+
+// ══════════════════════════════════════════════════════════════════════════════════════
+// [R3 2026-10-24] Which invoice is this photo? — read the barcode printed on every CLF invoice.
+// Field evidence 2026-10-22: at a big stop the per-invoice scan archive was scrambled (the file named
+// for invoice A held invoice B) because photos are paired with invoices purely by POSITION and drivers
+// shoot in a different order than the list. The form now reads each photo's barcode and sends the
+// photos in list order (POD_next.html: _bcPlace_, _bcPayload_); this block only answers "what does the
+// barcode on this photo say".
+// Calibrated on 5 real driver photos: CLF invoices print the invoice number as CODE 39, no check
+// character, nothing else ("MKMD053351"), in a band under the INVOICE box (upper right of the page).
+// Pipeline — runs while the driver looks at the scan review screen, never blocks the camera:
+//   1. the page, flattened with the scanner's 4 corners (or the plain photo when there was no scan),
+//      at 4 px/mm; a "bar-ness" map (strong left-right edges, weak up-down edges) gives candidate bands
+//   2. each band is re-sampled from the FULL-SIZE photo along its own axis at ~12 px/mm, so every row
+//      crosses every bar even when the paper is bent or the corners are a little off (on the real photos
+//      the band sat 8-12 degrees off the page axis — no row of the flattened page crossed the whole code)
+//   3. read by the phone's own BarcodeDetector where it exists (Android Chrome), else / then by
+//      zxing-cpp (WebAssembly; zxing-wasm 3.1.5, MIT + Apache-2.0, self-hosted in vendor/, ~1 MB,
+//      downloaded once on the first invoice photo)
+// Fail-open everywhere: no reader, a throw, a slow phone → null = "unreadable": the photo then goes to
+// the next invoice in list order exactly as before, marked "?" for the driver to check.
+// ══════════════════════════════════════════════════════════════════════════════════════
+var BC_ON = true;                                    // kill switch: false = never read barcodes (today's flow)
+var BC_ZX_JS = 'vendor/zxing-reader-3.1.5.js', BC_ZX_WASM = 'vendor/zxing_reader-3.1.5.wasm';
+var BC_FORMATS = ['Code39', 'Code128', 'Code93'];    // CLF prints Code 39; the other two only as a safety net
+var BC_NATIVE_FORMATS = ['code_39', 'code_128', 'code_93'];
+var BC_PLANE_PXMM = 4;                               // analysis page: 4 px per mm (A4 = 840 x 1188)
+var BC_STRIP_PXMM = 12;                              // band re-sampled at 12 px per mm (a 0.4 mm bar = ~5 px)
+var BC_SLOW_MS = 8000;                               // no new attempt is started after this
+var _bcZX = null, _bcZXLoading = null, _bcZXState = 'idle', _bcNat = null, _bcNatState = 'idle', _bcLast = null;
+
+// a decoded string → the form the invoice list is compared in (Code 39 can also carry - . space $ / + %)
+function bcNorm_(s){ return String(s == null ? '' : s).toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+
+function _bcYield_(job){
+  return new Promise(function(ok, no){ setTimeout(function(){ if (job && job.cancelled) no(new Error('cancelled')); else ok(); }, 0); });
+}
+
+// zxing-cpp reader, loaded on first use. The IIFE build is one file + one .wasm; its default would fetch the
+// .wasm from a CDN, so locateFile points it at our own copy. A WebView too old to parse it only loses the reader.
+function _bcZXLoad_(){
+  if (!BC_ON) return Promise.resolve(null);
+  if (_bcZX) return Promise.resolve(_bcZX);
+  if (_bcZXLoading) return _bcZXLoading;
+  _bcZXState = 'loading';
+  _bcZXLoading = new Promise(function(ok, no){
+    var s = document.createElement('script');
+    s.src = new URL(BC_ZX_JS, document.baseURI).href; s.async = true;
+    s.onload = function(){ ok(); }; s.onerror = function(){ no(new Error('reader script failed')); };
+    document.head.appendChild(s);
+  }).then(function(){
+    var Z = window.ZXingWASM;
+    if (!Z || !Z.prepareZXingModule || !Z.readBarcodes) throw new Error('reader missing');
+    var wasm = new URL(BC_ZX_WASM, document.baseURI).href;
+    return Z.prepareZXingModule({ overrides: { locateFile: function(p, pre){ return /\.wasm$/.test(p) ? wasm : pre + p; } }, fireImmediately: true })
+      .then(function(){ _bcZX = Z; _bcZXState = 'ready'; return Z; });
+  }).catch(function(e){
+    console.warn('barcode reader unavailable — photos will be matched by hand:', e);
+    _bcZXState = 'failed'; _bcZXLoading = null; return null;
+  });
+  return _bcZXLoading;
+}
+// the phone's own reader (Android Chrome); iPhones and desktop Windows have none
+function _bcNativeLoad_(){
+  if (_bcNatState !== 'idle') return Promise.resolve(_bcNat);
+  _bcNatState = 'none';
+  try{
+    if (!BC_ON || typeof window.BarcodeDetector !== 'function') return Promise.resolve(null);
+    var gs = window.BarcodeDetector.getSupportedFormats ? window.BarcodeDetector.getSupportedFormats() : Promise.resolve(BC_NATIVE_FORMATS);
+    return Promise.resolve(gs).then(function(list){
+      var f = BC_NATIVE_FORMATS.filter(function(x){ return (list || []).indexOf(x) >= 0; });
+      if (!f.length) return null;
+      _bcNat = new window.BarcodeDetector({ formats: f }); _bcNatState = 'ready'; return _bcNat;
+    }).catch(function(){ return null; });
+  }catch(e){ return Promise.resolve(null); }
+}
+
+// unit square (u, v) → the page quad TL, TR, BR, BL (Heckbert's square-to-quad homography)
+function _bcHomog_(c){
+  var x0 = c.topLeft.x, y0 = c.topLeft.y, x1 = c.topRight.x, y1 = c.topRight.y, x2 = c.bottomRight.x, y2 = c.bottomRight.y, x3 = c.bottomLeft.x, y3 = c.bottomLeft.y;
+  var dx1 = x1 - x2, dx2 = x3 - x2, dx3 = x0 - x1 + x2 - x3, dy1 = y1 - y2, dy2 = y3 - y2, dy3 = y0 - y1 + y2 - y3, g = 0, h = 0;
+  if (Math.abs(dx3) > 1e-9 || Math.abs(dy3) > 1e-9){ var den = dx1 * dy2 - dx2 * dy1; if (Math.abs(den) < 1e-12) return null; g = (dx3 * dy2 - dx2 * dy3) / den; h = (dx1 * dy3 - dx3 * dy1) / den; }
+  var a = x1 - x0 + g * x1, b = x3 - x0 + h * x3, d = y1 - y0 + g * y1, e = y3 - y0 + h * y3;
+  return function(u, v){ var w = g * u + h * v + 1; return [(a * u + b * v + x0) / w, (d * u + e * v + y0) / w]; };
+}
+// grey levels of a canvas region, optionally scaled down first (k ≤ 1)
+function _bcLum_(canvas, x, y, w, h, k){
+  k = k || 1;
+  var W = Math.max(1, Math.round(w * k)), H = Math.max(1, Math.round(h * k)), c = canvas, sx = x, sy = y;
+  if (k !== 1){
+    c = document.createElement('canvas'); c.width = W; c.height = H;
+    var cx = c.getContext('2d'); cx.imageSmoothingQuality = 'high'; cx.drawImage(canvas, x, y, w, h, 0, 0, W, H);
+    sx = 0; sy = 0;
+  }
+  var d = c.getContext('2d', { willReadFrequently: true }).getImageData(sx, sy, W, H).data, L = new Float32Array(W * H), i;
+  for (i = 0; i < W * H; i++) L[i] = 0.299 * d[4 * i] + 0.587 * d[4 * i + 1] + 0.114 * d[4 * i + 2];
+  if (c !== canvas) c.width = 0;
+  return { w: W, h: H, L: L };
+}
+function _bcBilin_(img, x, y){
+  var w = img.w, h = img.h, ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+  if (ix < 0 || iy < 0 || ix >= w - 1 || iy >= h - 1) return 255;
+  var k = iy * w + ix, L = img.L;
+  return (L[k] * (1 - fx) + L[k + 1] * fx) * (1 - fy) + (L[k + w] * (1 - fx) + L[k + w + 1] * fx) * fy;
+}
+// Catmull-Rom bicubic: keeps bar edges sharp when a low-resolution photo is enlarged for the reader
+var _bcWX = new Float64Array(4), _bcWY = new Float64Array(4);
+function _bcCubW_(t, o){ var t2 = t * t, t3 = t2 * t; o[0] = (-t3 + 2 * t2 - t) / 2; o[1] = (3 * t3 - 5 * t2 + 2) / 2; o[2] = (-3 * t3 + 4 * t2 + t) / 2; o[3] = (t3 - t2) / 2; }
+function _bcCubic_(img, x, y){
+  var w = img.w, h = img.h, ix = Math.floor(x), iy = Math.floor(y);
+  if (ix < 1 || iy < 1 || ix >= w - 2 || iy >= h - 2) return _bcBilin_(img, x, y);
+  _bcCubW_(x - ix, _bcWX); _bcCubW_(y - iy, _bcWY);
+  var L = img.L, s = 0, r, c;
+  for (r = 0; r < 4; r++){
+    var row = (iy - 1 + r) * w + ix - 1, v = 0;
+    for (c = 0; c < 4; c++) v += L[row + c] * _bcWX[c];
+    s += v * _bcWY[r];
+  }
+  return s < 0 ? 0 : (s > 255 ? 255 : s);
+}
+
+// The analysis plane: the flattened page at BC_PLANE_PXMM (corners known) or the photo itself (no corners).
+// toSrc(x, y) maps a plane point to full-size source pixels.
+function _bcPlane_(src, corners, hw){
+  var maxSide = Math.max(src.width, src.height);
+  if (corners){
+    var H = _bcHomog_(corners); if (!H) return null;
+    var land = hw && hw < 1, pw = Math.round((land ? 297 : 210) * BC_PLANE_PXMM), ph = Math.round(pw * (hw || Math.SQRT2));
+    // sample from a smaller copy of the photo: the plane only needs ~4 px/mm, the strips go back to full size
+    var k = Math.min(1, 1400 / maxSide), small = _bcLum_(src, 0, 0, src.width, src.height, k), L = new Float32Array(pw * ph), x, y;
+    for (y = 0; y < ph; y++) for (x = 0; x < pw; x++){ var p = H((x + 0.5) / pw, (y + 0.5) / ph); L[y * pw + x] = _bcBilin_(small, p[0] * k - 0.5, p[1] * k - 0.5); }
+    return { w: pw, h: ph, L: L, toSrc: function(px, py){ return H(px / pw, py / ph); }, pxmm: BC_PLANE_PXMM };
+  }
+  // no page outline: the photo itself, kept large — the bars of a page that fills only part of a phone photo
+  // are barely 1 px wide, and a smaller copy blurs them into grey before the bar-ness map can see them
+  var s = Math.min(1, 2000 / maxSide), im = _bcLum_(src, 0, 0, src.width, src.height, s);
+  // the scale is unknown: assume the page fills ~70% of the photo's shorter side
+  var pxmm = Math.min(im.w, im.h) * 0.7 / 210;
+  return { w: im.w, h: im.h, L: im.L, toSrc: function(px, py){ return [px / s, py / s]; }, pxmm: pxmm };
+}
+
+// Candidate barcode bands. Bar-ness = (box sum of |dI/dx|) − 1.5 × (box sum of |dI/dy|) over ~6 x 6 mm:
+// a barcode is dense left-right edges with almost no up-down ones; text and table lines have both or few.
+// The same for barcodes standing on their side (bars horizontal). Each band: centre, axis, length, height.
+function _bcBands_(pl){
+  var w = pl.w, h = pl.h, L = pl.L, G = 2, gw = Math.floor(w / G), gh = Math.floor(h / G), x, y, i;
+  // |d/dx| and |d/dy| summed per 2 x 2 px cell, then box sums over ~6 x 6 mm from integral images of the cells
+  var cX = new Float32Array(gw * gh), cY = new Float32Array(gw * gh);
+  for (y = 1; y < gh * G - 1; y++) for (x = 1; x < gw * G - 1; x++){
+    i = y * w + x; var k0 = ((y / G) | 0) * gw + ((x / G) | 0);
+    cX[k0] += Math.abs(L[i + 1] - L[i - 1]); cY[k0] += Math.abs(L[i + w] - L[i - w]);
+  }
+  function integ(a){ var I = new Float64Array((gw + 1) * (gh + 1)), xx, yy; for (yy = 0; yy < gh; yy++){ var run = 0; for (xx = 0; xx < gw; xx++){ run += a[yy * gw + xx]; I[(yy + 1) * (gw + 1) + xx + 1] = I[yy * (gw + 1) + xx + 1] + run; } } return I; }
+  var IX = integ(cX), IY = integ(cY), r = Math.max(2, Math.round(3 * pl.pxmm / G));
+  var BH = cX, BV = cY, mH = 0, mV = 0;                       // the box sums below read only IX / IY, so cX can take the result
+  var tmp = new Float32Array(gw * gh);
+  function box(I, x0, y0, x1, y1){ return I[y1 * (gw + 1) + x1] - I[y0 * (gw + 1) + x1] - I[y1 * (gw + 1) + x0] + I[y0 * (gw + 1) + x0]; }
+  for (y = 0; y < gh; y++) for (x = 0; x < gw; x++){
+    var x0 = Math.max(0, x - r), x1 = Math.min(gw, x + r + 1), y0 = Math.max(0, y - r), y1 = Math.min(gh, y + r + 1), area = (x1 - x0) * (y1 - y0) * G * G;
+    var sx = box(IX, x0, y0, x1, y1) / area, sy = box(IY, x0, y0, x1, y1) / area, k = y * gw + x;
+    BH[k] = sx - 1.5 * sy; tmp[k] = sy - 1.5 * sx;
+    if (BH[k] > mH) mH = BH[k]; if (tmp[k] > mV) mV = tmp[k];
+  }
+  BV = tmp; IX = IY = null;
+  var out = [];
+  [[BH, mH, false], [BV, mV, true]].forEach(function(t){
+    var B = t[0], m = t[1], vert = t[2];
+    if (!(m > 6)) return;                                     // nothing bar-like at all (blank / flat image)
+    var T = 0.35 * m, lab = new Int32Array(gw * gh), next = 0, stack = [];
+    for (var s = 0; s < gw * gh; s++){
+      if (lab[s] || !(B[s] > T)) continue;
+      next++; lab[s] = next; stack.push(s);
+      var cnt = 0, sw = 0, mx = 0, my = 0, pts = [];
+      while (stack.length){
+        var q = stack.pop(), qx = q % gw, qy = (q - qx) / gw, wq = B[q];
+        cnt++; sw += wq; mx += wq * qx; my += wq * qy; pts.push(q);
+        if (qx > 0 && !lab[q - 1] && B[q - 1] > T){ lab[q - 1] = next; stack.push(q - 1); }
+        if (qx < gw - 1 && !lab[q + 1] && B[q + 1] > T){ lab[q + 1] = next; stack.push(q + 1); }
+        if (qy > 0 && !lab[q - gw] && B[q - gw] > T){ lab[q - gw] = next; stack.push(q - gw); }
+        if (qy < gh - 1 && !lab[q + gw] && B[q + gw] > T){ lab[q + gw] = next; stack.push(q + gw); }
+      }
+      if (cnt < 12) continue;
+      mx /= sw; my /= sw;
+      // principal axis of the blob = the band's own direction (it may sit several degrees off the page axis)
+      var sxx = 0, syy = 0, sxy = 0, j, p, dx, dy;
+      for (j = 0; j < pts.length; j++){ p = pts[j]; dx = p % gw - mx; dy = (p - p % gw) / gw - my; sxx += dx * dx; syy += dy * dy; sxy += dx * dy; }
+      var th = 0.5 * Math.atan2(2 * sxy, sxx - syy), ux = Math.cos(th), uy = Math.sin(th);
+      if (vert ? (Math.abs(uy) < Math.abs(ux)) : (Math.abs(ux) < Math.abs(uy))){ var t0 = ux; ux = -uy; uy = t0; }   // long axis across the bars
+      if (vert ? uy < 0 : ux < 0){ ux = -ux; uy = -uy; }
+      var a0 = 1e9, a1 = -1e9, b0 = 1e9, b1 = -1e9;
+      for (j = 0; j < pts.length; j++){ p = pts[j]; dx = p % gw - mx; dy = (p - p % gw) / gw - my; var a = dx * ux + dy * uy, b = -dx * uy + dy * ux;
+        if (a < a0) a0 = a; if (a > a1) a1 = a; if (b < b0) b0 = b; if (b > b1) b1 = b; }
+      var len = (a1 - a0 + 1) * G / pl.pxmm, hgt = (b1 - b0 + 1) * G / pl.pxmm;
+      if (len < 15 || hgt < 3) continue;                      // shorter than 15 mm: not an invoice barcode
+      out.push({ score: sw, cx: (mx + 0.5) * G, cy: (my + 0.5) * G, ux: ux, uy: uy, a0: a0 * G, a1: (a1 + 1) * G, b0: b0 * G, b1: (b1 + 1) * G, vert: vert });
+    }
+  });
+  out.sort(function(p, q){ return q.score - p.score; });
+  return out.slice(0, 4);
+}
+
+// One band re-sampled from the full-size photo along its own axis → grey ImageData for the reader.
+function _bcStrip_(src, pl, band){
+  var ux = band.ux, uy = band.uy, nx = -uy, ny = ux;
+  var len = band.a1 - band.a0, ext = 0.18 * len + 5 * pl.pxmm;                    // the bar-ness blob can miss the code's ends
+  var a0 = band.a0 - ext, a1 = band.a1 + ext, b0 = band.b0 - pl.pxmm, b1 = band.b1 + pl.pxmm;
+  var k = BC_STRIP_PXMM / pl.pxmm, W = Math.round((a1 - a0) * k), H = Math.round((b1 - b0) * k);
+  if (W > 2400){ k *= 2400 / W; W = 2400; H = Math.round((b1 - b0) * k); }
+  if (H > 360) H = 360;
+  if (W < 40 || H < 8) return null;
+  // the strip's footprint in the source → read only that region of the photo, at full size
+  var corners = [[a0, b0], [a1, b0], [a1, b1], [a0, b1]].map(function(t){ return pl.toSrc(band.cx + t[0] * ux + t[1] * nx, band.cy + t[0] * uy + t[1] * ny); });
+  var fx0 = Math.max(0, Math.floor(Math.min.apply(null, corners.map(function(c){ return c[0]; }))) - 3), fy0 = Math.max(0, Math.floor(Math.min.apply(null, corners.map(function(c){ return c[1]; }))) - 3);
+  var fx1 = Math.min(src.width, Math.ceil(Math.max.apply(null, corners.map(function(c){ return c[0]; }))) + 3), fy1 = Math.min(src.height, Math.ceil(Math.max.apply(null, corners.map(function(c){ return c[1]; }))) + 3);
+  if (fx1 - fx0 < 8 || fy1 - fy0 < 8) return null;
+  var reg = _bcLum_(src, fx0, fy0, fx1 - fx0, fy1 - fy0, 1);
+  var out = new ImageData(W, H), od = out.data, x, y, hs = (b1 - b0) / H;
+  for (y = 0; y < H; y++){
+    var b = b0 + (y + 0.5) * hs;
+    for (x = 0; x < W; x++){
+      var a = a0 + (x + 0.5) / k, s = pl.toSrc(band.cx + a * ux + b * nx, band.cy + a * uy + b * ny);
+      var v = _bcCubic_(reg, s[0] - fx0 - 0.5, s[1] - fy0 - 0.5), o = 4 * (y * W + x);
+      od[o] = od[o + 1] = od[o + 2] = v; od[o + 3] = 255;
+    }
+  }
+  return out;
+}
+
+// several codes on one paper: an invoice-number-shaped one (letters + digits, e.g. MKDL044709) wins
+function _bcBest_(list){
+  var best = null;
+  for (var i = 0; i < list.length; i++){
+    var t = bcNorm_(list[i].raw);
+    if (t.length < 4) continue;
+    if (/^[A-Z]{2,6}[0-9]{4,8}$/.test(t)) return list[i];
+    if (!best) best = list[i];
+  }
+  return best;
+}
+async function _bcZXRead_(Z, img, extra){
+  var r = await Z.readBarcodes(img, Object.assign({ formats: BC_FORMATS, tryHarder: true, tryRotate: false, tryInvert: false, tryDownscale: false, maxNumberOfSymbols: 4 }, extra || {}));
+  return _bcBest_(r.filter(function(x){ return x.isValid; }).map(function(x){ return { raw: String(x.text), format: x.format }; }));
+}
+async function _bcNatRead_(det, img){
+  try{
+    var r = await det.detect(img);
+    return _bcBest_((r || []).map(function(x){ return { raw: String(x.rawValue), format: x.format }; }));
+  }catch(e){}
+  return null;
+}
+
+// Reads the barcode of one invoice photo. entry = the review screen's entry: _scanSrc + scan.corners when the
+// scanner ran (best: the full-size photo + the page outline), else the plain photo in entry.dataUrl.
+// Resolves { text (normalised), raw, format, how, ms } or null. Never rejects.
+async function bcDecode_(entry, job){
+  var t0 = Date.now(), info = { ok: false, ms: 0, how: '', text: '', err: '' };
+  _bcLast = info;
+  if (!BC_ON || !entry) return null;
+  var src = null, own = false, res = null;
+  try{
+    var zxP = _bcZXLoad_(), natP = _bcNativeLoad_();
+    var sc = entry.scan || {}, corners = (entry._scanSrc && sc.cropped && sc.corners) ? sc.corners : null;
+    if (entry._scanSrc && entry._scanSrc.width) src = entry._scanSrc;
+    else {
+      var im = await new Promise(function(ok, no){ var i = new Image(); i.onload = function(){ ok(i); }; i.onerror = function(){ no(new Error('photo decode failed')); }; i.src = entry.dataUrl; });
+      src = document.createElement('canvas'); src.width = im.naturalWidth; src.height = im.naturalHeight; own = true;
+      src.getContext('2d').drawImage(im, 0, 0);
+    }
+    var nat = await natP;
+    if (nat){ res = await _bcNatRead_(nat, src); if (res) res.how = 'native'; }   // fast, any angle
+    await _bcYield_(job);
+    var hw = corners ? (_scanAspect_(corners, src.width, src.height) || (sc.out ? sc.out[1] / sc.out[0] : Math.SQRT2)) : null;
+    var pl = res ? null : _bcPlane_(src, corners, hw);
+    await _bcYield_(job);
+    var bands = pl ? _bcBands_(pl) : [];
+    info.bands = bands.length;
+    var Z = res ? null : await Promise.race([zxP, new Promise(function(ok){ setTimeout(function(){ ok(null); }, 6000); })]);
+    for (var b = 0; !res && b < bands.length && Date.now() - t0 < BC_SLOW_MS; b++){
+      await _bcYield_(job);
+      var strip = _bcStrip_(src, pl, bands[b]);
+      if (!strip) continue;
+      if (nat){ res = await _bcNatRead_(nat, strip); if (res){ res.how = 'native-band'; break; } }
+      if (!Z) continue;
+      res = await _bcZXRead_(Z, strip, null);
+      if (!res) res = await _bcZXRead_(Z, strip, { binarizer: 'GlobalHistogram' });
+      if (res) res.how = 'band' + b;
+    }
+    // last resort: the whole photo (any layout, any quarter turn)
+    if (!res && Z && Date.now() - t0 < BC_SLOW_MS){
+      await _bcYield_(job);
+      var k = Math.min(1, 1600 / Math.max(src.width, src.height)), c = document.createElement('canvas');   // keeps the reader's memory small
+      c.width = Math.round(src.width * k); c.height = Math.round(src.height * k);
+      var cx = c.getContext('2d'); cx.imageSmoothingQuality = 'high'; cx.drawImage(src, 0, 0, c.width, c.height);
+      var full = cx.getImageData(0, 0, c.width, c.height); c.width = 0;
+      res = await _bcZXRead_(Z, full, { tryRotate: true, tryDownscale: true });
+      if (res) res.how = 'whole';
+    }
+    if (!Z && !nat) info.err = 'no reader';
+  }catch(e){
+    if (!/cancelled/.test(String(e && e.message))) console.warn('barcode read failed (photo kept, matched by hand):', e);
+    info.err = String((e && e.message) || e); res = null;
+  }finally{
+    if (own && src){ try{ src.width = 0; }catch(e2){} }
+  }
+  info.ms = Date.now() - t0;
+  if (res){ res.text = bcNorm_(res.raw); res.ms = info.ms; info.ok = true; info.how = res.how; info.text = res.text; }
+  try{ _scanDebug_(); }catch(e3){}
+  return res;
+}
+// starts a read for an entry once (the review screen calls this as soon as the scan is on screen); a second call
+// for the same entry returns the same promise. bcCancel_ stops a read whose photo was thrown away (Retake).
+function bcStart_(entry){
+  if (!BC_ON || !entry) return null;
+  if (entry._bcP) return entry._bcP;
+  var job = { cancelled: false };
+  entry._bcJob = job;
+  entry._bcP = bcDecode_(entry, job).then(function(r){ entry._bc = r || null; entry._bcDone = true; return r; }, function(){ entry._bcDone = true; return null; });
+  return entry._bcP;
+}
+function bcCancel_(entry){ if (entry && entry._bcJob) entry._bcJob.cancelled = true; }
+// warm the reader up when the invoice camera opens / an invoice photo is scanned — not at page load, so a driver
+// who never photographs an invoice never downloads it. The ~1 MB arrives while the driver aims; once loaded it
+// stays for the page session (a dead zone later in the day does not matter, only one before the first photo).
+function bcWarm_(){ if (!BC_ON) return; try{ _bcNativeLoad_(); _bcZXLoad_(); }catch(e){} }
 
 
 // photo taken for a customer → submit delivery for that customer's pending invoices
@@ -2361,6 +2972,11 @@ async function onShipPhoto(input){
       if (!_rev){ _palletToast('warn', L('Tap the camera button to retake', 'Tekan butang kamera untuk ambil semula'), 'top'); continue; }
       entry = _rev;
     }catch(scanErr){ console.warn('scan review failed open:', scanErr); }
+    // [R3] the barcode says which invoice this is (may ask: "already has a photo" / "not for this shop")
+    var _pl = await _bcPlace_(gKey, entry, null);
+    if (_pl === 'retake' || _pl === 'discard'){
+      _palletToast('warn', _pl === 'retake' ? L('Tap the camera button and take this shop\'s invoice', 'Tekan butang kamera dan ambil invois kedai ini') : L('New photo discarded', 'Foto baru dibuang'), 'top');
+      continue; }
     var _r = _addPhotoToGroup(gKey, entry, g);   // [AutoCap] shared with the in-page camera path
     if (!_r.added) break;
     g = _r.group;
@@ -2545,7 +3161,7 @@ function _acHeader(s){
     return;
   }
   var pend = _acPending(g), have = (g.photos || []).length, need = pend.length;
-  var next = pend[Math.min(have, pend.length - 1)];
+  var next = _bcNextFree_(g) || pend[Math.min(have, pend.length - 1)];   // [R3] the next invoice in list order that has no photo yet
   if (t) t.textContent = Math.min(have + 1, need) + '/' + need + (next ? ' · ' + next.invoiceNo : '');
   if (sub) sub.textContent = g.name || '';
   if (c){ c.textContent = have + '/' + need; c.style.visibility = 'visible'; }
@@ -2564,6 +3180,7 @@ async function openAutoCapture(i, opts){
     var pend = _acPending(g);
     if (!pend.length){ _deliverIdx = -1; alert(L('Select at least one invoice to deliver', 'Pilih sekurang-kurangnya satu invois')); return; }
     if ((g.photos || []).length >= pend.length){ _deliverIdx = -1; _palletToast('err', L('All ' + pend.length + ' photos for this stop are taken', 'Semua ' + pend.length + ' foto untuk kedai ini sudah diambil')); return; }
+    try{ if (typeof bcWarm_ === 'function') bcWarm_(); }catch(e){}   // [R3] the barcode reader downloads while the driver aims
   }
   var ov = _acEl('acOverlay') || _acBuild();
   ov.style.display = 'flex';
@@ -2728,12 +3345,24 @@ async function _acCapture(s, manual){
     try{
       var _rev = await scanAndReview_(blob, entry);
       if (!_acLive(s)){   // camera closed during the review (screen lock, call): keep a photo the driver chose to Use
-        if (_rev){ try{ var _kept = _addPhotoToGroup(s.gKey, _rev, null); if (_kept.added){ renderShipmentList(); _palletToast('ok', L('Photo kept', 'Foto disimpan'), 'top'); } }catch(e){} }
+        if (_rev){ try{ _rev._bcLate = true;   // [R3] no questions now: in as "?", a barcode read in the background still files it
+          var _kept = _addPhotoToGroup(s.gKey, _rev, null); if (_kept.added){ renderShipmentList(); _palletToast('ok', L('Photo kept', 'Foto disimpan'), 'top'); } }catch(e){} }
         return; }
       if (!_rev){ s.cooldownMsg = null; s.cooldownUntil = Date.now() + 900; s.stable = 0;
         _acStatus(L('Retake the same invoice', 'Ambil semula invois yang sama'), 0, 'warn'); return; }
       entry = _rev;
     }catch(scanErr){ console.warn('scan review failed open:', scanErr); }
+    // [R3] the barcode says which invoice this is (may ask: "already has a photo" / "not for this shop")
+    var _pl = await _bcPlace_(s.gKey, entry, s);
+    if (!_acLive(s)){   // camera closed while a question was open: keep what the driver chose to keep
+      if (_pl === 'add' || _pl === 'replace'){ try{ var _k2 = _addPhotoToGroup(s.gKey, entry, null); if (_k2.added){ renderShipmentList(); _palletToast('ok', L('Photo kept', 'Foto disimpan'), 'top'); } }catch(e){} }
+      return; }
+    if (_pl === 'retake' || _pl === 'discard'){
+      s.capturedLum = shotLum; s.changedSinceCapture = false; s.lastShotAt = Date.now(); s.stable = 0;   // no auto shot of the same paper again
+      s.cooldownMsg = null; s.cooldownUntil = Date.now() + 900;
+      _acHeader(s);
+      _acStatus(_pl === 'retake' ? L('Take the invoice for this shop', 'Ambil invois kedai ini') : L('New photo discarded', 'Foto baru dibuang'), 0, 'warn');
+      return; }
     s.capturedLum = shotLum;
     try{ entry.name = 'autocap_' + Date.now() + ((entry.name || '').match(/_scan[CF]/) || [''])[0] + '.jpg'; }catch(e){}   // office can tell auto shots apart; keeps compressImage's _scanC/_scanF marker
     _acAccept(s, entry);
@@ -2814,15 +3443,24 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden &&
 window.addEventListener('pagehide', function(){ if (_ac){ _ac.fellBack = true; closeAutoCapture(); } });
 
 // [Scanner TEST] what Save would upload: scan copies + backup originals, sizes and scan facts
-function _scanTestSummary_(g, photos, originals, invoiceNos){
+function _scanTestSummary_(g, photos, originals, invoiceNos, bp){
   var kb = function(b64){ return Math.round((b64 || '').length * 0.75 / 1024); };
   var sTot = photos.reduce(function(a, p){ return a + kb(p.base64); }, 0), oTot = originals.reduce(function(a, p){ return a + kb(p.base64); }, 0);
-  var rows = g.photos.map(function(p, k){
+  // [R3] rows in the order Save sends them (list order of each photo's invoice) + how the invoice was decided
+  var order = (bp && bp.order) || g.photos;
+  try{ window._scanTestLast = { invoiceNos: invoiceNos.slice(), names: photos.map(function(p){ return p.name; }), origNames: originals.map(function(o){ return o.name; }),
+    origIndex: originals.map(function(o){ return o.forIndex; }), how: order.map(function(p){ return p.bcHow + (p.forced ? '+forced' : ''); }),
+    barcodeMap: bp ? bp.barcodeMap : {}, forcedMismatch: !!(bp && bp.forcedMismatch), dataUrls: order.map(function(p){ return p.dataUrl; }) }; }catch(e){}
+  var rows = order.map(function(p, k){
     var sc = p.scan || {}, st = sc.ok ? (sc.cropped ? (sc.adjusted ? L('scanned (corners adjusted)', 'diimbas (sudut dilaras)') : L('scanned', 'diimbas')) : L('whitened, edges not found', 'diputihkan, tepi tidak dikesan')) : L('plain photo', 'foto biasa') + (sc.err ? ' — ' + _esc(sc.err) : '');
+    var how = p.forced ? L('kept although its barcode is another invoice', 'disimpan walaupun kod bar invois lain')
+            : p.bcHow === 'barcode' ? '&#10003; ' + L('barcode read', 'kod bar dibaca')
+            : p.bcHow === 'picked' ? L('chosen by the driver', 'dipilih pemandu') : '? ' + L('barcode not read, list order', 'kod bar tidak dibaca, ikut senarai');
     return '<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-top:1px solid #E2E8F0;">'
       + '<img src="' + p.dataUrl + '" style="width:84px;border:1px solid #CBD5E1;border-radius:4px;background:#fff;">'
       + (p.origDataUrl ? '<img src="' + p.origDataUrl + '" style="width:58px;border:1px solid #CBD5E1;border-radius:4px;opacity:.85;">' : '')
-      + '<div style="font-size:12px;line-height:1.45;color:#0F172A;"><b>' + _esc(invoiceNos[k] || ('#' + (k + 1))) + '</b><br>' + st
+      + '<div style="font-size:12px;line-height:1.45;color:#0F172A;"><b>' + _esc(invoiceNos[k] || ('#' + (k + 1))) + '</b> &middot; ' + how
+      + '<br><span style="color:#475569;word-break:break-all;">' + _esc(photos[k] ? photos[k].name : '') + '</span><br>' + st
       + '<br>' + L('scan ', 'imbasan ') + kb(photos[k].base64) + ' KB' + (sc.out ? ' · ' + sc.out[0] + '×' + sc.out[1] : '')
       + (p.origDataUrl ? '<br>' + L('original ', 'asal ') + kb(p.origDataUrl.split(',')[1]) + ' KB' : '') + (sc.ms ? '<br>' + sc.ms + ' ms' : '') + '</div></div>';
   }).join('');
@@ -2831,8 +3469,12 @@ function _scanTestSummary_(g, photos, originals, invoiceNos){
   ov.innerHTML = '<div style="background:#fff;border-radius:12px;max-width:520px;width:100%;max-height:88vh;overflow:auto;padding:16px;">'
     + '<div style="font-size:16px;font-weight:800;color:#B91C1C;">' + L('TEST — nothing was saved', 'UJIAN — tiada apa disimpan') + '</div>'
     + '<div style="font-size:13px;color:#475569;margin:2px 0 10px;">' + L('A real Save would upload:', 'Simpan sebenar akan muat naik:') + '</div>'
-    + '<div style="font-size:13px;color:#0F172A;"><b>' + photos.length + '</b> ' + L(photos.length === 1 ? 'scan copy' : 'scan copies', 'salinan imbasan') + ' (' + sTot + ' KB)'
-    + ' + <b>' + originals.length + '</b> ' + L(originals.length === 1 ? 'backup original' : 'backup originals', 'foto asal simpanan') + ' (' + oTot + ' KB) = <b>' + (sTot + oTot) + ' KB</b></div>'
+    + '<div style="font-size:13px;color:#0F172A;"><b>' + photos.length + '</b> ' + L(photos.length === 1 ? 'scan copy' : 'scan copies', 'salinan imbasan') + ' (' + sTot + ' KB) '
+    + L('in the Save', 'dalam Simpan') + '</div>'
+    // [R3 2026-10-24] the backup originals left the Save: one small upload each, only after the server confirmed it
+    + '<div id="stOrig" style="font-size:13px;color:#0F172A;margin-top:2px;"><b>' + originals.length + '</b> ' + L(originals.length === 1 ? 'backup original' : 'backup originals', 'foto asal simpanan') + ' (' + oTot + ' KB) '
+    + (ORIGINALS_UPLOAD ? L('sent separately, one by one, after the server confirms the Save', 'dihantar berasingan, satu demi satu, selepas pelayan mengesahkan Simpan')
+                        : L('<b>OFF</b> &mdash; not sent (backup upload is switched off)', '<b>MATI</b> &mdash; tidak dihantar (muat naik simpanan dimatikan)')) + '</div>'
     + rows
     + '<div style="display:flex;gap:8px;margin-top:12px;">'
     +   '<button type="button" id="stKeep" style="flex:1;padding:12px;background:#fff;color:#0F172A;border:1.5px solid #CBD5E1;border-radius:10px;font-weight:700;">' + L('Keep photos', 'Simpan foto') + '</button>'
@@ -2843,6 +3485,235 @@ function _scanTestSummary_(g, photos, originals, invoiceNos){
   ov.querySelector('#stClear').onclick = function(){
     var cur = _shipGroups.filter(function(x){ return x.key === g.key; })[0];   // the re-read after Save rebuilds the groups
     if (g.photos) g.photos.length = 0; g.photos = []; if (cur) cur.photos = []; ov.remove(); renderShipmentList(); };
+}
+
+// ══════════════════════════════════════════════════════════════════════════════════════
+// [R3 2026-10-24] Save and Problem tell the truth: a stop turns "Dihantar" ONLY after the server confirmed it.
+// Before this the form posted blind (no-cors), waited 12 s for a read-back and, without one, painted the whole
+// stop delivered (untagged invoices too) and sent its pallets — on 2026-08-20 a 36-invoice stop showed green
+// while the server had 2. Now:
+//  * the POST's own answer is read. Apps Script answers a POST with a 302 to script.googleusercontent.com, which
+//    allows any origin, so a plain CORS fetch reads the JSON as long as the request stays "simple" (FormData body,
+//    no custom headers). That answer comes only after the server has finished, so the wait grows with the photos.
+//  * answer lost on the way back (signal dropped after the upload) → ask the result cache that doPost fills
+//    under clientToken (10 minutes), with growing gaps.
+//  * still nothing → nothing is marked, nothing is sent after it, the photos stay, and the card says
+//    "Belum disahkan" with a Semak button. The delivery list from the server is the final truth.
+// Backup originals no longer ride in the Save: one small POST each, AFTER a confirmed Save (ORIGINALS_UPLOAD).
+// ══════════════════════════════════════════════════════════════════════════════════════
+var ORIGINALS_UPLOAD = false;   // backup originals as separate background uploads — OFF until the boss pastes backend v12 (POD_ORIGINAL)
+var SAVE_POLL_MS = 90000;       // after a lost answer: keep asking the result cache this long
+var SAVE_POLL_GAPS = [1500, 2500, 4000, 6000, 8000, 10000, 12000, 15000];   // gaps between those asks (the last one repeats)
+var SEMAK_POLL_MS = 6000;       // Semak asks the cache once more, briefly, before it reads the delivery list
+var _shipUnconf = {};           // g.key → the Save the server has not confirmed yet {token, invs, ship, key, name, meta, photos, pallet, checked}
+var _r3Sent = {};               // clientToken → pallets / backup originals already sent (answer + list may both confirm one Save)
+var _r3OrigWarned = false;      // at most one toast for a backup original that did not upload
+function _saveTimeoutMs_(nPhotos){ return Math.min(240000, 90000 + 3000 * (nPhotos || 0)); }   // the server answers after the LAST photo is in Drive
+// the saving screen counts the seconds (a 40-invoice stop can take minutes): nobody should think it froze and close
+// the page. _ovClock_(label) starts, (label, true) keeps counting under a new label, (null) stops.
+var _ovClockIv = 0, _ovClockT0 = 0, _ovClockLbl = '';
+function _ovClock_(label, keepT0){
+  if (_ovClockIv){ clearInterval(_ovClockIv); _ovClockIv = 0; }
+  if (!label){ _ovClockT0 = 0; return; }
+  if (!keepT0 || !_ovClockT0) _ovClockT0 = Date.now();
+  _ovClockLbl = label;
+  var tick = function(){
+    var el = document.querySelector('.loading-text'), s = Math.round((Date.now() - _ovClockT0) / 1000);
+    if (el) el.textContent = _ovClockLbl + (s >= 3 ? ' ' + s + 's' : '') + (s >= 20 ? ' · ' + L('keep this page open', 'biar halaman ini terbuka') : '');
+  };
+  tick(); _ovClockIv = setInterval(tick, 1000);
+}
+function _uncOf_(key){ var u = _shipUnconf[key]; return (u && u.ship === _shipKey) ? u : null; }   // per stop AND per list: another lorry's list may hold the same shop
+function _sameInvs_(a, b){
+  if (!a || !b || a.length !== b.length) return false;
+  var s = {}; a.forEach(function(n){ s[String(n)] = true; });
+  return b.every(function(n){ return s[String(n)]; });
+}
+
+// POST that READS the answer. Returns the server's JSON ({status:'success'|'error', …}) or null = UNKNOWN —
+// aborted, connection lost, an HTML error page, anything without a clear status. Null is never a success.
+async function _postRead_(payload, timeoutMs){
+  var fd = new FormData(); fd.append('data', JSON.stringify(payload));
+  var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  var tmo = ctrl ? setTimeout(function(){ ctrl.abort(); }, timeoutMs) : null;
+  try{
+    var res = await fetch(SCRIPT_URL, { method: 'POST', body: fd, signal: ctrl ? ctrl.signal : undefined });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var d = await res.json();   // an HTML error page (time-out, quota) lands here as SyntaxError
+    if (d && (d.status === 'success' || d.status === 'error')) return d;
+    throw new Error('answer without a status');
+  }catch(e){
+    console.warn('[R3] ' + payload.formType + ': answer not read —', e && e.name, e && e.message);
+    _dbgToast_(payload.formType + ' answer: ' + (e && e.name) + ' - ' + (e && e.message));   // visible with ?debug=1
+    return null;
+  }finally{ if (tmo) clearTimeout(tmo); }
+}
+
+// Ask doPost's result cache (getImportResult, 10 minutes per clientToken) with growing gaps, for up to maxMs.
+// 'pending' = not written (yet). Returns the answer or null; stops at once while the phone says it is offline.
+async function _pollResult_(token, maxMs, gaps){
+  gaps = gaps || SAVE_POLL_GAPS;
+  var t0 = Date.now();
+  for (var k = 0; ; k++){
+    var left = maxMs - (Date.now() - t0);
+    if (left <= 0) return null;
+    var wait = Math.min(gaps[Math.min(k, gaps.length - 1)], left);
+    if (wait > 0) await new Promise(function(r){ setTimeout(r, wait); });
+    if (navigator.onLine === false) return null;   // no signal: asking only drains the battery — Semak later
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var tmo = ctrl ? setTimeout(function(){ ctrl.abort(); }, 15000) : null;
+    try{
+      var rb = await fetch(SCRIPT_URL + '?action=getImportResult&token=' + encodeURIComponent(token), { signal: ctrl ? ctrl.signal : undefined });
+      var rd = await rb.json();
+      if (rd && (rd.status === 'success' || rd.status === 'error')) return rd;
+    }catch(e){ /* keep asking */ }
+    finally{ if (tmo) clearTimeout(tmo); }
+  }
+}
+
+// Which of the tagged invoices the server answer confirms. It names `already` and `notFound`, but only COUNTS the
+// ones it wrote now (`delivered`): the rest count only when that number covers all of them (delivered = 0 → none).
+function _confirmedInvs_(tagged, res){
+  var nf = {}, al = {};
+  (Array.isArray(res.notFound) ? res.notFound : []).forEach(function(n){ nf[String(n)] = true; });
+  (Array.isArray(res.already) ? res.already : []).forEach(function(n){ al[String(n)] = true; });
+  var rest = tagged.filter(function(n){ return !nf[String(n)] && !al[String(n)]; });
+  var restOk = (Number(res.delivered) || 0) >= rest.length;
+  var out = { done: [], missing: [], notFound: [] };
+  tagged.forEach(function(n){
+    var s = String(n);
+    if (al[s] || (!nf[s] && restOk)) out.done.push(n);
+    else { out.missing.push(n); if (nf[s]) out.notFound.push(n); }
+  });
+  return out;
+}
+
+// The ONLY place a Save changes a stop. ctx = what was sent {token, invs (tagged invoice numbers), ship, key, name,
+// meta, photos, pallet}; res = the server's answer or null.
+//   ok      — every tagged invoice in delivered ∪ already → Dihantar, photos cleared, pallets + originals sent (only here)
+//   partial — success, but not for every invoice → only the confirmed ones turn Dihantar, photos kept, the rest named
+//   error   — the server said no → nothing changes, photos kept
+//   unknown — no answer at all → nothing changes, photos kept, "Belum disahkan" + Semak on the card
+function _saveOutcome_(key, res, ctx){
+  var g = _groupByKey(key);
+  if (!res){
+    ctx.checked = false;
+    _shipUnconf[key] = ctx;
+    if (!_shipStale) _unconfReconcile_();   // a re-sync DURING the upload may already list it all delivered (only the answer got lost)
+    renderShipmentList();
+    if (_shipUnconf[key] !== ctx) return 'ok';
+    alert(L('Save not confirmed yet. Your photos are kept. Tap Check.', 'Simpanan belum disahkan. Foto masih ada. Tekan Semak.'));
+    return 'unknown';
+  }
+  delete _shipUnconf[key];   // the server answered for this stop: that answer replaces any earlier "not confirmed"
+  if (res.status !== 'success'){
+    renderShipmentList();
+    // REAL failure — keep the photos so the driver can just hit Save again.
+    alert(L('NOT saved!\n' + (res.message || 'Server error') + '\n\nYour photos are kept. Please tap Save again.',
+            'TIDAK disimpan!\n' + (res.message || 'Ralat pelayan') + '\n\nFoto anda masih ada. Sila tekan Simpan semula.'));
+    return 'error';
+  }
+  var c = _confirmedInvs_(ctx.invs, res), done = {};
+  c.done.forEach(function(n){ done[String(n)] = true; });
+  if (g) g.invs.forEach(function(x){ if (done[String(x.invoiceNo)]) x.status = 'delivered'; });
+  if (!c.missing.length){
+    if (g){ g.invs.forEach(function(x){ x._untag = false; }); g.photos = []; }   // [untag] untagged ones stay pending (tags reset, as before)
+    _r3AfterConfirmed_(key, g, ctx);
+    renderShipmentList();
+    _palletToast('ok', '&#10003; ' + L('Saved: ' + c.done.length + (c.done.length === 1 ? ' invoice delivered' : ' invoices delivered'), 'Disimpan: ' + c.done.length + ' invois dihantar'));
+    return 'ok';
+  }
+  renderShipmentList();
+  var lost = c.missing.filter(function(n){ return c.notFound.indexOf(n) < 0; });
+  alert(L('Saved only ' + c.done.length + ' of ' + ctx.invs.length + ' invoices.', 'Hanya ' + c.done.length + ' daripada ' + ctx.invs.length + ' invois disimpan.')
+    + (lost.length ? '\n' + L('NOT confirmed: ', 'BELUM disahkan: ') + lost.join(', ') : '')
+    + (c.notFound.length ? '\n' + L('Not found on the server (tell the office): ', 'Tiada di pelayan (beritahu pejabat): ') + c.notFound.join(', ') : '')
+    + '\n\n' + L('Your photos are kept.', 'Foto anda masih ada.'));
+  return 'partial';
+}
+
+// pallets and backup originals go only after a CONFIRMED Save, and only once per clientToken
+function _r3AfterConfirmed_(key, g, ctx){
+  if (_r3Sent[ctx.token]) return;
+  _r3Sent[ctx.token] = true;
+  // a re-sync that saw the stop delivered has already dropped its pallet entry from the stop: use the one sent
+  var pg = (g && g._pallet) ? g : (ctx.pallet ? { key: key, name: ctx.name, _pallet: ctx.pallet } : null);
+  if (pg && !_smMode){ firePalletDrop(pg); firePalletCollect(pg); }   // [Salesman] private cars carry no pallets
+  _sendOriginals_(ctx);
+}
+
+// A fresh SERVER list settles a Save whose answer was lost: once it lists EVERY invoice of that Save as delivered,
+// the Save counts as confirmed (pallets + originals go, once). Partly delivered = the server may still be
+// writing: keep waiting — the chips already show what it has.
+function _unconfReconcile_(){
+  Object.keys(_shipUnconf).forEach(function(k){
+    var u = _uncOf_(k), g = u ? _groupByKey(k) : null;
+    if (!g) return;
+    var st = {};
+    g.invs.forEach(function(x){ st[String(x.invoiceNo)] = String(x.status).toLowerCase(); });
+    if (!u.invs.every(function(n){ return st[String(n)] === 'delivered'; })) return;
+    delete _shipUnconf[k];
+    g.photos = [];
+    _r3AfterConfirmed_(k, g, u);
+    _palletToast('ok', '&#10003; ' + L('Confirmed: ', 'Disahkan: ') + _esc(g.name) + ' &mdash; ' + L('delivered', 'dihantar'));
+  });
+}
+
+// Semak / Check: ask the result cache once more, then read the delivery list (it settles the stop when it shows
+// every invoice delivered). Still nothing → the card offers Save again (the server skips what it already has).
+async function checkUnconfirmed(i){
+  var g0 = _shipGroups[i], key = g0 && g0.key, u = key ? _uncOf_(key) : null;
+  if (!u){ renderShipmentList(); return; }
+  if (u.busy) return;
+  u.busy = true;
+  var overlay = document.getElementById('loadingOverlay');
+  document.querySelector('.loading-text').textContent = L('Checking…', 'Menyemak…');
+  overlay.classList.add('show');
+  try{
+    var res = await _pollResult_(u.token, SEMAK_POLL_MS, [0, 2000]);
+    if (_shipUnconf[key] !== u) return;                    // settled meanwhile (a re-sync saw it delivered)
+    if (res){ overlay.classList.remove('show'); _saveOutcome_(key, res, u); return; }
+    if (_smMode) await smLoadDeliveries(true); else await checkShipmentForVehicle(true);   // → _unconfReconcile_
+    if (_shipUnconf[key] === u){
+      u.checked = true;
+      renderShipGroups();
+      _palletToast('warn', L('Still not confirmed. When you have signal, tap Save again.', 'Masih belum disahkan. Bila ada liputan, tekan Simpan semula.'), 'top');
+    }
+  }finally{
+    u.busy = false;
+    overlay.classList.remove('show');
+  }
+}
+
+// Which invoice a backup original belongs to — only when CERTAIN: the photo carries its own invoice number (a
+// barcode match), or the stop had one invoice. Never by position: photo k is not invoice k (that pairing is what
+// mislabelled the July scans). '' = unknown; the backend then files it under the stop and the photo number.
+function _origInvoiceOf_(p, invs){
+  if (p && p.invoiceNo && (p.bcHow === 'barcode' || p.bcHow === 'picked')) return String(p.invoiceNo);   // a "?" (list-order guess) is not certain
+  return (invs && invs.length === 1) ? String(invs[0]) : '';
+}
+// Backup originals: one small POST each (formType POD_ORIGINAL), one after the other, in the background. Never
+// touches the delivered state; a failure is logged and shown at most once as a small toast.
+function _sendOriginals_(ctx){
+  if (!ORIGINALS_UPLOAD || SCAN_TEST || !ctx || !ctx.photos) return;
+  var list = [];
+  ctx.photos.forEach(function(p, k){ if (p && p.origDataUrl) list.push({ p: p, k: k }); });
+  if (!list.length) return;
+  var m = ctx.meta || {}, n = ctx.photos.length;
+  (async function(){
+    for (var j = 0; j < list.length; j++){
+      var p = list[j].p, k = list[j].k;
+      var r = await _postRead_({ formType: 'POD_ORIGINAL', shipmentKey: m.shipmentKey, invoiceNo: _origInvoiceOf_(p, ctx.invs), branch: BRANCH,
+        deliveryDate: m.deliveryDate, vehicleNo: m.vehicleNo, driverName: m.driverName, custCode: ctx.key, photoIndex: k + 1, photoCount: n,
+        photo: { base64: String(p.origDataUrl).split(',')[1], name: String(p.name || 'invoice.jpg').replace(/(_scan[CF])?\.jpg$/i, '') + '_orig.jpg', type: 'image/jpeg' },
+        clientToken: 'org_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10) }, 60000);
+      if (!r || r.status !== 'success'){
+        console.warn('[R3] backup original ' + (k + 1) + '/' + n + ' not stored:', r && r.message);
+        if (!_r3OrigWarned){ _r3OrigWarned = true;
+          _palletToast('warn', L('A backup photo did not upload. The delivery IS saved.', 'Satu foto simpanan tidak dimuat naik. Penghantaran SUDAH disimpan.')); }
+      }
+    }
+  })().catch(function(e){ console.warn('[R3] backup originals stopped', e); });
 }
 
 // STEP 2: Save → submit the buffered photos → mark this customer's invoices delivered
@@ -2857,6 +3728,11 @@ async function saveDelivery(i){
   var _tagged = g.invs.filter(function(x){ return String(x.status).toLowerCase()!=='delivered' && !x._untag; }).map(function(x){ return x.invoiceNo; });
   if (!_tagged.length){ g._saving=false; alert(L('Select at least one invoice to deliver', 'Pilih sekurang-kurangnya satu invois')); return; }
   if (g.photos.length !== _tagged.length){ g._saving=false; alert(L('Photos must equal invoices: ' + g.photos.length + ' photos, ' + _tagged.length + ' invoices', 'Bilangan foto mesti sama dengan invois: ' + g.photos.length + ' foto, ' + _tagged.length + ' invois')); return; }
+  var _bp = _bcPayload_(g, SCAN_TEST);   // [R3] photos + invoiceNos in list order of each photo's own invoice (null = an invoice has no photo of its own)
+  if (!_bp){ g._saving=false; alert(L('Each invoice needs its own photo. Check the photos marked in red.', 'Setiap invois perlu fotonya sendiri. Semak foto bertanda merah.')); return; }
+  var _sk = _stopShipKey_(g, _bp.invoiceNos);   // [R3] the delivery order (DL) these invoices belong to
+  if (_sk.mixed){ g._saving=false; alert(L('These invoices are on 2 delivery orders (DL) and must be saved separately:', 'Invois ini dalam 2 DL dan mesti disimpan berasingan:')
+      + '\n' + _dlLines_(_sk) + '\n\n' + L('Untick the invoices of one DL, save, then tick them again and save.', 'Buang tanda invois satu DL, simpan, kemudian tanda semula dan simpan.')); return; }
   // [Round2] no driver picked = a POD that counts for nobody (KPI): send the driver to the trip card first
   if (!_smMode && !document.getElementById('driverName').value){
     g._saving = false;
@@ -2870,68 +3746,57 @@ async function saveDelivery(i){
   document.querySelector('.loading-text').textContent = L('Saving…', 'Menyimpan…');
   overlay.classList.add('show');
   try{
-    var photos = g.photos.map(function(p){ return { base64: p.dataUrl.split(',')[1], name: p.name, type: p.type }; });
-    // [Scanner] backup originals, index-aligned with photos[] (forIndex). The live backend must store
-    // these in a separate folder/column before this ships — an old backend simply ignores the field.
-    var originals = g.photos.map(function(p, k){ return p.origDataUrl ? { base64: p.origDataUrl.split(',')[1],
-      name: String(p.name || ('invoice_' + k)).replace(/(_scan[CF])?\.jpg$/i, '') + '_orig.jpg', type: 'image/jpeg', forIndex: k } : null; }).filter(Boolean);
-    if (SCAN_TEST){ overlay.classList.remove('show'); g._saving = false; _scanTestSummary_(g, photos, originals, _tagged); return; }
-    var pendingInvs = _tagged;   // [untag] only the invoices the driver kept tagged (delivered)
+    // [R3] photos in list (g.invs) order of each photo's own invoice, file names "<invoiceNo>_…" (_bcPayload_);
+    // the server's positional pairing (row N ↔ photo N) is then right. [Scanner] backup originals, index-aligned
+    // with photos[] (forIndex): they no longer ride in the Save (they doubled the upload) — _sendOriginals_ sends
+    // them one by one after a CONFIRMED Save; _bcPayload_ builds them only for the TEST summary (a copy of every
+    // original is megabytes a cheap phone should not hold for nothing).
+    var photos = _bp.photos;
+    var originals = _bp.originals;
+    if (SCAN_TEST){ overlay.classList.remove('show'); g._saving = false; _scanTestSummary_(g, photos, originals, _bp.invoiceNos, _bp); return; }
+    var pendingInvs = _bp.invoiceNos;   // [untag] only the invoices the driver kept tagged (delivered); [R3] same order as photos
+    _ovClock_(L('Saving…', 'Menyimpan…'));   // [R3] big stops take minutes: show the seconds, so nobody thinks it froze
     var _drv = document.getElementById('driverName').value;
     var _sd  = document.getElementById('secondDriver').value || '';
     if (_sd === _drv) _sd = '';   // same name twice → drop helper (avoid double KPI count)
     var now = new Date();
-    // A3: send a clientToken and poll the read-back endpoint for the REAL result —
-    // no-cors alone can't see server errors, so before this fix a failed save still showed "Delivered".
-    var token = 'pod_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
-    var payload = { formType:'SUBMIT_POD_FOR_INVOICE', branch: BRANCH, shipmentKey:_shipKey, invoiceNos:pendingInvs,
+    // A3: send a clientToken so the REAL result can be read back. [R3] A Save that was never confirmed goes again
+    // under the SAME token (same stop, same invoices): a late answer from either try lands in one place, and the
+    // server skips invoices it already has (no second KPI row).
+    var _prevU = _uncOf_(g.key);
+    var token = (_prevU && _sameInvs_(_prevU.invs, pendingInvs)) ? _prevU.token : 'pod_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+    // [R3] shipmentKey = the DL these invoices are on (a lorry with 2 DLs on one day used to send the first DL's key
+    // for every stop: the second DL's invoices were "not found" on the server)
+    var payload = { formType:'SUBMIT_POD_FOR_INVOICE', branch: BRANCH, shipmentKey:_sk.key, invoiceNos:pendingInvs,
       driverName: _drv, secondDriver: _sd,
       vehicleNo: document.getElementById('vehicleNo').value, deliveryDate: document.getElementById('deliveryDate').value,
-      timestamp: now.toISOString(), photos: photos, originals: originals, clientToken: token,
+      timestamp: now.toISOString(), photos: photos, clientToken: token,
+      // [R3] raw barcode per invoice (Shipment_Items col 18) + a photo kept against its barcode (col 19 DRIVER_FORCED)
+      barcodeMap: _bp.barcodeMap, forcedMismatch: _bp.forcedMismatch,
       // [E5] true if ANY included photo was force-uploaded past the quality gate
       qualityFlag: g.photos.some(function(p){ return !!p.qualityFlag; }) };
     if (_smMode){ payload.salesmanId = _smId; payload.pin = _smPin; payload.gps = _smGps || null; payload.driverName = ''; payload.secondDriver = ''; }   // [Salesman] server resolves identity
-    var fd = new FormData(); fd.append('data', JSON.stringify(payload));
-    // 90s upload timeout — on dead signal fetch can hang forever behind the overlay, and drivers
-    // kill the tab (losing buffered photos). Abort → catch → photos kept + clear retry message.
-    var _ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
-    var _tmo = _ctrl ? setTimeout(function(){ _ctrl.abort(); }, 90000) : null;
-    try{
-      await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body: fd, signal: _ctrl ? _ctrl.signal : undefined });
-    } finally { if (_tmo) clearTimeout(_tmo); }
-
-    document.querySelector('.loading-text').textContent = L('Confirming…', 'Mengesahkan…');
-    var confirmed = null;
-    for (var t = 0; t < 8; t++){
-      await new Promise(function(r){ setTimeout(r, 1500); });
-      try{
-        var rb = await fetch(SCRIPT_URL + '?action=getImportResult&token=' + encodeURIComponent(token));
-        var rd = await rb.json();
-        if (rd && rd.status && rd.status !== 'pending'){ confirmed = rd; break; }
-      }catch(e){ /* keep polling */ }
+    // [R3] what was sent, by stop KEY (a re-sync during a long upload replaces the stop objects)
+    var ctx = { token: token, invs: pendingInvs.slice(), ship: _shipKey, key: g.key, name: g.name, photos: g.photos, pallet: g._pallet || null,
+      meta: { shipmentKey: payload.shipmentKey, deliveryDate: payload.deliveryDate, vehicleNo: payload.vehicleNo, driverName: payload.driverName } };
+    // [R3] read the answer itself (the old 90 s cap aborted big stops that were still uploading); if it is lost,
+    // ask the result cache. Nothing below this line may paint a stop delivered without an answer.
+    var res = await _postRead_(payload, _saveTimeoutMs_(photos.length));
+    if (!res){
+      _ovClock_(L('Confirming…', 'Mengesahkan…'), true);
+      res = await _pollResult_(token, SAVE_POLL_MS, SAVE_POLL_GAPS);
     }
-    if (confirmed && confirmed.status === 'error'){
-      // REAL failure — keep the photos so the driver can just hit Save again.
-      alert(L('NOT saved!\n' + (confirmed.message || 'Server error') + '\n\nYour photos are kept. Please tap Save again.',
-              'TIDAK disimpan!\n' + (confirmed.message || 'Ralat pelayan') + '\n\nFoto anda masih ada. Sila tekan Simpan semula.'));
-    } else if (confirmed){
-      g.invs.forEach(function(x){ if(!x._untag && String(x.status).toLowerCase()!=='delivered') x.status='delivered'; x._untag=false; });   // [untag] only tagged ones delivered; untagged stay pending
-      g.photos = [];
-      if (!_smMode){ firePalletDrop(g); firePalletCollect(g); }   // [Salesman] private cars carry no pallets
-      renderShipmentList();
-    } else {
-      // No confirmation (weak signal) — show as delivered but KEEP the photos; the read-back
-      // below re-syncs with the server and only drops photos once it confirms delivered.
-      g.invs.forEach(function(x){ x.status='delivered'; });
-      if (!_smMode){ firePalletDrop(g); firePalletCollect(g); }   // [Salesman] private cars carry no pallets
-      renderShipmentList();
-    }
+    _ovClock_(null);
+    overlay.classList.remove('show');   // the outcome may open an alert: not under the spinner
+    _saveOutcome_(g.key, res, ctx);
   }catch(err){
+    _ovClock_(null);
     alert(L('Save failed, please try again.\n(Your photos are kept.)', 'Simpan gagal, sila cuba lagi.\n(Foto anda masih ada.)'));
   }finally{
     g._saving = false;
+    _ovClock_(null);
     overlay.classList.remove('show');
-    setTimeout(function(){ checkShipmentForVehicle(true); }, 2500);   // read-back to confirm (no-cors); keep list if read-back fails
+    setTimeout(function(){ checkShipmentForVehicle(true); }, 2500);   // read-back: the server's list is the final truth (it also settles "Belum disahkan")
   }
 }
 
@@ -2946,41 +3811,43 @@ async function failGroup(i, reason){
   if (g._saving) return;            // double-tap guard (same as saveDelivery)
   g._saving = true;
   var pending = g.invs.filter(function(x){ return String(x.status).toLowerCase()!=='delivered'; });
+  var _fsk = _stopShipKey_(g, pending.map(function(x){ return x.invoiceNo; }));   // [R3] the DL(s) these invoices are on (not always the list's first DL)
+  var answered = false;   // [R3] at least one DL's batch was confirmed
   var overlay = document.getElementById('loadingOverlay');
   document.querySelector('.loading-text').textContent = L('Saving…', 'Menyimpan…');
   overlay.classList.add('show');
-  var errMsg = '';
+  var errMsg = '', unknown = false, notMarked = [];   // [R3] unknown = no answer at all; notMarked = answered, but not for these
   try{
     if (g._failProof || _smMode){
       // [FailProof] one batch POST: all pending invoices + the proof photo (uploaded ONCE).
-      // no-cors hides the response, so poll the standard clientToken readback for the real result.
-      var token = 'flp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
-      var fd = new FormData();
-      fd.append('data', JSON.stringify({ formType:'MARK_INVOICE_FAILED', shipmentKey:_shipKey,
-        invoiceNos: pending.map(function(x){ return x.invoiceNo; }), reason: reason,
-        photo: g._failProof || null, branch: BRANCH,
-        salesmanId: (_smMode ? _smId : undefined), pin: (_smMode ? _smPin : undefined), gps: (_smMode ? (_smGps || null) : undefined),
-        driverName: document.getElementById('driverName').value || '', clientToken: token }));
-      await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body: fd });
-      var confirmed = null;
-      for (var t = 0; t < 8; t++){
-        await new Promise(function(r){ setTimeout(r, 1500); });
-        try{
-          var rb = await fetch(SCRIPT_URL + '?action=getImportResult&token=' + encodeURIComponent(token));
-          var rd = await rb.json();
-          if (rd && rd.status && rd.status !== 'pending'){ confirmed = rd; break; }
-        }catch(pe){ /* keep polling */ }
+      // [R3 2026-10-24] the server's own answer is read (as Save does); only when it is lost, the result cache is asked.
+      // One batch per delivery order (DL) — almost always one; a shop on 2 DLs of this lorry gets one each.
+      var okSet = {};
+      for (var dk = 0; dk < _fsk.order.length; dk++){
+        var _dl = _fsk.order[dk];
+        var token = 'flp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+        var confirmed = await _postRead_({ formType:'MARK_INVOICE_FAILED', shipmentKey:_dl,
+          invoiceNos: _fsk.groups[_dl].slice(), reason: reason,
+          photo: g._failProof || null, branch: BRANCH,
+          salesmanId: (_smMode ? _smId : undefined), pin: (_smMode ? _smPin : undefined), gps: (_smMode ? (_smGps || null) : undefined),
+          driverName: document.getElementById('driverName').value || '', clientToken: token }, _saveTimeoutMs_(g._failProof ? 1 : 0));
+        if (!confirmed){
+          document.querySelector('.loading-text').textContent = L('Confirming…', 'Mengesahkan…');
+          confirmed = await _pollResult_(token, SAVE_POLL_MS, SAVE_POLL_GAPS);
+        }
+        if (confirmed && confirmed.status === 'success'){ answered = true; (confirmed.failed || []).forEach(function(n){ okSet[String(n)] = true; }); }
+        else if (confirmed) errMsg = confirmed.message || 'server error';
+        else unknown = true;   // no answer: nothing of this DL is marked, the proof photo stays for the next try
       }
-      if (confirmed && confirmed.status === 'success'){
-        var okSet = {}; (confirmed.failed || []).forEach(function(n){ okSet[n] = true; });
-        pending.forEach(function(x){ if (okSet[x.invoiceNo]) x.status = 'failed'; });
-        g._failProof = null;   // consumed
-      } else {
-        errMsg = (confirmed && confirmed.message) ? confirmed.message : 'no confirmation - photo kept, try again';
+      if (answered){
+        var cur = _groupByKey(g.key) || g;   // by key: a re-sync during the upload may have rebuilt the stop
+        cur.invs.forEach(function(x){ if (String(x.status).toLowerCase() === 'delivered') return;
+          if (okSet[String(x.invoiceNo)]) x.status = 'failed'; else if (!unknown && !errMsg) notMarked.push(x.invoiceNo); });
+        if (!unknown && !errMsg){ cur._failProof = null; g._failProof = null; }   // consumed
       }
     } else {
       for (var k=0; k<pending.length; k++){
-        var res = await fetch(SCRIPT_URL + '?action=MARK_INVOICE_FAILED&shipmentKey=' + encodeURIComponent(_shipKey)
+        var res = await fetch(SCRIPT_URL + '?action=MARK_INVOICE_FAILED&shipmentKey=' + encodeURIComponent(pending[k].shipmentKey || _shipKey)
           + '&invoiceNo=' + encodeURIComponent(pending[k].invoiceNo) + '&reason=' + encodeURIComponent(reason));
         var d = null; try{ d = await res.json(); }catch(je){}
         if (d && d.status === 'success'){ pending[k].status = 'failed'; }
@@ -2991,9 +3858,18 @@ async function failGroup(i, reason){
   finally{
     g._saving = false;
     overlay.classList.remove('show');
-    if (errMsg) alert(L('Some were NOT saved (' + errMsg + '). Please try again.', 'Sebahagian TIDAK disimpan (' + errMsg + '). Sila cuba lagi.'));
-    else { delete _shipProblem[g.key]; _shipFailReason[g.key] = reason; }   // [Round1] stop marked: leave Problem mode; [Round2] its pill shows the reason
+    if (unknown) alert(answered   // [R3] (answered = a shop on 2 DLs where only one DL's batch got its answer)
+      ? L('Problem confirmed for some invoices only. Your proof photo is kept. Please try again for the rest.', 'Masalah disahkan untuk sebahagian invois sahaja. Foto bukti masih ada. Sila cuba lagi untuk yang lain.')
+      : L('Problem NOT confirmed yet: nothing was marked. Your proof photo is kept. Please try again.',
+          'Masalah BELUM disahkan: tiada apa ditanda. Foto bukti masih ada. Sila cuba lagi.'));   // [R3]
+    else if (errMsg) alert(L('Some were NOT saved (' + errMsg + '). Please try again.', 'Sebahagian TIDAK disimpan (' + errMsg + '). Sila cuba lagi.'));
+    else {
+      delete _shipProblem[g.key]; _shipFailReason[g.key] = reason;   // [Round1] stop marked: leave Problem mode; [Round2] its pill shows the reason
+      delete _shipUnconf[g.key];   // [R3] the driver's latest word on this stop; the list shows what the server holds
+      if (notMarked.length) alert(L('Not marked (already delivered, or not found on the server): ', 'Tidak ditanda (sudah dihantar, atau tiada di pelayan): ') + notMarked.join(', '));
+    }
     renderShipmentList();
+    setTimeout(function(){ checkShipmentForVehicle(true); }, 2500);   // [R3] read-back, as after Save: the server's list is the final truth
   }
 }
 
@@ -3173,6 +4049,7 @@ function _smUseShipment(key, quiet){
   _shipKey = key;
   var items = (window._smItems || []).filter(function(it){ return it.shipmentKey === key; });
   _buildGroups(items);
+  _unconfReconcile_();   // [R3] same rule as the driver list: the server's list settles an unconfirmed Save
   var man = document.getElementById('manualPodSection'); if (man) man.style.display = 'none';
   var sec = document.getElementById('shipmentSection'); if (sec) sec.style.display = 'block';
   renderShipmentList();
