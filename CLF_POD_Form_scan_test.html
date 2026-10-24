@@ -2229,13 +2229,18 @@ function _scanPaperMap_(src, maxDim){
   c.width = 0;
   var lh = new Uint32Array(256); for (i = 0; i < d.length; i += 4) lh[(d[i] + 2*d[i+1] + d[i+2]) >> 2]++;
   var cut = 255; for (var acc = 0; cut > 0 && (acc += lh[cut]) < 0.03 * w * h; cut--);
-  var cs = 0, cn = 0; for (i = 0; i < d.length; i += 4) if (((d[i] + 2*d[i+1] + d[i+2]) >> 2) >= cut){ cs += d[i] - d[i+2]; cn++; }
+  var cs = 0, cn = 0, cgm = 0; for (i = 0; i < d.length; i += 4) if (((d[i] + 2*d[i+1] + d[i+2]) >> 2) >= cut){ cs += d[i] - d[i+2]; cgm += d[i+1] - (d[i] + d[i+2]) / 2; cn++; }
   var cast = cn ? cs / cn : 0, hist = new Uint32Array(256);
+  // [R4 2026-10-24] for the page flattening only: a second map that also rejects COOL and green/magenta tints
+  // beyond the paper's own cast — faded light-blue jeans in sunlight pass the warm-only test above, and the edge
+  // tracer climbed onto the knee. The corner finder keeps using m exactly as before.
+  var tint = typeof DEWARP_ON !== 'undefined' && DEWARP_ON, m2 = tint ? new Uint8Array(w * h) : null, hist2 = tint ? new Uint32Array(256) : null, castGM = cn ? cgm / cn : 0;
   for (i = 0, j = 0; i < d.length; i += 4, j++){
     var r = d[i], g = d[i+1], b = d[i+2], mn = r < g ? (r < b ? r : b) : (g < b ? g : b), warm = (r - b) - cast;
     var f = mn - (warm > 0 ? 3 * warm : 0); m[j] = f < 0 ? 0 : f; hist[m[j]]++;
+    if (tint){ var gm = Math.abs(g - (r + b) / 2 - castGM), f2 = mn - 3 * Math.max(0, Math.abs(warm) - 10) - 3 * Math.max(0, gm - 10); m2[j] = f2 < 0 ? 0 : f2; hist2[m2[j]]++; }
   }
-  return { w: w, h: h, k: k, m: m, hist: hist };
+  return { w: w, h: h, k: k, m: m, hist: hist, m2: m2, hist2: hist2 };
 }
 // Otsu threshold over the paper-ness histogram, from percentile `from` upward (0 = whole image)
 function _scanOtsu_(map, from){
@@ -2374,24 +2379,48 @@ async function _scanDetect_(src, job){
     if (cd && cd[0] !== src) cd[0].width = 0;
     if (i === 0 && Date.now() - tc > 700) slow = true;
   }
-  map.m = null;
+  // [R4 2026-10-24] the paper map is handed on to the page flattening (it traces the edges on it); the caller frees it
+  if (typeof DEWARP_ON !== 'undefined' && DEWARP_ON && best.corners) best.pmap = { map: map, T: T };
+  else { map.m = null; map.m2 = null; }
   best.score = Math.max(0, Math.round(best.score * 1000) / 1000);
   return best;
+}
+// [R4 2026-10-24] the size the 4-corner scan comes out at (Scanic's extract → _scanFixAspect_ → _scanFit_), so a
+// flattened page is drawn straight at the same size
+function _scanOutSize_(c, hw){
+  function d(a, b){ return Math.hypot(a.x - b.x, a.y - b.y); }
+  var W = Math.max(1, Math.round(Math.max(d(c.bottomRight, c.bottomLeft), d(c.topRight, c.topLeft)))), H = Math.max(1, Math.round(Math.max(d(c.topRight, c.bottomRight), d(c.topLeft, c.bottomLeft))));
+  if (hw && Math.abs(H / W - hw) / hw >= 0.03){
+    var cur = H / W, nw, nh;
+    if (hw >= cur){ nh = Math.max(H, Math.round(W * hw)); nw = Math.round(nh / hw); } else { nw = Math.max(W, Math.round(H / hw)); nh = Math.round(nw * hw); }
+    var k = Math.min(1, SCAN_OUT_MAX / Math.max(nw, nh)); W = Math.round(nw * k); H = Math.round(nh * k);
+  }
+  var k2 = Math.min(1, SCAN_OUT_MAX / Math.max(W, H));
+  return k2 >= 1 ? [W, H] : [Math.round(W * k2), Math.round(H * k2)];
 }
 
 // Corners → flattened + whitened scan canvas (used by the first pass and by "Adjust corners").
 // extractDocument is ASYNC (Promise<ScannerResult>) — treating it as sync silently returns the
 // uncropped photo with no error, so it is awaited here and its success flag is checked.
-async function _scanFromCorners_(srcCanvas, corners, job){
-  var flat = null, hw = null;
+async function _scanFromCorners_(srcCanvas, corners, job, pmap){
+  var flat = null, hw = null, fl = null;
   if (corners){
-    await _scanYield_(job);
-    var r = await _scanic.extractDocument(srcCanvas, corners, { output: 'canvas' });
-    if (r && r.success !== false && r.output && r.output.width){
-      flat = r.output;
-      hw = _scanAspect_(corners, srcCanvas.width, srcCanvas.height);
-      var fixed = _scanFixAspect_(flat, hw);
-      if (fixed !== flat){ flat.width = 0; flat = fixed; }
+    // [R4 2026-10-24] a curled page: the paper-following mesh first (dewarp_block.js). No clear gain, any doubt or
+    // any failure → fl.canvas is null and the 4-corner scan below runs exactly as before.
+    if (typeof DEWARP_ON !== 'undefined' && DEWARP_ON && typeof dwFlatten_ === 'function'){
+      var hw0 = _scanAspect_(corners, srcCanvas.width, srcCanvas.height), sz = _scanOutSize_(corners, hw0);
+      fl = await dwFlatten_(srcCanvas, corners, hw0, sz[0], sz[1], pmap, job);
+      if (fl && fl.canvas){ flat = fl.canvas; hw = hw0; }
+    }
+    if (!flat){
+      await _scanYield_(job);
+      var r = await _scanic.extractDocument(srcCanvas, corners, { output: 'canvas' });
+      if (r && r.success !== false && r.output && r.output.width){
+        flat = r.output;
+        hw = _scanAspect_(corners, srcCanvas.width, srcCanvas.height);
+        var fixed = _scanFixAspect_(flat, hw);
+        if (fixed !== flat){ flat.width = 0; flat = fixed; }
+      }
     }
   }
   var base = _scanFit_(flat || srcCanvas, SCAN_OUT_MAX);
@@ -2400,7 +2429,7 @@ async function _scanFromCorners_(srcCanvas, corners, job){
   var out = clfWhiten_(base);
   if (flat && flat !== base) flat.width = 0;
   if (base !== srcCanvas && base !== out) base.width = 0;
-  return { canvas: out, cropped: !!flat, aspect: hw, clip: clip };
+  return { canvas: out, cropped: !!flat, aspect: hw, clip: clip, flat: fl ? fl.info : null, mesh: fl && fl.canvas ? fl.mesh : null };
 }
 
 // Takes the raw camera blob + the plain entry from compressImage(); returns the entry with
@@ -2413,7 +2442,7 @@ async function scanInvoice_(blob, plainEntry, job){
   // a stalled download (weak signal) must not hold the driver: wait ≤6 s once, then barely at all
   var m = await Promise.race([_scanicLoad_(), new Promise(function(ok){ setTimeout(function(){ ok(null); }, _scanLoadWaited ? 300 : 6000); })]);
   if (!m){ _scanLoadWaited = true; info.err = 'scanner not loaded'; _scanLast = info; _scanDebug_(); return plainEntry; }
-  var loaded = null, src = null;
+  var loaded = null, src = null, det = null;
   try{
     loaded = await _scanLoadImg_(blob);
     var im = loaded.img, k = Math.min(1, SCAN_SRC_MAX / Math.max(im.naturalWidth, im.naturalHeight));
@@ -2424,16 +2453,21 @@ async function scanInvoice_(blob, plainEntry, job){
     // the full-size decoded photo (up to ~48 MB at 4K) is not needed any more — free it before the heavy part
     try{ URL.revokeObjectURL(loaded.url); im.src = ''; }catch(e0){}
     im = null; loaded = null;
-    var det = await _scanDetect_(src, job);
+    det = await _scanDetect_(src, job);
     var corners = det.corners;
     info.score = det.score; info.how = det.how; info.sure = det.score >= SCAN_SURE;
     // already past 60% of the budget after finding the paper → this phone will not make it; stop now
     if (Date.now() - t0 > SCAN_SLOW_MS * 0.6 && !_scanWasHidden_(t0)) throw new Error('too slow (' + (Date.now() - t0) + ' ms)');
-    var res = await _scanFromCorners_(src, corners, job), scan = res.canvas;
+    // [R4 2026-10-24] flattening only on a sure outline (an unsure one already asks the driver to check the edges;
+    // after Adjust it runs on the driver's corners) and while the phone is well inside the time budget
+    var pmap = det.pmap ? (!info.sure ? { skip: 'unsure edges' } : Date.now() - t0 > SCAN_SLOW_MS * 0.35 ? { skip: 'slow phone' } : det.pmap) : null;
+    var res = await _scanFromCorners_(src, corners, job, pmap), scan = res.canvas;
     if (!res.cropped) corners = null;       // extraction refused → treat as "edges not found"
     info.cropped = !!corners; info.corners = corners; info.out = [scan.width, scan.height];
     info.aspect = res.aspect ? Math.round(res.aspect * 1000) / 1000 : null;
     info.clip = res.clip;
+    info.flat = res.flat;                    // [R4] { on, why, d0 → d2 (row waviness), s0 → s2 (background share), ms }
+    plainEntry._scanMesh = res.mesh || null; // [R4] flattened page → photo map (the barcode reader samples through it)
     info.ms = Date.now() - t0;
     if (info.ms > SCAN_SLOW_MS && !_scanWasHidden_(t0)){ scan.width = 0; throw new Error('too slow (' + info.ms + ' ms)'); }
     var orig = _scanFit_(src, ORIG_MAX);
@@ -2449,10 +2483,11 @@ async function scanInvoice_(blob, plainEntry, job){
     info.err = String((e && e.message) || e); info.ms = Date.now() - t0;
     if (/too slow/.test(info.err)) _scanSlowCount++;
     plainEntry.dataUrl = plainEntry.dataUrl;  // untouched plain photo
-    plainEntry.origDataUrl = null; plainEntry._scanSrc = null;
+    plainEntry.origDataUrl = null; plainEntry._scanSrc = null; plainEntry._scanMesh = null;
     if (src){ try{ src.width = 0; }catch(e3){} }
   }finally{
     if (loaded) try{ URL.revokeObjectURL(loaded.url); }catch(e2){}
+    if (det && det.pmap && det.pmap.map){ det.pmap.map.m = null; det.pmap.map.m2 = null; }   // [R4] the paper map lived only for the flattening
   }
   _scanLast = info; _scanDebug_();
   return plainEntry;
@@ -2497,7 +2532,7 @@ function _srTag_(entry){
   var t = document.getElementById('srTag'), h = document.getElementById('srHint'), sc = entry.scan || {};
   if (sc.ok && sc.cropped && sc.sure === false){ t.textContent = '⚠ ' + L('Check the edges', 'Semak tepi'); t.style.background = '#FBBF24'; t.style.color = '#412402';
     h.innerHTML = L('Is part of the invoice cut off? Tap <b>Adjust</b>.', 'Ada bahagian invois terpotong? Tekan <b>Laras</b>.'); }
-  else if (sc.ok && sc.cropped){ t.textContent = '✓ ' + L('Scanned', 'Diimbas'); t.style.background = '#15803D'; t.style.color = '#fff';
+  else if (sc.ok && sc.cropped){ t.textContent = '✓ ' + (sc.flat && sc.flat.on ? L('Flattened', 'Diratakan') : L('Scanned', 'Diimbas')); t.style.background = '#15803D'; t.style.color = '#fff';   // [R4] curled page flattened
     h.innerHTML = L('All clear? Tap <b>Use</b>. Edges cut off? Tap <b>Adjust</b>.', 'Semua jelas? Tekan <b>Guna</b>. Tepi terpotong? Tekan <b>Laras</b>.'); }
   else if (sc.ok){ t.textContent = '⚠ ' + L('Edges not found', 'Tepi tidak dikesan'); t.style.background = '#FBBF24'; t.style.color = '#412402';
     h.innerHTML = L('Tap <b>Adjust</b> and drag the 4 corners, or <b>Retake</b>.', 'Tekan <b>Laras</b> dan tarik 4 sudut, atau <b>Ambil semula</b>.'); }
@@ -2586,6 +2621,8 @@ function scanAndReview_(blob, plainEntry){
                     entry.scan.out = [scan.width, scan.height];
                     entry.scan.aspect = res.aspect ? Math.round(res.aspect * 1000) / 1000 : null;
                     entry.scan.clip = res.clip;
+                    // [R4 2026-10-24] the flattening ran again on the driver's corners (same never-worse test)
+                    entry.scan.flat = res.flat; entry._scanMesh = res.mesh || null;
                     entry.name = String(entry.name).replace(/_scan[CF]\.jpg$/i, '') + '_scanC.jpg';
                   }
                   scan.width = 0;
@@ -2610,12 +2647,570 @@ function _scanDebug_(){
   var s = _scanLast, cam = window._acCamRes ? (window._acCamRes[0] + '×' + window._acCamRes[1]) : '—';
   el.textContent = 'scanner: ' + _scanicState + ' · camera: ' + cam
     + (s ? ' · last: ' + (s.ok ? (s.cropped ? 'cropped ' + s.how + ' ' + s.score : 'whitened') : 'plain') + ' ' + s.ms + ' ms' + (s.src ? ' src ' + s.src[0] + '×' + s.src[1] : '') + (s.out ? ' → ' + s.out[0] + '×' + s.out[1] : '')
-      + (typeof s.clip === 'number' ? ' · blown ' + Math.round(s.clip * 100) + '%' : '') + (s.err ? ' (' + s.err + ')' : '') : '')
+      + (typeof s.clip === 'number' ? ' · blown ' + Math.round(s.clip * 100) + '%' : '') + (s.err ? ' (' + s.err + ')' : '')
+      // [R4] flattening: used or why not, row waviness (% of page height) 4-corner → flattened
+      + (s.flat ? ' · flat ' + (s.flat.on ? 'yes' : 'no ' + s.flat.why) + (s.flat.d0 != null && s.flat.d2 != null ? ' ' + (s.flat.d0 * 100).toFixed(2) + '→' + (s.flat.d2 * 100).toFixed(2) + '%' : '') + ' ' + s.flat.ms + ' ms' : '') : '')
     // [R3] barcode reader state + last read (test build only shows this line)
     + (typeof _bcZXState !== 'undefined' ? ' · barcode: ' + (_bcLast && _bcLast.ms ? (_bcLast.ok ? _bcLast.text + ' ' + _bcLast.how : 'not read' + (_bcLast.err ? ' (' + _bcLast.err + ')' : '')) + ' ' + _bcLast.ms + ' ms' : _bcZXState) : '');
 }
 // warm the scanner up in the background so the first photo does not wait for the download
 setTimeout(function(){ _scanicLoad_(); }, 1500);
+
+// ══════════════════════════════════════════════════════════════════════════════════════
+// [R4 2026-10-24] Page flattening ("dewarp") — a curled invoice comes out flat.
+// Drivers hold the invoice on their lap, so the PAPER ITSELF is bent (it sags between the knees, a corner
+// droops). After the 4-corner scan the rows, table rules and dashed lines were still wavy, the top edge dipped
+// in a V and slivers of trousers stayed in the corners. This block replaces the 4-corner flattening by a mesh
+// that follows the paper:
+//   1. the 4 paper edges are traced as CURVES on the paper map (not just 4 corners): the scan's frame follows
+//      the real edge, so a V-shaped top edge comes out straight and the trouser slivers go
+//   2. the rows of the page must be straight: their slope is measured tile by tile on the 4-corner page (text
+//      rows, table rules, dashed lines; projection profiles, the classic skew measure), a smooth slope field is
+//      fitted (the traced top/bottom edges are rows too), and each row of the mesh is a streamline of that field;
+//      the columns run between the traced left/right edges, spaced by length along the row
+//   3. the mesh is applied to the full-size photo in ONE resample (WebGL, checked against a small plain-JS view of
+//      the same mesh; plain JS where WebGL is missing or draws wrong), then the scanner whitens it exactly as before
+// Sharp folds (narrower than a tile, ~2 cm) and crumpled sheets are not straightened — the gate leaves them as before.
+// Never worse: the rows are measured on the 4-corner page and again on the flattened page; the flattening is
+// used only when the rows came out clearly straighter (or background slivers went away with rows no worse)
+// and the mesh is sane. Anything else — a flat page, a fold, a crumpled sheet, a slow phone, a throw — returns
+// no canvas and the scanner makes the 4-corner scan exactly as before.
+// Pure JS + canvas/WebGL, no OpenCV (it OOM-kills the tab on 2 GB phones), nothing downloaded.
+// ══════════════════════════════════════════════════════════════════════════════════════
+var DEWARP_ON = true;            // kill switch: false = byte-for-byte the 4-corner scan of R3
+var DW_NX = 33, DW_NY = 47;      // mesh nodes, output → photo (cells ≈ 6.5 mm on A4)
+var DW_AW = 480;                 // width of the analysis page used to measure rows (A4 ≈ 2.3 px/mm)
+var DW_TX = 10, DW_TY = 14;      // tile size for the row slopes: page / 10 × page / 14 (≈ 21 × 21 mm)
+var DW_OVER = 2;                 // tiles overlap by half: twice the detail (a sharp crease) at the same tile size
+var DW_SMOOTH = 16;              // curvature penalty of the slope field (relative; tuned on the synthetic ground truth)
+var DW_GAIN = 0.002;             // rows must get straighter by ≥ 0.2% of the page height …
+var DW_RATIO = 0.6;              // … AND end at ≤ 60% of the 4-corner waviness
+var DW_SLIVER = 0.01;            // or ≥ 1% of the page stops showing background, rows no worse …
+var DW_BEND = 0.008;             // … AND a traced edge is bent ≥ 0.8% of the page (not just offset)
+var DW_FADE = 0.3;               // the pull of the first/last row onto the traced edge fades out over this share of the page
+var DW_MAX_MS = 2500;            // the analysis gives up after this (slow phone) → 4-corner scan
+var _dwLast = null;              // last decision (test build diagnostics)
+
+// unit square (u, v) → the page quad TL, TR, BR, BL (Heckbert's square-to-quad homography)
+function _dwHomog_(c){
+  var x0 = c.topLeft.x, y0 = c.topLeft.y, x1 = c.topRight.x, y1 = c.topRight.y, x2 = c.bottomRight.x, y2 = c.bottomRight.y, x3 = c.bottomLeft.x, y3 = c.bottomLeft.y;
+  var dx1 = x1 - x2, dx2 = x3 - x2, dx3 = x0 - x1 + x2 - x3, dy1 = y1 - y2, dy2 = y3 - y2, dy3 = y0 - y1 + y2 - y3, g = 0, h = 0;
+  if (Math.abs(dx3) > 1e-9 || Math.abs(dy3) > 1e-9){ var den = dx1 * dy2 - dx2 * dy1; if (Math.abs(den) < 1e-12) return null; g = (dx3 * dy2 - dx2 * dy3) / den; h = (dx1 * dy3 - dx3 * dy1) / den; }
+  var a = x1 - x0 + g * x1, b = x3 - x0 + h * x3, d = y1 - y0 + g * y1, e = y3 - y0 + h * y3;
+  return function(u, v){ var w = g * u + h * v + 1; return [(a * u + b * v + x0) / w, (d * u + e * v + y0) / w]; };
+}
+// a mesh = grid of nodes: node (i, j) is output point (i / (nx-1), j / (ny-1)) → a point (photo px, or page units)
+function _dwMesh_(nx, ny, fn){
+  var X = new Float64Array(nx * ny), Y = new Float64Array(nx * ny), i, j, p;
+  for (j = 0; j < ny; j++) for (i = 0; i < nx; i++){ p = fn(i / (nx - 1), j / (ny - 1), i, j); X[j * nx + i] = p[0]; Y[j * nx + i] = p[1]; }
+  return { nx: nx, ny: ny, X: X, Y: Y };
+}
+// output point (s, t) ∈ 0..1 → mapped point (bilinear inside the mesh cell). The barcode reader uses it too.
+function _dwAt_(m, s, t){
+  var nx = m.nx, fx = s * (nx - 1), fy = t * (m.ny - 1), i = fx < 0 ? 0 : (fx > nx - 2 ? nx - 2 : Math.floor(fx)), j = fy < 0 ? 0 : (fy > m.ny - 2 ? m.ny - 2 : Math.floor(fy));
+  var a = fx - i, b = fy - j, k = j * nx + i, X = m.X, Y = m.Y;
+  return [(X[k] * (1 - a) + X[k + 1] * a) * (1 - b) + (X[k + nx] * (1 - a) + X[k + nx + 1] * a) * b,
+          (Y[k] * (1 - a) + Y[k + 1] * a) * (1 - b) + (Y[k + nx] * (1 - a) + Y[k + nx + 1] * a) * b];
+}
+// bilinear sample of a grey image { w, h, d } (−1 = outside it)
+function _dwSamp_(img, x, y){
+  var w = img.w, h = img.h;
+  if (!(x >= 0 && y >= 0 && x <= w - 1 && y <= h - 1)) return -1;
+  var ix = x | 0, iy = y | 0; if (ix > w - 2) ix = w - 2; if (iy > h - 2) iy = h - 2;
+  var fx = x - ix, fy = y - iy, k = iy * w + ix, d = img.d;
+  return (d[k] * (1 - fx) + d[k + 1] * fx) * (1 - fy) + (d[k + w] * (1 - fx) + d[k + w + 1] * fx) * fy;
+}
+// small dense solver (Gauss with partial pivoting), n ≤ ~150
+function _dwSolve_(A, b, n){
+  var i, j, k, x = new Float64Array(n);
+  for (k = 0; k < n; k++){
+    var p = k, mx = Math.abs(A[k * n + k]);
+    for (i = k + 1; i < n; i++){ var v = Math.abs(A[i * n + k]); if (v > mx){ mx = v; p = i; } }
+    if (mx < 1e-12) return null;
+    if (p !== k){ for (j = 0; j < n; j++){ var t = A[k * n + j]; A[k * n + j] = A[p * n + j]; A[p * n + j] = t; } var tb = b[k]; b[k] = b[p]; b[p] = tb; }
+    for (i = k + 1; i < n; i++){ var f = A[i * n + k] / A[k * n + k]; if (!f) continue; for (j = k; j < n; j++) A[i * n + j] -= f * A[k * n + j]; b[i] -= f * b[k]; }
+  }
+  for (i = n - 1; i >= 0; i--){ var s = b[i]; for (j = i + 1; j < n; j++) s -= A[i * n + j] * x[j]; x[i] = s / A[i * n + i]; }
+  return x;
+}
+// the same for a symmetric positive definite band matrix (the slope field: all couplings within bw of the diagonal),
+// no pivoting needed — ~20× faster than the dense one at n = 192
+function _dwSolveBand_(A, b, n, bw){
+  var i, j, k, x = new Float64Array(n);
+  for (k = 0; k < n; k++){
+    var pv = A[k * n + k]; if (!(pv > 1e-12)) return null;
+    var iEnd = Math.min(n, k + bw + 1);
+    for (i = k + 1; i < iEnd; i++){ var f = A[i * n + k] / pv; if (!f) continue; for (j = k; j < iEnd; j++) A[i * n + j] -= f * A[k * n + j]; b[i] -= f * b[k]; }
+  }
+  for (i = n - 1; i >= 0; i--){ var s = b[i], jEnd = Math.min(n, i + bw + 1); for (j = i + 1; j < jEnd; j++) s -= A[i * n + j] * x[j]; x[i] = s / A[i * n + i]; }
+  return x;
+}
+// smooth curve through knot values c[0..K-1] at x = k/(K-1) (Catmull-Rom; flat continuation past the ends)
+function _dwCurve_(c, x){
+  var K = c.length, f = (x < 0 ? 0 : (x > 1 ? 1 : x)) * (K - 1), k = Math.min(K - 2, Math.floor(f)), t = f - k;
+  var p0 = c[k > 0 ? k - 1 : 0], p1 = c[k], p2 = c[k + 1], p3 = c[k + 2 < K ? k + 2 : K - 1], t2 = t * t, t3 = t2 * t;
+  return 0.5 * (2 * p1 + (p2 - p0) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (3 * p1 - p0 - 3 * p2 + p3) * t3);
+}
+
+// ── 1. the paper's edges as curves ──
+// Searched in the 4-corner page's own frame (u, v): along each edge, a line across the edge from 6% outside to
+// 22% inside; from outside inwards, the first place with paper behind it and background before it is the edge.
+// Inward offsets (page units) are fitted with a smooth, outlier-proof curve. A thumb on the edge or a bright speck
+// is outvoted; an edge that cannot be seen (light seat, photo border, too few hits) stays the straight 4-corner edge.
+function _dwEdge_(H, pm, T, e, unitPx, hw){
+  var N = 48, dOut = 0.06, dIn = 0.22, ds = 0.75 / Math.max(50, unitPx), nS = Math.ceil((dIn + dOut) / ds) + 1;
+  var runIn = Math.max(4, Math.round(0.02 / ds)), runOut = Math.max(4, Math.round(0.015 / ds));
+  var prof = new Float32Array(nS), F = [], Dd = [], i, j, q;
+  var jIn = Math.round((dOut + 0.12) / ds);
+  function med(a0, a1){ var v = []; for (var r = a0; r < a1; r++) if (prof[r] >= 0) v.push(prof[r]); if (v.length < 3) return -1; v.sort(function(x, y){ return x - y; }); return v[v.length >> 1]; }
+  for (i = 0; i < N; i++){
+    var fi = (i + 0.5) / N;
+    for (j = 0; j < nS; j++){
+      var dd = -dOut + j * ds, u, v, p;
+      if (e === 0){ u = fi; v = dd; } else if (e === 1){ u = 1 - dd; v = fi; } else if (e === 2){ u = fi; v = 1 - dd; } else { u = dd; v = fi; }
+      p = H(u, v); prof[j] = _dwSamp_(pm, p[0] * pm.k, p[1] * pm.k);
+    }
+    // The edge = the outermost STEP into paper: inside it the level of this line's own paper (well inside the
+    // page), outside it clearly darker. One global threshold failed on a lap shot: the black car seat pulled it
+    // down to 100 and the light trousers (150) between seat and paper (215) passed as paper — the edge climbed
+    // onto the knee. Gradual shading has no step, so a shaded paper edge is never pulled inwards.
+    var pIn = med(jIn, nS), lo = Math.max(T, 0.8 * pIn), found = -1, mid = 0;
+    for (j = runOut; j < nS - runIn; j++){
+      if (!(prof[j] > lo)) continue;
+      var sIn = 0, nIn = 0, sOut = 0, nOut = 0, off = 0, hi = 0;
+      for (q = j; q < j + runIn; q++) if (prof[q] >= 0){ sIn += prof[q]; nIn++; }
+      for (q = j - runOut; q < j; q++){ if (prof[q] < 0) off++; else { sOut += prof[q]; nOut++; } }
+      if (!nIn) continue;
+      var mi = sIn / nIn, mo = nOut ? sOut / nOut : 0;
+      if (mi < lo || mo > 0.75 * mi) continue;
+      for (q = j; q < j + runIn; q++) if (prof[q] >= 0.8 * mi) hi++;
+      if (hi < 0.8 * runIn) continue;
+      if (off < 0.3 * runOut){ found = j; mid = (mi + mo) / 2; }   // background = the photo's border → unknown
+      break;
+    }
+    if (found < 1) continue;
+    // sub-step: where the profile last rises through mid-level before the paper run; the crossing sits mid-way
+    // through the blurred step, so 1.5 map px further in keeps the scan's outermost row on paper (printing never
+    // comes that close to the edge)
+    q = Math.min(nS - 1, found + (runIn >> 1)); while (q > Math.max(1, found - runOut) && prof[q - 1] >= mid) q--;
+    var a = prof[q - 1], b = prof[q], fr = b - a > 1e-6 ? (mid - a) / (b - a) : 0.5;
+    F.push(fi); Dd.push(-dOut + (q - 1 + (fr < 0 ? 0 : (fr > 1 ? 1 : fr)) + 2) * ds);
+  }
+  if (F.length < 0.5 * N) return null;
+  var K = e % 2 ? 21 : 17, fit = _dwFit_(F, Dd, K, 1.5, 0.02);
+  if (!fit) return null;
+  // sanity: smooth, small, and no steep turn (a folded corner is a 45° cut — that is not a bend)
+  var mx = 0, sl = 0, bend = 0, k;
+  for (k = 0; k < K; k++){ mx = Math.max(mx, Math.abs(fit.c[k])); bend = Math.max(bend, Math.abs(fit.c[k] - fit.c[0] - (fit.c[K - 1] - fit.c[0]) * k / (K - 1))); }
+  for (k = 1; k < K; k++) sl = Math.max(sl, Math.abs(fit.c[k] - fit.c[k - 1]) * (K - 1));
+  sl = e % 2 ? sl / hw : sl * hw;   // on the sheet itself (offsets are in page height for top/bottom, page width for the sides)
+  if (fit.rms > 0.012 || mx > 0.2 || fit.used < 0.45 * N || sl > 1) return null;
+  return { c: fit.c, n: F.length, rms: fit.rms, max: mx, slope: sl, bend: bend };   // bend = off its own straight line (a loose crop is offset, not bent)
+}
+// least squares on hat functions + curvature penalty, re-weighted (Tukey) so stray hits do not bend the curve
+function _dwFit_(f, d, K, lam2, lam0){
+  var n = f.length, w = new Float64Array(n), c = null, it, i, k, p, q, rms = 0, used = n;
+  for (i = 0; i < n; i++) w[i] = 1;
+  for (it = 0; it < 4; it++){
+    var A = new Float64Array(K * K), b = new Float64Array(K);
+    for (i = 0; i < n; i++){
+      var x = f[i] * (K - 1), k0 = Math.min(K - 2, Math.floor(x)), t = x - k0, w0 = 1 - t, w1 = t, wi = w[i];
+      A[k0 * K + k0] += wi * w0 * w0; A[k0 * K + k0 + 1] += wi * w0 * w1; A[(k0 + 1) * K + k0] += wi * w0 * w1; A[(k0 + 1) * K + k0 + 1] += wi * w1 * w1;
+      b[k0] += wi * w0 * d[i]; b[k0 + 1] += wi * w1 * d[i];
+    }
+    for (k = 1; k < K - 1; k++){ var id = [k - 1, k, k + 1], cf = [1, -2, 1]; for (p = 0; p < 3; p++) for (q = 0; q < 3; q++) A[id[p] * K + id[q]] += lam2 * cf[p] * cf[q]; }
+    for (k = 0; k < K; k++) A[k * K + k] += lam0;
+    c = _dwSolve_(A, b, K); if (!c) return null;
+    var r = new Float64Array(n), srt;
+    for (i = 0; i < n; i++){ var xx = f[i] * (K - 1), kk = Math.min(K - 2, Math.floor(xx)), tt = xx - kk; r[i] = Math.abs(c[kk] * (1 - tt) + c[kk + 1] * tt - d[i]); }
+    srt = Array.prototype.slice.call(r).sort(function(a, b){ return a - b; });
+    var sig = Math.max(0.0025, 1.4826 * srt[n >> 1]), sw = 0, ss = 0; used = 0;
+    for (i = 0; i < n; i++){ var u = r[i] / (4.685 * sig); w[i] = u >= 1 ? 0 : (1 - u * u) * (1 - u * u); if (w[i] > 0){ used++; sw += w[i]; ss += w[i] * r[i] * r[i]; } }
+    rms = Math.sqrt(ss / Math.max(1e-9, sw));
+  }
+  return { c: c, rms: rms, used: used };
+}
+
+// ── 2. the rows of the page ──
+// The page seen through a mesh, small (DW_AW wide): grey levels + which coarse cells are background reached from
+// the frame's edge (slivers — a dark trouser wedge must not count as "ink", and its share is the sliver measure).
+function _dwView_(lum, pm, T, mesh, aw, ah){
+  var A = new Float32Array(aw * ah), x, y, nx = mesh.nx, ny = mesh.ny, MX = mesh.X, MY = mesh.Y, cellW = aw / (nx - 1), lk = lum.k, lx0 = lum.x0, ly0 = lum.y0;
+  var LW = lum.w, LH = lum.h, LD = lum.d;
+  for (y = 0; y < ah; y++){
+    var fy = (y + 0.5) / ah * (ny - 1), j = Math.min(ny - 2, Math.floor(fy)), b = fy - j;
+    for (var i = 0; i < nx - 1; i++){
+      var k = j * nx + i, xa = Math.max(0, Math.ceil(i * cellW - 0.5)), xb = i === nx - 2 ? aw : Math.min(aw, Math.ceil((i + 1) * cellW - 0.5));
+      // photo point at the left / right end of this cell on this row → grey-copy pixels; linear in between
+      var l0 = ((MX[k] * (1 - b) + MX[k + nx] * b) - lx0) * lk, l1 = ((MY[k] * (1 - b) + MY[k + nx] * b) - ly0) * lk;
+      var r0 = ((MX[k + 1] * (1 - b) + MX[k + nx + 1] * b) - lx0) * lk, r1 = ((MY[k + 1] * (1 - b) + MY[k + nx + 1] * b) - ly0) * lk;
+      for (x = xa; x < xb; x++){
+        var a = (x + 0.5) / cellW - i, sx = l0 + (r0 - l0) * a, sy = l1 + (r1 - l1) * a, v = 0;
+        if (sx >= 0 && sy >= 0 && sx <= LW - 1 && sy <= LH - 1){
+          var ix = sx | 0, iy = sy | 0; if (ix > LW - 2) ix = LW - 2; if (iy > LH - 2) iy = LH - 2;
+          var fx = sx - ix, fz = sy - iy, q = iy * LW + ix;
+          v = (LD[q] * (1 - fx) + LD[q + 1] * fx) * (1 - fz) + (LD[q + LW] * (1 - fx) + LD[q + LW + 1] * fx) * fz;
+        }
+        A[y * aw + x] = v;
+      }
+    }
+  }
+  var cw = Math.ceil(aw / 4), ch = Math.ceil(ah / 4), bad = new Uint8Array(cw * ch), lid = new Uint8Array(cw * ch), st = [], i;
+  for (y = 0; y < ch; y++) for (x = 0; x < cw; x++){ var q = _dwAt_(mesh, (x * 4 + 2) / aw, (y * 4 + 2) / ah), pv = _dwSamp_(pm, q[0] * pm.k, q[1] * pm.k); bad[y * cw + x] = pv <= T ? 1 : 0; }
+  function seed(k){ if (bad[k] && !lid[k]){ lid[k] = 1; st.push(k); } }
+  for (x = 0; x < cw; x++){ seed(x); seed((ch - 1) * cw + x); }
+  for (y = 0; y < ch; y++){ seed(y * cw); seed(y * cw + cw - 1); }
+  while (st.length){ var k = st.pop(), kx = k % cw, ky = (k - kx) / cw; if (kx > 0) seed(k - 1); if (kx < cw - 1) seed(k + 1); if (ky > 0) seed(k - cw); if (ky < ch - 1) seed(k + cw); }
+  var n = 0; for (i = 0; i < lid.length; i++) n += lid[i];
+  return { A: A, w: aw, h: ah, lid: lid, cw: cw, sliver: n / lid.length };
+}
+// Slope of the rows in each tile: ink (darker than the local paper) projected along candidate slopes; the slope
+// whose profile is sharpest (rows stacked exactly) wins. A tile with little ink or no clear winner says nothing.
+function _dwTiles_(V, over){
+  var aw = V.w, ah = V.h, A = V.A, hw2 = Math.ceil(aw / 2), hh2 = Math.ceil(ah / 2), x, y, k, i;
+  // paper level: max over ≈ 3 mm, then blurred (half resolution)
+  var h2 = new Float32Array(hw2 * hh2), t1 = new Float32Array(hw2 * hh2), t2 = new Float32Array(hw2 * hh2);
+  for (y = 0; y < hh2; y++) for (x = 0; x < hw2; x++){ var x0 = Math.min(aw - 1, 2 * x), y0 = Math.min(ah - 1, 2 * y), x1 = Math.min(aw - 1, x0 + 1), y1 = Math.min(ah - 1, y0 + 1);
+    h2[y * hw2 + x] = Math.max(A[y0 * aw + x0], A[y0 * aw + x1], A[y1 * aw + x0], A[y1 * aw + x1]); }
+  function pass(src, dst, r, isMax, horiz){
+    for (y = 0; y < hh2; y++) for (x = 0; x < hw2; x++){
+      var acc = 0, n = 0;
+      for (k = -r; k <= r; k++){ var xx = horiz ? x + k : x, yy = horiz ? y : y + k; if (xx < 0 || yy < 0 || xx >= hw2 || yy >= hh2) continue; var v = src[yy * hw2 + xx]; if (isMax){ if (v > acc) acc = v; } else { acc += v; n++; } }
+      dst[y * hw2 + x] = isMax ? acc : acc / n;
+    }
+  }
+  pass(h2, t1, 3, true, true); pass(t1, t2, 3, true, false); pass(t2, t1, 4, false, true); pass(t1, t2, 4, false, false);
+  var bg = { w: hw2, h: hh2, d: t2 };
+  var TW = aw / DW_TX, TH = ah / DW_TY, SX = TW / over, SY = TH / over, NTX = (DW_TX - 1) * over + 1, NTY = (DW_TY - 1) * over + 1, tiles = [], NS = 29, SMAX = 0.42, tx, ty;
+  var nb = Math.ceil(TH + 2 * SMAX * TW / 2) + 4, prof = new Float32Array(nb), E = new Float64Array(NS);
+  var xs = new Float32Array(Math.ceil(TW + 2) * Math.ceil(TH + 2)), ys = new Float32Array(xs.length), ws = new Float32Array(xs.length);
+  for (ty = 0; ty < NTY; ty++) for (tx = 0; tx < NTX; tx++){
+    var cx = TW / 2 + tx * SX, cy = TH / 2 + ty * SY, X0 = Math.max(0, Math.floor(cx - TW / 2)), X1 = Math.min(aw, Math.floor(cx + TW / 2)), Y0 = Math.max(0, Math.floor(cy - TH / 2)), Y1 = Math.min(ah, Math.floor(cy + TH / 2)), n = 0, ink = 0;
+    for (y = Y0; y < Y1; y++) for (x = X0; x < X1; x++){
+      if (V.lid[(y >> 2) * V.cw + (x >> 2)]) continue;
+      var b = _dwSamp_(bg, x / 2, y / 2); if (b < 40) continue;
+      var dk = (b - A[y * aw + x]) / b - 0.12;
+      if (dk > 0){ xs[n] = x - cx; ys[n] = y - cy; ws[n] = dk > 0.5 ? 0.5 : dk; ink += ws[n]; n++; }
+    }
+    if (ink < 0.004 * TW * TH) continue;
+    var best = -1, bi = 0, sum = 0;
+    for (i = 0; i < NS; i++){
+      var m = -SMAX + 2 * SMAX * i / (NS - 1), off = nb / 2, e = 0;
+      prof.fill(0);
+      for (k = 0; k < n; k++){ var bb = (ys[k] - m * xs[k] + off) | 0; prof[bb] += ws[k]; }
+      for (k = 0; k < nb; k++) e += prof[k] * prof[k];
+      E[i] = e; sum += e; if (e > best){ best = e; bi = i; }
+    }
+    var mean = sum / NS, conf = (best - mean) / best;
+    var dm = 0; if (bi > 0 && bi < NS - 1){ var den = E[bi - 1] - 2 * E[bi] + E[bi + 1]; if (den < 0) dm = 0.5 * (E[bi - 1] - E[bi + 1]) / den; }
+    var slope = -SMAX + 2 * SMAX * (bi + dm) / (NS - 1);
+    if (conf < 0.12 || bi === 0 || bi === NS - 1) continue;
+    tiles.push({ x: cx, y: cy, tx: tx, ty: ty, m: slope, w: conf * conf * Math.min(1, ink / (0.03 * TW * TH)) });
+  }
+  return tiles;
+}
+// Smooth slope field over the page: one node per tile centre plus a ring of nodes on the page's border, bilinear
+// in between. Each observation (a tile, or a point of a traced edge) pulls its nodes; a light curvature penalty
+// fills the tiles without ink and evens out noise; a very weak pull to 0 (no evidence = leave the rows as they
+// are). Tile outliers (a slanted stamp, a signature) are re-weighted away.
+function _dwCell_(F, x, y){
+  var FX = F.FX, ix = x <= F.TW / 2 ? 0 : (x >= F.aw - F.TW / 2 ? FX - 2 : 1 + Math.floor((x - F.TW / 2) / F.SX)), iy = y <= F.TH / 2 ? 0 : (y >= F.ah - F.TH / 2 ? F.FY - 2 : 1 + Math.floor((y - F.TH / 2) / F.SY));
+  if (ix > FX - 2) ix = FX - 2; if (iy > F.FY - 2) iy = F.FY - 2;
+  var a = (x - F.NX[ix]) / (F.NX[ix + 1] - F.NX[ix]), c = (y - F.NY[iy]) / (F.NY[iy + 1] - F.NY[iy]);
+  return { k: iy * FX + ix, a: a < 0 ? 0 : (a > 1 ? 1 : a), c: c < 0 ? 0 : (c > 1 ? 1 : c) };
+}
+function _dwSlopeAt_(F, x, y){
+  var q = _dwCell_(F, x, y), k = q.k, a = q.a, c = q.c, S = F.S, FX = F.FX;
+  return (S[k] * (1 - a) + S[k + 1] * a) * (1 - c) + (S[k + FX] * (1 - a) + S[k + FX + 1] * a) * c;
+}
+function _dwField_(tiles, extra, aw, ah, over){
+  var NTX = (DW_TX - 1) * over + 1, NTY = (DW_TY - 1) * over + 1, FX = NTX + 2, FY = NTY + 2, n = FX * FY, TW = aw / DW_TX, TH = ah / DW_TY, i, k, it, wm = 0;
+  var F = { aw: aw, ah: ah, FX: FX, FY: FY, NX: [0], NY: [0], TW: TW, TH: TH, SX: TW / over, SY: TH / over, S: null };
+  for (i = 0; i < NTX; i++) F.NX.push(TW / 2 + i * F.SX); F.NX.push(aw);
+  for (i = 0; i < NTY; i++) F.NY.push(TH / 2 + i * F.SY); F.NY.push(ah);
+  tiles.forEach(function(t){ wm += t.w; }); wm = tiles.length ? wm / tiles.length : 0.1;
+  var obs = tiles.map(function(t){ return { x: t.x, y: t.y, m: t.m, w: t.w }; }).concat((extra || []).map(function(o){ return { x: o.x, y: o.y, m: o.m, w: o.w * wm * over, fixed: true }; }));
+  obs.forEach(function(o){ var q = _dwCell_(F, o.x, o.y); o.id = [q.k, q.k + 1, q.k + FX, q.k + FX + 1]; o.wt = [(1 - q.a) * (1 - q.c), q.a * (1 - q.c), (1 - q.a) * q.c, q.a * q.c]; });
+  var rw = new Float64Array(obs.length); for (i = 0; i < obs.length; i++) rw[i] = 1;
+  var lamS = 0.0075 * DW_SMOOTH * over * over * wm, lam0 = 0.004 * wm;   // same stiffness per mm whatever the node spacing
+  for (it = 0; it < 3; it++){
+    var A = new Float64Array(n * n), b = new Float64Array(n);
+    for (i = 0; i < obs.length; i++){ var o = obs[i], ww = o.w * rw[i]; for (var p = 0; p < 4; p++){ b[o.id[p]] += ww * o.wt[p] * o.m; for (var q2 = 0; q2 < 4; q2++) A[o.id[p] * n + o.id[q2]] += ww * o.wt[p] * o.wt[q2]; } }
+    function pen(i0, i1, i2){ var id2 = [i0, i1, i2], cf = [1, -2, 1]; for (var p2 = 0; p2 < 3; p2++) for (var q3 = 0; q3 < 3; q3++) A[id2[p2] * n + id2[q3]] += lamS * cf[p2] * cf[q3]; }
+    for (var yy = 0; yy < FY; yy++) for (var xx = 1; xx < FX - 1; xx++) pen(yy * FX + xx - 1, yy * FX + xx, yy * FX + xx + 1);
+    for (var xx2 = 0; xx2 < FX; xx2++) for (var yy2 = 1; yy2 < FY - 1; yy2++) pen((yy2 - 1) * FX + xx2, yy2 * FX + xx2, (yy2 + 1) * FX + xx2);
+    for (k = 0; k < n; k++) A[k * n + k] += lam0;
+    F.S = _dwSolveBand_(A, b, n, 2 * FX); if (!F.S) return null;
+    var r = obs.map(function(o){ return Math.abs(_dwSlopeAt_(F, o.x, o.y) - o.m); }), srt = r.slice(0, tiles.length).sort(function(a, b){ return a - b; });
+    var sig = Math.max(0.02, 1.4826 * (srt.length ? srt[srt.length >> 1] : 0));
+    for (i = 0; i < obs.length; i++){ if (obs[i].fixed) continue; var u = r[i] / (4.685 * sig); rw[i] = u >= 1 ? 0 : (1 - u * u) * (1 - u * u); }
+  }
+  var sw = 0, ss = 0; for (i = 0; i < tiles.length; i++){ var rr = _dwSlopeAt_(F, obs[i].x, obs[i].y) - obs[i].m; sw += obs[i].w * rw[i]; ss += obs[i].w * rw[i] * rr * rr; }
+  F.resid = Math.sqrt(ss / Math.max(1e-9, sw)); F.wsum = sw;
+  return F;
+}
+// one row = a streamline of the slope field through (x0, y0); y at n+1 evenly spaced x from xa to xb (x0 on that grid)
+function _dwRow_(F, x0, y0, xa, xb, n){
+  var Y = new Float64Array(n + 1), dx = (xb - xa) / n, k0 = Math.round((x0 - xa) / dx), k, dir;
+  Y[k0] = y0;
+  for (dir = -1; dir <= 1; dir += 2){
+    var y = y0, x = xa + k0 * dx, h = dir * dx;
+    for (k = k0 + dir; k >= 0 && k <= n; k += dir){ var k1 = _dwSlopeAt_(F, x, y), k2 = _dwSlopeAt_(F, x + h / 2, y + k1 * h / 2); y += k2 * h; x += h; Y[k] = y; }
+  }
+  return Y;
+}
+// How wavy the rows of a page view are, as a share of the page height: rows of the fitted slope field, each
+// compared with its own best straight line, weighted by how much measured ink the row runs through.
+function _dwWavy_(V, tiles){
+  var F = _dwField_(tiles, null, V.w, V.h, 1);
+  if (!F || tiles.length < 6) return { d: null, tiles: tiles.length };
+  var ny = 25, n = 48, NTX = F.FX - 2, NTY = F.FY - 2, cov = new Float64Array(NTX * NTY), j, k;
+  tiles.forEach(function(t){ cov[t.ty * NTX + t.tx] = Math.min(1, t.w * 4); });
+  var sw = 0, ss = 0;
+  for (j = 1; j < ny - 1; j++){
+    var Y = _dwRow_(F, V.w / 2, j / (ny - 1) * V.h, 0, V.w, n), wr = 0, s0 = 0, sx = 0, sy = 0, sxx = 0, sxy = 0, c = new Float64Array(n + 1);
+    for (k = 0; k <= n; k++){ var x = k / n * V.w, y = Y[k]; c[k] = cov[Math.min(NTY - 1, Math.max(0, Math.round((y - F.TH / 2) / F.SY))) * NTX + Math.min(NTX - 1, Math.max(0, Math.round((x - F.TW / 2) / F.SX)))]; wr += c[k];
+      var w = 0.15 + c[k]; s0 += w; sx += w * x; sy += w * y; sxx += w * x * x; sxy += w * x * y; }
+    if (wr < 4) continue;
+    var bb = (s0 * sxy - sx * sy) / Math.max(1e-9, s0 * sxx - sx * sx), aa = (sy - bb * sx) / s0, e = 0;
+    for (k = 0; k <= n; k++){ var r = Y[k] - aa - bb * (k / n * V.w); e += (0.15 + c[k]) * r * r; }
+    sw += wr; ss += wr * e / s0;
+  }
+  return { d: sw > 0 ? Math.sqrt(ss / sw) / V.h : null, tiles: tiles.length, resid: F.resid };
+}
+// The flat page → 4-corner frame map. Rows: streamlines of the slope field, anchored on the page's centre column
+// between the traced top and bottom edges; the first and last rows are then pulled exactly onto those edges, the
+// pull fading out over the top / bottom 30% of the page. Columns: each row runs from the traced left edge to the
+// traced right edge, nodes spaced by length along the row (a tilted stretch of row holds more paper).
+function _dwBuild_(F, E, aw, ah, NX, NY){
+  function off(e, x){ return E[e] ? _dwCurve_(E[e].c, x) : 0; }
+  var xa = -0.1 * aw, xb = 1.1 * aw, n = 72, x0 = aw / 2, rows = [], j, k, i, it, tau = DW_FADE;
+  var ycT = off(0, 0.5) * ah, ycB = (1 - off(2, 0.5)) * ah;
+  for (j = 0; j < NY; j++) rows.push(_dwRow_(F, x0, ycT + j / (NY - 1) * (ycB - ycT), xa, xb, n));
+  var rT = new Float64Array(n + 1), rB = new Float64Array(n + 1), maxR = 0;
+  for (k = 0; k <= n; k++){ var u = (xa + k * (xb - xa) / n) / aw; rT[k] = off(0, u) * ah - rows[0][k]; rB[k] = (1 - off(2, u)) * ah - rows[NY - 1][k];
+    if (u >= 0 && u <= 1) maxR = Math.max(maxR, E[0] ? Math.abs(rT[k]) : 0, E[2] ? Math.abs(rB[k]) : 0); }
+  for (j = 0; j < NY; j++){ var t = j / (NY - 1), wT = t < tau ? (1 - t / tau) * (1 - t / tau) : 0, wB = t > 1 - tau ? (1 - (1 - t) / tau) * (1 - (1 - t) / tau) : 0;
+    if (wT || wB) for (k = 0; k <= n; k++) rows[j][k] += wT * rT[k] + wB * rB[k]; }
+  var UV = { nx: NX, ny: NY, X: new Float64Array(NX * NY), Y: new Float64Array(NX * NY) }, m = 64, L = new Float64Array(m + 1);
+  for (j = 0; j < NY; j++){
+    var Y = rows[j];
+    var yAt = function(x){ var f = (x - xa) / (xb - xa) * n, q = f < 0 ? 0 : (f > n - 1 ? n - 1 : Math.floor(f)); return Y[q] + (Y[q + 1] - Y[q]) * (f - q); };
+    var xL = 0, xR = aw;
+    for (it = 0; it < 3; it++){ xL = off(3, yAt(xL) / ah) * aw; xR = (1 - off(1, yAt(xR) / ah)) * aw; }
+    var px = xL, py = yAt(xL); L[0] = 0;
+    for (k = 1; k <= m; k++){ var xx = xL + (xR - xL) * k / m, yy = yAt(xx); L[k] = L[k - 1] + Math.hypot(xx - px, yy - py); px = xx; py = yy; }
+    for (i = 0, k = 0; i < NX; i++){
+      var tgt = L[m] * i / (NX - 1); while (k < m - 1 && L[k + 1] < tgt) k++;
+      var fr = (tgt - L[k]) / Math.max(1e-9, L[k + 1] - L[k]), xq = xL + (xR - xL) * (k + (fr < 0 ? 0 : (fr > 1 ? 1 : fr))) / m;
+      UV.X[j * NX + i] = xq / aw; UV.Y[j * NX + i] = yAt(xq) / ah;
+    }
+  }
+  return { UV: UV, maxR: maxR / ah };
+}
+
+// ── 3. one resample of the full-size photo through the mesh ──
+// WebGL: the photo is a texture, the mesh is drawn as triangles (GPU, ~tens of ms). Needs highp floats in the
+// fragment shader (mediump is ±3 px on a 3000 px photo) and a big enough texture; else the plain JS path below.
+function _dwDrawGL_(src, mesh, W, H){
+  var c = document.createElement('canvas'); c.width = W; c.height = H;
+  var gl = null, out = null, res = [];
+  try{
+    gl = c.getContext('webgl', { alpha: false, antialias: false, depth: false, stencil: false, preserveDrawingBuffer: true, premultipliedAlpha: false });
+    if (!gl) return null;
+    var hp = gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER, gl.HIGH_FLOAT), mt = gl.getParameter(gl.MAX_TEXTURE_SIZE), vp = gl.getParameter(gl.MAX_VIEWPORT_DIMS);
+    if (!hp || hp.precision < 20 || mt < Math.max(src.width, src.height) || vp[0] < W || vp[1] < H) return null;
+    function sh(type, s){ var o = gl.createShader(type); res.push(['s', o]); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error('shader'); return o; }
+    var pr = gl.createProgram(); res.push(['p', pr]);
+    gl.attachShader(pr, sh(gl.VERTEX_SHADER, 'attribute vec2 p; attribute vec2 t; varying highp vec2 vt; void main(){ vt = t; gl_Position = vec4(p, 0.0, 1.0); }'));
+    gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, 'precision highp float; uniform sampler2D tx; varying highp vec2 vt; void main(){ gl_FragColor = vec4(texture2D(tx, vt).rgb, 1.0); }'));
+    gl.linkProgram(pr); if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error('link'); gl.useProgram(pr);
+    var nx = mesh.nx, ny = mesh.ny, P = new Float32Array(nx * ny * 2), Tc = new Float32Array(nx * ny * 2), idx = new Uint16Array((nx - 1) * (ny - 1) * 6), i, j, n = 0;
+    for (j = 0; j < ny; j++) for (i = 0; i < nx; i++){ var v = j * nx + i; P[2 * v] = i / (nx - 1) * 2 - 1; P[2 * v + 1] = 1 - j / (ny - 1) * 2;
+      Tc[2 * v] = (mesh.X[v] + 0.5) / src.width; Tc[2 * v + 1] = (mesh.Y[v] + 0.5) / src.height;
+      if (i < nx - 1 && j < ny - 1){ idx[n++] = v; idx[n++] = v + 1; idx[n++] = v + nx; idx[n++] = v + 1; idx[n++] = v + nx + 1; idx[n++] = v + nx; } }
+    function attr(data, name){ var bf = gl.createBuffer(); res.push(['b', bf]); gl.bindBuffer(gl.ARRAY_BUFFER, bf); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW); var l = gl.getAttribLocation(pr, name); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, 2, gl.FLOAT, false, 0, 0); }
+    attr(P, 'p'); attr(Tc, 't');
+    var ib = gl.createBuffer(); res.push(['b', ib]); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
+    var tex = gl.createTexture(); res.push(['t', tex]); gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
+    gl.viewport(0, 0, W, H); gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.drawElements(gl.TRIANGLES, n, gl.UNSIGNED_SHORT, 0);
+    if (gl.getError() !== gl.NO_ERROR || gl.isContextLost()) throw new Error('gl draw');
+    out = document.createElement('canvas'); out.width = W; out.height = H;
+    var ox = out.getContext('2d', { willReadFrequently: true }); ox.drawImage(c, 0, 0);
+    // a dead GPU path reads back black: a scan is mostly paper, so sample a 9 × 9 grid
+    var probe = 0; for (j = 1; j <= 9; j++) for (i = 1; i <= 9; i++){ var d = ox.getImageData(Math.floor(W * i / 10), Math.floor(H * j / 10), 1, 1).data; probe += d[0] + d[1] + d[2]; }
+    if (probe < 81 * 3 * 4){ out.width = 0; out = null; }
+  }catch(e){ if (out){ out.width = 0; out = null; } }
+  finally{
+    try{ if (gl){ res.forEach(function(r){ if (r[0] === 's') gl.deleteShader(r[1]); else if (r[0] === 'p') gl.deleteProgram(r[1]); else if (r[0] === 'b') gl.deleteBuffer(r[1]); else gl.deleteTexture(r[1]); });
+      var le = gl.getExtension('WEBGL_lose_context'); if (le) le.loseContext(); } }catch(e2){}
+    c.width = 0;
+  }
+  return out;
+}
+// Does a drawn page match the small grey view of the same mesh (made from the photo in plain JS)? Correlation of
+// the two grey images: a right drawing scores 0.99, a flipped / mirrored / 3%-shifted one ≤ 0.67 (measured on the
+// synthetic and the real lap photos) — a GPU that garbles the texture is caught here and the JS path draws instead.
+function _dwSame_(canvas, A, aw, ah){
+  var c = document.createElement('canvas'); c.width = aw; c.height = ah;
+  var x = c.getContext('2d', { willReadFrequently: true }); x.imageSmoothingQuality = 'high'; x.drawImage(canvas, 0, 0, aw, ah);
+  var d = x.getImageData(0, 0, aw, ah).data, i, n = aw * ah, sg = 0, sa = 0, sgg = 0, saa = 0, sga = 0;
+  c.width = 0;
+  for (i = 0; i < n; i++){ var g = (77 * d[4 * i] + 150 * d[4 * i + 1] + 29 * d[4 * i + 2]) >> 8, a = A[i]; sg += g; sa += a; sgg += g * g; saa += a * a; sga += g * a; }
+  var vg = sgg / n - (sg / n) * (sg / n), va = saa / n - (sa / n) * (sa / n);
+  if (!(vg > 1 && va > 1)) return Math.abs(sg - sa) / n < 20;   // a blank page: same brightness is all one can ask
+  return (sga / n - (sg / n) * (sa / n)) / Math.sqrt(vg * va) >= 0.9;
+}
+// plain JS: per output pixel, the photo point from the mesh cell, bilinear colour. Reads only the part of the
+// photo the page covers.
+function _dwDrawJS_(src, mesh, W, H){
+  var i, x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (i = 0; i < mesh.X.length; i++){ x0 = Math.min(x0, mesh.X[i]); x1 = Math.max(x1, mesh.X[i]); y0 = Math.min(y0, mesh.Y[i]); y1 = Math.max(y1, mesh.Y[i]); }
+  x0 = Math.max(0, Math.floor(x0) - 2); y0 = Math.max(0, Math.floor(y0) - 2); x1 = Math.min(src.width, Math.ceil(x1) + 3); y1 = Math.min(src.height, Math.ceil(y1) + 3);
+  var rw = x1 - x0, rh = y1 - y0; if (rw < 2 || rh < 2) return null;
+  var sd = src.getContext('2d', { willReadFrequently: true }).getImageData(x0, y0, rw, rh).data;
+  var out = document.createElement('canvas'); out.width = W; out.height = H;
+  var ox = out.getContext('2d'), id = ox.createImageData(W, H), od = id.data, nx = mesh.nx, ny = mesh.ny, MX = mesh.X, MY = mesh.Y, x, y;
+  var cellW = W / (nx - 1);
+  for (y = 0; y < H; y++){
+    var fy = (y + 0.5) / H * (ny - 1), j = Math.min(ny - 2, Math.floor(fy)), b = fy - j, o = y * W * 4;
+    for (i = 0; i < nx - 1; i++){
+      var k = j * nx + i, xa = Math.max(0, Math.ceil(i * cellW - 0.5)), xb = Math.min(W, Math.ceil((i + 1) * cellW - 0.5));
+      if (i === nx - 2) xb = W;
+      // photo point at the left / right end of this cell, on this row
+      var lx = MX[k] * (1 - b) + MX[k + nx] * b, ly = MY[k] * (1 - b) + MY[k + nx] * b, rx = MX[k + 1] * (1 - b) + MX[k + nx + 1] * b, ry = MY[k + 1] * (1 - b) + MY[k + nx + 1] * b;
+      for (x = xa; x < xb; x++){
+        var a = ((x + 0.5) / W * (nx - 1)) - i, sx = lx + (rx - lx) * a - x0, sy = ly + (ry - ly) * a - y0;
+        if (sx < 0) sx = 0; else if (sx > rw - 1.001) sx = rw - 1.001; if (sy < 0) sy = 0; else if (sy > rh - 1.001) sy = rh - 1.001;
+        var ix = sx | 0, iy = sy | 0, fx = sx - ix, fyy = sy - iy, p = (iy * rw + ix) * 4, q = p + rw * 4;
+        var w00 = (1 - fx) * (1 - fyy), w10 = fx * (1 - fyy), w01 = (1 - fx) * fyy, w11 = fx * fyy, oo = o + x * 4;
+        od[oo] = sd[p] * w00 + sd[p + 4] * w10 + sd[q] * w01 + sd[q + 4] * w11 + 0.5;
+        od[oo + 1] = sd[p + 1] * w00 + sd[p + 5] * w10 + sd[q + 1] * w01 + sd[q + 5] * w11 + 0.5;
+        od[oo + 2] = sd[p + 2] * w00 + sd[p + 6] * w10 + sd[q + 2] * w01 + sd[q + 6] * w11 + 0.5;
+        od[oo + 3] = 255;
+      }
+    }
+  }
+  ox.putImageData(id, 0, 0);
+  return out;
+}
+
+// ── the whole thing ──
+// src = the photo canvas, corners = the scanner's 4 corners, hw = true height/width, W × H = the scan's size,
+// pmap = { map, T } from the corner finder (null after "Adjust": made here; { skip } = phone too slow today).
+// Resolves { canvas, mesh, info } when the flattened page is used, or { canvas: null, info } = keep the 4-corner scan.
+async function dwFlatten_(src, corners, hw, W, H, pmap, job){
+  var t0 = Date.now(), info = { on: false, ms: 0, why: '' }, map = null, own = false;
+  _dwLast = info;
+  function no(why){ info.why = why; return { canvas: null, info: info }; }
+  function late(){ return Date.now() - t0 > DW_MAX_MS; }
+  try{
+    if (!DEWARP_ON) return no('off');
+    if (pmap && pmap.skip) return no(pmap.skip);
+    if (!corners || !(hw > 1)) return no(hw ? 'landscape' : 'no proportions');
+    var Hm = _dwHomog_(corners); if (!Hm) return no('corners');
+    map = pmap && pmap.map && pmap.map.m ? pmap.map : null;
+    if (!map){ map = _scanPaperMap_(src, 900); own = true; }
+    // the tint-aware paper map (light-blue jeans are not paper); the corner finder's own map if it is missing
+    var pm = map.m2 ? { w: map.w, h: map.h, d: map.m2, k: map.k } : { w: map.w, h: map.h, d: map.m, k: map.k };
+    var T = map.m2 ? _scanOtsu_({ hist: map.hist2, w: map.w, h: map.h }, 0) : (pmap && pmap.T ? pmap.T : _scanOtsu_(map, 0));
+    function len(a, b){ return Math.hypot(a.x - b.x, a.y - b.y); }
+    var pagePxH = (len(corners.topLeft, corners.bottomLeft) + len(corners.topRight, corners.bottomRight)) / 2 * map.k;
+    var pagePxW = (len(corners.topLeft, corners.topRight) + len(corners.bottomLeft, corners.bottomRight)) / 2 * map.k;
+    // 1. the edges as curves
+    var E = [_dwEdge_(Hm, pm, T, 0, pagePxH, hw), _dwEdge_(Hm, pm, T, 1, pagePxW, hw), _dwEdge_(Hm, pm, T, 2, pagePxH, hw), _dwEdge_(Hm, pm, T, 3, pagePxW, hw)];
+    info.edges = E.map(function(e){ return e ? Math.round(e.max * 1000) / 1000 : null; });
+    info.bend = Math.round(Math.max.apply(null, E.map(function(e){ return e ? e.bend : 0; })) * 1000) / 1000;
+    info.steep = Math.round(Math.max.apply(null, E.map(function(e){ return e ? e.slope : 0; })) * 100) / 100;
+    info.t = [Date.now() - t0];                 // ms at: edges, 4-corner rows, mesh, check, drawn
+    await _scanYield_(job);
+    // grey copy of the page region (≈ 1100 px) for the analysis views
+    var xs = [corners.topLeft.x, corners.topRight.x, corners.bottomRight.x, corners.bottomLeft.x], ys = [corners.topLeft.y, corners.topRight.y, corners.bottomRight.y, corners.bottomLeft.y];
+    var bx0 = Math.min.apply(null, xs), bx1 = Math.max.apply(null, xs), by0 = Math.min.apply(null, ys), by1 = Math.max.apply(null, ys), mg = 0.08 * Math.max(bx1 - bx0, by1 - by0);
+    bx0 = Math.max(0, Math.floor(bx0 - mg)); by0 = Math.max(0, Math.floor(by0 - mg)); bx1 = Math.min(src.width, Math.ceil(bx1 + mg)); by1 = Math.min(src.height, Math.ceil(by1 + mg));
+    var lk = Math.min(1, 1100 / Math.max(bx1 - bx0, by1 - by0)), lw = Math.max(2, Math.round((bx1 - bx0) * lk)), lh = Math.max(2, Math.round((by1 - by0) * lk));
+    var lc = document.createElement('canvas'); lc.width = lw; lc.height = lh;
+    var lx = lc.getContext('2d', { willReadFrequently: true }); lx.imageSmoothingQuality = 'high'; lx.drawImage(src, bx0, by0, bx1 - bx0, by1 - by0, 0, 0, lw, lh);
+    var ld = lx.getImageData(0, 0, lw, lh).data, L8 = new Uint8Array(lw * lh), i, j;
+    lc.width = 0;
+    for (i = 0; i < L8.length; i++) L8[i] = (77 * ld[4 * i] + 150 * ld[4 * i + 1] + 29 * ld[4 * i + 2]) >> 8;
+    ld = null;
+    var lum = { w: lw, h: lh, d: L8, x0: bx0, y0: by0, k: lk };
+    var aw = DW_AW, ah = Math.round(aw * hw), NX = DW_NX, NY = DW_NY;
+    // 2. the 4-corner page as it is today: its rows → slope field (+ the traced top / bottom edges as rows)
+    var M0 = _dwMesh_(NX, NY, function(s, t){ return Hm(s, t); });
+    // the field uses half-overlapping tiles; waviness (the gate) is measured with the plain tiles on both pages —
+    // on this page they are simply every other overlapping tile
+    var V0 = _dwView_(lum, pm, T, M0, aw, ah), T0 = _dwTiles_(V0, DW_OVER);
+    var W0 = _dwWavy_(V0, DW_OVER === 1 ? T0 : T0.filter(function(t){ return t.tx % DW_OVER === 0 && t.ty % DW_OVER === 0; }).map(function(t){ return { x: t.x, y: t.y, tx: t.tx / DW_OVER, ty: t.ty / DW_OVER, m: t.m, w: t.w }; }));
+    info.s0 = Math.round(V0.sliver * 1000) / 1000; info.tiles = T0.length;
+    V0 = null; info.t.push(Date.now() - t0);
+    await _scanYield_(job); if (late()) return no('slow');
+    var extra = [];
+    [0, 2].forEach(function(e){
+      if (!E[e]) return;
+      for (var q = 0; q <= 16; q++){ var u = q / 16, ua = Math.max(0, u - 0.03), ub = Math.min(1, u + 0.03), v = _dwCurve_(E[e].c, u), sl = (_dwCurve_(E[e].c, ub) - _dwCurve_(E[e].c, ua)) / (ub - ua) * ah / aw;
+        extra.push({ x: u * aw, y: (e === 0 ? v : 1 - v) * ah, m: e === 0 ? sl : -sl, w: 1.5 }); }
+    });
+    var F = _dwField_(T0, extra, aw, ah, DW_OVER);
+    if (!F) return no('field');
+    info.resid = Math.round(F.resid * 1000) / 1000;
+    var B = _dwBuild_(F, E, aw, ah, NX, NY), UV = B.UV;
+    info.edgeMiss = Math.round(B.maxR * 1000) / 1000;
+    // the traced top / bottom edge and the measured rows must agree (a wrong trace — background taken for paper —
+    // does not follow the rows)
+    if (B.maxR > 0.04) return no('edges disagree');
+    // sanity of the flat-page → photo-frame map: no folds, no cell squashed or blown up, no wild shift
+    var nom = 1 / ((NX - 1) * (NY - 1)), amin = 9, amax = 0, maxShift = 0, nan = false;
+    for (j = 0; j < NY - 1; j++) for (i = 0; i < NX - 1; i++){
+      var k = j * NX + i, ax = UV.X[k + NX + 1] - UV.X[k], ay = UV.Y[k + NX + 1] - UV.Y[k], bx = UV.X[k + NX] - UV.X[k + 1], by = UV.Y[k + NX] - UV.Y[k + 1];
+      var ar = 0.5 * (ax * by - ay * bx) / nom;
+      if (!isFinite(ar)) nan = true; else { if (ar < amin) amin = ar; if (ar > amax) amax = ar; }
+    }
+    info.area = [Math.round(amin * 100) / 100, Math.round(amax * 100) / 100];
+    // real curled pages stay within 0.7–1.3× per 6 mm cell; well outside that the mesh is not following paper
+    var sane = !nan && amin > 0.45 && amax < 2.2;
+    for (i = 0; i < UV.X.length; i++){ var s0 = (i % NX) / (NX - 1), t1 = Math.floor(i / NX) / (NY - 1); maxShift = Math.max(maxShift, Math.hypot(UV.X[i] - s0, UV.Y[i] - t1)); }
+    info.shift = Math.round(maxShift * 1000) / 1000;
+    if (!sane || maxShift > 0.3) return no('mesh');
+    var M2 = _dwMesh_(NX, NY, function(s, t, ii, jj){ var k2 = jj * NX + ii; return Hm(UV.X[k2], UV.Y[k2]); });
+    info.t.push(Date.now() - t0);
+    await _scanYield_(job); if (late()) return no('slow');
+    // 3. measure the result exactly like the 4-corner page, then decide
+    var V2 = _dwView_(lum, pm, T, M2, aw, ah), T2 = _dwTiles_(V2, 1), W2 = _dwWavy_(V2, T2), A2 = V2.A;
+    info.s2 = Math.round(V2.sliver * 1000) / 1000;
+    V2 = null; lum = null; info.t.push(Date.now() - t0);
+    var d0 = W0.d, d2 = W2.d, ok = false;
+    info.d0 = d0 == null ? null : Math.round(d0 * 10000) / 10000; info.d2 = d2 == null ? null : Math.round(d2 * 10000) / 10000;
+    // slivers alone count only when an edge is really bent: a flat page in a loose 4-corner crop stays as it was
+    var slivers = info.s0 - info.s2 >= DW_SLIVER && info.bend >= DW_BEND;
+    if (d0 != null && d2 != null){
+      if (d0 - d2 >= DW_GAIN && d2 <= DW_RATIO * d0) { ok = true; info.why = 'rows'; }
+      else if (slivers && d2 <= d0 + 0.0005) { ok = true; info.why = 'edges'; }
+    } else if (d0 == null && d2 == null && slivers) { ok = true; info.why = 'edges'; }   // a page with no rows to measure
+    if (!ok) return no('no gain');
+    await _scanYield_(job);
+    var out = _dwDrawGL_(src, M2, W, H), how = 'gl';
+    if (out && !_dwSame_(out, A2, aw, ah)){ out.width = 0; out = null; info.glBad = true; }   // the GPU drew something else
+    if (!out){ out = _dwDrawJS_(src, M2, W, H); how = 'js'; }
+    A2 = null;
+    if (!out) return no('draw');
+    info.on = true; info.how = how; info.t.push(Date.now() - t0);
+    return { canvas: out, mesh: M2, info: info };
+  }catch(e){
+    if (job && job.cancelled) throw e;
+    console.warn('flattening failed — 4-corner scan kept:', e);
+    return no('error: ' + String((e && e.message) || e).slice(0, 80));
+  }finally{
+    info.ms = Date.now() - t0;
+    if (own && map){ map.m = null; map.m2 = null; }
+  }
+}
 
 // ══════════════════════════════════════════════════════════════════════════════════════
 // [R3 2026-10-24] Which invoice is this photo? — read the barcode printed on every CLF invoice.
@@ -2739,10 +3334,12 @@ function _bcCubic_(img, x, y){
 
 // The analysis plane: the flattened page at BC_PLANE_PXMM (corners known) or the photo itself (no corners).
 // toSrc(x, y) maps a plane point to full-size source pixels.
-function _bcPlane_(src, corners, hw){
+// [R4 2026-10-24] a page the scanner flattened (curled paper) is sampled through the same mesh, so a band that
+// bends with the paper comes out straight
+function _bcPlane_(src, corners, hw, mesh){
   var maxSide = Math.max(src.width, src.height);
   if (corners){
-    var H = _bcHomog_(corners); if (!H) return null;
+    var H = mesh && typeof _dwAt_ === 'function' ? function(u, v){ return _dwAt_(mesh, u, v); } : _bcHomog_(corners); if (!H) return null;
     var land = hw && hw < 1, pw = Math.round((land ? 297 : 210) * BC_PLANE_PXMM), ph = Math.round(pw * (hw || Math.SQRT2));
     // sample from a smaller copy of the photo: the plane only needs ~4 px/mm, the strips go back to full size
     var k = Math.min(1, 1400 / maxSide), small = _bcLum_(src, 0, 0, src.width, src.height, k), L = new Float32Array(pw * ph), x, y;
@@ -2878,6 +3475,7 @@ async function bcDecode_(entry, job){
   try{
     var zxP = _bcZXLoad_(), natP = _bcNativeLoad_();
     var sc = entry.scan || {}, corners = (entry._scanSrc && sc.cropped && sc.corners) ? sc.corners : null;
+    var mesh = corners && entry._scanMesh ? entry._scanMesh : null;   // [R4] the flattened page's own mesh
     if (entry._scanSrc && entry._scanSrc.width) src = entry._scanSrc;
     else {
       var im = await new Promise(function(ok, no){ var i = new Image(); i.onload = function(){ ok(i); }; i.onerror = function(){ no(new Error('photo decode failed')); }; i.src = entry.dataUrl; });
@@ -2888,7 +3486,7 @@ async function bcDecode_(entry, job){
     if (nat){ res = await _bcNatRead_(nat, src); if (res) res.how = 'native'; }   // fast, any angle
     await _bcYield_(job);
     var hw = corners ? (_scanAspect_(corners, src.width, src.height) || (sc.out ? sc.out[1] / sc.out[0] : Math.SQRT2)) : null;
-    var pl = res ? null : _bcPlane_(src, corners, hw);
+    var pl = res ? null : _bcPlane_(src, corners, hw, mesh);
     await _bcYield_(job);
     var bands = pl ? _bcBands_(pl) : [];
     info.bands = bands.length;
@@ -3453,6 +4051,7 @@ function _scanTestSummary_(g, photos, originals, invoiceNos, bp){
     barcodeMap: bp ? bp.barcodeMap : {}, forcedMismatch: !!(bp && bp.forcedMismatch), dataUrls: order.map(function(p){ return p.dataUrl; }) }; }catch(e){}
   var rows = order.map(function(p, k){
     var sc = p.scan || {}, st = sc.ok ? (sc.cropped ? (sc.adjusted ? L('scanned (corners adjusted)', 'diimbas (sudut dilaras)') : L('scanned', 'diimbas')) : L('whitened, edges not found', 'diputihkan, tepi tidak dikesan')) : L('plain photo', 'foto biasa') + (sc.err ? ' — ' + _esc(sc.err) : '');
+    if (sc.flat && sc.flat.on) st += ' + ' + L('flattened', 'diratakan');   // [R4 2026-10-24] curled page flattened
     var how = p.forced ? L('kept although its barcode is another invoice', 'disimpan walaupun kod bar invois lain')
             : p.bcHow === 'barcode' ? '&#10003; ' + L('barcode read', 'kod bar dibaca')
             : p.bcHow === 'picked' ? L('chosen by the driver', 'dipilih pemandu') : '? ' + L('barcode not read, list order', 'kod bar tidak dibaca, ikut senarai');
