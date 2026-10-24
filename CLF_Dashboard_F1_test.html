@@ -329,6 +329,9 @@
   var followToday = true;
   function fmtYesterday(){ var d=new Date(Date.now()-86400000); var m=('0'+(d.getMonth()+1)).slice(-2), day=('0'+d.getDate()).slice(-2); return d.getFullYear()+'-'+m+'-'+day; }
   function isToday(){ return selectedDate === fmtToday(); }
+  // yyyy-mm-dd strings compare correctly as text. A FUTURE date is not "past": the import files a DL under
+  // its Est Del Date, so tomorrow can already have DLs — those are planned, not missing.
+  function isPast(){ return selectedDate < fmtToday(); }
   // Branch filter — reads ?branch=MTK|KTN|ALL from the URL (default ALL = all branches combined).
   // A Wayne-style link ?branch=KTN opens the dashboard pre-filtered to Kuantan. [F1] Without a URL
   // branch, the last choice made on this device is reused.
@@ -355,20 +358,55 @@
   // the same day. Red is kept for failed (problem) stops only. Past dates are always "late".
   var POD_DUE_HOUR = 15, FUEL_DUE_HOUR = 16;
   function hourNow(){ return new Date().getHours(); }
-  function podLate(){ return !isToday() || hourNow() >= POD_DUE_HOUR; }
+  function podLate(){ return isPast() || (isToday() && hourNow() >= POD_DUE_HOUR); }
   function fuelLate(){ return hourNow() >= FUEL_DUE_HOUR; }
   var _DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], _MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   function niceDate(ymd){ var p=String(ymd).split('-').map(Number); if(p.length!==3||!p[0]) return String(ymd); return _DOW[new Date(p[0], p[1]-1, p[2]).getDay()]+' '+p[2]+' '+_MON[p[1]-1]; }
   // A failed source shows "unavailable" plus a Retry that refetches only that zone's own source.
   function unavail(zone, text){ return '<span class="unavail">⚠ '+(text||'Data unavailable')+'<button class="retry" data-zone="'+zone+'">Retry</button></span>'; }
+  // [F1] Labels that depend only on the selection. Painted at the start of every load, so switching
+  // date / view / branch never leaves the previous view's wording sitting over placeholders or new data.
+  function paintLabels(){
+    var today = isToday(), past = isPast(), nd = niceDate(selectedDate);
+    var h1 = document.querySelector('.topbar h1');
+    if(h1) h1.textContent = 'CLF Fleet Dashboard' + (selectedBranch==='ALL' ? '' : ' · ' + branchLabel());
+    // B2: the POD half is daily-only — flag it loudly in Weekly/Monthly so the boss doesn't
+    // read a single day's delivery % as the weekly/monthly number.
+    var podScope = $('podScope');
+    if(selectedView==='daily'){ podScope.textContent = '— for ' + nd; podScope.style.color=''; }
+    else { podScope.textContent = '— ⚠ daily view only: showing ' + nd + ' (fuel below follows the ' + selectedView + ' period)'; podScope.style.color='var(--amber-700)'; }
+    $('podHeroTitle').textContent = past ? 'Deliveries confirmed' : (today ? 'Deliveries confirmed so far' : 'Deliveries planned');
+    $('podNotSubmittedSub').textContent = past ? 'Assigned a lorry but no POD recorded that day'
+      : (today ? 'Assigned a lorry but 0 deliveries confirmed yet · turns amber after 3 pm' : 'Assigned a lorry · deliveries happen on that day');
+    $('boardTitle').textContent = today ? 'Drivers now' : (past ? ('Crew on ' + nd) : ('Crew planned for ' + nd));
+    $('naPendHead').textContent = past ? 'No POD' : 'Not yet';
+    $('lorrySuccessSub').textContent = past
+      ? 'Green = finished · amber = invoices with no POD record · red = has problem stops · number = confirmed / planned'
+      : 'Green = finished · blue = on the way · red = has problem stops · number = confirmed / planned · started lorries only';
+    var tag = today ? '' : '<span class="tag-today">today only</span>';   // these two lists are always today's
+    $('noFuelTag').innerHTML = tag; $('fuelSubTag').innerHTML = tag;
+  }
+  var RETRY_OK = {};   // [F1] zone -> LOAD_SEQ in which a Retry refilled it (that load's own late failure must not blank it)
 
+  // [F1] The chart library is deferred and the page starts loading data without waiting for it, so a chart
+  // asked for before the library has run waits in _chartQ and is drawn on DOMContentLoaded (deferred
+  // scripts run before that event). dropChart() destroys a chart AND cancels a queued one, so a zone that
+  // was re-rendered as empty / unavailable in the meantime can't get an old chart drawn over it.
+  var _chartQ = {};
+  function dropChart(id){ if(CHARTS[id]){ try{ CHARTS[id].destroy(); }catch(e){} delete CHARTS[id]; } delete _chartQ[id]; }
   function chart(id, opt){ var el=$(id); if(!el) return;
-    // Defensive: if the chart library failed to load (slow/blocked CDN), do NOT throw — a single
-    // chart error must never crash the whole dashboard. Show a note; the numbers/tables stay correct.
-    if(typeof ApexCharts==='undefined'){ el.innerHTML='<div class="unavail" style="padding:8px;line-height:1.5;">⚠ Chart library didn\'t load. The numbers &amp; tables above are still correct.<br><i>Pustaka carta gagal dimuat — nombor &amp; jadual di atas tetap betul.</i></div>'; return; }
-    opt.chart=opt.chart||{}; opt.chart.animations={enabled:false}; if(CHARTS[id]){ try{CHARTS[id].destroy();}catch(e){} }
+    if(typeof ApexCharts==='undefined'){
+      if(document.readyState==='loading'){ dropChart(id); _chartQ[id] = opt; el.innerHTML = '<div class="empty">Loading chart…</div>'; return; }
+      // Defensive: if the chart library failed to load (slow/blocked CDN), do NOT throw — a single
+      // chart error must never crash the whole dashboard. Show a note; the numbers/tables stay correct.
+      el.innerHTML='<div class="unavail" style="padding:8px;line-height:1.5;">⚠ Chart library didn\'t load. The numbers &amp; tables above are still correct.<br><i>Pustaka carta gagal dimuat — nombor &amp; jadual di atas tetap betul.</i></div>'; return;
+    }
+    opt.chart=opt.chart||{}; opt.chart.animations={enabled:false};
+    dropChart(id);
+    el.innerHTML = '';   // [F1] ApexCharts appends to the container — clear "Loading…" / "unavailable" first
     try{ CHARTS[id]=new ApexCharts(el, opt); CHARTS[id].render(); }catch(e){ el.innerHTML='<div class="unavail" style="padding:8px;">⚠ Chart could not render</div>'; }
   }
+  document.addEventListener('DOMContentLoaded', function(){ var q = _chartQ; _chartQ = {}; Object.keys(q).forEach(function(id){ chart(id, q[id]); }); });
 
   function showErr(msg){ var b=$('errBanner'); if(b){ b.textContent=msg; b.classList.add('show'); } }
   function hideErr(){ var b=$('errBanner'); if(b) b.classList.remove('show'); }
@@ -421,8 +459,8 @@
   var _curAbort = null;    // AbortController of the in-flight load; a newer load aborts it (FN-3)
   var _lastLoadAt = 0;     // ms of the last load() start — floors the visibilitychange retry (2026-08-10)
   // [F1] up to SNAP_MAX saved views (date|view|branch), so switching MTK/KTN/Yesterday paints instantly.
-  // The TEST page keeps its own keys so it can never disturb the live page's clfDash_snap_v1.
-  var _SNAP_KEY = 'clfDashT_snaps_v2', _STAFF_KEY = 'clfDash_staff_v1', SNAP_MAX = 4;
+  // The TEST page keeps its own keys so it can never disturb the live page's clfDash_snap_v1 / staff map.
+  var _SNAP_KEY = 'clfDashT_snaps_v2', _STAFF_KEY = 'clfDashT_staff_v1', SNAP_MAX = 4;
   var CUR = { ship:null, fuel:null, dash:null, leave:null };   // latest data per source for what is on screen
   var ON_SCREEN_KEY = null;     // date|view|branch the board is currently showing
   var FROM_SNAPSHOT = false;    // board was painted from a saved view and fresh data hasn't settled yet
@@ -444,12 +482,17 @@
   function snapKey(){ return selectedDate+'|'+selectedView+'|'+selectedBranch; }
   // Only what this board renders from dash is kept — the full payload carries a lot the page never uses.
   function slimDash(d){ return d ? { status:d.status, drivers:d.drivers, notSubmittedToday:d.notSubmittedToday, isPublicHoliday:d.isPublicHoliday } : d; }
+  // per-shipment atRisk duplicates failedList and this page never reads it (~100 KB a saved view)
+  function slimShip(sh){ if(!sh || !sh.shipments) return sh; var o = Object.assign({}, sh); o.shipments = sh.shipments.map(function(s){ var c = Object.assign({}, s); delete c.atRisk; return c; }); return o; }
+  // day = the day the view was SAVED: its "today only" parts (fuel slips not in, fuel list, leave) belong to that day
+  function snapOf(c){ return { k:snapKey(), day:fmtToday(), ts:LAST_UPDATED, date:selectedDate, view:selectedView, branch:selectedBranch, dash:slimDash(c.dash), ship:slimShip(c.ship), fuel:c.fuel, leave:c.leave }; }
   function loadSnaps(){ try{ var a = JSON.parse(localStorage.getItem(_SNAP_KEY)||'[]'); return Array.isArray(a) ? a : []; }catch(e){ return []; } }
   function saveSnapshot(o){
     var a = loadSnaps().filter(function(s){ return s && s.k !== o.k; });
     a.unshift(o); a = a.slice(0, SNAP_MAX);
     // localStorage is shared by every form on this origin: on a quota error drop the oldest view and retry.
     while(a.length){ try{ localStorage.setItem(_SNAP_KEY, JSON.stringify(a)); return; }catch(e){ a.pop(); } }
+    try{ localStorage.removeItem(_SNAP_KEY); }catch(e){}   // not even the newest view fits: don't keep replaying the old list
   }
   function loadSnapshot(){ var k = snapKey(), a = loadSnaps(); for(var i=0;i<a.length;i++){ if(a[i] && a[i].k===k) return a[i]; } return null; }
   function saveStaff(){ try{ localStorage.setItem(_STAFF_KEY, JSON.stringify(STAFF)); }catch(e){} }
@@ -540,12 +583,13 @@
     $('driverBoard').innerHTML = L;
     $('needsActionBody').innerHTML = '<tr><td colspan="6" class="empty">Loading…</td></tr>';
     $('podNotSubmitted').innerHTML = L; $('podNotSubmittedNote').textContent = '';
-    ['lorrySuccess','fuelCostLorry','fuelPerKm'].forEach(function(id){ if(CHARTS[id]){ try{ CHARTS[id].destroy(); }catch(e){} delete CHARTS[id]; } $(id).innerHTML = L; });
+    ['lorrySuccess','fuelCostLorry','fuelPerKm'].forEach(function(id){ dropChart(id); $(id).innerHTML = L; });
     $('lorrySuccessEmpty').style.display = 'none'; $('fuelCostEmpty').style.display = 'none'; $('fuelPerKmEmpty').style.display = 'none';
     $('crewRows').innerHTML = '<tr><td colspan="4" class="empty">Loading…</td></tr>';
     $('dsumRows').innerHTML = '<tr><td colspan="5" class="empty">Loading…</td></tr>';
     $('routePicker').innerHTML = L; $('routeStops').innerHTML = '';
     $('fuelPerKmHero').textContent = '…'; $('fuelKmPerL').textContent = 'loading…'; $('fuelTotal').textContent = '…';
+    $('fuelScope').textContent = ''; $('fuelHeroTitle').textContent = 'Fuel cost per km';   // period labels come with the fuel data
     $('noFuelChips').innerHTML = L; $('noFuelNote').textContent = '';
     $('tankRows').innerHTML = '<tr><td colspan="7" class="empty">Loading…</td></tr>'; $('tankEmpty').style.display = 'none';
     $('fuelRows').innerHTML = '<tr><td colspan="7" class="empty">Loading…</td></tr>';
@@ -556,13 +600,12 @@
     // [F1] follow today across midnight unless someone picked another date
     if(followToday && selectedDate !== fmtToday()){ selectedDate = fmtToday(); var _di = $('dateInput'); if(_di) _di.value = selectedDate; }
     syncDayButtons();
-    var _h1 = document.querySelector('.topbar h1');
-    if(_h1) _h1.textContent = 'CLF Fleet Dashboard' + (selectedBranch==='ALL' ? '' : ' · ' + branchLabel());
+    paintLabels();   // [F1] selection-only labels first, so the old view's wording never sits over the new one
     // [F1] A different date / view / branch paints its saved view if this device has one, else placeholders.
     var key = snapKey();
     if(key !== ON_SCREEN_KEY){
       CUR = { ship:null, fuel:null, dash:null, leave:null };
-      if(!paintSnapshot()){ LAST_UPDATED = null; FROM_SNAPSHOT = false; renderSkeleton(); }
+      if(!paintSnapshot()){ LAST_UPDATED = null; FROM_SNAPSHOT = false; renderSkeleton(); paintUpdated(); }
       ON_SCREEN_KEY = key;
     }
     // Don't wipe the meta to "Loading…" if we already have data on screen — show a subtle "refreshing…"
@@ -585,14 +628,17 @@
     var authBox = { denied:false };   // _rgSeen() sets this if any read came back READ_AUTH
     function fresh(){ return seq === LOAD_SEQ; }   // a newer load started → this one's late arrivals are ignored
 
-    if (!_rgAuth()) { _rgShowLock(); return; }
+    if (!_rgAuth()) { _pending = {}; paintLoadLine(); _rgShowLock(); return; }   // no fetch → nothing is "still loading"
     _lastLoadAt = Date.now();   // stamped only where requests are actually issued (see visibilitychange)
     _pending = { ship:1, fuel:1, dash:1, leave:1 }; _loadStartedAt = Date.now();
     if(!_loadTick) _loadTick = setInterval(paintLoadLine, 1000);
     var ps = ['dash','ship','fuel','leave'].map(function(z){
       return zoneRequest(z, sig, forceFresh).then(_rgSeen(authBox), function(){ return null; }).then(function(data){
         if(!fresh()) return;
-        got[z] = data; _pending[z] = 0; paintLoadLine();
+        _pending[z] = 0; paintLoadLine();
+        // A Retry already refilled this zone during THIS load — its own late failure must not blank it.
+        if(!data && RETRY_OK[z] === seq){ got[z] = CUR[z]; return; }
+        got[z] = data;
         land(z, data);
       });
     });
@@ -611,7 +657,7 @@
       else if(!ship || !fuel || !dash){ showErr('Some data failed to load — sections marked "unavailable" are NOT empty, just not loaded. Tap Retry on them.'); }
       if(ship || fuel){
         LAST_UPDATED = Date.now();
-        saveSnapshot({ k:key, ts:LAST_UPDATED, date:selectedDate, view:selectedView, branch:selectedBranch, dash:slimDash(dash), ship:ship, fuel:fuel, leave:leave });
+        saveSnapshot(snapOf(CUR));   // from CUR: includes any zone a Retry refilled during this load
       }
       paintUpdated();
     }).catch(function(e){ if(!fresh()) return; showErr('Something went wrong loading the dashboard. Please Refresh.'); $('dashMeta').textContent=''; });
@@ -624,14 +670,20 @@
     var seq = LOAD_SEQ;
     document.querySelectorAll('.retry[data-zone="'+zone+'"]').forEach(function(b){ b.disabled = true; b.textContent = 'Loading…'; });
     var authBox = { denied:false };
-    zoneRequest(zone, null, false).then(_rgSeen(authBox), function(){ return null; }).then(function(data){
+    // Rides on the current load's AbortController, so a newer load (date / branch switch) cancels it too.
+    zoneRequest(zone, _curAbort ? _curAbort.signal : null, false).then(_rgSeen(authBox), function(){ return null; }).then(function(data){
       if(seq !== LOAD_SEQ) return;                         // a newer load took over
+      if(!data && CUR[zone]) return;                       // a late failed retry must not blank data a load has painted since
       if(authBox.denied && !data){ _rgOnDenied(false); return; }
+      if(data) RETRY_OK[zone] = seq;                       // ...and the running load's own late failure must not blank this one
       land(zone, data);
-      if(data){
+      // Stamp + save only once nothing of this load is still in flight; otherwise the load's
+      // Promise.all does it (from CUR), so hours-old saved-view zones are never labelled fresh.
+      var inFlight = Object.keys(_pending).some(function(k){ return _pending[k]; });
+      if(data && !inFlight && (CUR.ship || CUR.fuel)){
         if(CUR.ship && CUR.fuel && CUR.dash) hideErr();
-        LAST_UPDATED = Date.now();
-        saveSnapshot({ k:snapKey(), ts:LAST_UPDATED, date:selectedDate, view:selectedView, branch:selectedBranch, dash:slimDash(CUR.dash), ship:CUR.ship, fuel:CUR.fuel, leave:CUR.leave });
+        LAST_UPDATED = Date.now(); FROM_SNAPSHOT = false;
+        saveSnapshot(snapOf(CUR));
         paintUpdated();
       }
     });
@@ -642,6 +694,14 @@
   function paintSnapshot(){
     var s = loadSnapshot();
     if(!s) return false;
+    // [F1] A view saved on another day (yesterday's "Today" is exactly what the Yesterday button opens)
+    // carries THAT day's "today only" parts — fuel slips not in, the fuel submissions list, leave. Drop
+    // them: those cards show "Loading…" until today's own sources land, never another day's names.
+    if(s.day !== fmtToday()){
+      s.leave = null;
+      if(s.dash) s.dash = Object.assign({}, s.dash, { notSubmittedToday:null, isPublicHoliday:false, staleToday:true });
+      if(s.fuel) s.fuel = Object.assign({}, s.fuel, { submissions:null, staleToday:true });
+    }
     if(s.dash && s.dash.drivers && s.dash.drivers.length) seedStaffFromDrivers(s.dash.drivers);
     CUR = { ship:s.ship||null, fuel:s.fuel||null, dash:s.dash||null, leave:s.leave||null };
     try{ renderTop(s.ship, s.fuel); }catch(e){}
@@ -680,8 +740,7 @@
   var NONE_OPEN = false;              // [F1] the collapsed "No route" list was expanded by the user
   function renderBoard(ship, dash, leave){
     var el = $('driverBoard'); if(!el) return;
-    var today = isToday();
-    var _bt = $('boardTitle'); if(_bt) _bt.textContent = today ? 'Drivers now' : ('Crew on ' + niceDate(selectedDate));
+    var past = isPast();   // the card title comes from paintLabels()
     if(!ship){ el.innerHTML = unavail('ship'); return; }
     // leave list is valid only for the date the BACKEND says it covers (KL-timezone-exact)
     var leaveValid = !!(leave && leave.onLeave && leave.date === selectedDate);
@@ -736,8 +795,8 @@
       row('#1A56DB','2nd trip', groups.trip2,   function(x){ return idCol(x.name, role(x))+' <span class="meta">'+esc(x.frac)+'</span>'; }) +
       row('#60A5FA','On route', groups.route,   function(x){ return idCol(x.name, role(x))+' <span class="meta">'+esc(x.frac)+'</span>'; }) +
       row('#9CA3AF','On leave', groups.leave,   function(x){ return idCol(x.name); }) +
-      row('#D1D5DB', today ? 'No route' : 'Not on a lorry', groups.none, function(x){ return idCol(x.name); }, true);   // [F1] collapsed: a phone no longer scrolls past ~48 names
-    if(!today && groups.none.length) html += '<div class="note-line">Leave is only recorded for today, so on a past date anyone on leave is listed under "Not on a lorry".</div>';
+      row('#D1D5DB', past ? 'Not on a lorry' : 'No route', groups.none, function(x){ return idCol(x.name); }, true);   // [F1] collapsed: a phone no longer scrolls past ~48 names
+    if(past && groups.none.length) html += '<div class="note-line">Leave is only recorded for today, so on a past date anyone on leave is listed under "Not on a lorry".</div>';
     el.innerHTML = html || '<div class="empty">'+((ship.shipments||[]).length ? 'No crew assigned yet.' : 'No delivery orders imported for this date.')+'</div>';
   }
 
@@ -774,20 +833,19 @@
     var body = $('needsActionBody');
     if(NA_LOADING){ body.innerHTML = '<tr><td colspan="6" class="empty">Loading…</td></tr>'; return; }
     if(!POD_OK){ body.innerHTML = '<tr><td colspan="6">'+unavail('ship','POD data unavailable')+'</td></tr>'; return; }
-    var today = isToday(), late = podLate();
-    var _ph = $('naPendHead'); if(_ph) _ph.textContent = today ? 'Not yet' : 'No POD';
+    var past = isPast(), late = podLate();   // the column head comes from paintLabels()
     if(NA_EMPTY_DAY){ body.innerHTML = '<tr><td colspan="6" class="empty">No delivery orders imported for this date.</td></tr>'; return; }
     var groups = (NA_FILTER==='failed') ? NA_GROUPS.filter(function(g){ return g.failed>0; }) : NA_GROUPS;
     if(!groups.length){
       body.innerHTML = '<tr><td colspan="6" class="empty">'+(NA_FILTER==='failed'
-        ? 'No problem stops ✓'+(NA_GROUPS.length?(' — '+NA_GROUPS.length+' lorr'+(NA_GROUPS.length>1?'ies':'y')+(today?' still have stops not yet confirmed':' have invoices with no POD record')+' (tap All)'):'')
-        : (today ? 'No problem stops and nothing left to confirm ✓' : 'No problem stops and every invoice has a POD record ✓'))+'</td></tr>';
+        ? 'No problem stops ✓'+(NA_GROUPS.length?(' — '+NA_GROUPS.length+' lorr'+(NA_GROUPS.length>1?'ies':'y')+(past?' have invoices with no POD record':' still have stops not yet confirmed')+' (tap All)'):'')
+        : (past ? 'No problem stops and every invoice has a POD record ✓' : 'No problem stops and nothing left to confirm ✓'))+'</td></tr>';
       return;
     }
-    // [F1] a stop nobody has reached yet is "Not yet" (grey until 3 pm, then amber); on a past date it is
-    // "No POD record" (amber). Red stays for failed stops only.
-    var pendLabel = today ? 'Not yet' : 'No POD record';
-    var pendCls = (today && !late) ? 'st-wait' : 'st-pend';
+    // [F1] a stop nobody has reached yet is "Not yet" (grey until 3 pm today, then amber; grey for a future
+    // date); on a past date it is "No POD record" (amber). Red stays for failed stops only.
+    var pendLabel = past ? 'No POD record' : 'Not yet';
+    var pendCls = late ? 'st-pend' : 'st-wait';
     var html = '';
     groups.forEach(function(g, gi){
       html += '<tr class="na-sum'+(g.failed>0?' fail':'')+'" data-g="'+gi+'"><td><span class="caret">▸</span></td>'
@@ -817,10 +875,9 @@
 
   function renderPod(ship){
     POD_OK = !!ship; NA_LOADING = false;
-    var today = isToday(), late = podLate();
-    $('podHeroTitle').textContent = today ? 'Deliveries confirmed so far' : 'Deliveries confirmed';
-    $('podNotSubmittedSub').textContent = today ? 'Assigned a lorry but 0 deliveries confirmed yet · turns amber after 3 pm' : 'Assigned a lorry but no POD recorded that day';
+    var today = isToday(), past = isPast(), late = podLate();   // card titles come from paintLabels()
     if(!ship){
+      dropChart('lorrySuccess');
       $('podPct').textContent='—'; $('podPct').style.color=''; $('podFrac').textContent='data unavailable'; $('podChips').innerHTML='';
       $('needsActionBody').innerHTML = '<tr><td colspan="6">'+unavail('ship','POD data unavailable')+'</td></tr>';
       $('podNotSubmitted').innerHTML = unavail('ship');
@@ -839,13 +896,13 @@
       // the import used to read "All routes have started ✓" and "Nothing failed or pending — all good ✓".
       $('podPct').textContent = 'No DLs'; $('podPct').style.color = 'var(--gray-400)';   // neutral, not the hero green
       $('podFrac').innerHTML = 'No delivery orders imported for ' + esc(niceDate(selectedDate))
-        + ((today && hourNow() < 11) ? ' · usually in by 9 am' : '')
+        + ((today && hourNow() < 11 && new Date().getDay() !== 0) ? ' · usually in by 9 am' : '')
         + (today ? ' · <a href="#" id="seeYesterday">see yesterday ›</a>' : '');
       $('podChips').innerHTML = '';
       NA_GROUPS = []; renderNeedsAction();
       $('podNotSubmitted').innerHTML = '<span class="empty">No delivery orders imported — nothing to check.</span>';
       $('podNotSubmittedNote').textContent = '';
-      if(CHARTS['lorrySuccess']){ try{ CHARTS['lorrySuccess'].destroy(); }catch(e){} delete CHARTS['lorrySuccess']; }
+      dropChart('lorrySuccess');
       $('lorrySuccess').innerHTML = '';
       $('lorrySuccessEmpty').textContent = 'No delivery orders imported for this date.'; $('lorrySuccessEmpty').style.display = 'block';
       $('crewRows').innerHTML = '<tr><td colspan="4" class="empty">No delivery orders imported for this date.</td></tr>';
@@ -857,7 +914,7 @@
     $('podPct').textContent = fmtInt(t.delivered) + ' / ' + fmtInt(t.planned); $('podPct').style.color = '';
     // UX-7: in Weekly/Monthly the POD half is still a single day — mark the big number itself, not just the zone header.
     $('podFrac').textContent = (t.successPct==null ? '—' : t.successPct+'%') + ' confirmed'
-      + (t.pending ? (' · ' + fmtInt(t.pending) + (today ? ' not yet' : ' with no POD record')) : '')
+      + (t.pending ? (' · ' + fmtInt(t.pending) + (past ? ' with no POD record' : ' not yet')) : '')
       + (selectedView!=='daily' ? ' · DAILY '+selectedDate+' only' : '');
     // UX-4: split the money. Red = FAILED stops only — a real problem. Stops that just haven't been reached
     // yet are shown separately (grey, amber after 3 pm; amber "no POD record" on a past date). The TOTAL is
@@ -869,13 +926,13 @@
     if(_total!=null && _total>0){ _rmFail = Math.min(_rmFailList, _total); _rmPend = Math.round((_total - _rmFail)*100)/100; }
     else { _rmFail = _rmFailList; _rmPend = 0; }   // no backend total → only what the list gives us
     function _rm(n){ return 'RM '+Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
-    var pendCls = (today && !late) ? 'grey' : 'amber';
+    var pendCls = late ? 'amber' : 'grey';
     $('podChips').innerHTML =
       '<span class="chip green">'+fmtInt(t.delivered)+' delivered</span>' +
       '<span class="chip '+(t.failed>0?'red':'grey')+'">'+fmtInt(t.failed)+' problem</span>' +
-      '<span class="chip '+pendCls+'">'+fmtInt(t.pending)+(today?' not yet':' no POD record')+'</span>' +
+      '<span class="chip '+pendCls+'">'+fmtInt(t.pending)+(past?' no POD record':' not yet')+'</span>' +
       (_rmFail>0 ? '<span class="chip red mono">'+_rm(_rmFail)+' on problem stops</span>' : '') +
-      (_rmPend>0 ? '<span class="chip '+pendCls+' mono">'+_rm(_rmPend)+(today?' not yet delivered':' with no POD record')+'</span>' : '');
+      (_rmPend>0 ? '<span class="chip '+pendCls+' mono">'+_rm(_rmPend)+(past?' with no POD record':' not yet delivered')+'</span>' : '');
 
     // Needs action — group per lorry (accordion): failed lorries first, then by RM at risk
     var fl = (ship.failedList||[]);
@@ -912,17 +969,14 @@
       });
       $('podNotSubmitted').innerHTML = nsHtml + '</tbody></table>';
     }
-    $('podNotSubmittedNote').textContent = ns.length ? (ns.length+' of '+shipments.length+' routes '+(today ? 'haven\'t confirmed a POD yet.' : 'have no POD record for this date.')) : '';
+    $('podNotSubmittedNote').textContent = ns.length ? (ns.length+' of '+shipments.length+' routes '+(past ? 'have no POD record for this date.' : 'haven\'t confirmed a POD yet.')) : '';
 
     // Per-lorry progress (started only, lowest at top)
     // UX-6: "started" = any POD confirmed, delivered OR failed. A lorry that's all-failed is still working
     // (and is the most urgent one) — the old delivered-only test hid it from this chart.
     var started = shipments.filter(function(s){ return (((s.delivered||0)+(s.failed||0)) > 0) && (s.planned||0) > 0; });
     started.sort(function(a,b){ return (a.pct||0)-(b.pct||0); });
-    $('lorrySuccessSub').textContent = today
-      ? 'Green = finished · blue = on the way · red = has problem stops · number = confirmed / planned · started lorries only'
-      : 'Green = finished · amber = invoices with no POD record · red = has problem stops · number = confirmed / planned';
-    if(!started.length){ $('lorrySuccess').innerHTML=''; if(CHARTS['lorrySuccess']){try{CHARTS['lorrySuccess'].destroy();}catch(e){}} $('lorrySuccessEmpty').textContent='No started lorries for this date.'; $('lorrySuccessEmpty').style.display='block'; }
+    if(!started.length){ dropChart('lorrySuccess'); $('lorrySuccess').innerHTML=''; $('lorrySuccessEmpty').textContent='No started lorries for this date.'; $('lorrySuccessEmpty').style.display='block'; }
     else {
       $('lorrySuccessEmpty').style.display='none';
       var plates = started.map(function(s){return s.lorryNo;});
@@ -932,7 +986,7 @@
       var cols = started.map(function(s){
         if((s.failed||0) > 0) return RED;
         if(((s.delivered||0)+(s.failed||0)) >= (s.planned||0)) return GREEN;
-        return today ? '#1A56DB' : AMBER;
+        return past ? AMBER : '#1A56DB';
       });
       chart('lorrySuccess', {
         chart:{type:'bar',height:Math.max(160, started.length*26+40),toolbar:{show:false}},
@@ -1013,15 +1067,16 @@
   // "Haven't submitted fuel" comes from getDashboardData (dash), NOT getFuelOps — render it from
   // whichever of the two states we're in, so a fuel-only failure doesn't leave a stale green chip.
   function renderNoFuel(dash){
-    var _tag = $('noFuelTag'); if(_tag) _tag.innerHTML = isToday() ? '' : '<span class="tag-today">today only</span>';   // [F1] always today, whatever date is picked
     if(!dash){
       $('noFuelChips').innerHTML = unavail('dash');
       $('noFuelNote').textContent = '';
       return;
     }
-    // [F1] a public holiday used to show the green "Everyone submitted ✓" (the backend sends [] on a PH)
+    if(dash.staleToday){ $('noFuelChips').innerHTML = '<span class="empty">Loading…</span>'; $('noFuelNote').textContent = ''; return; }   // saved on another day
+    // [F1] a rest day / public holiday used to show the green "Everyone submitted ✓" (the backend sends []
+    // when an ALL_DRIVERS PH / OFF_SAT / OFF_SUN row covers today)
     if(dash.isPublicHoliday){
-      $('noFuelChips').innerHTML = '<span class="chip grey">Public holiday — fuel slips not expected today</span>';
+      $('noFuelChips').innerHTML = '<span class="chip grey">Rest day / public holiday — fuel slips not expected today</span>';
       $('noFuelNote').textContent = '';
       return;
     }
@@ -1121,12 +1176,12 @@
   // "haven't submitted fuel" card as unavailable — leave it for the dash branch to fill (avoids a
   // transient unavailable flash on that card during a normal load).
   function renderFuel(fuel, dash, skipNoFuel){
-    var _ft = $('fuelSubTag'); if(_ft) _ft.innerHTML = isToday() ? '' : '<span class="tag-today">today only</span>';   // [F1] the list is always today's
     if(!fuel){
       // UX-5: on FAILURE every fuel card shows "unavailable" — not the "no RM recorded yet / needs 2 fills"
       // empty text, which reads as a real zero and could make the boss wrongly think nobody logged fuel.
       var _un=unavail('fuel');
       $('fuelPerKmHero').textContent='—'; $('fuelKmPerL').textContent='data unavailable'; $('fuelTotal').textContent='—';
+      dropChart('fuelCostLorry'); dropChart('fuelPerKm');
       $('fuelCostEmpty').style.display='none'; $('fuelCostLorry').innerHTML=_un;
       $('fuelPerKmEmpty').style.display='none'; $('fuelPerKm').innerHTML=_un;
       $('crossCheckWrap').innerHTML=unavail('fuel','Fuel data unavailable');
@@ -1146,7 +1201,7 @@
 
     // Fuel cost by lorry
     var withRm = lorries.filter(function(l){ return num(l.rm)!=null && l.rm>0; }).slice().sort(function(a,b){return b.rm-a.rm;}).slice(0,12);
-    if(!withRm.length){ if(CHARTS['fuelCostLorry']){try{CHARTS['fuelCostLorry'].destroy();}catch(e){}} $('fuelCostLorry').innerHTML=''; $('fuelCostEmpty').style.display='block'; }
+    if(!withRm.length){ dropChart('fuelCostLorry'); $('fuelCostLorry').innerHTML=''; $('fuelCostEmpty').style.display='block'; }
     else {
       $('fuelCostEmpty').style.display='none';
       chart('fuelCostLorry', {
@@ -1162,7 +1217,7 @@
     // RM per km by lorry
     var withKm = lorries.filter(function(l){ return num(l.rmPerKm)!=null && l.rmPerKm>0; }).slice().sort(function(a,b){return b.rmPerKm-a.rmPerKm;}).slice(0,12);
     var avg = num(t.rmPerKm);
-    if(!withKm.length){ if(CHARTS['fuelPerKm']){try{CHARTS['fuelPerKm'].destroy();}catch(e){}} $('fuelPerKm').innerHTML=''; $('fuelPerKmEmpty').style.display='block'; }
+    if(!withKm.length){ dropChart('fuelPerKm'); $('fuelPerKm').innerHTML=''; $('fuelPerKmEmpty').style.display='block'; }
     else {
       $('fuelPerKmEmpty').style.display='none';
       var anns = (avg!=null) ? {xaxis:[{x:avg,borderColor:'#777',strokeDashArray:4,label:{text:'avg '+avg.toFixed(2),style:{fontSize:'10px',background:'#777',color:'#fff'}}}]} : {};
@@ -1220,6 +1275,7 @@
     if(!skipNoFuel) renderNoFuel(dash);
 
     // Fuel submissions today
+    if(fuel.staleToday){ _FUEL_SUBS = []; $('fuelRows').innerHTML = '<tr><td colspan="7" class="empty">Loading…</td></tr>'; return; }   // [F1] saved on another day
     var subs = (fuel.submissions||[]);
     _FUEL_SUBS = subs;
     var body = $('fuelRows');
@@ -1288,6 +1344,7 @@
       if(!document.hidden && (!LAST_UPDATED || Date.now()-LAST_UPDATED > 2*60000) && Date.now()-_lastLoadAt > 20000) load();
       paintUpdated();
     });
+    paintLabels();
     var _hadSnap = paintSnapshot();   // instant open from the saved view (FN-4), then fetch fresh below
     ON_SCREEN_KEY = snapKey();
     syncDayButtons();
@@ -1298,7 +1355,8 @@
     if(!_hadSnap){ renderSkeleton(); $('dashMeta').textContent = 'Checking access… · ' + branchLabel(); }   // [F1] "Loading…", never an empty card that reads as "nothing"
     _rgBoot().then(function(ok){ if (ok) load(); });
   }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
+  // [F1] init() is called at the very END of this script (below the read-grant section), not on
+  // DOMContentLoaded — see there.
 
 /* ============================================================================
    READ GRANT (management reads)                                  [2026-07-30]
@@ -1483,6 +1541,12 @@ async function _rgBoot(){
   return true;
 }
 
+// [F1] Start here, at the end: this script sits at the end of <body>, so every element it needs exists,
+// and only from this line on are the read-grant vars above initialised (RG_KEY, _rgPending, _rgRetryAt —
+// starting any earlier made every open mint a fresh grant, ~4 s). Not waiting for DOMContentLoaded means
+// the reads no longer wait for the 534 KB deferred chart library; charts asked for before it has run are
+// queued by chart() and drawn when it has.
+init();
 
 })();
 </script>
