@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en" translate="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#141C77">
+<meta name="google" content="notranslate">
+<meta name="robots" content="noindex">
+<title>CLF Fleet - F2 design draft</title>
+<style>
+  /* F2 design draft v3 (2026-10-24), after two review rounds (governance/data, phone UX, then a check of both). Same tokens as the POD form
+     (Round 2, boss-approved): navy header, white cards, 12px radius, system fonts 13/15/17/22 + one 32px number.
+     Colour = status only, always next to a word. Everything below runs on FAKE data generated in this file. */
+  :root{
+    --navy:#141C77; --navy-2:#0E1458; --navy-50:#EEF0FA;
+    --red-700:#C8101E; --red-50:#FEF2F2; --red-line:#F5C2C7;
+    --green:#15803D; --green-50:#ECFDF3; --green-line:#A7D7B8;
+    --lime:#87C329;
+    --amber:#B45309; --amber-50:#FFFBEB; --amber-line:#F3D19C;
+    --ink:#0F172A; --ink-2:#475569; --ink-3:#94A3B8;
+    --line:#E2E8F0; --bg:#FFFFFF; --bg-2:#F4F6FA;
+    --r:12px;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{touch-action:manipulation;-webkit-text-size-adjust:100%}
+  html,body{background:var(--bg-2)}
+  body{font:15px/1.45 var(--font);color:var(--ink);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;min-height:100vh}
+  button{font:inherit;color:inherit;cursor:pointer;background:none;border:0;text-align:left}
+  [hidden]{display:none!important}
+  svg.i{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  svg.i.s{width:16px;height:16px}
+  .num{font-variant-numeric:tabular-nums}
+
+  .draft{background:#FEF08A;color:#713F12;font-size:12px;font-weight:800;text-align:center;padding:5px 10px;letter-spacing:.2px}
+  .app{max-width:1200px;margin:0 auto;min-height:100vh;background:var(--bg-2);padding-bottom:90px}
+
+  /* header: the POD form's bar; right side = data time (tap to refresh) + branch */
+  .bar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:10px;min-height:56px;padding:8px 12px;padding-top:max(8px, env(safe-area-inset-top));background:var(--navy);color:#fff}
+  .bar img{height:30px;width:auto;display:block}
+  .bar .sep{width:1px;height:26px;background:rgba(255,255,255,.28)}
+  .bar .ttl{font-size:17px;font-weight:800;letter-spacing:.6px}
+  .bar .sp{flex:1}
+  @media (max-width:359px){ .bar{gap:8px} .bar .sep{display:none} }
+  .clock{display:flex;align-items:center;gap:5px;min-height:36px;padding:0 10px;border-radius:999px;color:#fff;font-size:13px;font-weight:800}
+  .clock.old{background:var(--amber-50);color:var(--amber)}
+  .brp{display:flex;align-items:center;gap:4px;min-height:36px;padding:0 10px 0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.5);color:#fff;font-size:13px;font-weight:800}
+
+  /* date row */
+  .daterow{display:flex;align-items:center;gap:6px;padding:10px 14px 4px}
+  .daterow .arw{flex:none;width:44px;height:44px;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--navy);display:flex;align-items:center;justify-content:center}
+  .daterow .arw:disabled{opacity:.35}
+  .dbox{position:relative;flex:1;min-width:0}
+  .dbox .day{display:flex;align-items:center;justify-content:center;gap:4px;width:100%;min-height:44px;border-radius:10px;border:1.5px solid var(--line);background:#fff;font-size:15px;font-weight:800;text-align:center;padding:0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dbox .day small{font-weight:600;color:var(--ink-2)}
+  .dbox input{position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer}
+  .today{flex:none;min-height:44px;padding:0 12px;border-radius:10px;background:var(--navy);color:#fff;font-size:13px;font-weight:800}
+  .loadline{padding:2px 16px 0;font-size:13px;color:var(--ink-2)}
+  .offline{display:flex;align-items:center;gap:8px;margin:8px 14px 0;padding:8px 10px 8px 12px;border-radius:10px;background:var(--amber-50);color:var(--amber);font-size:13px;font-weight:800}
+  .offline span{flex:1}
+  .offline.grey{background:var(--bg-2);color:var(--ink-2)}
+  .offline.grey .pill{background:#fff;color:var(--navy);border-color:var(--line)!important}
+
+  /* card grid: a card keeps its width, a wider screen gets more columns (max 4) */
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:10px 14px 0}
+  .span2{grid-column:span 2}
+  @media (min-width:700px){ .grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;padding:12px 20px 0;max-width:800px} .daterow{padding:12px 20px 4px;max-width:800px} .rows{padding:14px 20px 0;max-width:800px} .offline{max-width:772px} }
+
+  .card{position:relative;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;width:100%;border:1px solid var(--line);border-radius:var(--r);background:var(--bg);padding:14px;min-height:104px}
+  .card.short{min-height:0;padding:12px 14px}
+  .card:active{background:var(--bg-2)}
+  .card .go{position:absolute;top:12px;right:10px;color:#64748B}
+  .lbl{font-size:13px;font-weight:700;color:var(--ink-2);line-height:18px;padding-right:22px}
+  .lbl .rt{position:absolute;top:13px;right:32px;font-weight:600}
+  .big{font-size:32px;font-weight:800;line-height:36px;margin-top:4px;letter-spacing:-.5px;white-space:nowrap}
+  .big .u{font-size:17px;font-weight:700;color:var(--ink-2);letter-spacing:0;margin-left:4px}
+  .big .u.pre{margin:0 3px 0 0}
+  .big.amb{color:var(--amber)} .big.mute{color:var(--ink-2)} .big.ok{color:var(--green);font-size:22px;display:flex;align-items:center;gap:6px}
+  .big.word{font-size:22px;color:var(--ink-2)}
+  .card.short .big{margin-top:2px}
+  .sub{font-size:13px;color:var(--ink-2);margin-top:6px;line-height:18px}
+  .sub b{color:var(--ink);font-weight:700}
+  .sub .warn{color:var(--amber);font-weight:700}
+  .sub .bad{color:var(--red-700);font-weight:700}
+  .sub .rty{margin-left:6px;color:var(--navy);font-weight:800;text-decoration:underline}
+  .pill{display:inline-flex;align-items:center;gap:4px;height:24px;font-size:12px;font-weight:800;padding:0 9px;border-radius:999px;white-space:nowrap;vertical-align:middle}
+  .pill.sm{height:20px;font-size:11px;padding:0 8px}
+  .card .chipline{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:6px;line-height:24px}
+  .chipline .unit{font-size:13px;font-weight:700;color:var(--ink-2)}
+  .p-done{background:var(--green-50);color:var(--green)}
+  .p-late{background:var(--amber-50);color:var(--amber)}
+  .p-fail{background:var(--red-50);color:var(--red-700)}
+  .p-grey{background:var(--bg-2);color:var(--ink-2)}
+  .p-navy{background:var(--navy-50);color:var(--navy)}
+  /* stacked bar with 2px white gaps between segments (readable without colour) */
+  .sbar{display:flex;gap:2px;height:10px;margin-top:10px}
+  .sbar i{display:block;height:100%;border-radius:3px}
+  .sbar .g{background:var(--green)} .sbar .r{background:var(--red-700)} .sbar .a{background:#E8B26A} .sbar .k{background:var(--line)}
+  .skel{color:var(--ink-2)!important}
+  .clock svg.spin{animation:sp .8s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  /* rows under the cards */
+  .rows{padding:14px 14px 0}
+  .row{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:10px 14px;margin-bottom:10px;border:1px solid var(--line);border-radius:var(--r);background:var(--bg)}
+  .row:active{background:var(--bg-2)}
+  .row .t{display:flex;align-items:center;gap:6px;font-size:15px;font-weight:800}
+  .row .m{flex:1;min-width:0;font-size:13px;color:var(--ink-2);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .go{color:#64748B}
+  .state{padding:18px 14px;text-align:center;border:1px solid var(--line);border-radius:var(--r);background:var(--bg);color:var(--ink-2);font-size:15px}
+  .state b{display:block;color:var(--ink);font-size:17px;margin-bottom:2px}
+
+  /* level 1: full page (right-hand panel on a wide screen); level 2: bottom sheet */
+  .page{position:fixed;top:0;left:0;right:0;bottom:0;z-index:40;background:var(--bg-2);overflow-y:auto;-webkit-overflow-scrolling:touch}
+  @media (min-width:900px){ .page{left:auto;width:520px;box-shadow:-8px 0 30px rgba(15,23,42,.15)} }
+  .page .bar{gap:6px}
+  .page .back{display:flex;align-items:center;gap:2px;color:#fff;font-weight:800;font-size:15px;min-height:44px;padding:0 6px 0 0}
+  .pbody{max-width:760px;margin:0 auto;padding:12px 14px 40px}
+  .h2{font-size:13px;font-weight:800;color:var(--ink-2);margin:18px 2px 8px}
+  .h2:first-child{margin-top:4px}
+  .li{display:flex;align-items:center;gap:12px;width:100%;min-height:60px;padding:10px 14px;margin-bottom:8px;border:1px solid var(--line);border-radius:var(--r);background:var(--bg)}
+  .li:active{background:var(--bg-2)}
+  .li.done{background:var(--bg-2);border-color:transparent}
+  .li .mn{flex:1;min-width:0}
+  .li .l1{font-size:17px;font-weight:800;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .li .l1.s{font-size:15px}
+  .li .l2{font-size:13px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .li .l2.w{white-space:normal}
+  .li .rt{text-align:right;flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+  .li .rt .v{font-size:15px;font-weight:800}
+  .li .go{color:#64748B}
+  .tot{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .tot .card{min-height:92px}
+  .note{font-size:13px;color:var(--ink-2);margin:2px 2px 10px}
+  .link{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:48px;margin-top:12px;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--navy);font-weight:800;font-size:15px}
+  table.t{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;font-size:13px}
+  table.t th{background:var(--bg-2);color:var(--ink-2);font-weight:800;text-align:left;padding:8px 10px}
+  table.t td{padding:9px 10px;border-top:1px solid var(--line)}
+  table.t .n{text-align:right;font-variant-numeric:tabular-nums}
+  .days{display:flex;align-items:flex-end;gap:3px;height:70px;border:1px solid var(--line);border-radius:var(--r);background:#fff;padding:10px 12px}
+  .days i{flex:1;background:var(--green);border-radius:3px 3px 0 0;min-height:2px}
+  .days i.k{background:var(--line)}
+
+  .scrim{position:fixed;top:0;left:0;right:0;bottom:0;z-index:60;background:rgba(15,23,42,.55);display:flex;align-items:flex-end;justify-content:center}
+  .sheet{width:100%;max-width:560px;max-height:88vh;overflow-y:auto;background:#fff;border-radius:18px 18px 0 0;padding:16px 16px;padding-bottom:max(20px, calc(env(safe-area-inset-bottom) + 14px))}
+  .grab{width:40px;height:5px;border-radius:99px;background:var(--line);margin:0 auto 12px}
+  .sheet h3{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:17px;font-weight:800;line-height:1.3}
+  .sheet .s2{font-size:13px;color:var(--ink-2);margin-top:2px}
+  .stop{border:1px solid var(--line);border-radius:var(--r);padding:12px;margin-top:10px}
+  .stop.done{background:var(--bg-2);border-color:transparent}
+  .stop .top{display:flex;align-items:flex-start;gap:10px}
+  .stop .nm{flex:1;min-width:0;font-size:15px;font-weight:800}
+  .stop .mt{font-size:13px;color:var(--ink-2);font-weight:600}
+  .ths{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .th{width:52px;height:52px;border-radius:8px;border:1px solid var(--line);background:linear-gradient(135deg,#E9EDF5,#F8FAFC);display:flex;align-items:center;justify-content:center;color:var(--ink-3)}
+  .reason{display:flex;gap:8px;align-items:center;margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--red-50);color:var(--red-700);font-size:13px;font-weight:800}
+  .reason.g{background:var(--bg-2);color:var(--ink-2)}
+  .kv{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px}
+  .kv div{border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+  .kv small{display:block;font-size:12px;color:var(--ink-2);font-weight:700}
+  .kv b{font-size:17px}
+  .btnrow{display:flex;gap:10px;margin-top:14px}
+  .btn{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;min-height:52px;border-radius:12px;font-weight:800;font-size:15px;text-align:center}
+  .b-pri{background:var(--navy);color:#fff}
+  .b-ghost{background:#fff;border:1.5px solid var(--line)}
+  .form2{display:grid;gap:4px;margin-top:12px}
+  .fl{font-size:13px;font-weight:700;color:var(--ink-2);margin-top:6px}
+  .in{display:block;width:100%;height:48px;border:1.5px solid var(--line);border-radius:10px;padding:0 12px;font-size:16px;color:var(--ink);background:#fff}
+  .in:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(20,28,119,.12)}
+  .err{font-size:13px;font-weight:700;color:var(--red-700);margin-top:2px}
+  textarea{width:100%;min-height:96px;margin-top:10px;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;font:16px/1.4 var(--font);color:var(--ink)}
+  textarea:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(20,28,119,.12)}
+  .disc{border:1.5px solid var(--ink-2);background:#fff;border-radius:var(--r);padding:12px 14px;margin-bottom:10px}
+  .disc .w{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:var(--ink)}
+  .disc .t{font-size:15px;font-weight:800;margin-top:4px}
+  .disc .q{font-size:13px;color:var(--ink-2);margin-top:2px}
+  .disc .btn{margin-top:10px;min-height:46px;border:1.5px solid var(--line)}
+  .disc.closed{border-color:transparent;background:var(--bg-2)}
+  .opts{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
+  .opts button{min-height:44px;border-radius:10px;border:1.5px solid var(--line);background:#fff;font-size:14px;font-weight:800;text-align:center;padding:0 6px}
+  .opts button.on{border-color:var(--navy);background:var(--navy-50);color:var(--navy)}
+
+  /* demo controls: NOT part of the dashboard */
+  .demo{position:fixed;right:12px;bottom:max(12px, env(safe-area-inset-bottom));z-index:50;display:flex;align-items:center;gap:6px;height:44px;padding:0 14px;border-radius:999px;background:#FEF08A;color:#713F12;font-size:13px;font-weight:800;box-shadow:0 4px 14px rgba(15,23,42,.18)}
+</style>
+</head>
+<body>
+<div class="draft">DESIGN DRAFT &middot; fake data &middot; nothing here is live</div>
+<div class="app">
+  <header class="bar">
+    <img src="brand/clf-logo-horizontal-white.png" alt="CLF Trading" width="72" height="30" decoding="async">
+    <span class="sep" aria-hidden="true"></span>
+    <span class="ttl">FLEET</span>
+    <span class="sp"></span>
+    <button type="button" class="clock" id="clock" data-act="refresh" aria-label="Data time, tap to refresh"></button>
+    <button type="button" class="brp" id="brp" data-act="branch" aria-label="Branch"></button>
+  </header>
+  <div class="daterow">
+    <button type="button" class="arw" id="dPrev" aria-label="Previous day"><svg class="i" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <div class="dbox"><div class="day" id="dDay"></div><input type="date" id="dPick" aria-label="Pick a date" min="2026-06-09" max="2026-10-26"></div>
+    <button type="button" class="arw" id="dNext" aria-label="Next day"><svg class="i" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></button>
+    <button type="button" class="today" id="dToday" hidden>Today</button>
+  </div>
+  <div class="loadline" id="loadline" hidden></div>
+  <div class="offline" id="offline" hidden><svg class="i s" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span id="offlineText">Offline &middot; showing 10:42</span><button type="button" class="pill p-late" data-act="retry" style="height:36px;padding:0 14px;border:1.5px solid var(--amber-line)">Retry</button></div>
+  <main class="grid" id="home"></main>
+  <div class="rows" id="rows"></div>
+</div>
+
+<div class="page" id="page" hidden>
+  <header class="bar"><button type="button" class="back" id="pBack"><svg class="i" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>Back</button><span class="ttl" id="pTitle"></span></header>
+  <div class="pbody" id="pBody"></div>
+</div>
+<div class="scrim" id="scrim" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+<button type="button" class="demo" id="demoBtn"><svg class="i s" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>Demo</button>
+
+<script>
+(function () {
+  'use strict';
+  // ================================================================ fake data (seeded, so every view agrees)
+  function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; var t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  var AREAS = ['Mentakab', 'Temerloh', 'Lanchang', 'Kerdau', 'Triang', 'Bentong', 'Karak', 'Jerantut', 'Maran', 'Chenor'];
+  var REASONS = { closed: 'Shop closed', rejected: 'Rejected', partial: 'Partial', resched: 'Reschedule' };   // the POD form's four
+  var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  var MONTH = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  var TODAY = new Date(2026, 9, 24);            // the draft's "today": Sat 24 Oct 2026
+  var BARCODE_FROM = new Date(2026, 9, 24);     // the POD form started reading barcodes on 24 Oct
+  var FLEET = { MTK: 16, KTN: 19 }, LEAVE = { MTK: 3, KTN: 1 };
+
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  // a typical MTK working day in the 22 Oct export: 11 of 16 lorries out, ~97 stops, ~334 invoices, ~RM 373K
+  function buildFleet(branch) {
+    var out = [], idle = [];
+    if (branch === 'KTN') { for (var k = 0; k < FLEET.KTN; k++) idle.push({ plate: 'VKT ' + (2101 + k), last: '-' }); return { out: out, idle: idle }; }
+    var R = rng(20261024), nOut = 11, LAST = ['21 Oct', '23 Oct', '9 Oct', '22 Oct', '20 Oct'];
+    for (var i = 0; i < FLEET.MTK; i++) {
+      var plate = 'VAA ' + (1001 + i);
+      if (i >= nOut) { idle.push({ plate: plate, last: LAST[i - nOut] }); continue; }
+      var slow = (i === 4 || i === 9), nStops = 8 + Math.floor(R() * 3), stops = [];
+      var start = 8.6 + R() * 0.6, end = slow ? 17.4 : 13.4 + R() * 1.2;   // most lorries finish before the 3 pm cut-off, two run late
+      for (var s = 0; s < nStops; s++) {
+        var nInv = 2 + Math.floor(R() * 3.9), inv = [];
+        for (var v = 0; v < nInv; v++) inv.push({ no: 'IV' + (510000 + i * 400 + s * 9 + v), rm: Math.round(400 + R() * 1360), match: R() < 0.97 });
+        stops.push({ shop: 'Outlet ' + (100 + i * 20 + s), area: AREAS[Math.floor(R() * AREAS.length)], at: start + (end - start) * (s + 1) / nStops, inv: inv, fail: null });
+      }
+      if (i === 2) stops[4].fail = { why: 'closed', photo: true };   // ~0.3 not-delivered stops a day in the export: one today
+      if (i === 6) stops[1].fail = { why: 'resched', photo: false }; // the customer asked for another day: grey, not red
+      out.push({ plate: plate, staff: 'TER 4' + pad(10 + i * 3), driver: 'Driver ' + pad(i + 1), crew: 'Crew ' + pad(i + 3), stops: stops });
+    }
+    return { out: out, idle: idle };
+  }
+
+  // a moment in the day: a stop has a record once its planned time has passed (delivered or not delivered)
+  function snapshot(fleet, hour, allDone) {
+    var S = { stops: 0, visited: 0, notDel: [], late: 0, rmPlanned: 0, invDelivered: 0, invMatched: 0, lorries: [] };
+    fleet.out.forEach(function (L) {
+      var visited = 0, hard = 0, rows = [], lastPod = 0;
+      L.stops.forEach(function (st) {
+        var rm = st.inv.reduce(function (a, x) { return a + x.rm; }, 0), done = allDone || st.at <= hour;
+        var state = !done ? 'pending' : (st.fail ? 'failed' : 'delivered');
+        S.stops++; S.rmPlanned += rm;
+        if (done) {
+          visited++; S.visited++;
+          if (state === 'failed') { S.notDel.push({ plate: L.plate, stop: st, rm: rm }); if (st.fail.why !== 'resched') hard++; }
+          else { lastPod = Math.max(lastPod, st.at); st.inv.forEach(function (x) { S.invDelivered++; if (x.match) S.invMatched++; }); }
+        }
+        rows.push({ st: st, state: state, rm: rm });
+      });
+      var pending = L.stops.length - visited, isLate = hour >= 15 && pending > 0 && !allDone;
+      if (isLate) S.late += pending;
+      S.lorries.push({ L: L, visited: visited, total: L.stops.length, nd: hard, lastPod: lastPod, status: pending === 0 ? 'done' : isLate ? 'late' : visited ? 'route' : 'notstarted', rows: rows });
+    });
+    S.hard = S.notDel.filter(function (p) { return p.stop.fail.why !== 'resched'; });
+    S.toGo = S.stops - S.visited;
+    return S;
+  }
+
+  // Not closed (FAKE, shaped like the 22 Oct export): 25 DLs 2-30 days old, 15 of them only partly open, RM 779K open
+  function buildOpen() {
+    var R = rng(4242), rows = [], days = ['20 Oct', '20 Oct', '19 Oct', '17 Oct', '16 Oct', '16 Oct', '15 Oct', '13 Oct', '12 Oct', '10 Oct', '9 Oct', '8 Oct', '6 Oct', '6 Oct', '3 Oct', '2 Oct', '1 Oct', '30 Sep', '29 Sep', '29 Sep', '27 Sep', '26 Sep', '24 Sep', '23 Sep', '22 Sep'];
+    var total = 0;
+    days.forEach(function (d, i) {
+      var inv = 18 + Math.floor(R() * 14), whole = i % 5 < 2, open = whole ? inv : 4 + Math.floor(R() * (inv - 6)), rm = Math.round(open * (1500 + R() * 600));
+      rows.push({ date: d, plate: 'VAA ' + (1001 + Math.floor(R() * 11)), dl: 'DL ' + (880790 - i * 23), inv: inv, open: open, rm: rm, tag: i === 7 ? 'Asked crew' : 'Not checked' });
+      total += rm;
+    });
+    var k = 779000 / total; rows.forEach(function (r) { r.rm = Math.round(r.rm * k); });
+    return rows;
+  }
+  // fuel this month by lorry (FAKE); the Fuel card shows these sums, so the card and the table always agree
+  function buildFuelMonth() {
+    var R = rng(91), rows = [], rm = 0, fills = 0;
+    for (var i = 0; i < FLEET.MTK; i++) { var f = i < 11 ? 3 + Math.floor(R() * 2) : (i === 11 || i === 13 ? 1 : 0), r = f * (360 + Math.round(R() * 120)); rows.push({ plate: 'VAA ' + (1001 + i), rm: r, fills: f }); rm += r; fills += f; }
+    return { rows: rows, rm: rm, fills: fills, odo: fills - 2, photo: fills, litres: Math.round(fills * 0.65), read: 0 };
+  }
+
+  // ================================================================ state
+  var st = { branch: 'MTK', dayOff: 0, hour: 15.5, mode: 'normal', early: true, showDisc: false, fuelRule: 'driver', failZone: '', updating: false,
+             disc: [{ plate: 'VAA 1007', what: 'Fuel 14 Oct', q: 'Litres above tank size', open: true, words: '' }], open: buildOpen() };
+  var FUELM = buildFuelMonth();
+  var $ = function (id) { return document.getElementById(id); };
+  function fmtRM(v) { return v >= 1e6 ? 'RM ' + (v / 1e6).toFixed(2) + 'M' : v >= 100000 ? 'RM ' + Math.round(v / 1000) + 'K' : v >= 10000 ? 'RM ' + (v / 1000).toFixed(1) + 'K' : 'RM ' + Math.round(v).toLocaleString('en-MY'); }
+  function bigRM(v) { var s = fmtRM(v).slice(3), m = /^([\d.,]+)([KM]?)$/.exec(s); return '<span class="u pre">RM</span>' + m[1] + (m[2] ? '<span class="u" style="margin-left:1px">' + m[2] + '</span>' : ''); }
+  function hhmm(h) { var H = Math.floor(h), M = Math.round((h - H) * 60); if (M === 60) { H++; M = 0; } return pad(H) + ':' + pad(M); }
+  function dayOf(off) { var d = new Date(TODAY); d.setDate(d.getDate() + off); return d; }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function pill(t, c, sm) { return '<span class="pill ' + c + (sm ? ' sm' : '') + '">' + t + '</span>'; }
+  var GO = '<svg class="i s go" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>';
+  var CAM = '<svg class="i s" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>';
+  var DOC = '<svg class="i s" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+  var TRUCK = '<svg class="i s" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="1"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>';
+  var OK = '<svg class="i" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
+  var REF = '<svg class="i s" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.5 15a9 9 0 1 1-2.1-9.4L23 10"/></svg>';
+
+  function dayKind() {
+    if (st.mode === 'holiday') return 'holiday';
+    if (dayOf(st.dayOff).getDay() === 0) return 'sunday';
+    return st.dayOff < 0 ? 'past' : st.dayOff > 0 ? 'future' : 'today';
+  }
+  function blank() { return st.mode === 'loading' || st.mode === 'error0'; }   // nothing to show yet: dashes, never 0
+  function data() {
+    var f = st.branch === 'ALL' ? (function () { var a = buildFleet('MTK'), b = buildFleet('KTN'); return { out: a.out, idle: a.idle.concat(b.idle) }; })() : buildFleet(st.branch);
+    var kind = dayKind(), off = kind === 'sunday' || kind === 'holiday', preImport = kind === 'today' && st.hour < 8, future = kind === 'future';
+    if (off || preImport || future) f = { out: [], idle: f.idle.concat(f.out.map(function (L) { return { plate: L.plate, last: '23 Oct' }; })) };
+    var hour = st.mode === 'error' ? 10.7 : st.hour;   // offline: the numbers as they were at 10:42
+    var S = snapshot(f, kind === 'past' ? 24 : hour, kind === 'past');
+    S.fleetSize = st.branch === 'ALL' ? FLEET.MTK + FLEET.KTN : FLEET[st.branch];
+    S.leave = st.branch === 'ALL' ? LEAVE.MTK + LEAVE.KTN : LEAVE[st.branch];
+    // fuel report, MTK. Rule A (today's backend): every active driver, not crew, not on leave, sends a fuel or no-fuel slip.
+    // Rule B (D12): only the lorries out today. Server's today only.
+    var lorryDrivers = buildFleet('MTK').out, spare = ['Driver 12', 'Driver 13', 'Driver 14', 'Driver 15', 'Driver 16', 'Driver 17'];
+    var people = lorryDrivers.map(function (L) { return { staff: L.staff, name: L.driver, plate: L.plate }; }).concat(spare.map(function (n, i) { return { staff: 'TER 5' + pad(10 + i * 4), name: n, plate: '' }; }));
+    var share = hour < 8.5 ? 0 : hour < 16 ? (hour - 8.5) / 7.5 * 0.75 : 0.94;   // reports trickle in through the day
+    var due = st.fuelRule === 'lorry' ? people.filter(function (p) { return p.plate; }) : people;
+    // who has sent: lorry drivers in lorry order, then spare drivers; at 6 pm one lorry driver is still out
+    var order = due.slice().sort(function (a, b) { return (a.plate ? 0 : 1) - (b.plate ? 0 : 1); }), nSent = Math.round(due.length * share);
+    if (hour >= 18) order = order.filter(function (p) { return p.name !== 'Driver 05'; }).concat(order.filter(function (p) { return p.name === 'Driver 05'; }));
+    S.fuel = { rule: st.fuelRule, unit: st.fuelRule === 'lorry' ? 'lorries' : 'drivers', due: due.length, sent: order.slice(0, nSent), missing: order.slice(nSent), onLeave: LEAVE.MTK, crew: 3 };
+    S.month = FUELM;
+    S.standby = S.lorries.filter(function (x) { return x.status === 'done'; });
+    S.kind = kind; S.fleet = f; S.preImport = preImport;
+    S.open = st.branch === 'KTN' ? [] : st.open;
+    S.barcodeYet = dayOf(st.dayOff) >= BARCODE_FROM;
+    return S;
+  }
+
+  // ================================================================ home
+  function card(cls, inner, act) { return '<button type="button" class="card ' + cls + '" data-act="' + act + '">' + inner + GO + '</button>'; }
+  function bar(parts) { var tot = parts.reduce(function (a, p) { return a + p[0]; }, 0) || 1; return '<div class="sbar">' + parts.filter(function (p) { return p[0]; }).map(function (p) { return '<i class="' + p[1] + '" style="flex:' + (p[0] / tot) + '"></i>'; }).join('') + '</div>'; }
+  function retry() { return '<span class="warn">10:42</span><span class="rty" role="button" data-act="retry">Retry</span>'; }
+
+  function renderHome() {
+    var D = data(), k = D.kind, h = '', B = blank(), d = dayOf(st.dayOff);
+    var past = k === 'past', future = k === 'future', off = k === 'sunday' || k === 'holiday';
+    // date row: when not on today, the Today key gives the context, so the box shows only the date
+    $('dDay').innerHTML = (st.dayOff === 0 ? 'Today <small>&middot; ' : '<small>') + WD[d.getDay()] + ' ' + d.getDate() + ' ' + MON[d.getMonth()] + '</small>';
+    $('dPick').value = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    $('dNext').disabled = st.dayOff >= 2;
+    $('dToday').hidden = st.dayOff === 0;
+    var old = st.mode === 'error' || !!st.failZone;
+    $('clock').className = 'clock' + (old ? ' old' : '');
+    $('clock').innerHTML = st.mode === 'error0' ? '' : old ? '10:42 &middot; old' : st.updating ? 'Updating&hellip; ' + REF.replace('class="i s"', 'class="i s spin"') : B ? '&mdash;' : hhmm(st.hour) + ' ' + REF;
+    $('brp').innerHTML = (st.branch === 'ALL' ? 'All' : st.branch) + ' <svg class="i s" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>';
+    var line = st.mode === 'loading' ? 'Loading · 8 s' : k === 'sunday' ? 'Rest day' : k === 'holiday' ? 'Public holiday' : '';
+    $('loadline').hidden = !line; $('loadline').textContent = line;
+    $('offline').hidden = !(st.mode === 'error' || st.mode === 'error0');
+    $('offline').className = 'offline' + (st.mode === 'error0' ? ' grey' : '');
+    $('offlineText').innerHTML = st.mode === 'error0' ? 'Offline &middot; nothing saved on this phone yet' : 'Offline &middot; showing 10:42';
+    var V = function (x) { return B ? '<span class="skel">&mdash;</span>' : x; };
+
+    // 1 Deliveries: stops with a record (delivered or not delivered) out of stops on the day's delivery lists
+    if (!B && !D.stops) {
+      var why = D.preImport ? ['No DLs imported yet', 'Usually in by 9 am'] : future ? ['No DLs yet', 'Usually in by 9 am on the day'] : off ? ['No DLs for this day', '&nbsp;'] : ['No DLs imported', 'For ' + WD[d.getDay()] + ' ' + d.getDate() + ' ' + MON[d.getMonth()]];
+      h += card('span2', '<div class="lbl">Deliveries</div><div class="big word">' + why[0] + '</div><div class="sub">' + why[1] + '</div>', 'deliveries');
+    } else {
+      var nd = D.hard.length, ndRM = D.hard.reduce(function (a, p) { return a + p.rm; }, 0), rs = D.notDel.length - nd, parts = [];
+      if (nd) parts.push('<span class="bad">' + nd + ' not delivered &middot; ' + fmtRM(ndRM) + '</span>');
+      if (D.toGo) parts.push(past ? '<span class="warn">' + D.toGo + ' not closed</span>' : D.late ? '<span class="warn">' + D.late + ' late</span>' : '<b>' + D.toGo + '</b> to go');
+      if (!parts.length) parts.push('All stops visited');
+      h += card('span2', '<div class="lbl">Deliveries<span class="rt">' + V(fmtRM(D.rmPlanned) + ' planned') + '</span></div><div class="big num">' + V(D.visited + '<span class="u">/ ' + D.stops + ' stops</span>') + '</div>' +
+        (B ? '<div class="sbar"><i class="k" style="flex:1"></i></div>' : bar([[D.visited - D.notDel.length, 'g'], [nd, 'r'], [rs, 'k'], [D.toGo, D.late || past ? 'a' : 'k']])) + '<div class="sub">' + V(parts.join(' &middot; ')) + '</div>', 'deliveries');
+    }
+
+    // 2 Not closed: an office to-do as of today. Hidden on past and future days. Never coloured.
+    if (!past && !future) {
+      var op = D.open.length, opRM = D.open.reduce(function (a, x) { return a + x.rm; }, 0);
+      h += card('span2 short', '<div class="lbl">Not closed &middot; 30 days</div>' + (B ? '<div class="big num skel">&mdash;</div>' :
+        st.branch === 'KTN' ? '<div class="big word" style="font-size:17px">No DLs yet</div>' :
+        op ? '<div class="big num">' + op + '<span class="u">DLs &middot; ' + fmtRM(opRM) + '</span></div>' : '<div class="big ok">' + OK + 'All closed</div>'), 'open');
+    }
+
+    // 3 POD matched: of the day's DELIVERED invoices, how many have a photo whose barcode = the invoice number.
+    //   Never coloured. Barcodes are read from 24 Oct; the first two weeks show "collecting data".
+    var b3 = '&mdash;', s3 = 'No deliveries yet';
+    if (!D.barcodeYet) s3 = 'Barcode check from 24 Oct';
+    else if (future || off || !D.stops) s3 = '&nbsp;';
+    else if (st.early) s3 = 'Collecting data &middot; from 7 Nov';
+    else if (D.invDelivered) { b3 = Math.round(D.invMatched / D.invDelivered * 100) + '<span class="u">%</span>'; s3 = D.invMatched + ' of ' + D.invDelivered + ' invoices'; }
+    h += card('', '<div class="lbl">POD matched</div><div class="big num' + (b3 === '&mdash;' ? ' mute' : '') + '">' + V(b3) + '</div><div class="sub">' + V(s3) + '</div>', 'matched');
+
+    // 4 Lorries out (today) / Lorries used (past day)
+    if (past) h += card('', '<div class="lbl">Lorries used</div><div class="big num">' + V(D.fleet.out.length + '<span class="u">/ ' + D.fleetSize + '</span>') + '</div><div class="sub">&nbsp;</div>', 'lorries');
+    else h += card('', '<div class="lbl">Lorries out</div><div class="big num">' + V((D.preImport || future ? '&mdash;' : D.fleet.out.length) + '<span class="u">/ ' + D.fleetSize + '</span>') + '</div><div class="sub">' + V((D.preImport || future || off || !D.fleet.out.length ? '' : 'Standby ' + D.standby.length + ' &middot; ') + 'Leave ' + D.leave) + '</div>', 'lorries');
+
+    // 5 Fuel report: today only. "drivers" lives on the second line so 360 px phones fit.
+    var F = D.fuel;
+    if (!past && !future) {
+      var b5, c5 = '';
+      if (off) { b5 = '<span class="big word" style="font-size:17px">Not expected</span>'; }
+      else if (st.branch === 'KTN') { b5 = '<span class="big word" style="font-size:17px">Rule pending</span>'; c5 = '<span class="sub">D12</span>'; }
+      else if (D.preImport) { b5 = '&mdash;'; }
+      else {
+        b5 = F.sent.length + '<span class="u">/ ' + F.due + '</span>';
+        var lateN = F.missing.filter(function (p) { return p.plate; }).length;   // a driver with no lorry today is never "late"
+        c5 = '<span class="unit">' + F.unit + '</span>' + (F.missing.length === 0 ? pill(OK.replace('class="i"', 'class="i s"') + 'All in', 'p-done') : st.hour < 16 || st.mode === 'error' ? pill('Due 4 pm', 'p-grey') : lateN ? pill(lateN + ' late', 'p-late') : pill(F.missing.length + ' no lorry', 'p-grey'));
+      }
+      h += card('', '<div class="lbl">Fuel report</div><div class="big num">' + V(b5) + '</div><div class="chipline">' + (B ? '' : st.failZone === 'fuel' ? '<span class="sub" style="margin:0">' + retry() + '</span>' : c5 || '<span class="sub">&nbsp;</span>') + '</div>', 'fuel');
+    }
+    // 6 Fuel this month: cost only (KTN has no slips in this draft)
+    var ktn = st.branch === 'KTN';
+    h += card('', '<div class="lbl">Fuel &middot; ' + MON[d.getMonth()] + '</div><div class="big num' + (ktn ? ' mute' : '') + '">' + V(ktn ? '&mdash;' : bigRM(D.month.rm)) + '</div><div class="sub">' + (st.failZone === 'fuel' ? retry() : V(ktn ? 'No slips yet' : D.month.fills + ' fills')) + '</div>', 'fuelmonth');
+    $('home').innerHTML = h;
+
+    var r = '';
+    if (st.showDisc && st.branch !== 'KTN') { var od = st.disc.filter(function (x) { return x.open; }).length; r += '<button type="button" class="row" data-act="disc"><span class="t">' + TRUCK + 'To discuss</span><span class="m">' + (od ? od + ' this week' : 'None') + '</span>' + GO + '</button>'; }
+    r += '<button type="button" class="row" data-act="month"><span class="t">' + MONTH[d.getMonth()] + ' summary</span><span class="m"></span>' + GO + '</button>';
+    $('rows').innerHTML = r;
+  }
+
+  // ================================================================ level 1 pages
+  var STATUS = { late: ['Late', 'p-late'], route: ['On route', 'p-grey'], notstarted: ['Not started', 'p-grey'], done: ['Done', 'p-done'] };
+  var ORDER = { late: 0, notstarted: 1, route: 2, done: 3 };
+  function openPage(title, html, push) { $('pTitle').textContent = title; $('pBody').innerHTML = html; if ($('page').hidden) { $('page').hidden = false; $('page').scrollTop = 0; if (push !== false) history.pushState({ lvl: 1 }, ''); } }
+  function closePage() { $('page').hidden = true; }
+  // a lorry row carries a plate, never a name
+  function lorryRow(x) {
+    var s = STATUS[x.status];
+    return '<button type="button" class="li' + (x.status === 'done' ? ' done' : '') + '" data-lorry="' + x.L.plate + '"><div class="mn"><div class="l1">' + x.L.plate + '</div><div class="l2">' + x.visited + ' / ' + x.total + ' stops' + (x.nd ? ' &middot; <span style="color:var(--red-700);font-weight:700">' + x.nd + ' not delivered</span>' : '') + '</div></div><div class="rt">' + pill(s[0], s[1]) + '</div>' + GO + '</button>';
+  }
+  function stopRow(p) {
+    var w = p.stop.fail.why;
+    return '<button type="button" class="li" data-stop="' + p.plate + '|' + p.stop.shop + '"><div class="mn"><div class="l1 s">' + esc(p.stop.shop) + '</div><div class="l2">' + REASONS[w] + ' &middot; ' + p.plate + ' &middot; ' + p.stop.area + '</div></div><div class="rt"><div class="v num">' + fmtRM(p.rm) + '</div>' +
+      (w === 'resched' ? pill('Reschedule', 'p-grey', 1) : pill('Not delivered', 'p-fail', 1)) + (p.stop.fail.photo ? pill(CAM + 'Photo', 'p-grey', 1) : '') + '</div>' + GO + '</button>';
+  }
+
+  function pageDeliveries() {
+    var D = data(), h = '';
+    if (!D.stops) { openPage('Deliveries', '<div class="state"><b>No delivery lists</b>Nothing imported for this day</div>'); return; }
+    if (D.hard.length) { h += '<div class="h2">Not delivered &middot; ' + D.hard.length + '</div>'; D.hard.forEach(function (p) { h += stopRow(p); }); }
+    var rs = D.notDel.filter(function (p) { return p.stop.fail.why === 'resched'; });
+    if (rs.length) { h += '<div class="h2">Rescheduled by the customer &middot; ' + rs.length + '</div>'; rs.forEach(function (p) { h += stopRow(p); }); }
+    h += '<div class="h2">Lorries</div>';
+    D.lorries.slice().sort(function (a, b) { return ORDER[a.status] - ORDER[b.status] || (a.L.plate < b.L.plate ? -1 : 1); }).forEach(function (x) { h += lorryRow(x); });
+    openPage('Deliveries', h);
+  }
+
+  function pageMatched() {
+    var D = data(), h = '';
+    if (!D.barcodeYet) h = '<div class="state"><b>No barcode data for this day</b>The POD form started reading barcodes on 24 Oct</div>';
+    else if (st.early) h = '<div class="state"><b>Collecting data</b>The barcode check started on 24 Oct. The number shows from 7 Nov, after two weeks of photos.</div>';
+    else if (!D.invDelivered) h = '<div class="state"><b>No deliveries yet</b>Counts start with the first saved POD</div>';
+    else {
+      h += '<div class="tot"><div class="card"><div class="lbl">' + DOC + ' Matched</div><div class="big num" style="color:var(--green)">' + D.invMatched + '</div><div class="sub">invoices</div></div><div class="card"><div class="lbl">Unclear</div><div class="big num" style="color:var(--ink-2)">' + (D.invDelivered - D.invMatched) + '</div><div class="sub">invoices</div></div></div>';
+      h += '<div class="h2">What it means</div><div class="li"><div class="mn"><div class="l2 w"><b>Matched:</b> the barcode on the POD photo is this invoice number. It proves the right paper was photographed; the customer chop is checked on the daily scan copy.</div></div></div>';
+      h += '<div class="li"><div class="mn"><div class="l2 w"><b>Unclear:</b> the barcode could not be read. Usually light, a crease or several invoices at one stop. The office checks the photo or the paper copy.</div></div></div>';
+    }
+    if (D.barcodeYet) h += '<button type="button" class="link" data-act="podadmin">Open in POD Admin ' + GO + '</button>';
+    openPage('POD matched', h);
+  }
+
+  function pageOpen() {
+    var D = data(), h = '', last = '';
+    if (st.branch === 'KTN') { openPage('Not closed', '<div class="state"><b>No DLs yet</b>No delivery lists for KTN</div>'); return; }
+    h += '<p class="note">Delivery lists 2&ndash;30 days old with invoices that have no POD and no problem record. Invoices already handled on another DL are left out. Often office-side: cancelled, moved, second lorry not linked, or a system fault. The office checks each one first.</p>';
+    D.open.forEach(function (x) {
+      if (x.date !== last) { h += '<div class="h2">' + x.date + '</div>'; last = x.date; }
+      h += '<button type="button" class="li" data-open="' + x.dl + '"><div class="mn"><div class="l1">' + x.dl + '</div><div class="l2">' + x.plate + ' &middot; ' + x.open + ' of ' + x.inv + ' open &middot; ' + fmtRM(x.rm) + '</div></div><div class="rt">' + pill(x.tag, 'p-grey', 1) + '</div>' + GO + '</button>';
+    });
+    if (!D.open.length) h += '<div class="state"><b>All closed</b>Every delivery list from 2&ndash;30 days ago is closed</div>';
+    h += '<p class="note" style="margin-top:14px">Older than 30 days: 137 DLs, not counted here. The office clears them in POD Admin.</p>';
+    openPage('Not closed', h);
+  }
+
+  function pageLorries() {
+    var D = data(), h = '', k = D.kind;
+    if (D.preImport || k === 'future') h += '<div class="state" style="margin-bottom:6px"><b>No DLs imported yet</b>Lorries show once the day\'s delivery lists are in</div>';
+    else if (k === 'today' && D.fleet.out.length) {
+      var road = D.lorries.filter(function (x) { return x.status !== 'done'; });
+      h += '<div class="h2">Standby &middot; route done, free for a 2nd trip &middot; ' + D.standby.length + '</div>';
+      D.standby.forEach(function (x) { h += '<button type="button" class="li done" data-lorry="' + x.L.plate + '"><div class="mn"><div class="l1">' + x.L.plate + '</div><div class="l2">' + x.L.staff + ' &middot; ' + esc(x.L.driver) + ' + ' + esc(x.L.crew) + ' &middot; last POD ' + hhmm(x.lastPod) + '</div></div>' + GO + '</button>'; });
+      if (!D.standby.length) h += '<p class="note">None yet</p>';
+      h += '<div class="h2">On road &middot; ' + road.length + '</div>';
+      road.forEach(function (x) { h += lorryRow(x); });
+      h += '<div class="h2">Not out &middot; ' + D.fleet.idle.length + '</div>';
+      D.fleet.idle.forEach(function (I) { h += '<div class="li done"><div class="mn"><div class="l1">' + I.plate + '</div><div class="l2">Last out ' + I.last + '</div></div></div>'; });
+    } else if (k === 'past') {
+      h += '<div class="h2">Used &middot; ' + D.fleet.out.length + '</div>';
+      D.lorries.forEach(function (x) { h += lorryRow(x); });
+    } else {
+      h += '<div class="h2">Not out &middot; ' + D.fleet.idle.length + '</div>';
+      D.fleet.idle.forEach(function (I) { h += '<div class="li done"><div class="mn"><div class="l1">' + I.plate + '</div><div class="l2">Last out ' + I.last + '</div></div></div>'; });
+    }
+    if (k === 'today') {
+      h += '<div class="h2">Drivers on leave &middot; ' + D.leave + '</div>';
+      for (var i = 0; i < D.leave; i++) h += '<div class="li"><div class="mn"><div class="l1 s">TER 4' + pad(20 + i * 9) + ' &middot; Driver ' + pad(18 + i) + '</div></div></div>';
+    }
+    openPage(k === 'past' ? 'Lorries used' : 'Lorries out', h);
+  }
+
+  function pageFuel() {
+    var D = data(), F = D.fuel, h = '', R = rng(33);
+    if (D.kind === 'sunday' || D.kind === 'holiday') { openPage('Fuel report', '<div class="state"><b>Not expected</b>No fuel reports due on a rest day</div>'); return; }
+    if (st.branch === 'KTN') { openPage('Fuel report', '<div class="state"><b>Rule pending</b>Decision D12: should KTN drivers send fuel reports while KTN has no delivery lists?</div>'); return; }
+    if (D.kind !== 'today' || D.preImport) { openPage('Fuel report', '<div class="state"><b>Not yet</b>Fuel reports are tracked for today only</div>'); return; }
+    var after4 = st.hour >= 16 && st.mode !== 'error';
+    h += '<div class="tot"><div class="card"><div class="lbl">Sent</div><div class="big num">' + F.sent.length + '</div><div class="sub">' + F.unit + '</div></div><div class="card"><div class="lbl">' + (after4 ? 'Not in' : 'Due by 4 pm') + '</div><div class="big num">' + F.missing.length + '</div><div class="sub">' + F.unit + '</div></div></div>';
+    if (F.missing.length && after4) {
+      h += '<div class="h2">Not in after 4 pm &middot; by ' + (F.rule === 'lorry' ? 'plate' : 'staff ID') + '</div>';
+      F.missing.slice().sort(function (a, b) { return a.staff < b.staff ? -1 : 1; }).forEach(function (p) {
+        h += F.rule === 'lorry' ? '<div class="li"><div class="mn"><div class="l1">' + p.plate + '</div></div></div>'
+          : '<div class="li"><div class="mn"><div class="l1 s">' + p.staff + ' &middot; ' + esc(p.name) + '</div><div class="l2">' + (p.plate ? p.plate + ' today' : 'No lorry today') + '</div></div></div>';
+      });
+    } else if (F.missing.length) h += '<p class="note" style="margin-top:12px">Names of missing reports show after 4 pm.</p>';
+    h += '<div class="h2">Sent today &middot; ' + F.sent.length + '</div>';
+    F.sent.forEach(function (p, j) {
+      var fill = p.plate && j % 4 === 1, rm = 330 + Math.round(R() * 140), lit = Math.round(rm / 3.05), t = 8.2 + j * 0.45;   // 2-3 fills a day; the rest are "No fuel"
+      h += '<button type="button" class="li done" data-slip="' + (p.plate || 'No lorry') + '|' + hhmm(t) + '|' + (fill ? rm : 0) + '|' + (j % 3 ? lit : '') + '"><div class="mn"><div class="l1 s">' + (p.plate || 'No lorry') + ' &middot; ' + hhmm(t) + '</div><div class="l2">' + (fill ? 'RM ' + rm + (j % 3 ? ' &middot; ' + lit + ' L' : '') : 'No fuel today') + '</div></div>' + GO + '</button>';
+    });
+    h += '<div class="h2">Not due</div><div class="li done"><div class="mn"><div class="l1 s">' + F.onLeave + ' on leave &middot; ' + F.crew + ' crew</div><div class="l2">Not counted</div></div></div>';
+    openPage('Fuel report', h);
+  }
+
+  function pageFuelMonth() {
+    var M = data().month, h = '';
+    if (st.branch === 'KTN') { openPage('Fuel · ' + MON[dayOf(st.dayOff).getMonth()], '<div class="state"><b>No fuel slips yet</b>Nothing recorded for KTN this month</div>'); return; }
+    h += '<div class="tot"><div class="card"><div class="lbl">Fuel cost</div><div class="big num">' + bigRM(M.rm) + '</div></div><div class="card"><div class="lbl">Fills</div><div class="big num">' + M.fills + '</div></div></div>';
+    h += '<div class="h2">Slips complete &middot; whole fleet</div>';
+    [['Odometer entered', M.odo], ['Receipt photo', M.photo], ['Litres entered', M.litres]].forEach(function (c) { h += '<div class="li"><div class="mn"><div class="l1 s">' + c[0] + '</div></div><div class="rt"><div class="v num">' + c[1] + ' of ' + M.fills + '</div></div></div>'; });
+    h += '<div class="h2">Receipt check</div><div class="li"><div class="mn"><div class="l1 s">Off &middot; being fixed</div><div class="l2">Receipts are not compared with the typed amount yet</div></div><div class="rt">' + pill('Unclear', 'p-grey', 1) + '</div></div>';
+    h += '<div class="h2">By lorry &middot; A&ndash;Z by plate</div><table class="t"><thead><tr><th>Lorry</th><th class="n">RM</th><th class="n">Fills</th></tr></thead><tbody>';
+    M.rows.forEach(function (r) { h += '<tr><td><b>' + r.plate + '</b></td><td class="n">' + (r.rm ? r.rm.toLocaleString('en-MY') : '&mdash;') + '</td><td class="n">' + r.fills + '</td></tr>'; });
+    h += '</tbody></table><p class="note" style="margin-top:8px">Litres are typed on ' + M.litres + ' of ' + M.fills + ' slips, so they are counted for the whole fleet only. km per litre: collecting data, ready Dec 2026.</p>';
+    openPage('Fuel · ' + MON[dayOf(st.dayOff).getMonth()], h);
+  }
+
+  function pageDisc(noPush) {
+    var h = '<p class="note"><b>Later, not in F2.</b> Appears only after the GPS archive and a silent trial, or 6 months of fuel slips. Questions about a vehicle, never conclusions about a person. At most 5 a week; more than that pauses the check. Shown to a driver only after the supervisor has talked to them.</p>';
+    st.disc.forEach(function (x, i) {
+      h += '<div class="disc' + (x.open ? '' : ' closed') + '"><div class="w">' + TRUCK + (x.open ? 'To discuss' : 'Explained') + '</div><div class="t">' + x.plate + ' &middot; ' + x.what + '</div><div class="q">' + x.q + '</div>' +
+        (x.open ? '<button type="button" class="btn" data-explain="' + i + '">Explained</button>' : '<div class="q" style="margin-top:6px">&ldquo;' + esc(x.words) + '&rdquo;</div>') + '</div>';
+    });
+    if (!st.disc.some(function (x) { return x.open; })) h += '<div class="state"><b>Nothing to discuss this week</b></div>';
+    openPage('To discuss', h, noPush ? false : undefined);
+  }
+
+  function pageMonth() {
+    var m = dayOf(st.dayOff).getMonth(), M = data().month, h = '', R = rng(5);
+    h += '<div class="tot">';
+    [['Stops visited', '2,412', 'of 2,486'], ['POD matched', '&mdash;', 'collecting data &middot; from 7 Nov'], ['Not delivered', '6', 'stops &middot; RM 31K'], ['Not closed', String(st.open.length), 'DLs, 2&ndash;30 days'], ['Fuel reports sent', '96<span class="u">%</span>', 'of reports due'], ['Fuel cost', bigRM(M.rm), M.fills + ' fills']].forEach(function (c) {
+      h += '<div class="card"><div class="lbl">' + c[0] + '</div><div class="big num' + (c[1] === '&mdash;' ? ' mute' : '') + '" style="font-size:26px">' + c[1] + '</div><div class="sub">' + c[2] + '</div></div>';
+    });
+    h += '</div><div class="h2">Stops visited per day &middot; whole fleet</div><div class="days">';
+    for (var i = 1; i <= 24; i++) { var sun = new Date(2026, m, i).getDay() === 0; h += '<i class="' + (sun ? 'k' : '') + '" style="height:' + (sun ? 4 : 80 + R() * 20) + '%"></i>'; }
+    h += '</div><div class="h2">By branch</div><div class="li"><div class="mn"><div class="l1">MTK</div><div class="l2">2,412 of 2,486 stops &middot; ' + fmtRM(M.rm) + ' fuel</div></div></div><div class="li done"><div class="mn"><div class="l1">KTN</div><div class="l2">No delivery lists yet</div></div></div>';
+    h += '<div class="h2">Month-end &middot; decision D13</div><button type="button" class="li" data-act="payroll"><div class="mn"><div class="l1 s">Per driver, by staff ID</div><div class="l2">Routes done &middot; 2nd trips &middot; leave days &middot; for allowances</div></div>' + GO + '</button>';
+    openPage(MONTH[m] + ' summary', h);
+  }
+
+  // ================================================================ level 2 sheets
+  function openSheet(html) { var fresh = $('scrim').hidden; $('sheet').innerHTML = '<div class="grab"></div>' + html; $('scrim').hidden = false; $('sheet').scrollTop = 0; if (fresh) history.pushState({ lvl: 2 }, ''); }   // a sheet opened from a sheet replaces it
+  function closeSheet() { $('scrim').hidden = true; }
+  function stopHtml(row) {
+    var s = row.st, state = row.state, th = '';
+    if (state === 'delivered') s.inv.forEach(function () { th += '<div class="th">' + CAM + '</div>'; });
+    if (state === 'failed' && s.fail.photo) th = '<div class="th">' + CAM + '</div>';
+    var p = state === 'delivered' ? pill('Delivered', 'p-done') : state === 'failed' ? (s.fail.why === 'resched' ? pill('Reschedule', 'p-grey') : pill('Not delivered', 'p-fail')) : (st.hour >= 15 && dayKind() === 'today' ? pill('Late', 'p-late') : pill('Not yet', 'p-grey'));
+    // "saved" = the time the POD was saved. A not-delivered stop has no time in the data yet (v14).
+    return '<div class="stop' + (state === 'delivered' ? ' done' : '') + '"><div class="top"><div class="nm">' + esc(s.shop) + '<div class="mt">' + s.area + ' &middot; ' + s.inv.length + ' invoices &middot; ' + fmtRM(row.rm) + (state === 'delivered' ? ' &middot; saved ' + hhmm(s.at) : '') + '</div></div>' + p + '</div>' +
+      (state === 'failed' ? '<div class="reason' + (s.fail.why === 'resched' ? ' g' : '') + '">' + REASONS[s.fail.why] + '</div>' : '') + (th ? '<div class="ths">' + th + '</div>' : '') + '</div>';
+  }
+  function sheetLorry(plate) {
+    var D = data(), x = D.lorries.filter(function (l) { return l.L.plate === plate; })[0]; if (!x) return;
+    var s = STATUS[x.status], h = '<h3>' + plate + ' ' + pill(s[0], s[1]) + '</h3><div class="s2">' + x.visited + ' / ' + x.total + ' stops</div><div class="s2">On board: ' + esc(x.L.driver) + ' + ' + esc(x.L.crew) + '</div>';
+    x.rows.forEach(function (r) { h += stopHtml(r); });
+    openSheet(h + '<button type="button" class="link" data-act="podadmin">Open in POD Admin ' + GO + '</button>');
+  }
+  function sheetStop(key) {
+    var D = data(), p = key.split('|'), x = D.lorries.filter(function (l) { return l.L.plate === p[0]; })[0]; if (!x) return;
+    openSheet('<h3>' + esc(p[1]) + '</h3><div class="s2">' + p[0] + '</div>' + stopHtml(x.rows.filter(function (r) { return r.st.shop === p[1]; })[0]) + '<button type="button" class="link" data-act="podadmin">Open in POD Admin ' + GO + '</button>');
+  }
+  function sheetOpen(dl) {
+    var x = st.open.filter(function (o) { return o.dl === dl; })[0], R = rng(x.inv * 97);
+    var h = '<h3>' + dl + '</h3><div class="s2">' + x.plate + ' &middot; ' + x.date + ' &middot; ' + x.open + ' of ' + x.inv + ' invoices open &middot; ' + fmtRM(x.rm) + '</div>';
+    h += '<div class="s2" style="margin-top:6px">Office tag: <b>' + x.tag + '</b> &middot; set in POD Admin</div>';
+    for (var i = 0; i < Math.min(6, x.inv); i++) h += '<div class="stop' + (i >= x.open ? ' done' : '') + '"><div class="top"><div class="nm">IV' + (470000 + Math.floor(R() * 9000)) + '<div class="mt">Outlet ' + (300 + i) + ' &middot; ' + AREAS[i % AREAS.length] + '</div></div>' + (i < x.open ? pill('No POD', 'p-grey') : pill('Delivered', 'p-done')) + '</div></div>';
+    if (x.inv > 6) h += '<p class="note" style="margin-top:10px">+ ' + (x.inv - 6) + ' more</p>';
+    openSheet(h + '<button type="button" class="link" data-act="podadmin">Open in POD Admin ' + GO + '</button>');
+  }
+  var SLIP = null;
+  function sheetSlip(v) {
+    var p = v.split('|'); SLIP = { plate: p[0], time: p[1], rm: +p[2], lit: p[3] };
+    var nofuel = !SLIP.rm, h = '<h3>' + SLIP.plate + ' &middot; ' + SLIP.time + '</h3><div class="s2">' + (nofuel ? 'No fuel today' : 'Fuel slip') + '</div>';
+    if (!nofuel) h += '<div class="kv"><div><small>Odometer</small><b>' + (184200 + SLIP.rm * 7).toLocaleString('en-MY') + '</b></div><div><small>RM</small><b>' + SLIP.rm + '</b></div><div><small>Litres</small><b>' + (SLIP.lit || '&mdash;') + '</b></div></div><div class="ths"><div class="th">' + DOC + '</div></div><p class="note" style="margin-top:8px">Receipt check: off, being fixed.</p>';
+    h += '<div class="btnrow"><button type="button" class="btn b-ghost" data-act="edit">Edit</button><button type="button" class="btn b-ghost" data-act="delete">Delete</button></div>';
+    openSheet(h);
+  }
+  function pinBox() { return '<label class="fl" for="pin">Manager PIN</label><input id="pin" class="in" type="password" inputmode="numeric" autocomplete="off" maxlength="8"><div class="err" id="pinErr" hidden>Wrong PIN</div>'; }
+  function sheetEdit() {
+    $('sheet').innerHTML = '<div class="grab"></div><h3>Edit &middot; ' + SLIP.plate + ' &middot; ' + SLIP.time + '</h3><div class="form2"><label class="fl" for="eRm">RM</label><input id="eRm" class="in" inputmode="decimal" value="' + (SLIP.rm || '') + '"><label class="fl" for="eL">Litres</label><input id="eL" class="in" inputmode="decimal" value="' + (SLIP.lit || '') + '">' + pinBox() + '</div><div class="btnrow"><button type="button" class="btn b-ghost" data-close="1">Cancel</button><button type="button" class="btn b-pri" data-act="pinok">Save</button></div><p class="note" style="margin-top:10px">Demo only: nothing is saved.</p>';
+  }
+  function sheetDelete() {
+    $('sheet').innerHTML = '<div class="grab"></div><h3>Delete ' + SLIP.plate + ' &middot; ' + SLIP.time + (SLIP.rm ? ' &middot; RM ' + SLIP.rm : '') + '?</h3><div class="form2">' + pinBox() + '</div><div class="btnrow"><button type="button" class="btn b-ghost" data-close="1">Cancel</button><button type="button" class="btn b-pri" data-act="pinok">Delete</button></div><p class="note" style="margin-top:10px">Demo only: nothing is deleted.</p>';
+  }
+  function sheetPayroll() {
+    var h = '<h3>Per driver &middot; October</h3><div class="s2">For allowances. Sorted by staff ID, never by the numbers. Decision D13: keep it here, or as a month-end export.</div><table class="t" style="margin-top:12px"><thead><tr><th>Staff ID</th><th class="n">Routes</th><th class="n">2nd trips</th><th class="n">Leave</th></tr></thead><tbody>';
+    var R = rng(12);
+    for (var i = 0; i < 8; i++) h += '<tr><td>TER 4' + pad(10 + i * 4) + '</td><td class="n">' + (16 + Math.floor(R() * 6)) + '</td><td class="n">' + Math.floor(R() * 4) + '</td><td class="n">' + Math.floor(R() * 3) + '</td></tr>';
+    openSheet(h + '</tbody></table><p class="note" style="margin-top:8px">+ 9 more drivers</p>');
+  }
+  function sheetExplain(i) {
+    var x = st.disc[i];
+    openSheet('<h3>' + x.plate + ' &middot; ' + x.what + '</h3><div class="s2">' + x.q + '</div><textarea id="exWords" placeholder="What the driver said, word for word"></textarea><div class="btnrow"><button type="button" class="btn b-ghost" data-close="1">Cancel</button><button type="button" class="btn b-pri" data-save="' + i + '">Save as Explained</button></div><p class="note" style="margin-top:10px">Later: a supervisor tool, needs D11.</p>');
+  }
+  function sheetBranch() {
+    openSheet('<h3>Branch</h3><div class="opts" style="grid-template-columns:repeat(3,1fr)">' + ['MTK', 'KTN', 'ALL'].map(function (b) { return '<button type="button" data-b="' + b + '" class="' + (st.branch === b ? 'on' : '') + '">' + (b === 'ALL' ? 'All' : b) + '</button>'; }).join('') + '</div><p class="note" style="margin-top:10px">Remembered on this phone.</p>');
+  }
+  function sheetDemo() {
+    var o = function (grp, val, label) {
+      var on = grp === 'hour' ? st.hour === val && st.dayOff === 0 && st.mode === 'normal' : grp === 'mode' ? st.mode === val : grp === 'day' ? st.dayOff === val && st.mode === 'normal' : grp === 'early' ? !st.early : grp === 'disc' ? st.showDisc : grp === 'rule' ? st.fuelRule === val : grp === 'fail' ? st.failZone === val : false;
+      return '<button type="button" data-demo="' + grp + ':' + val + '" class="' + (on ? 'on' : '') + '">' + label + '</button>';
+    };
+    openSheet('<h3>Demo controls</h3><div class="s2">Not part of the dashboard: shows the screen at other times and states.</div>' +
+      '<div class="h2">Time today</div><div class="opts">' + o('hour', 7.5, '7:30 am') + o('hour', 9, '9:00 am') + o('hour', 12, '12:00 pm') + o('hour', 15.5, '3:30 pm') + o('hour', 18, '6:00 pm') + '</div>' +
+      '<div class="h2">Other days</div><div class="opts">' + o('day', -1, 'Yesterday') + o('day', 2, 'Mon 26 Oct') + o('day', 1, 'Sun 25 Oct') + o('mode', 'holiday', 'Public holiday') + '</div>' +
+      '<div class="h2">Screen states</div><div class="opts">' + o('mode', 'loading', 'First load') + o('mode', 'error', 'Offline') + o('mode', 'error0', 'Offline, nothing saved') + o('fail', 'fuel', 'Fuel source failed') + '</div>' +
+      '<div class="h2">Decisions and phases</div><div class="opts">' + o('rule', 'driver', 'Fuel: per driver') + o('rule', 'lorry', 'Fuel: per lorry') + o('early', 1, 'After 7 Nov preview') + o('disc', 1, 'Later: To discuss') + '</div>');
+  }
+
+  // ================================================================ events
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('button,[role=button]'); if (!t) return;
+    var a = t.getAttribute('data-act');
+    if (a === 'retry') { e.stopPropagation(); st.mode = 'normal'; st.failZone = ''; renderHome(); return; }
+    if (a === 'deliveries') return pageDeliveries();
+    if (a === 'matched') return pageMatched();
+    if (a === 'open') return pageOpen();
+    if (a === 'lorries') return pageLorries();
+    if (a === 'fuel') return pageFuel();
+    if (a === 'fuelmonth') return pageFuelMonth();
+    if (a === 'disc') return pageDisc();
+    if (a === 'month') return pageMonth();
+    if (a === 'payroll') return sheetPayroll();
+    if (a === 'branch') return sheetBranch();
+    if (a === 'edit') return sheetEdit();
+    if (a === 'delete') return sheetDelete();
+    if (a === 'pinok') { var pv = ($('pin').value || '').trim(); if (pv.length < 4) { $('pinErr').hidden = false; $('pin').focus(); return; } history.back(); return; }
+    if (a === 'podadmin') { openSheet('<h3>POD Admin</h3><div class="s2">Opens the existing POD Admin board for this lorry or DL. Photos, barcodes, the Unclear filter and the office tags live there. Not part of this draft.</div><div class="btnrow"><button type="button" class="btn b-ghost" data-close="1">Close</button></div>'); return; }
+    if (a === 'refresh') { st.updating = true; renderHome(); setTimeout(function () { st.updating = false; st.mode = st.mode === 'loading' ? 'normal' : st.mode; st.failZone = ''; renderHome(); }, 900); return; }
+    if (t.hasAttribute('data-b')) { st.branch = t.getAttribute('data-b'); history.back(); renderHome(); return; }
+    if (t.hasAttribute('data-lorry')) return sheetLorry(t.getAttribute('data-lorry'));
+    if (t.hasAttribute('data-stop')) return sheetStop(t.getAttribute('data-stop'));
+    if (t.hasAttribute('data-open')) return sheetOpen(t.getAttribute('data-open'));
+    if (t.hasAttribute('data-slip')) return sheetSlip(t.getAttribute('data-slip'));
+    if (t.hasAttribute('data-explain')) return sheetExplain(+t.getAttribute('data-explain'));
+    if (t.hasAttribute('data-save')) { var i = +t.getAttribute('data-save'), w = ($('exWords').value || '').trim(); if (!w) { $('exWords').focus(); return; } st.disc[i].open = false; st.disc[i].words = w; history.back(); setTimeout(function () { pageDisc(true); renderHome(); }, 30); return; }
+    if (t.hasAttribute('data-close')) { history.back(); return; }
+    if (t.hasAttribute('data-demo')) {
+      var d = t.getAttribute('data-demo').split(':');
+      if (d[0] === 'hour') { st.hour = +d[1]; st.dayOff = 0; st.mode = 'normal'; }
+      if (d[0] === 'day') { st.dayOff = +d[1]; st.mode = 'normal'; }
+      if (d[0] === 'mode') { st.mode = st.mode === d[1] ? 'normal' : d[1]; if (d[1] === 'holiday') st.dayOff = 0; }
+      if (d[0] === 'fail') st.failZone = st.failZone ? '' : d[1];
+      if (d[0] === 'rule') st.fuelRule = d[1];
+      if (d[0] === 'early') st.early = !st.early;
+      if (d[0] === 'disc') st.showDisc = !st.showDisc;
+      history.back(); renderHome(); return;
+    }
+    if (t.id === 'demoBtn') return sheetDemo();
+    if (t.id === 'pBack') { history.back(); return; }
+    if (t.id === 'dPrev') { st.dayOff--; if (st.mode === 'holiday') st.mode = 'normal'; renderHome(); return; }
+    if (t.id === 'dNext') { if (st.dayOff < 2) st.dayOff++; if (st.mode === 'holiday') st.mode = 'normal'; renderHome(); return; }
+    if (t.id === 'dToday') { st.dayOff = 0; if (st.mode === 'holiday') st.mode = 'normal'; renderHome(); return; }
+  });
+  $('dPick').addEventListener('change', function () {
+    var p = this.value.split('-'); if (p.length !== 3) return;
+    var d = new Date(+p[0], +p[1] - 1, +p[2]); st.dayOff = Math.round((d - TODAY) / 86400000); if (st.dayOff > 2) st.dayOff = 2;
+    if (st.mode === 'holiday') st.mode = 'normal'; renderHome();
+  });
+  $('scrim').addEventListener('click', function (e) { if (e.target === $('scrim')) history.back(); });
+  // the phone's Back button closes the sheet first, then the page
+  window.addEventListener('popstate', function () { if (!$('scrim').hidden) closeSheet(); else if (!$('page').hidden) closePage(); });
+  renderHome();
+})();
+
+</script>
+</body>
+</html>
