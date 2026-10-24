@@ -924,7 +924,7 @@ function _renderOcrHead(){
   var o = _ocr || {}, parts = [], warn = false;
   if (_STATION_NAMES[o.station]) parts.push(_STATION_NAMES[o.station]);
   if (o.fuel_type && o.fuel_type !== 'UNKNOWN'){ parts.push(_FUEL_NAMES[o.fuel_type] || L('Other fuel', 'Minyak lain')); if (o.fuel_type !== 'DIESEL') warn = true; }
-  if (o.receipt_date){ parts.push(_shortDate(o.receipt_date) + (o.receipt_time ? ' ' + o.receipt_time : '')); if (o.receipt_date !== $('fuelDate').value) warn = true; }
+  if (o.receipt_date){ var rd = _rcptDate(o.receipt_date, $('fuelDate').value); parts.push(_shortDate(rd) + (o.receipt_time ? ' ' + o.receipt_time : '')); if (rd !== $('fuelDate').value) warn = true; }
   if (_ocrSample) parts.push(L('TEST: sample reading', 'UJIAN: bacaan contoh'));
   i.textContent = parts.join(' · '); i.className = 'rcpt-l2' + (warn ? ' warn' : '');
 }
@@ -944,6 +944,13 @@ function _ocrUsable(o){
   var t = o.total_rm, l = o.litres, u = o.unit_price;
   if (typeof t !== 'number' || typeof l !== 'number' || typeof u !== 'number') return false;
   return Math.abs(t - l * u) <= 0.06;   // pump rounding + 5-sen cash rounding stay under 3 sen
+}
+// [boss 2026-10-24] a receipt date one YEAR off the fuel date (same day and month) is the reader mistaking a digit
+// of the year (Petron prints 0 as a slashed zero: 2026 read as 2025) — count it as the fuel date, no amber
+function _rcptDate(iso, fuel){
+  var a = String(iso || '').split('-'), b = String(fuel || '').split('-');
+  if (a.length === 3 && b.length === 3 && a[1] === b[1] && a[2] === b[2] && Math.abs(+a[0] - +b[0]) === 1) return fuel;
+  return iso;
 }
 function _ocrWhyOf(o){
   if (!o) return '';
