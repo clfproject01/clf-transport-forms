@@ -113,6 +113,7 @@
   .b-pri{flex:1;background:var(--navy);color:#fff}
   .b-save{flex:1;background:var(--green);color:#fff}
   .b-ghost{background:#fff;color:var(--ink);border:1.5px solid var(--line)}
+  .b-red{background:var(--red-700);color:#fff}   /* No refuel [boss 2026-10-24: red, clearly apart from the green Save] */
   .b-full{width:100%}
   /* a Save the server has not confirmed yet (never painted green): amber box with Semak */
   .unc{border-radius:10px;background:var(--amber-50);color:var(--amber);padding:12px}
@@ -240,7 +241,7 @@
 
         <div class="acts" id="fuelActs">
           <button type="button" class="btn b-save" id="saveBtn"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span data-en="Save">Simpan</span></button>
-          <button type="button" class="btn b-ghost" id="noFuelBtn"><span data-en="No refuel">Tak isi minyak</span></button>
+          <button type="button" class="btn b-red" id="noFuelBtn"><span data-en="No refuel">Tak isi minyak</span></button>
         </div>
 
         <div class="unc" id="uncBox" hidden>
@@ -328,6 +329,7 @@ const ROSTER_CACHE_KEY = 'clf_roster_cache_' + BRANCH; // last good roster / pla
 const VEH_CACHE_KEY = 'clf_vehicle_cache_' + BRANCH;   //   load on either form rescues both in a dead zone
 const UNC_KEY = 'clf_fuel_pending_' + BRANCH;          // a Save the server has not confirmed yet (no photo in it)
 const DRAFT_KEY = 'clf_fuel_draft_' + BRANCH;          // typed numbers, kept for an hour (cheap phones reload the tab after the camera)
+const CREW_KEY = 'clf_fuel_crew_' + BRANCH;            // lorry → the crew this phone last saved for it (instant auto-fill)
 
 // ── ONE language on screen: Bahasa Melayu by default, English when the driver taps EN (same system as POD) ──
 // Static markup is written in Malay with the English in data-en (data-en-ph for placeholders); JS-built text goes
@@ -571,9 +573,7 @@ function _applyRoster(drivers){
   STAFF_IDS = {}; ROSTER = drivers.slice();
   drivers.forEach(function(d){ STAFF_IDS[d.name] = d.staffId || ''; });
   // a roster that loads after a failed first try must not keep the "Failed to load" placeholder
-  var _ds = $('driverSearch');
-  _ds.setAttribute('data-en-ph', 'Staff ID (e.g. 448) or name'); _ds.setAttribute('data-bm-ph', 'ID staf (cth. 448) atau nama');
-  _ds.placeholder = L('Staff ID (e.g. 448) or name', 'ID staf (cth. 448) atau nama');
+  _crewBusy(_crewBusyOn);
   wireDriverPicker('driverSearch', 'driverName', 'driverPanel', 'staffIdBadge', function(name){
     try{ localStorage.setItem(STORAGE_KEY, name); }catch(e){}
     $('rememberedBadge').style.display = 'inline-flex';
@@ -735,25 +735,67 @@ function _renderOdoHint(){
   }
   h.hidden = false;
 }
-// crew auto-fill: the lorry's shipment assignment on the FUEL DATE pre-fills driver + helper (only empty fields,
-// roster names only) so the fuel entry's crew lines up with the dashboard tally; the server does the same lookup.
-function _loadCrew(veh){
-  var date = $('fuelDate').value || _todayMYT();
-  fetch(SCRIPT_URL + '?action=getShipmentForLorry&vehicleNo=' + encodeURIComponent(veh) + '&date=' + encodeURIComponent(date))
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      if ($('vehicleNo').value !== veh || ($('fuelDate').value || _todayMYT()) !== date) return;   // changed meanwhile
-      if (!d || d.status !== 'ok' || !d.shipments || !d.shipments.length) return;
-      var s = d.shipments[0], primary, secondary;
-      if (_normId(s.lorry2) && _normId(veh) === _normId(s.lorry2)){ primary = s.lorry2Primary; secondary = s.lorry2Secondary; }
-      else { primary = s.assignedPrimary; secondary = s.assignedSecondary; }
-      function inRoster(name){ return ROSTER.some(function(x){ return x.name === name; }); }
-      primary = String(primary || '').trim(); secondary = String(secondary || '').trim();
-      var dS = $('driverSearch'), sS = $('secondSearch');
-      if (primary && !$('driverName').value && dS._pick && inRoster(primary)){ dS._pick(primary, true); _autoCrew.d = true; }
-      if (secondary && secondary !== primary && !$('secondDriver').value && sS._pick && inRoster(secondary)){ sS._pick(secondary, true); _autoCrew.s = true; }
-      _tripRender();
-    }).catch(function(){ /* best-effort — the server's own crew lookup is the safety net */ });
+// ── crew auto-fill once a lorry is picked [boss 2026-10-24: "after choosing the lorry the driver must appear"].
+// Only fields nobody typed in, roster names only, never saved as the "remembered driver". Three sources, best first:
+//   1. at once: the crew THIS PHONE last saved for this lorry (clf_fuel_crew_<branch>, 30 days)
+//   2. the lorry's delivery order on the FUEL DATE (the office plan; the server does the same lookup) — replaces 1
+//   3. no order that day and still nobody: the lorry's latest delivery order in the 3 days before
+// A lookup that finds an order makes the server read the whole item sheet (7–13 s, Oct 2026), so the empty driver
+// box says "Mencari pemandu…" meanwhile instead of looking broken. ──
+var _crewSeq = 0, _crewBusyOn = false;
+function _inRoster(name){ return !!name && ROSTER.some(function(x){ return x.name === name; }); }
+function _crewMem(){ try{ return JSON.parse(localStorage.getItem(CREW_KEY) || '{}') || {}; }catch(e){ return {}; } }
+function _crewRemember(veh, d, s){
+  if (!veh || !d) return;
+  try{ var m = _crewMem(); m[_normId(veh)] = { d: d, s: s || '', t: Date.now() }; localStorage.setItem(CREW_KEY, JSON.stringify(m)); }catch(e){}
+}
+function _crewBusy(on){
+  _crewBusyOn = !!on;
+  if (!ROSTER.length) return;   // the roster's own "failed — tap to retry" text stays
+  var ds = $('driverSearch');
+  var en = on ? 'Finding the driver…' : 'Staff ID (e.g. 448) or name', bm = on ? 'Mencari pemandu…' : 'ID staf (cth. 448) atau nama';
+  ds.setAttribute('data-en-ph', en); ds.setAttribute('data-bm-ph', bm); ds.placeholder = L(en, bm);
+}
+function _crewFill(p, s, plan){   // plan = the office's order: it may replace auto-filled names, and drop an auto helper it does not list
+  p = String(p || '').trim(); s = String(s || '').trim();
+  if (p && _inRoster(p) && $('driverName').value !== p && (!$('driverName').value || (plan && _autoCrew.d))){ $('driverSearch')._pick(p, true); _autoCrew.d = true; }
+  if (s && s !== p && _inRoster(s)){
+    if ($('secondDriver').value !== s && (!$('secondDriver').value || (plan && _autoCrew.s))){ $('secondSearch')._pick(s, true); _autoCrew.s = true; }
+  } else if (plan && !s && _autoCrew.s){ _clearCrewField('secondDriver', 'secondSearch', 'staffIdBadge2'); _autoCrew.s = false; }
+  _tripRender();
+}
+async function _shipCrew(veh, date){   // {p, s} from the lorry's delivery order on that date, or null (none / failed)
+  var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
+  var timer = ctrl ? setTimeout(function(){ ctrl.abort(); }, 30000) : null;
+  try{
+    var r = await fetch(SCRIPT_URL + '?action=getShipmentForLorry&vehicleNo=' + encodeURIComponent(veh) + '&date=' + encodeURIComponent(date), { signal: ctrl ? ctrl.signal : undefined });
+    var d = await r.json();
+    if (!d || d.status !== 'ok' || !d.shipments || !d.shipments.length) return null;
+    var s = d.shipments[0];
+    if (_normId(s.lorry2) && _normId(veh) === _normId(s.lorry2)) return { p: s.lorry2Primary, s: s.lorry2Secondary };   // this lorry is the order's 2nd lorry
+    return { p: s.assignedPrimary, s: s.assignedSecondary };
+  }catch(e){ return null; }
+  finally{ if (timer) clearTimeout(timer); }
+}
+function _dayBefore(iso, k){ var p = String(iso).split('-'); return new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] - k)).toISOString().slice(0, 10); }
+async function _loadCrew(veh){
+  var seq = ++_crewSeq, date = $('fuelDate').value || _todayMYT();
+  function stale(){ return seq !== _crewSeq || $('vehicleNo').value !== veh || ($('fuelDate').value || _todayMYT()) !== date; }
+  var mem = _crewMem()[_normId(veh)];
+  if (mem && Date.now() - mem.t < 30 * 864e5) _crewFill(mem.d, mem.s, false);
+  _crewBusy(true);
+  try{
+    var c = await _shipCrew(veh, date);
+    if (stale()) return;
+    if (c){ _crewFill(c.p, c.s, true); return; }
+    for (var k = 1; k <= 3 && !$('driverName').value; k++){
+      c = await _shipCrew(veh, _dayBefore(date, k));
+      if (stale()) return;
+      if (c){ _crewFill(c.p, c.s, false); return; }
+    }
+  } finally {
+    if (seq === _crewSeq) _crewBusy(false);
+  }
 }
 $('fuelDate').addEventListener('change', function(){
   // another day may have another crew: drop the auto-filled names and ask again for the new date
@@ -1027,7 +1069,7 @@ async function submitNoFuel(){
   }catch(e){ failed = true; }
   finally{ if (timer) clearTimeout(timer); _overlay(false); _ovClock_(null); _saving = false; _busy(false); }
   if (json && (json.status === 'success' || json.status === 'ok')){
-    _showDone({ noFuel: true, fuelDate: dt, vehicleNo: veh, driverName: dn, at: now.getTime() });
+    _showDone({ noFuel: true, fuelDate: dt, vehicleNo: veh, driverName: dn, secondDriver: sd, at: now.getTime() });
   } else if (failed){
     _toast('warn', _esc(L('Not sure it was saved. Check your signal and try again.', 'Belum pasti disimpan. Semak liputan dan cuba lagi.')));
   } else {
@@ -1108,6 +1150,7 @@ function resendUnconfirmed(){
 // ── saved ──
 function _showDone(info){
   _doneInfo = info; _clearDraft();
+  _crewRemember(info.vehicleNo, info.driverName, info.secondDriver);   // next time this lorry is picked, its crew is there at once
   $('mainView').hidden = true; $('doneView').hidden = false;
   _renderDone();
   try{ window.scrollTo(0, 0); }catch(e){}
