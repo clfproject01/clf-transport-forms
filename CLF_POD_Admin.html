@@ -27,6 +27,11 @@
          -> { status:'success' } (idempotent). POST (not GET) so the session
             authToken travels in the body, never in the access log / URL.
 
+  PHOTO CHECK (2026-10-24): barcodeRaw = the barcode the driver's phone read on the photo filed under
+    that invoice. BC✓ only when it IS this invoice; another number = "Wrong photo" on that row only, and
+    the EFI barcode is still drawn from the invoice number. "Needs check" = wrong photo / no photo /
+    no barcode read (deliveries from 2026-10-24) / AI-matched / driver sent an unclear photo.
+
   ⚠ PROPOSE-FIRST (do NOT ship the ACL decision without the boss):
     The unlock reuses the EXISTING, verified PALLET_UNLOCK endpoint + Pallet_Access
     roster — no NEW auth system is invented here. Open question for the boss only:
@@ -132,6 +137,14 @@
   .src.bc{background:#DCFCE7;color:#166534;}    /* barcode-read tag */
   .src.ai{background:#FEF9C3;color:#854D0E;}    /* AI ~ */
   .src.no{background:#F3F4F6;color:#6B7280;}    /* ✗ */
+  /* [2026-10-24] photo check: the barcode on the photo is ANOTHER invoice / not read */
+  .src.bad{background:#FEE2E2;color:#991B1B;}
+  .src.q{background:#FEF3C7;color:#92400E;}
+  .bc-warn{font-size:11px;color:var(--red-700);font-weight:700;margin-top:3px;text-align:center;}
+  .lh-bad{font-size:11.5px;font-weight:700;color:var(--red-700);background:var(--red-50);border:1px solid var(--red-500);border-radius:999px;padding:1px 8px;margin-left:8px;white-space:nowrap;}
+  .stat.ver .n{color:var(--green-700);} .stat.ver .bar i{background:var(--green-500);}
+  .stat.chk{cursor:pointer;} .stat.chk .n{color:var(--red-700);} .stat.chk.on{outline:2px solid var(--red-500);}
+  td.hidden-ok{font-size:11.5px;color:var(--gray-500);font-style:italic;}
   .time{font-variant-numeric:tabular-nums;color:var(--gray-500);font-size:12px;white-space:nowrap;}
   .thumbs{display:flex;gap:4px;flex-wrap:wrap;}
   .thumb{width:38px;height:38px;border-radius:6px;object-fit:cover;border:1px solid var(--gray-200);cursor:pointer;background:var(--gray-100);}
@@ -178,6 +191,7 @@
         <button class="seg-btn" data-branch="KTN">Kuantan</button>
       </span>
       <button class="btn" id="toggleAllBtn">▾ Expand all</button>
+      <button class="btn" id="checkBtn" title="Show only the invoices whose photo needs a look">⚑ Needs check</button>
       <button class="btn" id="refreshBtn">↻ Refresh</button>
       <a class="btn" id="scanifyLink" href="CLF_POD_Scanify.html" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:3px;">📄 Scan copies</a>
       <a class="btn" href="CLF_Driver_Admin.html" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:3px;">👥 Drivers</a>
@@ -193,6 +207,8 @@
     <div class="stat efi"><div class="n" id="s-efi">0</div><div class="l">EFI entered</div><div class="bar"><i id="s-efi-bar" style="width:0%"></i></div></div>
     <div class="stat pend"><div class="n" id="s-pend">0</div><div class="l">To deliver</div></div>
     <div class="stat prob"><div class="n" id="s-prob">0</div><div class="l">Problem</div></div>
+    <div class="stat ver" title="Delivered invoices whose photo barcode IS the invoice"><div class="n" id="s-ver">0</div><div class="l">Photo verified</div><div class="bar"><i id="s-ver-bar" style="width:0%"></i></div></div>
+    <div class="stat chk" id="s-chk-card" title="Tap: show only these"><div class="n" id="s-chk">0</div><div class="l">Needs check</div></div>
   </div>
 
   <div id="board"><div class="loading"><div class="spin"></div><div style="margin-top:10px;">Loading…</div></div></div>
@@ -232,7 +248,13 @@ var _boardData = null;      // last good board payload
 var _openKeys = new Set();  // collapsed by DEFAULT — office expands the lorry they are scanning (survives auto-refresh)
 var _openStations = new Set();  // per-customer collapse INSIDE a lorry — click a customer to reveal its barcodes (survives auto-refresh)
 var _refreshTmr = null;
-var _lbPhotos = [], _lbIdx = 0;
+var _lbPhotos = [], _lbIdx = 0, _lbCaps = null;
+var _lbSets = {};           // station key -> { urls, caps }: every photo of one shop, each captioned with ITS invoice
+var _onlyCheck = false;     // "Needs check" filter
+// The driver form reads the invoice barcode on every photo from this day on (POD round 3). Earlier deliveries never
+// had one, so "no barcode" only counts as a photo to check from here.
+var BC_SINCE = '2026-10-24';
+var THUMB_ONERR = 'this.onerror=null;var a=document.createElement(\'a\');a.href=this.src;a.target=\'_blank\';a.rel=\'noopener\';a.className=\'thumb-link\';a.textContent=\'📷\';this.replaceWith(a);';
 
 /* ============================================================================
    UTIL
@@ -415,48 +437,58 @@ function render(){
   var d=_boardData; if(!d){ return; }
   var lorries = d.lorries||[];
   // summary
-  var done=0,pend=0,prob=0,efi=0,total=0;
+  var done=0,pend=0,prob=0,efi=0,total=0,ver=0,chk=0;
   lorries.forEach(function(L){ (L.invoices||[]).forEach(function(v){
     total++;
     var st=String(v.status||'').toLowerCase();
-    if(st==='delivered'){ done++; if(v.efiScanned) efi++; }
+    if(st==='delivered'){ done++; if(v.efiScanned) efi++; if(photoCheck(v)==='ok') ver++; if(needsCheck(v)) chk++; }
     else if(st==='failed') prob++; else pend++;
   }); });
   $('summary').style.display = total?'grid':'none';
   $('s-done').textContent=done; $('s-pend').textContent=pend; $('s-prob').textContent=prob; $('s-efi').textContent=efi;
   $('s-efi-bar').style.width = (done? Math.round(efi/done*100):0)+'%';
+  $('s-ver').textContent=ver; $('s-ver-bar').style.width = (done? Math.round(ver/done*100):0)+'%';
+  $('s-chk').textContent=chk; $('s-chk-card').classList.toggle('on', _onlyCheck);
+  var cb=$('checkBtn'); cb.textContent='⚑ Needs check ('+chk+')'; cb.classList.toggle('btn-primary', _onlyCheck);
   $('lastUpdated').textContent = 'Updated '+new Date().toLocaleTimeString('en-MY',{hour:'2-digit',minute:'2-digit'})+' · auto-refresh 60s · '+(BRANCH==='KTN'?'Kuantan':'Mentakab');
 
   var board=$('board');
   if(!lorries.length){ board.innerHTML='<div class="empty"><div class="big">📭</div>No deliveries for this date / branch yet.</div>'; return; }
 
-  var html='';
+  var html='', shown=0;
+  _lbSets = {};
   lorries.forEach(function(L){
     var invs=L.invoices||[];
     var ld=invs.filter(function(v){return String(v.status).toLowerCase()==='delivered';}).length;
     var efid=invs.filter(function(v){return v.efiScanned;}).length;
     var lkey=String(L.shipmentKey||L.vehicleNo||'');
-    var isOpen=_openKeys.has(lkey);
+    var stations=groupStations(invs);
+    // "Needs check": only the shops with a photo to look at; everything opens so the rows are right there
+    if(_onlyCheck){ stations=stations.filter(function(S){ return S.invs.some(needsCheck); }); if(!stations.length) return; }
+    shown++;
+    var isOpen=_onlyCheck || _openKeys.has(lkey);
+    var bad=invs.filter(function(v){ return photoCheck(v)==='wrong'; }).length;
     // [Salesman 2026-07-24] salesman-handled DL renders as a purple card
     var hb=L.handledBy && L.handledBy.type==='SALESMAN' ? L.handledBy : null;
     html+='<div class="lorry'+(isOpen?' open':'')+'"'+(hb?' style="border-left:4px solid #6D28D9;"':'')+'><div class="lorry-head" data-key="'+esc(lkey)+'"'+(hb?' style="background:#F5F3FF;"':'')+'>'
       +(hb
         ? '<div><span class="chev">'+(isOpen?'▾':'▸')+'</span> <span class="plate" style="color:#5B21B6;">&#129333; SALESMAN</span> <span class="crew" style="color:#6D28D9;font-weight:700;">'+esc(hb.id||'')+' · '+esc(hb.name||'')+'</span>'+(L.vehicleNo&&L.vehicleNo!=='?'?' <span class="crew">('+esc(L.vehicleNo)+')</span>':'')+'</div>'
         : '<div><span class="chev">'+(isOpen?'▾':'▸')+'</span> <span class="plate">'+esc(L.vehicleNo||'?')+'</span>'+(L.drivers?' <span class="crew">· '+esc(L.drivers)+'</span>':'')+'</div>')
-      +'<div class="mini">EFI '+efid+'/'+ld+' · '+ld+' / '+invs.length+' delivered</div></div>';
+      +'<div class="mini">EFI '+efid+'/'+ld+' · '+ld+' / '+invs.length+' delivered'+(bad?'<span class="lh-bad">⚑ '+bad+' wrong photo'+(bad===1?'':'s')+'</span>':'')+'</div></div>';
     html+='<div class="lorry-body">';
-    // One STATION (customer) = one photo bucket. The backend writes the same photo set to every
-    // invoice in a station, so grouping by customer lets us show the bucket ONCE + "N invoices"
-    // instead of repeating every photo on every invoice row (the 5-invoice×5-photo explosion).
-    groupStations(invs).forEach(function(S){
-      var sd = S.invs.filter(function(v){return String(v.status).toLowerCase()==='delivered';}).length;
+    // One STATION (customer) = its photos shown once in the header. Older saves shared one photo set across every
+    // invoice of the stop; since POD save v2 (2026-10-24) each invoice holds its OWN photo, shown on its row too.
+    stations.forEach(function(S){
+      var sd = S.sd;
       var ec = S.invs.filter(function(v){return v.efiScanned;}).length;
       var pc = S.photoUrls.length;
       // count-match check (driver form now enforces photos == delivered invoices; flag legacy/odd data)
-      var warn = (pc && sd && pc!==sd)
+      var warn = S.warn
         ? '<span class="st-warn" title="Photos do not match delivered invoices">&#9873; '+pc+' photo'+(pc===1?'':'s')+' &ne; '+sd+' delivered</span>' : '';
       var skey = lkey+'¦'+S.custKey;   // stable across auto-refresh so an open station stays open
-      var sOpen = _openStations.has(skey);
+      var sOpen = _onlyCheck || _openStations.has(skey);
+      _lbSets[skey] = { urls: S.photos.map(function(p){ return p.u; }),
+                        caps: S.photos.map(function(p){ return (p.inv ? 'Invoice '+p.inv+' · ' : '')+(S.customer||''); }) };
       html+='<div class="station'+(sOpen?' open':'')+'">'
         +'<div class="station-head" data-skey="'+esc(skey)+'">'
           +'<div class="st-meta"><span class="chev st-chev">'+(sOpen?'▾':'▸')+'</span>'
@@ -464,58 +496,95 @@ function render(){
             +(S.area?'<span class="st-area">'+esc(S.area)+'</span>':'')
             +'<span class="st-count">'+S.invs.length+' invoice'+(S.invs.length===1?'':'s')+'</span>'
             +(sd?'<span class="st-efi">EFI '+ec+'/'+sd+'</span>':'')+warn+'</div>'
-          +'<div class="st-photos">'+stationPhotoCell(S.photoUrls, S.anchorInv)+'</div>'
+          +'<div class="st-photos">'+stationPhotoCell(S.photoUrls, skey)+'</div>'
         +'</div>'
         +'<div class="station-body"><div style="overflow-x:auto;"><table class="inv"><thead><tr>'
-          +'<th>Invoice</th><th style="text-align:right;">Amount</th><th>Status</th><th>Time</th><th>Barcode</th><th>EFI</th>'
+          +'<th>Invoice</th><th>Photo</th><th style="text-align:right;">Amount</th><th>Status</th><th>Time</th><th>Barcode</th><th>EFI</th>'
           +'</tr></thead><tbody>';
-      S.invs.forEach(function(v, idx){ html+=invRow(L, v, idx); });
+      var rows = _onlyCheck ? S.invs.filter(needsCheck) : S.invs;
+      rows.forEach(function(v, idx){ html+=invRow(L, v, idx, S, skey); });
+      if(rows.length < S.invs.length) html+='<tr><td colspan="7" class="hidden-ok">'+(S.invs.length-rows.length)+' other invoice'+(S.invs.length-rows.length===1?'':'s')+' at this shop look fine (hidden)</td></tr>';
       html+='</tbody></table></div></div></div>';
     });
     html+='</div></div>';
   });
+  if(_onlyCheck && !shown) html='<div class="empty"><div class="big">✓</div>Nothing to check for this date / branch.</div>';
   board.innerHTML=html;
   var tab=$('toggleAllBtn'); if(tab) tab.textContent=_openKeys.size?'▸ Collapse all':'▾ Expand all';
   wireEfiCheckboxes();
 }
 
+// [2026-10-24] Photo check per invoice. The driver form files each photo under one invoice and keeps the barcode it
+// read on that photo (Shipment_Items col 18 = barcodeRaw). Verified = that code IS this invoice. The server's
+// matchSource says 'barcode' for ANY code, and its mismatch flag (DRIVER_FORCED) is stamped on every invoice of the
+// save, so neither can say which invoice is wrong.
+function bcNorm(s){ return String(s==null?'':s).toUpperCase().replace(/[^A-Z0-9]/g,''); }   // same rule as the driver form
+function photoCheck(v){   // '' (not delivered) | ok | wrong | unread | ai | nophoto
+  if(String(v.status||'').toLowerCase()!=='delivered') return '';
+  if(!(v.photoUrls||[]).length) return 'nophoto';
+  var raw=bcNorm(v.barcodeRaw);
+  if(raw) return raw===bcNorm(v.invoiceNo) ? 'ok' : 'wrong';
+  return v.matchSource==='ai' ? 'ai' : 'unread';
+}
+function _bcEra(v){ return String(v.deliveredDate || (_boardData && _boardData.date) || '') >= BC_SINCE; }
+function needsCheck(v){
+  var c=photoCheck(v);
+  return c==='wrong' || c==='nophoto' || c==='ai' || (c==='unread' && _bcEra(v)) || (!!c && !!v.photoFlag);
+}
 function statusBadge(v){
   var st=String(v.status||'').toLowerCase();
-  if(v.mismatch) return '<span class="badge mismatch">⚑ Mismatch</span>';
-  if(st==='delivered') return '<span class="badge done">✓ Delivered</span>';
+  if(photoCheck(v)==='wrong') return '<span class="badge mismatch" title="The barcode on this photo is invoice '+esc(v.barcodeRaw)+', not this one">⚑ Wrong photo</span>';
+  if(st==='delivered') return '<span class="badge done">✓ Delivered</span>'
+    +(v.photoFlag?' <span class="badge pend" title="The driver saved although the phone said the photo was not clear">⚠ Unclear photo</span>':'');
   if(st==='failed') return '<span class="badge prob">✕ '+esc(v.failReason||'Problem')+'</span>';
   return '<span class="badge pend">… Pending</span>';
 }
 function srcTag(v){
-  if(v.matchSource==='barcode') return '<span class="src bc" title="Read from the scanned barcode">BC&#10003;</span>';
-  if(v.matchSource==='ai')      return '<span class="src ai" title="Matched by AI (Gemini) — double-check">AI~</span>';
-  if(v.matchSource==='none')    return '<span class="src no" title="Not auto-identified">✗</span>';
+  var c=photoCheck(v);
+  if(c==='ok')      return '<span class="src bc" title="The barcode on the photo is this invoice">BC&#10003;</span>';
+  if(c==='wrong')   return '<span class="src bad" title="The barcode on this photo is another invoice — open the photo">photo = '+esc(v.barcodeRaw)+'</span>';
+  if(c==='ai')      return '<span class="src ai" title="Matched by AI (Gemini) — double-check">AI~</span>';
+  if(c==='nophoto') return '<span class="src bad" title="Delivered without a photo">no photo</span>';
+  if(c==='unread')  return _bcEra(v) ? '<span class="src q" title="No barcode read on the photo — not verified, open the photo">?</span>'
+                                     : '<span class="src no" title="Not auto-identified">✗</span>';
   return '';
 }
-// Group a lorry's invoices into stations (one customer = one photo bucket).
-// Preserves first-seen order; unions+dedupes the photo URLs (they're identical per station,
-// but a union is safe if any row differs). anchorInv = an invoice that owns the bucket, so
-// the existing lightbox delegation (data-inv → openLightbox) still resolves the photos.
+// Group a lorry's invoices into stations (one customer = one photo set).
+// Preserves first-seen order; unions+dedupes the photo URLs. Older saves wrote the same photo set to every invoice
+// of the stop; since POD save v2 (2026-10-24) each invoice holds only its OWN photo. photos[i].inv = the one invoice
+// holding that photo ('' when several share it), so the viewer can caption each photo with its invoice.
 function groupStations(invs){
   var map={}, order=[];
   (invs||[]).forEach(function(v){
     var key=String(v.custCode||v.customer||v.customerName||v.area||'—');
-    if(!map[key]){ map[key]={custKey:key, customer:v.customer||v.customerName||v.custCode||'', area:v.area||'', invs:[], photoUrls:[], anchorInv:null, _seen:{}}; order.push(key); }
+    if(!map[key]){ map[key]={custKey:key, customer:v.customer||v.customerName||v.custCode||'', area:v.area||'', invs:[], photoUrls:[], _holders:{}}; order.push(key); }
     var S=map[key];
     S.invs.push(v);
     if(!S.area && v.area) S.area=v.area;
     if(!S.customer && (v.customer||v.customerName)) S.customer=v.customer||v.customerName;
-    // bucket = DELIVERED photos only — a failed invoice's proof photo (closed shopfront etc.)
-    // belongs on its own row, not in the delivery bucket / the photos-vs-delivered ⚑ check
+    // DELIVERED photos only — a failed invoice's proof photo (closed shopfront etc.)
+    // belongs on its own row, not in the delivery set / the photos-vs-delivered ⚑ check
     if(String(v.status).toLowerCase()==='delivered'){
-      (v.photoUrls||[]).forEach(function(u){ if(u && !S._seen[u]){ S._seen[u]=1; S.photoUrls.push(u); if(!S.anchorInv) S.anchorInv=String(v.invoiceNo); } });
+      (v.photoUrls||[]).forEach(function(u){
+        if(!u) return;
+        if(!S._holders[u]){ S._holders[u]=[]; S.photoUrls.push(u); }
+        if(S._holders[u].indexOf(String(v.invoiceNo))<0) S._holders[u].push(String(v.invoiceNo));
+      });
     }
   });
-  return order.map(function(k){ var S=map[k]; delete S._seen; return S; });
+  return order.map(function(k){
+    var S=map[k];
+    S.photos = S.photoUrls.map(function(u){ var h=S._holders[u]; return { u:u, inv: h.length===1 ? h[0] : '' }; });
+    S.idxOf = {}; S.photos.forEach(function(p, i){ S.idxOf[p.u]=i; });
+    S.sd = S.invs.filter(function(v){ return String(v.status).toLowerCase()==='delivered'; }).length;
+    S.warn = !!(S.photoUrls.length && S.sd && S.photoUrls.length!==S.sd);
+    delete S._holders;
+    return S;
+  });
 }
-// The station photo bucket, rendered ONCE. Same markup/contract as photoCell so the board-level
-// click delegation (.thumb → .thumbs[data-inv] → openLightbox) works with no extra wiring.
-function stationPhotoCell(urls, anchorInv){
+// The station's photos, rendered ONCE in the shop row. data-set = the station key: a tap opens THAT photo in the
+// viewer, captioned with its own invoice, and the arrows step through the whole shop.
+function stationPhotoCell(urls, skey){
   urls = urls||[];
   if(!urls.length) return '<span class="thumb-none">no photo</span>';
   if(PHOTO_DISPLAY==='link'){
@@ -523,12 +592,22 @@ function stationPhotoCell(urls, anchorInv){
       return '<a class="thumb-link" href="'+esc(u)+'" target="_blank" rel="noopener" title="POD '+(i+1)+'">📷</a>';
     }).join('')+'</div>';
   }
-  var h='<div class="thumbs" data-inv="'+esc(String(anchorInv||''))+'">';
-  urls.forEach(function(u,i){ var su=esc(u);
-    h+='<img class="thumb" src="'+su+'" alt="POD" data-idx="'+i+'" loading="lazy" '
-      +'onerror="this.onerror=null;var a=document.createElement(\'a\');a.href=this.src;a.target=\'_blank\';a.rel=\'noopener\';a.className=\'thumb-link\';a.textContent=\'📷\';this.replaceWith(a);">';
+  var h='<div class="thumbs" data-set="'+esc(skey)+'">';
+  urls.forEach(function(u,i){
+    h+='<img class="thumb" src="'+esc(u)+'" alt="POD" data-idx="'+i+'" loading="lazy" onerror="'+THUMB_ONERR+'">';
   });
   return h+'</div>';
+}
+// The invoice row's OWN photo (POD save v2 on). A stop saved by an older form shares one photo set across its
+// invoices: nothing per row then (the shop row has them), so a 5-invoice x 5-photo stop does not explode.
+function rowPhotoCell(v, S, skey){
+  if(String(v.status||'').toLowerCase()!=='delivered') return '';
+  var urls=v.photoUrls||[];
+  if(!urls.length) return '<span class="thumb-none">no photo</span>';
+  var i=S.idxOf[urls[0]];
+  if(urls.length!==1 || i==null || S.photos[i].inv!==String(v.invoiceNo)) return '<span class="thumb-none" title="Saved by an older form: this shop\'s photos are shared, see the shop row">shared</span>';
+  if(PHOTO_DISPLAY==='link') return '<a class="thumb-link" href="'+esc(urls[0])+'" target="_blank" rel="noopener" title="POD '+esc(v.invoiceNo)+'">📷</a>';
+  return '<div class="thumbs" data-set="'+esc(skey)+'"><img class="thumb" src="'+esc(urls[0])+'" alt="POD '+esc(v.invoiceNo)+'" data-idx="'+i+'" loading="lazy" onerror="'+THUMB_ONERR+'"></div>';
 }
 function photoCell(v){
   var urls=v.photoUrls||[];
@@ -556,11 +635,14 @@ function photoCell(v){
 function barcodeCell(v){
   var st=String(v.status||'').toLowerCase();
   if(st!=='delivered') return '<span class="bc-na">—</span>';   // only scan delivered invoices into EFI
-  var raw = v.barcodeRaw || v.invoiceNo || '';
+  // [2026-10-24] the EFI barcode is always THIS invoice. The phone's raw string is used only when it IS this invoice
+  // (keeps EFI's exact printed form); a photo showing another invoice must never put that other number into EFI.
+  var c = photoCheck(v);
+  var raw = (c==='ok') ? String(v.barcodeRaw) : String(v.invoiceNo||'');
+  var warn = (c==='wrong') ? '<div class="bc-warn">⚠ The photo shows '+esc(v.barcodeRaw)+' — open the photo before EFI</div>' : '';
   var svg = barcodeSvg(raw, {height:40});
-  // fallback must show `raw` (the exact string EFI expects), NOT invoiceNo — they can differ
-  if(!svg) return '<span class="bc-na">no barcode<br>type manually:<br><b>'+esc(raw)+'</b></span>';
-  return '<div class="bc-cell"><div class="bc-box">'+svg+'</div><div class="bc-txt">'+esc(raw)+'</div></div>';
+  if(!svg) return '<span class="bc-na">no barcode<br>type manually:<br><b>'+esc(raw)+'</b></span>'+warn;
+  return '<div class="bc-cell"><div class="bc-box">'+svg+'</div><div class="bc-txt">'+esc(raw)+'</div></div>'+warn;
 }
 function efiCell(L, v){
   var st=String(v.status||'').toLowerCase();
@@ -570,9 +652,9 @@ function efiCell(L, v){
   var by=v.efiScanned&&v.efiBy?('<span class="by">'+esc(v.efiBy)+'</span>'):'';
   return '<label class="efi-wrap"><input type="checkbox" data-key="'+key+'" data-ship="'+esc(L.shipmentKey||'')+'" data-inv="'+esc(String(v.invoiceNo))+'" '+checked+'>'+by+'</label>';
 }
-function invRow(L, v, idx){
+function invRow(L, v, idx, S, skey){
   var st=String(v.status||'').toLowerCase();
-  var cls = v.mismatch?'row-mismatch':(st==='delivered'?'row-done':(st==='failed'?'row-prob':'row-pend'));
+  var cls = photoCheck(v)==='wrong'?'row-mismatch':(st==='delivered'?'row-done':(st==='failed'?'row-prob':'row-pend'));
   // [FailProof] a failed invoice may carry a driver-taken evidence photo (closed shop etc.)
   // — render it right next to the status badge; the standard .thumbs/data-inv delegation
   // opens it in the lightbox.
@@ -585,6 +667,7 @@ function invRow(L, v, idx){
   }
   return '<tr class="'+cls+'">'
     +'<td class="inv-no">'+esc(v.invoiceNo)+srcTag(v)+'</td>'
+    +'<td>'+rowPhotoCell(v, S, skey)+'</td>'
     +'<td class="amt">'+(v.amount!=null?money(v.amount):'')+'</td>'
     +'<td>'+statusBadge(v)+proof+'</td>'
     +'<td class="time">'+esc(fmtTime(v.deliveredDate||_boardData.date, v.deliveredAt))+'</td>'
@@ -645,14 +728,25 @@ function _patchCache(ship, inv, val){
 function _findInvoice(invoiceNo){
   var out=null; (_boardData.lorries||[]).forEach(function(L){ (L.invoices||[]).forEach(function(v){ if(String(v.invoiceNo)===String(invoiceNo)) out=v; }); }); return out;
 }
+// one invoice's photos (a problem stop's proof photo)
 function openLightbox(invoiceNo, idx){
   var v=_findInvoice(invoiceNo); if(!v||!v.photoUrls||!v.photoUrls.length) return;
-  _lbPhotos=v.photoUrls.slice(); _lbIdx=idx||0; _lbCap='Invoice '+invoiceNo+' · '+(v.customer||'');
-  $('lb-img').src=_lbPhotos[_lbIdx]; $('lb-cap').textContent=_lbCap+'  ('+(_lbIdx+1)+'/'+_lbPhotos.length+')';
-  $('lightbox').classList.add('show');
+  _lbOpen(v.photoUrls.slice(), null, 'Invoice '+invoiceNo+' · '+(v.customer||''), idx);
 }
+// [2026-10-24] one shop's photos, each captioned with its own invoice. Since POD save v2 every invoice holds only
+// its own photo, so the old "first invoice's photos at index N" opened a blank viewer from the 2nd photo on.
+function openLightboxSet(key, idx){
+  var s=_lbSets[key]; if(!s||!s.urls.length) return;
+  _lbOpen(s.urls.slice(), s.caps.slice(), '', idx);
+}
+function _lbOpen(urls, caps, cap, idx){
+  _lbPhotos=urls; _lbCaps=caps; _lbCap=cap;
+  _lbIdx=Math.min(Math.max(parseInt(idx,10)||0, 0), urls.length-1);   // never past the end (= a blank viewer)
+  _lbPaint(); $('lightbox').classList.add('show');
+}
+function _lbPaint(){ $('lb-img').src=_lbPhotos[_lbIdx]; $('lb-cap').textContent=(_lbCaps ? _lbCaps[_lbIdx] : _lbCap)+'  ('+(_lbIdx+1)+'/'+_lbPhotos.length+')'; }
 var _lbCap='';
-function lbStep(dir){ if(!_lbPhotos.length) return; _lbIdx=(_lbIdx+dir+_lbPhotos.length)%_lbPhotos.length; $('lb-img').src=_lbPhotos[_lbIdx]; $('lb-cap').textContent=_lbCap+'  ('+(_lbIdx+1)+'/'+_lbPhotos.length+')'; }
+function lbStep(dir){ if(!_lbPhotos.length) return; _lbIdx=(_lbIdx+dir+_lbPhotos.length)%_lbPhotos.length; _lbPaint(); }
 function closeLightbox(){ $('lightbox').classList.remove('show'); $('lb-img').src=''; }
 $('lightbox').addEventListener('click', function(e){ if(e.target===this) closeLightbox(); });   // tap the dark area = close
 document.addEventListener('keydown',function(e){ if(!$('lightbox').classList.contains('show')) return; if(e.key==='Escape') closeLightbox(); if(e.key==='ArrowLeft') lbStep(-1); if(e.key==='ArrowRight') lbStep(1); });
@@ -662,16 +756,20 @@ document.addEventListener('keydown',function(e){ if(!$('lightbox').classList.con
    DEMO DATA (only via ?demo=1 — never masquerades as live)
    ============================================================================ */
 function demoData(){
+  // a drawn sample paper (never a real invoice): shows the number printed on it, like the barcode would
+  function P(no){ return 'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="420"><rect width="300" height="420" fill="#fff" stroke="#9CA3AF"/>'
+    +'<text x="20" y="44" font-family="monospace" font-size="18" fill="#6B7280">SAMPLE ONLY</text><text x="20" y="96" font-family="monospace" font-size="30" font-weight="700">'+no+'</text></svg>'); }
   return { status:'ok', date: todayKL(), branch: BRANCH, lorries:[
     { vehicleNo:'VBT 1234', shipmentKey:'SHIP-DEMO-1', drivers:'Ahmad · Rosli', invoices:[
-      { invoiceNo:'IV100231', barcodeRaw:'IV100231', customer:'Kedai Runcit Aman', custCode:'C0231', area:'Mentakab', amount:1240.50, status:'delivered', deliveredAt:'10:14', matchSource:'barcode', efiScanned:true, efiBy:'TER282', photoUrls:[] },
-      { invoiceNo:'IV100232', barcodeRaw:'IV100232', customer:'Restoran Sri Muda', custCode:'C0244', area:'Temerloh', amount:398.00, status:'delivered', deliveredAt:'10:52', matchSource:'ai', efiScanned:false, photoUrls:[] },
-      { invoiceNo:'IV100240', barcodeRaw:'', customer:'Pasar Mini Jaya', custCode:'C0261', area:'Lanchang', amount:2015.75, status:'delivered', deliveredAt:'11:37', matchSource:'none', efiScanned:false, photoUrls:[] },
+      { invoiceNo:'IV100231', barcodeRaw:'IV100231', customer:'Kedai Runcit Aman', custCode:'C0231', area:'Mentakab', amount:1240.50, status:'delivered', deliveredAt:'10:14', matchSource:'barcode', efiScanned:true, efiBy:'TER282', photoUrls:[P('IV100231')] },
+      { invoiceNo:'IV100232', barcodeRaw:'', customer:'Restoran Sri Muda', custCode:'C0244', area:'Temerloh', amount:398.00, status:'delivered', deliveredAt:'10:52', matchSource:'ai', efiScanned:false, photoUrls:[P('IV100232')] },
+      { invoiceNo:'IV100240', barcodeRaw:'', customer:'Pasar Mini Jaya', custCode:'C0261', area:'Lanchang', amount:2015.75, status:'delivered', deliveredAt:'11:37', matchSource:'none', efiScanned:false, photoUrls:[P('IV100240')] },
       { invoiceNo:'IV100255', customer:'Warung Pak Din', custCode:'C0288', area:'Kerdau', amount:150.00, status:'failed', failReason:'Shop closed', photoUrls:[] }
     ]},
     { vehicleNo:'WXX 5678', shipmentKey:'SHIP-DEMO-2', drivers:'Kumar', invoices:[
-      { invoiceNo:'IV100301', barcodeRaw:'IV100301', customer:'Gerai Selera Kampung', custCode:'C0301', area:'Mentakab', amount:730.25, status:'delivered', deliveredAt:'09:41', matchSource:'barcode', efiScanned:true, efiBy:'TER278', photoUrls:[] },
-      { invoiceNo:'IV100305', barcodeRaw:'IV100305', customer:'Kedai Buku Ilmu', custCode:'C0312', area:'Bandar', amount:88.90, status:'delivered', deliveredAt:'12:03', matchSource:'barcode', mismatch:true, efiScanned:false, photoUrls:[] },
+      { invoiceNo:'IV100301', barcodeRaw:'IV100301', customer:'Gerai Selera Kampung', custCode:'C0301', area:'Mentakab', amount:730.25, status:'delivered', deliveredAt:'09:41', matchSource:'barcode', efiScanned:true, efiBy:'TER278', photoUrls:[P('IV100301')] },
+      { invoiceNo:'IV100302', barcodeRaw:'IV100309', customer:'Gerai Selera Kampung', custCode:'C0301', area:'Mentakab', amount:412.00, status:'delivered', deliveredAt:'09:41', matchSource:'barcode', mismatch:true, efiScanned:false, photoUrls:[P('IV100309')] },
+      { invoiceNo:'IV100305', barcodeRaw:'IV100305', customer:'Kedai Buku Ilmu', custCode:'C0312', area:'Bandar', amount:88.90, status:'delivered', deliveredAt:'12:03', matchSource:'barcode', efiScanned:false, photoUrls:[P('IV100305')] },
       { invoiceNo:'IV100320', customer:'Hardware Seng Hin', custCode:'C0333', area:'Mentakab', amount:0, status:'pending', photoUrls:[] }
     ]}
   ]};
@@ -711,8 +809,14 @@ $('board').addEventListener('click', function(e){
 $('board').addEventListener('click', function(e){
   var t = e.target.closest('.thumb'); if(!t) return;
   var wrap = t.closest('.thumbs'); if(!wrap) return;
-  openLightbox(wrap.getAttribute('data-inv'), parseInt(t.getAttribute('data-idx'),10)||0);
+  var i = parseInt(t.getAttribute('data-idx'),10)||0;
+  if(wrap.hasAttribute('data-set')) openLightboxSet(wrap.getAttribute('data-set'), i);
+  else openLightbox(wrap.getAttribute('data-inv'), i);
 });
+// "Needs check": the button and the summary card both toggle it
+function toggleCheck(){ _onlyCheck=!_onlyCheck; render(); window.scrollTo(0, 0); }
+$('checkBtn').addEventListener('click', toggleCheck);
+$('s-chk-card').addEventListener('click', toggleCheck);
 document.querySelectorAll('#branchSeg .seg-btn').forEach(function(b){
   b.addEventListener('click', function(){
     document.querySelectorAll('#branchSeg .seg-btn').forEach(function(x){ x.classList.remove('active'); });
