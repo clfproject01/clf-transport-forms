@@ -104,6 +104,8 @@
   .photo.dis{opacity:.6}
   .photo.big{flex-direction:column;gap:8px;min-height:132px;border-width:2px;font-size:17px}
   .photo.big svg.i{width:36px;height:36px}
+  /* OCR v2: the photo itself was the problem (blurry, too far, two receipts) — a new photo is one big tap away */
+  .photo.retake{min-height:56px;margin-bottom:12px;border-style:solid;border-color:var(--amber);background:var(--amber-50);color:var(--amber)}
   /* after the photo: thumbnail · what was read · Tukar */
   .rcpt{display:flex;align-items:center;gap:12px;margin-bottom:12px}
   .rcpt img{width:56px;height:56px;border-radius:8px;object-fit:cover;flex:none;border:1px solid var(--line);background:var(--bg-2)}
@@ -239,6 +241,11 @@
             <div class="rcpt-main"><div class="rcpt-l1" id="ocrHead"></div><div class="rcpt-l2" id="ocrInfo"></div></div>
             <span class="ph-c"><span id="photoChange">Tukar</span><input type="file" id="receiptPhoto2" accept="image/*" aria-label="Tukar foto / Change photo"></span>
           </div>
+          <div class="photo retake" id="retakeBtn" hidden>
+            <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            <span id="retakeTxt">Ambil foto semula</span>
+            <input type="file" id="receiptPhoto3" accept="image/*" aria-label="Ambil foto semula / Retake photo">
+          </div>
           <div class="fields" id="fuelFields">
             <div class="two">
               <div class="field">
@@ -308,6 +315,8 @@ var BRANCH_DISPLAY = { MTK: 'Mentakab', KTN: 'Kuantan' };
 // Reads (action=get…) go to the real backend so the boss tests with real lorries and drivers. Every write
 // (the FUEL save, NO_FUEL) is answered here and never sent: ?sim=ok (default) answers "saved",
 // ?sim=unc loses the answer (shows "Belum disahkan"), ?sim=err answers a server error.
+// ?sim=blur / far / two / unsure: every receipt photo comes back as one the reader could not trust (blurry photo,
+// receipt too far, two receipts in one photo, sum does not add up) — answered here, no paid reading.
 var FUEL_TEST = true;
 var _SIM = FUEL_TEST ? (new URLSearchParams(location.search).get('sim') || 'ok') : '';
 (function(){
@@ -324,8 +333,11 @@ var _SIM = FUEL_TEST ? (new URLSearchParams(location.search).get('sim') || 'ok')
         var ft = '';
         try{ if (method !== 'GET' && init && init.body && typeof init.body.get === 'function') ft = (JSON.parse(init.body.get('data') || '{}') || {}).formType || ''; }catch(e){}
         if (ft === 'FUEL_OCR'){   // reading a receipt saves nothing: the real server reads it; until its OCR add-on is in, a sample reading
-          var sample = function(){ return answer({ status: 'success', sample: true, ocr: { readable: true, total_rm: 180.5, litres: 46.15, unit_price: 3.91,
-            station: 'PETRONAS', fuel_type: 'DIESEL', receipt_date: _todayMYT(), receipt_time: '09:12' } }, 0); };
+          var held = { blur: ['PHOTO', 'BLURRY', 'ONE'], far: ['PHOTO', 'TOO_FAR', 'ONE'], two: ['MULTI', 'NONE', 'SEVERAL'], unsure: ['NO_MATCH', 'NONE', 'ONE'] }[_SIM];
+          if (held) return answer({ status: 'success', sim: true, ocr: { readable: true, total_rm: null, litres: null, unit_price: 5.17, station: 'PETRON',
+            fuel_type: 'DIESEL', receipt_date: _todayMYT(), receipt_time: '09:12', receipts: held[2], photo_issue: held[1], why: held[0], use: false } }, 1200);
+          var sample = function(){ return answer({ status: 'success', sample: true, ocr: { readable: true, total_rm: 180.5, litres: 46.15, unit_price: 3.911,
+            station: 'PETRONAS', fuel_type: 'DIESEL', receipt_date: _todayMYT(), receipt_time: '09:12', receipts: 'ONE', photo_issue: 'NONE', why: 'OK', use: true } }, 0); };
           return _realFetch(input, init).then(function(r){ return r.clone().json().then(function(j){ return (j && j.status === 'success') ? r : sample(); }, sample); }, sample);
         }
         if (method !== 'GET' || !/^get/i.test(act)){
@@ -840,11 +852,16 @@ $('fuelDate').addEventListener('change', function(){
 // and RM / litres arrive filled in — the driver checks them, fixes what is wrong, types the odometer, saves.
 // The photo is compressed ONCE: the reading and the Save send the same bytes, so the server's 15-minute cache
 // answers the Save's own reading (one paid call per receipt). Before the server has its OCR add-on (or when the
-// reading fails) the boxes simply stay empty to type — saving works the same either way. ──
+// reading fails) the boxes simply stay empty to type — saving works the same either way.
+// OCR v2 [2026-10-24, after the 40-receipt trial]: a reading is filled in ONLY when it adds up (litres × price per
+// litre = total, ±6 sen) — Petron prints 0 as Ø and v1 sometimes took it for 8. Better an empty box than a wrong
+// number a busy driver saves without looking. A blurry / far photo or two receipts in one photo get a big
+// "Ambil foto semula" (the driver is still at the pump). ──
 var OCR_WAIT_MS = 25000;
 var _photoPh = null;                         // the compressed photo {base64, name, type}
 var _ocr = null, _ocrSample = false;         // what the receipt said (null = nothing usable)
 var _ocrState = 'none';                      // none | reading | done | manual
+var _ocrWhy = '';                            // manual because of: PHOTO | MULTI | UNSURE | '' (could not read / no answer)
 var _ocrSeq = 0;                             // a newer photo makes an older reading stale
 var _ocrAuto = { amount: null, litres: null };   // the values the reading filled in (a typed value is never overwritten)
 
@@ -852,7 +869,7 @@ function _setPhoto(f){
   if (_photoUrl){ try{ URL.revokeObjectURL(_photoUrl); }catch(e){} _photoUrl = ''; }
   _photoFile = f || null;
   if (f){ try{ _photoUrl = URL.createObjectURL(f); }catch(e){} }
-  else { try{ $('receiptPhoto').value = ''; $('receiptPhoto2').value = ''; }catch(e){} }
+  else { try{ $('receiptPhoto').value = ''; $('receiptPhoto2').value = ''; $('receiptPhoto3').value = ''; }catch(e){} }
   _renderPhoto();
 }
 function _renderPhoto(){
@@ -862,10 +879,11 @@ function _renderPhoto(){
   $('photoBtn').className = 'photo big' + ($('receiptPhoto').disabled ? ' dis' : '');
   $('photoTxt').textContent = L('Take receipt photo', 'Ambil foto resit');
   $('photoChange').textContent = L('Change', 'Tukar');
+  $('retakeTxt').textContent = L('Retake photo', 'Ambil foto semula');
 }
 function _clearReceipt(){
   _ocrSeq++; _setPhoto(null);
-  _photoPh = null; _ocr = null; _ocrSample = false; _ocrState = 'none'; _ocrAuto = { amount: null, litres: null };
+  _photoPh = null; _ocr = null; _ocrSample = false; _ocrState = 'none'; _ocrWhy = ''; _ocrAuto = { amount: null, litres: null };
 }
 // which part of the fuel card shows: the photo button, the reading, the boxes to check — or the unconfirmed Save
 function _renderFuelStep(){
@@ -875,18 +893,33 @@ function _renderFuelStep(){
   $('stepCheck').hidden = unc || !has;
   $('fuelFields').hidden = reading; $('fuelActs').hidden = reading;
   $('checkNote').hidden = reading || _ocrState !== 'done';
+  $('retakeBtn').hidden = reading || _ocrState !== 'manual' || (_ocrWhy !== 'PHOTO' && _ocrWhy !== 'MULTI');
   _renderOcrHead(); _renderOcrTags();
 }
 var _FUEL_NAMES = { DIESEL: 'Diesel', RON95: 'RON95', RON97: 'RON97' };
 var _STATION_NAMES = { PETRONAS: 'Petronas', SHELL: 'Shell', PETRON: 'Petron', CALTEX: 'Caltex', BHPETROL: 'BHPetrol' };
+var _PHOTO_MSG = { BLURRY: ['Photo blurry', 'Foto kabur'], TOO_FAR: ['Receipt too far', 'Resit terlalu jauh'],
+  PARTLY_HIDDEN: ['Numbers covered', 'Nombor terlindung'], DARK_OR_GLARE: ['Too dark or shiny', 'Terlalu gelap / silau'] };
 function _renderOcrHead(){
   var h = $('ocrHead'), i = $('ocrInfo');
   if (_ocrState === 'reading'){
     h.className = 'rcpt-l1'; h.innerHTML = '<span class="spin-s"></span><span>' + _esc(L('Reading the receipt…', 'Membaca resit…')) + '</span>';
     i.textContent = ''; i.className = 'rcpt-l2'; return;
   }
-  if (_ocrState === 'done'){ h.className = 'rcpt-l1 ok'; h.innerHTML = _ico('check', 's') + '<span>' + _esc(L('Read from the receipt', 'Dibaca dari resit')) + '</span>'; }
-  else { h.className = 'rcpt-l1 warn'; h.innerHTML = _ico('warn', 's') + '<span>' + _esc(L('Could not read it — please type', 'Tak dapat dibaca — isi sendiri')) + '</span>'; }
+  if (_ocrState !== 'done'){
+    // not filled in: say why in a few words; the receipt's station / date are not shown (from an unsure reading they mislead)
+    var pm = _PHOTO_MSG[(_ocr && _ocr.photo_issue) || ''] || ['Photo not clear', 'Foto kurang jelas'];
+    var head = _ocrWhy === 'MULTI' ? L('2 receipts in 1 photo', '2 resit dalam 1 foto')
+             : _ocrWhy === 'PHOTO' ? L(pm[0], pm[1])
+             : _ocrWhy === 'UNSURE' ? L('Not sure — please type', 'Tak pasti — isi sendiri')
+             : L('Could not read it — please type', 'Tak dapat dibaca — isi sendiri');
+    h.className = 'rcpt-l1 warn'; h.innerHTML = _ico('warn', 's') + '<span>' + _esc(head) + '</span>';
+    i.textContent = _ocrWhy === 'MULTI' ? L('One receipt per photo', 'Satu resit, satu foto')
+                  : _ocrWhy === 'PHOTO' ? L('Flat, close and in good light', 'Rata, dekat dan terang') : '';
+    i.className = 'rcpt-l2';
+    return;
+  }
+  h.className = 'rcpt-l1 ok'; h.innerHTML = _ico('check', 's') + '<span>' + _esc(L('Read from the receipt', 'Dibaca dari resit')) + '</span>';
   // station · fuel · date and time on the receipt — amber when the date is not the fuel date, or the fuel is not diesel
   var o = _ocr || {}, parts = [], warn = false;
   if (_STATION_NAMES[o.station]) parts.push(_STATION_NAMES[o.station]);
@@ -904,23 +937,37 @@ function _prefill(id, val){
   if (val == null){ if (prev != null && el.value === prev) el.value = ''; _ocrAuto[id] = null; return; }   // a new photo without it: drop the old auto value
   if (!el.value || el.value === prev){ el.value = val; _ocrAuto[id] = val; _errOff('err-' + id); }
 }
+// OCR v2: fill in only a reading that adds up. The v2 server already holds the others back (use:false, no numbers);
+// the sum is checked here too, so an answer from the v1 server (no `use`) gets the same treatment.
+function _ocrUsable(o){
+  if (!o || !o.readable || o.use === false) return false;
+  var t = o.total_rm, l = o.litres, u = o.unit_price;
+  if (typeof t !== 'number' || typeof l !== 'number' || typeof u !== 'number') return false;
+  return Math.abs(t - l * u) <= 0.06;   // pump rounding + 5-sen cash rounding stay under 3 sen
+}
+function _ocrWhyOf(o){
+  if (!o) return '';
+  if (o.receipts === 'SEVERAL') return 'MULTI';
+  if (o.photo_issue && o.photo_issue !== 'NONE') return 'PHOTO';
+  return (o.readable && o.receipts !== 'NONE') ? 'UNSURE' : '';
+}
 async function _onPhotoPicked(f){
   _setPhoto(f); _errOff('err-photo');
   var seq = ++_ocrSeq;
-  _photoPh = null; _ocr = null; _ocrSample = false; _ocrState = 'reading'; _renderFuelStep();
+  _photoPh = null; _ocr = null; _ocrSample = false; _ocrState = 'reading'; _ocrWhy = ''; _renderFuelStep();
   var ph = null;
   try{ ph = await compressToBase64(f); }catch(e){ ph = null; }
   if (seq !== _ocrSeq) return;
   _photoPh = ph;
   var res = (ph && navigator.onLine !== false) ? await _readReceipt(ph) : null;
   if (seq !== _ocrSeq) return;
-  var o = (res && res.status === 'success' && res.ocr && res.ocr.readable) ? res.ocr : null;
+  var o = (res && res.status === 'success' && res.ocr) ? res.ocr : null, use = _ocrUsable(o);
   _ocr = o; _ocrSample = !!(res && res.sample);
-  if (o){
-    _prefill('amount', typeof o.total_rm === 'number' ? o.total_rm.toFixed(2) : null);
-    _prefill('litres', typeof o.litres === 'number' ? String(o.litres) : null);
-  }
-  _ocrState = (o && typeof o.total_rm === 'number') ? 'done' : 'manual';
+  // a new photo never keeps the previous photo's auto-filled numbers; a number the driver typed always stays
+  _prefill('amount', use ? o.total_rm.toFixed(2) : null);
+  _prefill('litres', use ? String(o.litres) : null);
+  _ocrWhy = use ? '' : _ocrWhyOf(o);
+  _ocrState = use ? 'done' : 'manual';
   _saveDraft(); _renderFuelStep();
 }
 function _readReceipt(ph){
@@ -929,7 +976,7 @@ function _readReceipt(ph){
     clientToken: 'ocr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10) }, OCR_WAIT_MS);
 }
 $('photoPreview').addEventListener('error', function(){ this.style.visibility = 'hidden'; });   // e.g. a HEIC the browser cannot draw: the upload still works
-['receiptPhoto', 'receiptPhoto2'].forEach(function(id){
+['receiptPhoto', 'receiptPhoto2', 'receiptPhoto3'].forEach(function(id){
   $(id).addEventListener('change', function(){
     var f = this.files && this.files[0];
     if (f) _onPhotoPicked(f);   // a cancelled picker keeps the photo already taken
@@ -1199,7 +1246,7 @@ function _uncSet(u, note){
 function _renderUnc(){
   var on = !!_unc;
   // the entry under check must stay exactly as sent: no edits until it is settled
-  ['fuelDate', 'driverSearch', 'secondSearch', 'vehicleNo', 'receiptPhoto', 'receiptPhoto2'].forEach(function(id){ $(id).disabled = on; });
+  ['fuelDate', 'driverSearch', 'secondSearch', 'vehicleNo', 'receiptPhoto', 'receiptPhoto2', 'receiptPhoto3'].forEach(function(id){ $(id).disabled = on; });
   $('tripToggle').disabled = on;
   _renderPhoto(); _renderFuelStep();
   if (!on) return;
