@@ -241,10 +241,14 @@
           <button type="button" class="link" id="tripToggle" hidden></button>
         </div>
         <div class="form" id="tripForm">
+          <!-- [R4 2026-10-24] lorry FIRST, as the new Fuel form (boss): picking it brings that lorry's crew from its delivery
+               list (_autoFillAssignedDrivers; "Mencari pemandu…" while it looks); the date (today by default) goes last -->
           <div class="field">
-            <label class="fl" for="deliveryDate"><span data-en="Delivery date">Tarikh penghantaran</span> <span class="req">*</span></label>
-            <div class="date-in" id="dateWrap"><input class="in" type="date" id="deliveryDate" required><span class="date-txt" id="dateTxt" aria-hidden="true"></span></div>
-            <div class="error-msg" id="err-date" data-en="Please select a date">Sila pilih tarikh</div>
+            <label class="fl" for="vehicleNo"><span data-en="Lorry">Lori</span> <span class="req">*</span></label>
+            <select class="in" id="vehicleNo" required>
+              <option value="" data-en="&mdash; Select lorry &mdash;">&mdash; Pilih lori &mdash;</option>
+            </select>
+            <div class="error-msg" id="err-vehicle" data-en="Please select a lorry">Sila pilih lori</div>
           </div>
 
           <div class="field">
@@ -258,7 +262,7 @@
 
           <!-- SECOND DRIVER (optional) -->
           <div class="field">
-            <label class="fl" for="secondSearch"><span data-en="Second driver (only if two)">Pemandu kedua (jika dua)</span></label>
+            <label class="fl" for="secondSearch"><span data-en="2nd driver (if any)">Pemandu kedua (jika ada)</span></label>
             <input class="in" type="text" id="secondSearch" autocomplete="off" placeholder="ID staf atau nama" data-en-ph="Staff ID or name">
             <input type="hidden" id="secondDriver">
             <div id="secondPanel" class="dp-panel" style="display:none;"></div>
@@ -266,11 +270,9 @@
           </div>
 
           <div class="field">
-            <label class="fl" for="vehicleNo"><span data-en="Lorry">Lori</span> <span class="req">*</span></label>
-            <select class="in" id="vehicleNo" required>
-              <option value="" data-en="&mdash; Select lorry &mdash;">&mdash; Pilih lori &mdash;</option>
-            </select>
-            <div class="error-msg" id="err-vehicle" data-en="Please select a lorry">Sila pilih lori</div>
+            <label class="fl" for="deliveryDate"><span data-en="Delivery date">Tarikh penghantaran</span> <span class="req">*</span></label>
+            <div class="date-in" id="dateWrap"><input class="in" type="date" id="deliveryDate" required><span class="date-txt" id="dateTxt" aria-hidden="true"></span></div>
+            <div class="error-msg" id="err-date" data-en="Please select a date">Sila pilih tarikh</div>
           </div>
         </div>
       </section>
@@ -432,7 +434,7 @@ function _tripRender(){
   var l1 = document.getElementById('tripL1'), l2 = document.getElementById('tripL2'), l3 = document.getElementById('tripL3'), tg = document.getElementById('tripToggle');
   if (_smMode || !done){   // salesman mode: only the date applies (the other fields are hidden), no summary
     l1.textContent = L('Trip details', 'Maklumat perjalanan');
-    l2.textContent = _smMode ? _dateLabel(dt) : L('Date, driver and lorry', 'Tarikh, pemandu dan lori');
+    l2.textContent = _smMode ? _dateLabel(dt) : L('Lorry, driver and date', 'Lori, pemandu dan tarikh');   // [R4] screen order, as the Fuel form
     l2.className = 'trip-l2'; l3.hidden = true; tg.hidden = true;
   } else {
     var sid = STAFF_IDS[dn];
@@ -1071,7 +1073,23 @@ async function checkShipmentForVehicle(keepListOnFail, isRetry){
     }, 5000);
   } finally {
     if (timer) clearTimeout(timer);
+    _crewLooking_(false);   // [R4] the list answered (or not): the driver box stops saying "Mencari pemandu…"
   }
+}
+// [R4 2026-10-24] as the new Fuel form: after a lorry is picked, the EMPTY driver box says "Mencari pemandu…" while that
+// lorry's delivery list (which carries its crew) loads, instead of looking broken. Only our own text is undone.
+function _crewLooking_(on){
+  var ds = document.getElementById('driverSearch');
+  if (!ds) return;
+  var cur = ds.getAttribute('data-en-ph') || '';
+  if (on){
+    if (document.getElementById('driverName').value || /Failed to load/.test(cur)) return;   // a driver is there / the roster itself failed
+    ds.setAttribute('data-en-ph', 'Finding the driver…'); ds.setAttribute('data-bm-ph', 'Mencari pemandu…');
+  } else {
+    if (cur !== 'Finding the driver…') return;
+    ds.setAttribute('data-en-ph', 'Staff ID (e.g. 448) or name'); ds.setAttribute('data-bm-ph', 'ID staf (cth. 448) atau nama');
+  }
+  ds.placeholder = LANG === 'en' ? ds.getAttribute('data-en-ph') : ds.getAttribute('data-bm-ph');
 }
 
 // bug #7: auto-fill the driver picker(s) with the shipment's assigned crew.
@@ -4489,8 +4507,19 @@ document.getElementById('vehicleNo').addEventListener('change', function(){
   ['driverName','secondDriver'].forEach(function(id){ var h=document.getElementById(id); if(h) h.value=''; });
   ['driverSearch','secondSearch'].forEach(function(id){ var s=document.getElementById(id); if(s) s.value=''; });
   ['staffIdBadge','staffIdBadge2'].forEach(function(id){ var b=document.getElementById(id); if(b){ b.style.display='none'; b.textContent=''; } });
+  var _rb = document.getElementById('rememberedBadge'); if (_rb) _rb.style.display = 'none';   // "✓ Diingati" only on the name the phone filled
   _tripRender();
-  checkShipmentForVehicle();
+  // [R4 2026-10-24] lorry first (as the Fuel form): its delivery list brings the assigned crew; while it loads the empty
+  // driver box says "Mencari pemandu…"; no crew on the list → the driver this phone remembers (the phone's own driver)
+  var _veh = this.value;
+  if (_veh) _crewLooking_(true);
+  Promise.resolve(checkShipmentForVehicle()).catch(function(){}).then(function(){
+    _crewLooking_(false);   // also when the check never fetched (no date picked, salesman mode)
+    var vs = document.getElementById('vehicleNo'), dn = document.getElementById('driverName'), ds = document.getElementById('driverSearch');
+    if (!_veh || vs.value !== _veh || dn.value || !ds || !ds._pick) return;
+    var saved = null; try{ saved = localStorage.getItem(STORAGE_KEY); }catch(e){}
+    if (saved && ROSTER.some(function(d){ return d.name === saved; })){ ds._pick(saved, true); if (_rb) _rb.style.display = 'inline-flex'; _tripRender(); }
+  }).catch(function(){});
 });
 document.getElementById('deliveryDate').addEventListener('change', function(){ _tripRender(); checkShipmentForVehicle(); });
 
