@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en" translate="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#141C77">
+<meta name="google" content="notranslate">
+<meta name="robots" content="noindex">
+<title>CLF Fleet (TEST)</title>
+<style>
+  /* F2 design draft v3.1 (2026-10-24): two review rounds, then the boss's D6-D13 decisions (fuel report per lorry, month table kept). Same tokens as the POD form
+     (Round 2, boss-approved): navy header, white cards, 12px radius, system fonts 13/15/17/22 + one 32px number.
+     Colour = status only, always next to a word. Everything below runs on FAKE data generated in this file. */
+  :root{
+    --navy:#141C77; --navy-2:#0E1458; --navy-50:#EEF0FA;
+    --red-700:#C8101E; --red-50:#FEF2F2; --red-line:#F5C2C7;
+    --green:#15803D; --green-50:#ECFDF3; --green-line:#A7D7B8;
+    --lime:#87C329;
+    --amber:#B45309; --amber-50:#FFFBEB; --amber-line:#F3D19C;
+    --ink:#0F172A; --ink-2:#475569; --ink-3:#94A3B8;
+    --line:#E2E8F0; --bg:#FFFFFF; --bg-2:#F4F6FA;
+    --r:12px;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{touch-action:manipulation;-webkit-text-size-adjust:100%}
+  html,body{background:var(--bg-2)}
+  body{font:15px/1.45 var(--font);color:var(--ink);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;min-height:100vh}
+  button{font:inherit;color:inherit;cursor:pointer;background:none;border:0;text-align:left}
+  [hidden]{display:none!important}
+  svg.i{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  svg.i.s{width:16px;height:16px}
+  .num{font-variant-numeric:tabular-nums}
+
+  .app{max-width:1200px;margin:0 auto;min-height:100vh;background:var(--bg-2);padding-bottom:90px}
+
+  /* header: the POD form's bar; right side = data time (tap to refresh) + branch */
+  .bar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:10px;min-height:56px;padding:8px 12px;padding-top:max(8px, env(safe-area-inset-top));background:var(--navy);color:#fff}
+  .bar img{height:30px;width:auto;display:block}
+  .bar .sep{width:1px;height:26px;background:rgba(255,255,255,.28)}
+  .bar .ttl{font-size:17px;font-weight:800;letter-spacing:.6px}
+  .bar .sp{flex:1}
+  @media (max-width:359px){ .bar{gap:8px} .bar .sep{display:none} }
+  .clock{display:flex;align-items:center;gap:5px;min-height:36px;padding:0 10px;border-radius:999px;color:#fff;font-size:13px;font-weight:800}
+  .clock.old{background:var(--amber-50);color:var(--amber)}
+  .brp{display:flex;align-items:center;gap:4px;min-height:36px;padding:0 10px 0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.5);color:#fff;font-size:13px;font-weight:800}
+
+  /* date row */
+  .daterow{display:flex;align-items:center;gap:6px;padding:10px 14px 4px}
+  .daterow .arw{flex:none;width:44px;height:44px;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--navy);display:flex;align-items:center;justify-content:center}
+  .daterow .arw:disabled{opacity:.35}
+  .dbox{position:relative;flex:1;min-width:0}
+  .dbox .day{display:flex;align-items:center;justify-content:center;gap:4px;width:100%;min-height:44px;border-radius:10px;border:1.5px solid var(--line);background:#fff;font-size:15px;font-weight:800;text-align:center;padding:0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dbox .day small{font-weight:600;color:var(--ink-2)}
+  .dbox input{position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer}
+  .today{flex:none;min-height:44px;padding:0 12px;border-radius:10px;background:var(--navy);color:#fff;font-size:13px;font-weight:800}
+  .loadline{padding:2px 16px 0;font-size:13px;color:var(--ink-2)}
+  .offline{display:flex;align-items:center;gap:8px;margin:8px 14px 0;padding:8px 10px 8px 12px;border-radius:10px;background:var(--amber-50);color:var(--amber);font-size:13px;font-weight:800}
+  .offline span{flex:1}
+  .offline.grey{background:var(--bg-2);color:var(--ink-2)}
+  .offline.grey .pill{background:#fff;color:var(--navy);border-color:var(--line)!important}
+
+  /* card grid: a card keeps its width, a wider screen gets more columns (max 4) */
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:10px 14px 0}
+  .span2{grid-column:span 2}
+  @media (min-width:700px){ .grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;padding:12px 20px 0;max-width:800px} .daterow{padding:12px 20px 4px;max-width:800px} .rows{padding:14px 20px 0;max-width:800px} .offline{max-width:772px} }
+
+  .card{position:relative;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;width:100%;border:1px solid var(--line);border-radius:var(--r);background:var(--bg);padding:14px;min-height:104px}
+  .card.short{min-height:0;padding:12px 14px}
+  .card:active{background:var(--bg-2)}
+  .card .go{position:absolute;top:12px;right:10px;color:#64748B}
+  .lbl{font-size:13px;font-weight:700;color:var(--ink-2);line-height:18px;padding-right:22px}
+  .lbl .rt{position:absolute;top:13px;right:32px;font-weight:600}
+  .big{font-size:32px;font-weight:800;line-height:36px;margin-top:4px;letter-spacing:-.5px;white-space:nowrap}
+  .big .u{font-size:17px;font-weight:700;color:var(--ink-2);letter-spacing:0;margin-left:4px}
+  .big .u.pre{margin:0 3px 0 0}
+  .big.amb{color:var(--amber)} .big.mute{color:var(--ink-2)} .big.ok{color:var(--green);font-size:22px;display:flex;align-items:center;gap:6px}
+  .big.word{font-size:22px;color:var(--ink-2)}
+  .card.short .big{margin-top:2px}
+  .sub{font-size:13px;color:var(--ink-2);margin-top:6px;line-height:18px}
+  .sub b{color:var(--ink);font-weight:700}
+  .sub .warn{color:var(--amber);font-weight:700}
+  .sub .bad{color:var(--red-700);font-weight:700}
+  .sub .rty{margin-left:6px;color:var(--navy);font-weight:800;text-decoration:underline}
+  .pill{display:inline-flex;align-items:center;gap:4px;height:24px;font-size:12px;font-weight:800;padding:0 9px;border-radius:999px;white-space:nowrap;vertical-align:middle}
+  .pill.sm{height:20px;font-size:11px;padding:0 8px}
+  .card .chipline{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:6px;line-height:24px}
+  .chipline .unit{font-size:13px;font-weight:700;color:var(--ink-2)}
+  .p-done{background:var(--green-50);color:var(--green)}
+  .p-late{background:var(--amber-50);color:var(--amber)}
+  .p-fail{background:var(--red-50);color:var(--red-700)}
+  .p-grey{background:var(--bg-2);color:var(--ink-2)}
+  .p-navy{background:var(--navy-50);color:var(--navy)}
+  /* stacked bar with 2px white gaps between segments (readable without colour) */
+  .sbar{display:flex;gap:2px;height:10px;margin-top:10px}
+  .sbar i{display:block;height:100%;border-radius:3px}
+  .sbar .g{background:var(--green)} .sbar .r{background:var(--red-700)} .sbar .a{background:#E8B26A} .sbar .k{background:var(--line)}
+  .skel{color:var(--ink-2)!important}
+  .clock svg.spin{animation:sp .8s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  /* rows under the cards */
+  .rows{padding:14px 14px 0}
+  .row{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:10px 14px;margin-bottom:10px;border:1px solid var(--line);border-radius:var(--r);background:var(--bg)}
+  .row:active{background:var(--bg-2)}
+  .row .t{display:flex;align-items:center;gap:6px;font-size:15px;font-weight:800}
+  .row .m{flex:1;min-width:0;font-size:13px;color:var(--ink-2);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .go{color:#64748B}
+  .state{padding:18px 14px;text-align:center;border:1px solid var(--line);border-radius:var(--r);background:var(--bg);color:var(--ink-2);font-size:15px}
+  .state b{display:block;color:var(--ink);font-size:17px;margin-bottom:2px}
+
+  /* level 1: full page (right-hand panel on a wide screen); level 2: bottom sheet */
+  .page{position:fixed;top:0;left:0;right:0;bottom:0;z-index:40;background:var(--bg-2);overflow-y:auto;-webkit-overflow-scrolling:touch}
+  @media (min-width:900px){ .page{left:auto;width:520px;box-shadow:-8px 0 30px rgba(15,23,42,.15)} }
+  .page .bar{gap:6px}
+  .page .back{display:flex;align-items:center;gap:2px;color:#fff;font-weight:800;font-size:15px;min-height:44px;padding:0 6px 0 0}
+  .pbody{max-width:760px;margin:0 auto;padding:12px 14px 40px}
+  .h2{font-size:13px;font-weight:800;color:var(--ink-2);margin:18px 2px 8px}
+  .h2:first-child{margin-top:4px}
+  .li{display:flex;align-items:center;gap:12px;width:100%;min-height:60px;padding:10px 14px;margin-bottom:8px;border:1px solid var(--line);border-radius:var(--r);background:var(--bg)}
+  .li:active{background:var(--bg-2)}
+  .li.done{background:var(--bg-2);border-color:transparent}
+  .li .mn{flex:1;min-width:0}
+  .li .l1{font-size:17px;font-weight:800;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .li .l1.s{font-size:15px}
+  .li .l2{font-size:13px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .li .l2.w{white-space:normal}
+  .li .rt{text-align:right;flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+  .li .rt .v{font-size:15px;font-weight:800}
+  .li .go{color:#64748B}
+  .tot{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .tot .card{min-height:92px}
+  .note{font-size:13px;color:var(--ink-2);margin:2px 2px 10px}
+  .link{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:48px;margin-top:12px;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--navy);font-weight:800;font-size:15px}
+  table.t{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;font-size:13px}
+  table.t th{background:var(--bg-2);color:var(--ink-2);font-weight:800;text-align:left;padding:8px 10px}
+  table.t td{padding:9px 10px;border-top:1px solid var(--line)}
+  table.t .n{text-align:right;font-variant-numeric:tabular-nums}
+  .days{display:flex;align-items:flex-end;gap:3px;height:70px;border:1px solid var(--line);border-radius:var(--r);background:#fff;padding:10px 12px}
+  .days i{flex:1;background:var(--green);border-radius:3px 3px 0 0;min-height:2px}
+  .days i.k{background:var(--line)}
+
+  .scrim{position:fixed;top:0;left:0;right:0;bottom:0;z-index:60;background:rgba(15,23,42,.55);display:flex;align-items:flex-end;justify-content:center}
+  .sheet{width:100%;max-width:560px;max-height:88vh;overflow-y:auto;background:#fff;border-radius:18px 18px 0 0;padding:16px 16px;padding-bottom:max(20px, calc(env(safe-area-inset-bottom) + 14px))}
+  .grab{width:40px;height:5px;border-radius:99px;background:var(--line);margin:0 auto 12px}
+  .sheet h3{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:17px;font-weight:800;line-height:1.3}
+  .sheet .s2{font-size:13px;color:var(--ink-2);margin-top:2px}
+  .stop{border:1px solid var(--line);border-radius:var(--r);padding:12px;margin-top:10px}
+  .stop.done{background:var(--bg-2);border-color:transparent}
+  .stop .top{display:flex;align-items:flex-start;gap:10px}
+  .stop .nm{flex:1;min-width:0;font-size:15px;font-weight:800}
+  .stop .mt{font-size:13px;color:var(--ink-2);font-weight:600}
+  .ths{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .th{width:52px;height:52px;border-radius:8px;border:1px solid var(--line);background:linear-gradient(135deg,#E9EDF5,#F8FAFC);display:flex;align-items:center;justify-content:center;color:var(--ink-3)}
+  .reason{display:flex;gap:8px;align-items:center;margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--red-50);color:var(--red-700);font-size:13px;font-weight:800}
+  .reason.g{background:var(--bg-2);color:var(--ink-2)}
+  .kv{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px}
+  .kv div{border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+  .kv small{display:block;font-size:12px;color:var(--ink-2);font-weight:700}
+  .kv b{font-size:17px}
+  .btnrow{display:flex;gap:10px;margin-top:14px}
+  .btn{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;min-height:52px;border-radius:12px;font-weight:800;font-size:15px;text-align:center}
+  .b-pri{background:var(--navy);color:#fff}
+  .b-ghost{background:#fff;border:1.5px solid var(--line)}
+  .form2{display:grid;gap:4px;margin-top:12px}
+  .fl{font-size:13px;font-weight:700;color:var(--ink-2);margin-top:6px}
+  .in{display:block;width:100%;height:48px;border:1.5px solid var(--line);border-radius:10px;padding:0 12px;font-size:16px;color:var(--ink);background:#fff}
+  .in:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(20,28,119,.12)}
+  .err{font-size:13px;font-weight:700;color:var(--red-700);margin-top:2px}
+  textarea{width:100%;min-height:96px;margin-top:10px;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;font:16px/1.4 var(--font);color:var(--ink)}
+  textarea:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(20,28,119,.12)}
+  .disc{border:1.5px solid var(--ink-2);background:#fff;border-radius:var(--r);padding:12px 14px;margin-bottom:10px}
+  .disc .w{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:var(--ink)}
+  .disc .t{font-size:15px;font-weight:800;margin-top:4px}
+  .disc .q{font-size:13px;color:var(--ink-2);margin-top:2px}
+  .disc .btn{margin-top:10px;min-height:46px;border:1.5px solid var(--line)}
+  .disc.closed{border-color:transparent;background:var(--bg-2)}
+  .opts{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
+  .opts button{min-height:44px;border-radius:10px;border:1.5px solid var(--line);background:#fff;font-size:14px;font-weight:800;text-align:center;padding:0 6px}
+  .opts button.on{border-color:var(--navy);background:var(--navy-50);color:var(--navy)}
+
+
+  /* live test page additions */
+  .testbar{background:#FEF3C7;border-bottom:1px solid #F59E0B;color:#92400E;font-size:12.5px;font-weight:700;text-align:center;padding:6px 10px}
+  a.link{text-decoration:none}
+  .rcpt{font-size:12px;color:var(--ink-2);margin-top:2px}
+  .lock{position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(15,23,42,.92);display:flex;align-items:center;justify-content:center;padding:20px}
+  .lockbox{background:#fff;border-radius:16px;max-width:360px;width:100%;padding:22px 20px}
+  .lockbox .in{margin-top:4px}
+</style>
+</head>
+<body>
+<div class="testbar">TEST PAGE &middot; new dashboard on live data &middot; current one unchanged</div>
+<div class="app">
+  <header class="bar">
+    <img src="brand/clf-logo-horizontal-white.png" alt="CLF Trading" width="72" height="30" decoding="async">
+    <span class="sep" aria-hidden="true"></span>
+    <span class="ttl">FLEET</span>
+    <span class="sp"></span>
+    <button type="button" class="clock" id="clock" data-act="refresh" aria-label="Data time, tap to refresh"></button>
+    <button type="button" class="brp" id="brp" data-act="branch" aria-label="Branch"></button>
+  </header>
+  <div class="daterow">
+    <button type="button" class="arw" id="dPrev" aria-label="Previous day"><svg class="i" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <div class="dbox"><div class="day" id="dDay"></div><input type="date" id="dPick" aria-label="Pick a date" min="2026-06-09"></div>
+    <button type="button" class="arw" id="dNext" aria-label="Next day"><svg class="i" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></button>
+    <button type="button" class="today" id="dToday" hidden>Today</button>
+  </div>
+  <div class="loadline" id="loadline" hidden></div>
+  <main class="grid" id="home"></main>
+  <div class="rows" id="rows"></div>
+</div>
+
+<div class="page" id="page" hidden>
+  <header class="bar"><button type="button" class="back" id="pBack"><svg class="i" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>Back</button><span class="ttl" id="pTitle"></span></header>
+  <div class="pbody" id="pBody"></div>
+</div>
+<div class="scrim" id="scrim" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+
+<script>
+(function () {
+  'use strict';
+  /* F2 dashboard, TEST page (2026-10-24). Same backend and the same office sign-in + read grant as the live
+     dashboard; the layout is the approved F2 design (6 cards, POD form style). Parts the backend cannot answer
+     yet say "Coming soon". Reads only: nothing on this page writes. */
+  var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxabHh2Kd04z7k0zZOOoaJs2i5hgycQsO_AYoRS99xZx2WqMJ6cowumY0e1znehiRM1/exec';
+  var BC_SINCE = '2026-10-24';   // the POD form reads invoice barcodes from this day (same rule as POD Admin)
+  var KEY_BRANCH = 'clfDashF2T_branch_v1', KEY_SNAP = 'clfDashF2T_snap_v1', KEY_VEH = 'clfDashF2T_veh_v1';
+  var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  var MONTH = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  var REASON_ORDER = ['Shop closed', 'Rejected', 'Partial', 'Reschedule'];
+
+  // ================================================================ helpers
+  function $(id) { return document.getElementById(id); }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function np(p) { return String(p || '').toUpperCase().replace(/\s+/g, ''); }   // plate key: "CDQ 9098" == "cdq9098"
+  function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function today() { return ymd(new Date()); }
+  function parseYmd(s) { var p = String(s).split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function addDays(s, n) { var d = parseYmd(s); d.setDate(d.getDate() + n); return ymd(d); }
+  function hm(ts) { var d = new Date(ts); return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+  function nowHour() { var d = new Date(); return d.getHours() + d.getMinutes() / 60; }
+  function num(v) { var n = Number(v); return isFinite(n) ? n : 0; }
+  function fmtRM(v) { v = num(v); return v >= 1e6 ? 'RM ' + (v / 1e6).toFixed(2) + 'M' : v >= 100000 ? 'RM ' + Math.round(v / 1000) + 'K' : v >= 10000 ? 'RM ' + (v / 1000).toFixed(1) + 'K' : 'RM ' + Math.round(v).toLocaleString('en-MY'); }
+  function bigRM(v) { var s = fmtRM(v).slice(3), m = /^([\d.,]+)([KM]?)$/.exec(s); return '<span class="u pre">RM</span>' + m[1] + (m[2] ? '<span class="u" style="margin-left:1px">' + m[2] + '</span>' : ''); }
+  function pill(t, c, sm) { return '<span class="pill ' + c + (sm ? ' sm' : '') + '">' + t + '</span>'; }
+  function readLS(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } }
+  function writeLS(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
+  var GO = '<svg class="i s go" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>';
+  var CAM = '<svg class="i s" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>';
+  var DOC = '<svg class="i s" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+  var OK = '<svg class="i s" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
+  var REF = '<svg class="i s" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.5 15a9 9 0 1 1-2.1-9.4L23 10"/></svg>';
+
+  // ================================================================ state
+  var st = { date: today(), follow: true, branch: 'MTK', updating: false, fromSnap: 0, started: 0, reopen: null };
+  (function () { var b = readLS(KEY_BRANCH); if (b === 'MTK' || b === 'KTN' || b === 'ALL') st.branch = b; var q = new URLSearchParams(location.search).get('branch'); if (q && /^(MTK|KTN|ALL)$/i.test(q)) st.branch = q.toUpperCase(); })();
+  var DATA = {}, AT = {}, ERR = {}, LOADING = {}, LOAD_SEQ = 0;
+
+  // ================================================================ reads
+  function get(action, params, gated, ms) {
+    var q = ['action=' + encodeURIComponent(action)];
+    Object.keys(params || {}).forEach(function (k) { if (params[k] != null) q.push(k + '=' + encodeURIComponent(params[k])); });
+    var url = SCRIPT_URL + '?' + q.join('&');
+    if (gated) url = _rgUrl(url);
+    var ctl = window.AbortController ? new AbortController() : null, to = ctl ? setTimeout(function () { try { ctl.abort(); } catch (e) {} }, ms || 30000) : null;
+    return fetch(url, ctl ? { signal: ctl.signal } : undefined).then(function (r) { return r.json(); }).then(function (j) {
+      if (to) clearTimeout(to);
+      if (_rgIsDenied(j)) { var d = new Error('READ_AUTH'); d.denied = true; throw d; }
+      if (!j || j.status === 'error') throw new Error((j && j.message) || 'No answer');
+      return j;
+    }, function (e) { if (to) clearTimeout(to); throw e; });
+  }
+  function vehicles(B) {   // the fleet list changes rarely: keep it a day on this phone
+    var all = readLS(KEY_VEH) || {}, c = all[B];
+    if (c && c.j && Date.now() - c.ts < 864e5) return Promise.resolve(c.j);
+    return get('getVehicles', { branch: B }, false, 20000).then(function (j) { all = readLS(KEY_VEH) || {}; all[B] = { ts: Date.now(), j: j }; writeLS(KEY_VEH, all); return j; });
+  }
+  function board(D, B) {   // POD Admin's own read: every invoice of the day with its barcode, time and status
+    if (B === 'ALL') return Promise.all([get('getPodAdminBoard', { date: D, branch: 'MTK' }, true, 70000), get('getPodAdminBoard', { date: D, branch: 'KTN' }, true, 70000)])
+      .then(function (a) { return { status: 'ok', date: D, lorries: (a[0].lorries || []).concat(a[1].lorries || []) }; });
+    return get('getPodAdminBoard', { date: D, branch: B }, true, 70000);
+  }
+
+  function snapKey() { return st.date + '|' + st.branch; }
+  function saveSnap() {
+    if (!DATA.ship || !DATA.fuel || ERR.ship || ERR.fuel) return;
+    var all = (readLS(KEY_SNAP) || []).filter(function (x) { return x.k !== snapKey(); });
+    all.unshift({ k: snapKey(), ts: AT.ship || Date.now(), ship: DATA.ship, fuel: DATA.fuel, leave: DATA.leave || null });
+    while (all.length > 2 || (all.length && !writeLS(KEY_SNAP, all))) all.pop();
+  }
+  function paintSnap() {
+    var s = (readLS(KEY_SNAP) || []).filter(function (x) { return x.k === snapKey() && Date.now() - x.ts < 12 * 3600e3; })[0];
+    if (!s) return false;
+    DATA.ship = s.ship; DATA.fuel = s.fuel; DATA.leave = s.leave; AT.ship = AT.fuel = s.ts; st.fromSnap = s.ts;
+    return true;
+  }
+
+  function load(fresh) {
+    var seq = ++LOAD_SEQ, D = st.date, B = st.branch, F = fresh ? '1' : null, isToday = D === today();
+    st.updating = true; st.started = Date.now(); render();
+    var jobs = [
+      ['ship', get('getShipmentsForDate', { date: D, branch: B, fresh: F }, true, 45000)],
+      ['fuel', get('getFuelOps', { view: 'monthly', period: D.slice(0, 7), branch: B, fresh: F }, true, 45000)],
+      ['leave', isToday ? get('getLeaveToday', { branch: B, fresh: F }, true, 30000) : Promise.resolve(null)],
+      ['veh', vehicles(B)]
+    ], left = jobs.length;
+    jobs.forEach(function (job) {
+      LOADING[job[0]] = true;
+      job[1].then(function (j) { if (seq !== LOAD_SEQ) return; DATA[job[0]] = j; AT[job[0]] = Date.now(); ERR[job[0]] = null; },
+        function (e) { if (seq !== LOAD_SEQ) return; if (e && e.denied) _rgOnDenied(fresh); ERR[job[0]] = e; })
+        .then(function () {
+          if (seq !== LOAD_SEQ) return;
+          LOADING[job[0]] = false;
+          if (--left === 0) { st.updating = false; if (!ERR.ship && !ERR.fuel) st.fromSnap = 0; saveSnap(); }
+          render(); if (st.reopen) st.reopen();
+        });
+    });
+    LOADING.board = true;
+    board(D, B).then(function (j) { if (seq !== LOAD_SEQ) return; DATA.board = j; AT.board = Date.now(); ERR.board = null; },
+      function (e) { if (seq !== LOAD_SEQ) return; if (e && e.denied) _rgOnDenied(fresh); ERR.board = e; })
+      .then(function () { if (seq !== LOAD_SEQ) return; LOADING.board = false; render(); if (st.reopen) st.reopen(); });
+  }
+  function go(date, branch) {   // a different day or branch: drop what is on screen, never show one day's numbers on another
+    st.date = date; st.branch = branch; st.follow = date === today(); st.fromSnap = 0;
+    DATA = {}; AT = {}; ERR = {}; LOADING = {};
+    paintSnap(); writeLS(KEY_BRANCH, branch);
+    load(false);
+  }
+
+  // ================================================================ the numbers
+  function model() {
+    var D = st.date, T = today(), m = { kind: D < T ? 'past' : D > T ? 'future' : 'today', hour: nowHour(), sunday: parseYmd(D).getDay() === 0 };
+    var S = DATA.ship, F = DATA.fuel, L = DATA.leave, V = DATA.veh, Bd = DATA.board;
+    m.lateNow = m.kind === 'today' && m.hour >= 15;
+    if (S) {
+      var ships = S.shipments || [], t = S.totals || {};
+      m.hasStops = t.drops != null;                        // backend v13 counts stops; before that, invoices
+      m.unit = m.hasStops ? 'stops' : 'invoices';
+      m.total = m.hasStops ? num(t.drops) : num(t.planned);
+      m.visited = m.hasStops ? num(t.dropsVisited) : num(t.delivered) + num(t.failed);
+      m.rmPlanned = ships.reduce(function (a, x) { return a + num(x.totalAmount); }, 0);
+      // not delivered, grouped into stops (lorry + customer); a customer reschedule is grey, not red
+      var by = {};
+      (S.failedList || []).forEach(function (x) {
+        if (String(x.status || '').toLowerCase() !== 'failed') return;
+        var k = np(x.lorryNo) + '|' + (x.customer || '');
+        var g = by[k] || (by[k] = { plate: x.lorryNo || '', customer: x.customer || '', area: x.area || '', reason: x.reason || 'Not delivered', rm: 0, inv: 0 });
+        g.rm += num(x.amount); g.inv++;
+      });
+      m.notDel = Object.keys(by).map(function (k) { return by[k]; });
+      m.notDel.forEach(function (g) { g.resched = /resched/i.test(g.reason); });
+      m.hard = m.notDel.filter(function (g) { return !g.resched; });
+      m.hardRM = m.hard.reduce(function (a, g) { return a + g.rm; }, 0);
+      m.hardN = m.hasStops ? m.hard.length : m.hard.reduce(function (a, g) { return a + g.inv; }, 0);
+      m.reschedN = m.hasStops ? m.notDel.length - m.hard.length : m.notDel.filter(function (g) { return g.resched; }).reduce(function (a, g) { return a + g.inv; }, 0);
+      m.toGo = Math.max(0, m.total - m.visited);
+      // lorries: one row per plate; a second lorry on a DL is also "out"
+      var lor = {}, out = {};
+      ships.forEach(function (x) {
+        var k = np(x.lorryNo); if (!k) return;
+        var r = lor[k] || (lor[k] = { plate: String(x.lorryNo).toUpperCase(), planned: 0, delivered: 0, failed: 0, pending: 0, crew: [], trips: 0, drops: null, dropsVisited: 0 });
+        r.planned += num(x.planned); r.delivered += num(x.delivered); r.failed += num(x.failed); r.pending += num(x.pending); r.trips += 1;
+        if (x.drops != null) { r.drops = num(r.drops) + num(x.drops); r.dropsVisited += num(x.dropsVisited); }   // backend v13: stops per DL
+        [x.assignedPrimary, x.assignedSecondary].forEach(function (n) { if (n && r.crew.indexOf(n) < 0) r.crew.push(n); });
+        out[k] = x.lorryNo; if (np(x.lorry2)) out[np(x.lorry2)] = x.lorry2;
+      });
+      m.lorries = Object.keys(lor).map(function (k) {
+        var r = lor[k], done = r.delivered + r.failed;
+        r.status = r.planned > 0 && r.pending === 0 ? 'done' : m.lateNow ? 'late' : done === 0 ? 'notstarted' : 'route';
+        if (m.kind === 'past' && r.pending > 0) r.status = 'open';
+        return r;
+      }).sort(function (a, b) { return a.plate < b.plate ? -1 : 1; });
+      m.out = Object.keys(out).map(function (k) { return String(out[k]).toUpperCase(); }).sort();
+      m.standby = m.lorries.filter(function (r) { return r.status === 'done'; });
+    }
+    if (V) { var seen = {}; m.fleet = (V.vehicles || []).filter(function (p) { var k = np(p); if (!k || seen[k]) return false; seen[k] = 1; return true; }).sort(); }
+    if (V && S) { var o = {}; m.out.forEach(function (p) { o[np(p)] = 1; }); m.notOut = m.fleet.filter(function (p) { return !o[np(p)]; }); }
+    if (L) m.leave = (L.onLeave || []);
+    if (F) {
+      m.monthRM = num((F.totals || {}).rm); m.fills = (F.lorries || []).reduce(function (a, l) { return a + num(l.fills); }, 0);
+      m.checkCount = num((F.totals || {}).checkCount); m.fuelLorries = F.lorries || []; m.subs = F.submissions || [];
+      if (m.kind === 'today' && S) {   // D12 (boss): one fuel report per lorry out today, fuel or "no fuel"
+        var got = {}; m.subs.forEach(function (s) { got[np(s.lorry)] = 1; });
+        m.fuelDue = m.out.length; m.fuelSent = m.out.filter(function (p) { return got[np(p)]; });
+        m.fuelMissing = m.out.filter(function (p) { return !got[np(p)]; });
+      }
+    }
+    if (Bd) {
+      var done = 0, ver = 0, chk = 0, era = D >= BC_SINCE;
+      (Bd.lorries || []).forEach(function (l) { (l.invoices || []).forEach(function (v) {
+        var c = photoCheck(v); if (!c) return;
+        done++; if (c === 'ok') ver++;
+        if (c === 'wrong' || c === 'nophoto' || c === 'ai' || (c === 'unread' && era) || v.photoFlag) chk++;
+      }); });
+      m.pod = { done: done, ver: ver, chk: chk, era: era };
+    }
+    return m;
+  }
+  // POD Admin's rule, word for word: verified only when the barcode on the photo IS this invoice
+  function bcNorm(s) { return String(s == null ? '' : s).toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+  function photoCheck(v) {
+    if (String(v.status || '').toLowerCase() !== 'delivered') return '';
+    if (!(v.photoUrls || []).length) return 'nophoto';
+    var raw = bcNorm(v.barcodeRaw);
+    if (raw) return raw === bcNorm(v.invoiceNo) ? 'ok' : 'wrong';
+    return v.matchSource === 'ai' ? 'ai' : 'unread';
+  }
+
+  // ================================================================ home
+  function card(cls, inner, act) { return '<button type="button" class="card ' + cls + '" data-act="' + act + '">' + inner + GO + '</button>'; }
+  function bar(parts) { var tot = parts.reduce(function (a, p) { return a + p[0]; }, 0) || 1; return '<div class="sbar">' + parts.filter(function (p) { return p[0] > 0; }).map(function (p) { return '<i class="' + p[1] + '" style="flex:' + (p[0] / tot) + '"></i>'; }).join('') + '</div>'; }
+  function zoneLine(z) {   // a source that failed: keep the last numbers, say how old, offer Retry
+    if (!ERR[z]) return '';
+    return DATA[z] ? '<span class="warn">' + hm(AT[z] || Date.now()) + '</span><span class="rty" role="button" data-act="retry">Retry</span>'
+                   : '<span class="warn">Could not load</span><span class="rty" role="button" data-act="retry">Retry</span>';
+  }
+  var DASH = '<span class="skel">&mdash;</span>';
+
+  function render() {
+    var m = model(), h = '', d = parseYmd(st.date), k = m.kind;
+    var past = k === 'past', future = k === 'future';
+    $('dDay').innerHTML = (k === 'today' ? 'Today <small>&middot; ' : '<small>') + WD[d.getDay()] + ' ' + d.getDate() + ' ' + MON[d.getMonth()] + '</small>';
+    $('dPick').value = st.date; $('dPick').max = addDays(today(), 2);
+    $('dNext').disabled = st.date >= addDays(today(), 2);
+    $('dToday').hidden = k === 'today';
+    var anyErr = ERR.ship || ERR.fuel || ERR.leave, old = !!st.fromSnap || (anyErr && (DATA.ship || DATA.fuel));
+    $('clock').className = 'clock' + (old && !st.updating ? ' old' : '');
+    $('clock').innerHTML = st.updating && (DATA.ship || DATA.fuel) ? 'Updating&hellip; ' + REF.replace('class="i s"', 'class="i s spin"')
+      : old ? hm(st.fromSnap || AT.ship || Date.now()) + ' &middot; old' : AT.ship ? hm(AT.ship) + ' ' + REF : '&mdash;';
+    $('brp').innerHTML = (st.branch === 'ALL' ? 'All' : st.branch) + ' <svg class="i s" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>';
+    var waiting = st.updating && !DATA.ship, secs = Math.round((Date.now() - st.started) / 1000);
+    $('loadline').hidden = !(waiting && secs >= 3) && !m.sunday; $('loadline').textContent = waiting && secs >= 3 ? 'Loading · ' + secs + ' s' : m.sunday ? 'Rest day' : '';
+
+    // 1 Deliveries
+    if (!DATA.ship) {
+      h += card('span2', '<div class="lbl">Deliveries</div><div class="big num mute">' + DASH + '</div><div class="sbar"><i class="k" style="flex:1"></i></div><div class="sub">' + (ERR.ship ? zoneLine('ship') : '&nbsp;') + '</div>', 'deliveries');
+    } else if (!m.total) {
+      var why = k === 'today' && m.hour < 11 ? ['No DLs imported yet', 'Usually in by 9 am'] : future ? ['No DLs yet', 'Usually in by 9 am on the day'] : ['No DLs imported', 'For ' + WD[d.getDay()] + ' ' + d.getDate() + ' ' + MON[d.getMonth()]];
+      h += card('span2', '<div class="lbl">Deliveries</div><div class="big word">' + why[0] + '</div><div class="sub">' + (ERR.ship ? zoneLine('ship') : why[1]) + '</div>', 'deliveries');
+    } else {
+      var parts = [];
+      if (m.hardN) parts.push('<span class="bad">' + m.hardN + ' not delivered &middot; ' + fmtRM(m.hardRM) + '</span>');
+      if (m.toGo) parts.push(past ? '<span class="warn">' + m.toGo + ' not closed</span>' : future ? '<b>' + m.toGo + '</b> planned' : m.lateNow ? '<span class="warn">' + m.toGo + ' late</span>' : '<b>' + m.toGo + '</b> to go');
+      if (!parts.length) parts.push('All ' + m.unit + ' visited');
+      h += card('span2', '<div class="lbl">Deliveries<span class="rt">' + fmtRM(m.rmPlanned) + ' planned</span></div><div class="big num">' + m.visited + '<span class="u">/ ' + m.total + ' ' + m.unit + '</span></div>' +
+        bar([[m.visited - m.hardN - m.reschedN, 'g'], [m.hardN, 'r'], [m.reschedN, 'k'], [m.toGo, m.lateNow || past ? 'a' : 'k']]) + '<div class="sub">' + (ERR.ship ? zoneLine('ship') : parts.join(' &middot; ')) + '</div>', 'deliveries');
+    }
+
+    // 2 Not closed: needs its own backend read (v14)
+    if (!past && !future) h += card('span2 short', '<div class="lbl">Not closed &middot; 30 days</div><div class="big word" style="font-size:17px">Coming soon</div>', 'open');
+
+    // 3 POD matched (POD Admin's "Photo verified"): delivered invoices whose photo barcode is the invoice
+    var b3 = DASH, s3 = '&nbsp;';
+    if (st.date < BC_SINCE) s3 = 'Barcode check from 24 Oct';
+    else if (m.pod) { if (m.pod.done) { b3 = Math.round(m.pod.ver / m.pod.done * 100) + '<span class="u">%</span>'; s3 = m.pod.ver + ' of ' + m.pod.done + ' invoices'; } else s3 = 'No deliveries yet'; }
+    else if (ERR.board) s3 = zoneLine('board');
+    else if (LOADING.board) s3 = 'Loading&hellip;';
+    h += card('', '<div class="lbl">POD matched</div><div class="big num' + (b3 === DASH ? ' mute' : '') + '">' + b3 + '</div><div class="sub">' + s3 + '</div>', 'matched');
+
+    // 4 Lorries out / used
+    var fleetN = m.fleet ? m.fleet.length : null;
+    if (past) h += card('', '<div class="lbl">Lorries used</div><div class="big num">' + (DATA.ship ? m.out.length + (fleetN != null ? '<span class="u">/ ' + fleetN + '</span>' : '') : DASH) + '</div><div class="sub">&nbsp;</div>', 'lorries');
+    else {
+      var sub4 = [];
+      if (DATA.ship && k === 'today' && m.out.length) sub4.push('Standby ' + m.standby.length);
+      if (DATA.leave) sub4.push('Leave ' + m.leave.length);
+      h += card('', '<div class="lbl">Lorries out</div><div class="big num">' + (DATA.ship && !future ? m.out.length : DASH) + (fleetN != null ? '<span class="u">/ ' + fleetN + '</span>' : '') + '</div><div class="sub">' + (ERR.leave && !DATA.leave ? zoneLine('leave') : sub4.join(' &middot; ') || '&nbsp;') + '</div>', 'lorries');
+    }
+
+    // 5 Fuel report: today only, one per lorry out (D12)
+    if (k === 'today') {
+      var b5 = DASH, c5 = '';
+      if (DATA.ship && DATA.fuel) {
+        if (!m.fuelDue) { b5 = '<span class="big word" style="font-size:17px">Not expected</span>'; c5 = '<span class="sub">No lorries out</span>'; }
+        else {
+          b5 = m.fuelSent.length + '<span class="u">/ ' + m.fuelDue + '</span>';
+          c5 = '<span class="unit">lorries</span>' + (!m.fuelMissing.length ? pill(OK + 'All in', 'p-done') : m.hour < 16 ? pill('Due 4 pm', 'p-grey') : pill(m.fuelMissing.length + ' late', 'p-late'));
+        }
+      }
+      h += card('', '<div class="lbl">Fuel report</div><div class="big num">' + b5 + '</div><div class="chipline">' + (ERR.fuel ? '<span class="sub" style="margin:0">' + zoneLine('fuel') + '</span>' : c5 || '<span class="sub">&nbsp;</span>') + '</div>', 'fuel');
+    }
+    // 6 Fuel this month
+    h += card('', '<div class="lbl">Fuel &middot; ' + MON[d.getMonth()] + '</div><div class="big num">' + (DATA.fuel ? bigRM(m.monthRM) : DASH) + '</div><div class="sub">' + (ERR.fuel ? zoneLine('fuel') : DATA.fuel ? m.fills + ' fills' : '&nbsp;') + '</div>', 'fuelmonth');
+    $('home').innerHTML = h;
+    $('rows').innerHTML = '<button type="button" class="row" data-act="month"><span class="t">' + MONTH[d.getMonth()] + ' summary</span><span class="m"></span>' + GO + '</button>';
+  }
+
+  // ================================================================ level 1 pages
+  var STATUS = { late: ['Late', 'p-late'], route: ['On route', 'p-grey'], notstarted: ['Not started', 'p-grey'], done: ['Done', 'p-done'], open: ['Not closed', 'p-late'] };
+  var ORDER = { late: 0, open: 0, notstarted: 1, route: 2, done: 3 };
+  function openPage(title, html, refresh) {
+    $('pTitle').textContent = title; $('pBody').innerHTML = html;
+    if ($('page').hidden) { $('page').hidden = false; $('page').scrollTop = 0; history.pushState({ lvl: 1 }, ''); }
+    st.reopen = refresh || null;
+  }
+  function closePage() { $('page').hidden = true; st.reopen = null; }
+  function waitHtml(z, what) { return ERR[z] ? '<div class="state"><b>Could not load ' + what + '</b><button type="button" class="link" data-act="retry">Retry</button></div>' : '<div class="state"><b>Loading ' + what + '&hellip;</b></div>'; }
+  function lorryRow(r, m) {
+    var s = STATUS[r.status], done = r.delivered + r.failed;
+    var cnt = r.drops != null ? r.dropsVisited + ' / ' + r.drops + ' stops' : done + ' / ' + r.planned + ' invoices';
+    return '<button type="button" class="li' + (r.status === 'done' ? ' done' : '') + '" data-lorry="' + esc(r.plate) + '"><div class="mn"><div class="l1">' + esc(r.plate) + '</div><div class="l2">' + cnt + (r.failed ? ' &middot; <span style="color:var(--red-700);font-weight:700">' + r.failed + ' not delivered</span>' : '') + (r.trips > 1 ? ' &middot; ' + r.trips + ' DLs' : '') + '</div></div><div class="rt">' + pill(s[0], s[1]) + '</div>' + GO + '</button>';
+  }
+  function stopRow(g) {
+    return '<button type="button" class="li" data-lorry="' + esc(g.plate) + '"><div class="mn"><div class="l1 s">' + esc(g.customer) + '</div><div class="l2">' + esc(g.reason) + ' &middot; ' + esc(g.plate) + (g.area ? ' &middot; ' + esc(g.area) : '') + '</div></div><div class="rt"><div class="v num">' + fmtRM(g.rm) + '</div>' + (g.resched ? pill('Reschedule', 'p-grey', 1) : pill('Not delivered', 'p-fail', 1)) + '</div>' + GO + '</button>';
+  }
+
+  function pageDeliveries() {
+    var m = model(), h = '';
+    if (!DATA.ship) return openPage('Deliveries', waitHtml('ship', 'deliveries'), pageDeliveries);
+    if (!m.total) return openPage('Deliveries', '<div class="state"><b>No delivery lists</b>Nothing imported for this day</div>', pageDeliveries);
+    if (m.hard.length) { h += '<div class="h2">Not delivered &middot; ' + m.hard.length + ' shops</div>'; m.hard.sort(function (a, b) { return REASON_ORDER.indexOf(a.reason) - REASON_ORDER.indexOf(b.reason); }).forEach(function (g) { h += stopRow(g); }); }
+    var rs = m.notDel.filter(function (g) { return g.resched; });
+    if (rs.length) { h += '<div class="h2">Rescheduled by the customer &middot; ' + rs.length + '</div>'; rs.forEach(function (g) { h += stopRow(g); }); }
+    h += '<div class="h2">Lorries &middot; ' + m.lorries.length + '</div>';
+    m.lorries.slice().sort(function (a, b) { return ORDER[a.status] - ORDER[b.status] || (a.plate < b.plate ? -1 : 1); }).forEach(function (r) { h += lorryRow(r, m); });
+    openPage('Deliveries', h, pageDeliveries);
+  }
+
+  function pageMatched() {
+    var m = model(), h = '', B = st.branch === 'ALL' ? 'MTK' : st.branch;
+    if (st.date < BC_SINCE) h = '<div class="state"><b>No barcode data for this day</b>The POD form reads barcodes from 24 Oct</div>';
+    else if (!m.pod) h = waitHtml('board', 'the POD photos');
+    else if (!m.pod.done) h = '<div class="state"><b>No deliveries yet</b>Counts start with the first saved POD</div>';
+    else {
+      h += '<div class="tot"><div class="card"><div class="lbl">' + DOC + ' Matched</div><div class="big num" style="color:var(--green)">' + m.pod.ver + '</div><div class="sub">of ' + m.pod.done + ' delivered invoices</div></div><div class="card"><div class="lbl">Needs check</div><div class="big num" style="color:var(--ink-2)">' + m.pod.chk + '</div><div class="sub">in POD Admin</div></div></div>';
+      h += '<div class="h2">What it means</div><div class="li"><div class="mn"><div class="l2 w"><b>Matched:</b> the barcode on the POD photo is this invoice number. It proves the right paper was photographed; the customer chop is checked on the daily scan copy.</div></div></div>';
+      h += '<div class="li"><div class="mn"><div class="l2 w"><b>Needs check:</b> no barcode read, another invoice\'s barcode, no photo, or an unclear photo. Usually light, a crease or several invoices at one stop. Same count as POD Admin.</div></div></div>';
+    }
+    h += '<a class="link" href="CLF_POD_Admin.html?branch=' + B + '" target="_blank" rel="noopener">Open POD Admin ' + GO + '</a>';
+    openPage('POD matched', h, pageMatched);
+  }
+
+  function pageOpen() {
+    openPage('Not closed', '<div class="state"><b>Coming soon</b>Delivery lists 2&ndash;30 days old that still have open invoices. It needs a new backend read (v14). The office checks each one first: cancelled, moved, second lorry not linked, or a system fault.</div>');
+  }
+
+  function lastPod(plate) {   // latest POD save of a lorry today, from POD Admin's read
+    var t = '';
+    ((DATA.board || {}).lorries || []).forEach(function (l) { if (np(l.vehicleNo) !== np(plate)) return; (l.invoices || []).forEach(function (v) { if (v.deliveredAt && v.deliveredAt > t) t = v.deliveredAt; }); });
+    return t;
+  }
+  function pageLorries() {
+    var m = model(), h = '', k = m.kind;
+    if (!DATA.ship) return openPage(k === 'past' ? 'Lorries used' : 'Lorries out', waitHtml('ship', 'lorries'), pageLorries);
+    if (k === 'today' && m.out.length) {
+      var road = m.lorries.filter(function (r) { return r.status !== 'done'; });
+      h += '<div class="h2">Standby &middot; route done, free for a 2nd trip &middot; ' + m.standby.length + '</div>';
+      m.standby.forEach(function (r) { var t = lastPod(r.plate); h += '<button type="button" class="li done" data-lorry="' + esc(r.plate) + '"><div class="mn"><div class="l1">' + esc(r.plate) + '</div><div class="l2">' + esc(r.crew.join(' + ') || 'No crew recorded') + (t ? ' &middot; last POD ' + esc(t) : '') + '</div></div>' + GO + '</button>'; });
+      if (!m.standby.length) h += '<p class="note">None yet</p>';
+      h += '<div class="h2">On road &middot; ' + road.length + '</div>';
+      road.forEach(function (r) { h += lorryRow(r, m); });
+    } else if (m.lorries && m.lorries.length) {
+      h += '<div class="h2">' + (k === 'past' ? 'Used' : 'Planned') + ' &middot; ' + m.lorries.length + '</div>';
+      m.lorries.forEach(function (r) { h += lorryRow(r, m); });
+    } else h += '<div class="state" style="margin-bottom:6px"><b>No DLs imported yet</b>Lorries show once the day\'s delivery lists are in</div>';
+    if (m.notOut) { h += '<div class="h2">Not out &middot; ' + m.notOut.length + '</div>'; m.notOut.forEach(function (p) { h += '<div class="li done"><div class="mn"><div class="l1">' + esc(p) + '</div><div class="l2">Last out: coming soon</div></div></div>'; }); }
+    if (k === 'today') {
+      if (DATA.leave) { h += '<div class="h2">Drivers on leave &middot; ' + m.leave.length + '</div>'; m.leave.slice().sort(function (a, b) { return String(a.staffId) < String(b.staffId) ? -1 : 1; }).forEach(function (x) { h += '<div class="li"><div class="mn"><div class="l1 s">' + esc((x.staffId ? x.staffId + ' · ' : '') + x.driverName) + '</div></div></div>'; }); if (!m.leave.length) h += '<p class="note">Nobody on leave today</p>'; }
+      else h += waitHtml('leave', 'the leave list');
+    }
+    openPage(k === 'past' ? 'Lorries used' : 'Lorries out', h, pageLorries);
+  }
+
+  function pageFuel() {
+    var m = model(), h = '';
+    if (m.kind !== 'today') return openPage('Fuel report', '<div class="state"><b>Today only</b>Fuel reports are tracked for today</div>');
+    if (!DATA.ship || !DATA.fuel) return openPage('Fuel report', waitHtml(DATA.fuel ? 'ship' : 'fuel', 'fuel reports'), pageFuel);
+    if (!m.fuelDue) return openPage('Fuel report', '<div class="state"><b>Not expected</b>No lorries out today, so no fuel reports are due</div>', pageFuel);
+    var after4 = m.hour >= 16, crew = {};
+    m.lorries.forEach(function (r) { crew[np(r.plate)] = r.crew.join(' + '); });
+    h += '<div class="tot"><div class="card"><div class="lbl">Sent</div><div class="big num">' + m.fuelSent.length + '</div><div class="sub">lorries</div></div><div class="card"><div class="lbl">' + (after4 ? 'Not in' : 'Due by 4 pm') + '</div><div class="big num">' + m.fuelMissing.length + '</div><div class="sub">lorries</div></div></div>';
+    if (m.fuelMissing.length && after4) {
+      h += '<div class="h2">Not in after 4 pm &middot; by plate</div>';
+      m.fuelMissing.forEach(function (p) { h += '<div class="li"><div class="mn"><div class="l1">' + esc(p) + '</div><div class="l2">' + (crew[np(p)] ? 'On board: ' + esc(crew[np(p)]) : 'Second lorry on a DL') + '</div></div></div>'; });
+    } else if (m.fuelMissing.length) h += '<p class="note" style="margin-top:12px">Plates still missing show here after 4 pm.</p>';
+    h += '<div class="h2">Sent today &middot; ' + m.subs.length + '</div>';
+    m.subs.forEach(function (s, i) {
+      var note = s.check === 'CHECK' && s.ocrRm != null ? '<div class="rcpt">Receipt RM ' + num(s.ocrRm).toFixed(2) + '</div>' : '';
+      h += '<button type="button" class="li done" data-slip="' + i + '"><div class="mn"><div class="l1 s">' + esc(String(s.lorry || '?').toUpperCase()) + ' &middot; ' + esc(s.time || '') + '</div><div class="l2">' + (s.noFuel ? 'No fuel today' : 'RM ' + (s.rm == null ? '?' : num(s.rm).toFixed(2)) + (s.litres != null && s.litres !== '' ? ' &middot; ' + num(s.litres) + ' L' : '')) + '</div>' + note + '</div>' + GO + '</button>';
+    });
+    if (m.notOut) h += '<div class="h2">Not due</div><div class="li done"><div class="mn"><div class="l1 s">' + m.notOut.length + ' lorries not out today</div><div class="l2">No fuel report needed</div></div></div>';
+    openPage('Fuel report', h, pageFuel);
+  }
+
+  function pageFuelMonth() {
+    var m = model(), d = parseYmd(st.date), h = '';
+    if (!DATA.fuel) return openPage('Fuel · ' + MON[d.getMonth()], waitHtml('fuel', 'fuel'), pageFuelMonth);
+    h += '<div class="tot"><div class="card"><div class="lbl">Fuel cost</div><div class="big num">' + bigRM(m.monthRM) + '</div></div><div class="card"><div class="lbl">Fills</div><div class="big num">' + m.fills + '</div></div></div>';
+    h += '<div class="h2">Receipt check</div><div class="li"><div class="mn"><div class="l1 s">Receipts that differ this month: ' + m.checkCount + '</div><div class="l2">Reading receipts since 24 Oct &middot; the office checks the photo, then edits</div></div></div>';
+    h += '<div class="h2">By lorry &middot; A&ndash;Z by plate</div><table class="t"><thead><tr><th>Lorry</th><th class="n">RM</th><th class="n">Fills</th></tr></thead><tbody>';
+    m.fuelLorries.slice().sort(function (a, b) { return String(a.lorry) < String(b.lorry) ? -1 : 1; }).forEach(function (l) { h += '<tr><td><b>' + esc(l.lorry) + '</b></td><td class="n">' + (num(l.rm) ? Math.round(num(l.rm)).toLocaleString('en-MY') : '&mdash;') + '</td><td class="n">' + num(l.fills) + '</td></tr>'; });
+    h += '</tbody></table><p class="note" style="margin-top:8px">Cost only. Comparing lorries on fuel use waits for 6 months of data (from Dec 2026).</p>';
+    openPage('Fuel · ' + MON[d.getMonth()], h, pageFuelMonth);
+  }
+
+  var MONTHDASH = { seq: 0, data: null, err: null, key: '' };
+  function pageMonth() {
+    var m = model(), d = parseYmd(st.date), per = st.date.slice(0, 7), h = '';
+    h += '<div class="tot"><div class="card"><div class="lbl">Fuel cost</div><div class="big num" style="font-size:26px">' + (DATA.fuel ? bigRM(m.monthRM) : DASH) + '</div><div class="sub">' + (DATA.fuel ? m.fills + ' fills' : '&nbsp;') + '</div></div>';
+    h += '<div class="card"><div class="lbl">Coming soon</div><div class="sub" style="margin-top:4px">Stops visited &middot; POD matched &middot; not delivered &middot; not closed &middot; fuel reports sent</div></div></div>';
+    h += '<div class="h2">Per driver &middot; by staff ID</div>';
+    var key = per + '|' + st.branch;
+    if (MONTHDASH.key === key && MONTHDASH.data) {
+      var rows = (MONTHDASH.data.drivers || []).map(function (x) { return { id: String(x.staffId || ''), name: x.name || '', routes: num(x.routesDone), trips2: num(x.secondTrips), leave: num(x.leaveDays) }; })   // only these fields are ever shown
+        .sort(function (a, b) { return (a.id || 'ZZZ') < (b.id || 'ZZZ') ? -1 : (a.id || 'ZZZ') > (b.id || 'ZZZ') ? 1 : (a.name < b.name ? -1 : 1); });
+      h += '<table class="t"><thead><tr><th>Staff</th><th class="n">Routes</th><th class="n">2nd trips</th><th class="n">Leave</th></tr></thead><tbody>';
+      rows.forEach(function (r) { h += '<tr><td><b>' + esc(r.id) + '</b> ' + esc(r.name) + '</td><td class="n">' + r.routes + '</td><td class="n">' + r.trips2 + '</td><td class="n">' + r.leave + '</td></tr>'; });
+      h += '</tbody></table><p class="note" style="margin-top:8px">For allowances. Sorted by staff ID, never by the numbers.</p>';
+    } else if (MONTHDASH.key === key && MONTHDASH.err) h += '<div class="state"><b>Could not load</b><button type="button" class="link" data-act="monthretry">Retry</button></div>';
+    else {
+      h += '<div class="state"><b>Loading&hellip;</b></div>';
+      if (MONTHDASH.key !== key || (!MONTHDASH.data && !MONTHDASH.err && !MONTHDASH.busy)) {
+        MONTHDASH = { seq: MONTHDASH.seq + 1, data: null, err: null, key: key, busy: true };
+        var my = MONTHDASH.seq;
+        get('getDashboardData', { view: 'monthly', period: per, branch: st.branch }, true, 60000)
+          .then(function (j) { if (my !== MONTHDASH.seq) return; MONTHDASH.data = j; }, function (e) { if (my !== MONTHDASH.seq) return; if (e && e.denied) _rgOnDenied(false); MONTHDASH.err = e; })
+          .then(function () { if (my !== MONTHDASH.seq) return; MONTHDASH.busy = false; if (_reopenPage === pageMonth && !$('page').hidden) pageMonth(); });
+      }
+    }
+    openPage(MONTH[d.getMonth()] + ' summary', h, pageMonth);
+  }
+
+  // ================================================================ level 2 sheets
+  function openSheet(html) { var fresh = $('scrim').hidden; $('sheet').innerHTML = '<div class="grab"></div>' + html; $('scrim').hidden = false; $('sheet').scrollTop = 0; if (fresh) history.pushState({ lvl: 2 }, ''); }
+  function closeSheet() { $('scrim').hidden = true; st.sheet = null; }
+  function sheetLorry(plate) {
+    st.sheet = function () { sheetLorry(plate); };
+    var m = model(), r = (m.lorries || []).filter(function (x) { return np(x.plate) === np(plate); })[0], s = r ? STATUS[r.status] : null, B = st.branch === 'ALL' ? 'MTK' : st.branch;
+    var h = '<h3>' + esc(plate) + (s ? ' ' + pill(s[0], s[1]) : '') + '</h3>';
+    if (r) h += '<div class="s2">' + (r.delivered + r.failed) + ' / ' + r.planned + ' invoices</div><div class="s2">On board: ' + esc(r.crew.join(' + ') || 'not recorded') + '</div>';
+    if (!DATA.board) h += ERR.board ? '<p class="note" style="margin-top:12px">Could not load the stops. <a href="#" data-act="retry">Retry</a></p>' : '<p class="note" style="margin-top:12px">Loading this lorry\'s stops&hellip;</p>';
+    else {
+      var stops = {}, order = [];
+      (DATA.board.lorries || []).forEach(function (l) {
+        if (np(l.vehicleNo) !== np(plate)) return;
+        (l.invoices || []).forEach(function (v) {
+          var k = (v.custCode || v.customer || '?');
+          var g = stops[k] || (stops[k] = { customer: v.customer || k, area: v.area || '', rm: 0, inv: 0, del: 0, fail: 0, reason: '', time: '', photos: 0 });
+          if (!stops[k].seen) { stops[k].seen = 1; order.push(k); }
+          g.rm += num(v.amount); g.inv++;
+          var stt = String(v.status || '').toLowerCase();
+          if (stt === 'delivered') { g.del++; if (v.deliveredAt && v.deliveredAt > g.time) g.time = v.deliveredAt; g.photos += (v.photoUrls || []).length; }
+          else if (stt === 'failed') { g.fail++; g.reason = v.failReason || 'Not delivered'; }
+        });
+      });
+      if (!order.length) h += '<p class="note" style="margin-top:12px">No invoices for this lorry in POD Admin\'s list.</p>';
+      order.forEach(function (k) {
+        var g = stops[k], state = g.fail && g.fail === g.inv ? 'failed' : g.del + g.fail < g.inv ? 'pending' : 'delivered';
+        var p = state === 'delivered' ? pill('Delivered', 'p-done') : state === 'failed' ? (/resched/i.test(g.reason) ? pill('Reschedule', 'p-grey') : pill('Not delivered', 'p-fail')) : (st.date === today() && nowHour() >= 15 ? pill('Late', 'p-late') : pill('Not yet', 'p-grey'));
+        h += '<div class="stop' + (state === 'delivered' ? ' done' : '') + '"><div class="top"><div class="nm">' + esc(g.customer) + '<div class="mt">' + (g.area ? esc(g.area) + ' &middot; ' : '') + g.inv + ' invoices &middot; ' + fmtRM(g.rm) + (g.time ? ' &middot; saved ' + esc(g.time) : '') + (g.fail && state !== 'failed' ? ' &middot; ' + g.fail + ' not delivered' : '') + '</div></div>' + p + '</div>' +
+          (g.fail ? '<div class="reason' + (/resched/i.test(g.reason) ? ' g' : '') + '">' + esc(g.reason) + '</div>' : '') + (g.photos ? '<div class="mt" style="margin-top:6px">' + CAM + ' ' + g.photos + ' photo' + (g.photos > 1 ? 's' : '') + '</div>' : '') + '</div>';
+      });
+    }
+    h += '<a class="link" href="CLF_POD_Admin.html?branch=' + B + '" target="_blank" rel="noopener">Photos in POD Admin ' + GO + '</a>';
+    openSheet(h);
+  }
+  function sheetSlip(i) {
+    var s = (model().subs || [])[i]; if (!s) return;
+    var h = '<h3>' + esc(String(s.lorry || '?').toUpperCase()) + ' &middot; ' + esc(s.time || '') + '</h3><div class="s2">' + (s.noFuel ? 'No fuel today' : 'Fuel slip') + '</div>';
+    if (!s.noFuel) {
+      h += '<div class="kv"><div><small>Odometer</small><b>' + (s.mileage ? num(s.mileage).toLocaleString('en-MY') : '&mdash;') + '</b></div><div><small>RM</small><b>' + (s.rm == null ? '&mdash;' : num(s.rm).toFixed(2)) + '</b></div><div><small>Litres</small><b>' + (s.litres == null || s.litres === '' ? '&mdash;' : num(s.litres)) + '</b></div></div>';
+      if (s.check === 'CHECK' && s.ocrRm != null) h += '<p class="note" style="margin-top:10px">Receipt RM ' + num(s.ocrRm).toFixed(2) + ' &middot; check the photo, then edit</p>';
+      if (/^https?:\/\//i.test(String(s.photo || ''))) h += '<a class="link" href="' + esc(s.photo) + '" target="_blank" rel="noopener">' + CAM + ' Open the receipt photo</a>';
+    }
+    h += '<p class="note" style="margin-top:12px">Edit and Delete: use the current dashboard for now. Coming soon here.</p>';
+    openSheet(h);
+  }
+  function sheetBranch() {
+    openSheet('<h3>Branch</h3><div class="opts" style="grid-template-columns:repeat(3,1fr)">' + ['MTK', 'KTN', 'ALL'].map(function (b) { return '<button type="button" data-b="' + b + '" class="' + (st.branch === b ? 'on' : '') + '">' + (b === 'ALL' ? 'All' : b) + '</button>'; }).join('') + '</div><p class="note" style="margin-top:10px">Remembered on this phone.</p>');
+  }
+
+  // ================================================================ read grant + office sign-in (same as the live dashboard)
+  var RG_KEY = 'clf_read_grant';
+  function _rgCached() { try { var g = JSON.parse(localStorage.getItem(RG_KEY) || 'null'); if (g && g.grant && (Date.now() - (g.ts || 0)) < 5.5 * 3600e3) return g.grant; } catch (e) {} return ''; }
+  function _rgClear() { try { localStorage.removeItem(RG_KEY); } catch (e) {} }
+  function _rgUrl(url) { var g = _rgCached(); return g ? (url + (url.indexOf('?') >= 0 ? '&' : '?') + 'grant=' + encodeURIComponent(g)) : url; }
+  var _rgPending = null;
+  async function _rgEnsure(force) {
+    if (!force) { var g = _rgCached(); if (g) return g; }
+    if (_rgPending) return _rgPending;
+    _rgPending = _rgMint();
+    try { return await _rgPending; } finally { _rgPending = null; }
+  }
+  async function _rgMint() {
+    var a = _rgAuth(); if (!a || !a.token) return '';
+    var tok = 'rg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+    function _body(withToken) { var p = { formType: 'GET_READ_GRANT', authToken: a.token }; if (withToken) p.clientToken = tok; var f = new FormData(); f.append('data', JSON.stringify(p)); return f; }
+    function _keep(gr) { try { localStorage.setItem(RG_KEY, JSON.stringify({ grant: gr, ts: Date.now() })); } catch (e) {} return gr; }
+    try {
+      var ctl = window.AbortController ? new AbortController() : null, to = ctl ? setTimeout(function () { try { ctl.abort(); } catch (e) {} }, 12000) : null;
+      var opt = { method: 'POST', body: _body(false) }; if (ctl) opt.signal = ctl.signal;
+      var pr = await fetch(SCRIPT_URL, opt); if (to) clearTimeout(to);
+      var pj = await pr.json();
+      if (pj && pj.status === 'success' && pj.grant) return _keep(pj.grant);
+      if (pj && pj.status === 'error' && /session|unlock/i.test(String(pj.message || ''))) return '';
+    } catch (e) { /* fall through to the legacy handshake */ }
+    try { await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: _body(true) }); } catch (e) { return ''; }
+    for (var t = 0; t < 8; t++) {
+      await new Promise(function (r) { setTimeout(r, 1200); });
+      try { var rb = await fetch(SCRIPT_URL + '?action=getImportResult&token=' + encodeURIComponent(tok)); var rd = await rb.json(); if (rd && rd.status && rd.status !== 'pending') return (rd.status === 'success' && rd.grant) ? _keep(rd.grant) : ''; } catch (e) {}
+    }
+    return '';
+  }
+  function _rgAuth() { try { return JSON.parse(localStorage.getItem('clf_pallet_auth') || 'null'); } catch (e) { return null; } }
+  function _rgShowLock(msg) {
+    var ov = $('rgLock');
+    if (!ov) {
+      ov = document.createElement('div'); ov.id = 'rgLock'; ov.className = 'lock';
+      ov.innerHTML = '<div class="lockbox"><svg class="i" viewBox="0 0 24 24" style="width:30px;height:30px;color:var(--navy);display:block;margin:0 auto"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>' +
+        '<h3 style="text-align:center;margin-top:6px">Sign in to view this data</h3><div class="s2" style="text-align:center;margin-bottom:12px">Authorised staff only</div>' +
+        '<label class="fl" for="rgEmp">Staff ID</label><input id="rgEmp" class="in" autocomplete="off" placeholder="e.g. TER282">' +
+        '<label class="fl" for="rgPin">PIN</label><input id="rgPin" class="in" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN">' +
+        '<div class="err" id="rgErr"></div><button type="button" class="btn b-pri" id="rgBtn" style="width:100%;margin-top:10px">Unlock</button></div>';
+      document.body.appendChild(ov);
+      $('rgBtn').onclick = _rgUnlock;
+      $('rgPin').addEventListener('keydown', function (e) { if (e.key === 'Enter') _rgUnlock(); });
+    }
+    ov.style.display = 'flex';
+    if (msg) $('rgErr').textContent = msg;
+    var a = _rgAuth(), emp = $('rgEmp'); if (emp && !emp.value && a && a.empNo) emp.value = a.empNo;
+  }
+  function _rgHideLock() { var ov = $('rgLock'); if (ov) ov.style.display = 'none'; }
+  async function _rgUnlock() {
+    var emp = $('rgEmp').value.trim().toUpperCase(), pin = $('rgPin').value.trim(), err = $('rgErr');
+    if (!emp || !pin) { err.textContent = 'Enter Staff ID + PIN'; return; }
+    var btn = $('rgBtn'); btn.disabled = true; btn.textContent = 'Checking...';
+    var tok = 'ulk_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10), fd = new FormData(), rd = null;
+    fd.append('data', JSON.stringify({ formType: 'PALLET_UNLOCK', empNo: emp, pin: pin, clientToken: tok }));
+    try {
+      await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: fd });
+      for (var t = 0; t < 8; t++) {
+        await new Promise(function (r) { setTimeout(r, 1200); });
+        try { var rb = await fetch(SCRIPT_URL + '?action=getImportResult&token=' + encodeURIComponent(tok)); var j = await rb.json(); if (j && j.status && j.status !== 'pending') { rd = j; break; } } catch (e) {}
+      }
+    } catch (e) {}
+    btn.disabled = false; btn.textContent = 'Unlock';
+    if (rd && rd.status === 'success' && rd.authToken) {
+      try { localStorage.setItem('clf_pallet_auth', JSON.stringify({ token: rd.authToken, empNo: rd.empNo, name: rd.name })); } catch (e) {}
+      $('rgPin').value = ''; err.textContent = '';
+      _rgClear(); await _rgEnsure(); _rgHideLock(); load(true);
+    } else err.textContent = (rd && rd.message) ? rd.message : 'Could not unlock - check connection';
+  }
+  function _rgIsDenied(d) { return !!(d && d.status === 'error' && d.code === 'READ_AUTH'); }
+  var _rgRecovering = false, _rgRetryAt = 0;
+  function _rgOnDenied(forceFresh) {   // a dead grant: drop it, mint a fresh one, reload once; else ask for the PIN
+    var now = Date.now();
+    if (_rgRecovering) return;
+    if (now < _rgRetryAt) { _rgShowLock('Session expired - please unlock again'); return; }
+    _rgRecovering = true; _rgRetryAt = now + 60000; _rgClear();
+    $('clock').textContent = 'Renewing access…';
+    var settled = false;
+    function finish(g) { if (settled) return; settled = true; _rgRecovering = false; if (g) { _rgRetryAt = Date.now() + 10000; _rgHideLock(); load(forceFresh); } else _rgShowLock('Session expired - please unlock again'); }
+    setTimeout(function () { finish(''); }, 45000);
+    _rgEnsure(true).then(finish, function () { finish(''); });
+  }
+
+  // ================================================================ events
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('button,[role=button],a[data-act]'); if (!t) return;
+    var a = t.getAttribute('data-act');
+    if (a === 'retry') { e.preventDefault(); e.stopPropagation(); load(true); return; }
+    if (a === 'monthretry') { MONTHDASH.key = ''; pageMonth(); return; }
+    if (a === 'deliveries') return pageDeliveries();
+    if (a === 'matched') return pageMatched();
+    if (a === 'open') return pageOpen();
+    if (a === 'lorries') return pageLorries();
+    if (a === 'fuel') return pageFuel();
+    if (a === 'fuelmonth') return pageFuelMonth();
+    if (a === 'month') return pageMonth();
+    if (a === 'branch') return sheetBranch();
+    if (a === 'refresh') { if (!st.updating) load(true); return; }
+    if (t.hasAttribute('data-b')) { var b = t.getAttribute('data-b'); history.back(); if (b !== st.branch) go(st.date, b); return; }
+    if (t.hasAttribute('data-lorry')) return sheetLorry(t.getAttribute('data-lorry'));
+    if (t.hasAttribute('data-slip')) return sheetSlip(+t.getAttribute('data-slip'));
+    if (t.id === 'pBack') { history.back(); return; }
+    if (t.id === 'dPrev') return go(addDays(st.date, -1), st.branch);
+    if (t.id === 'dNext') { if (st.date < addDays(today(), 2)) go(addDays(st.date, 1), st.branch); return; }
+    if (t.id === 'dToday') return go(today(), st.branch);
+  });
+  $('dPick').addEventListener('change', function () { if (/^\d{4}-\d{2}-\d{2}$/.test(this.value) && this.value <= addDays(today(), 2)) go(this.value, st.branch); });
+  $('scrim').addEventListener('click', function (e) { if (e.target === $('scrim')) history.back(); });
+  window.addEventListener('popstate', function () { if (!$('scrim').hidden) closeSheet(); else if (!$('page').hidden) closePage(); });
+  // a page or sheet waiting for data repaints when that data lands
+  var _reopenPage = null;
+  Object.defineProperty(st, 'reopen', { get: function () { return function () { if (_reopenPage && !$('page').hidden) _reopenPage(); if (st.sheet && !$('scrim').hidden) st.sheet(); }; }, set: function (f) { _reopenPage = f; } });
+  // every 5 minutes while the page is on screen; at midnight a page left on "today" follows the date
+  setInterval(function () {
+    if (document.visibilityState !== 'visible') return;
+    if (st.follow && st.date !== today()) return go(today(), st.branch);
+    if (st.follow && !st.updating) load(false);
+  }, 5 * 60000);
+  setInterval(function () { if (st.updating && !DATA.ship) render(); }, 1000);   // the "Loading · n s" counter
+
+  // ================================================================ start
+  (async function () {
+    paintSnap(); render();
+    if (!_rgAuth()) { _rgShowLock(); return; }
+    await _rgEnsure();
+    load(false);
+  })();
+})();
+
+</script>
+</body>
+</html>
