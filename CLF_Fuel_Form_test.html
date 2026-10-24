@@ -172,10 +172,13 @@
           <button type="button" class="link" id="tripToggle" hidden></button>
         </div>
         <div class="form" id="tripForm">
+          <!-- [boss 2026-10-24] lorry FIRST: picking it brings the driver (see _loadCrew); the date (today by default) goes last -->
           <div class="field">
-            <label class="fl" for="fuelDate"><span data-en="Date">Tarikh</span> <span class="req">*</span></label>
-            <div class="date-in" id="dateWrap"><input class="in" type="date" id="fuelDate" required><span class="date-txt" id="dateTxt" aria-hidden="true"></span></div>
-            <div class="error-msg" id="err-date" data-en="Please select a date">Sila pilih tarikh</div>
+            <label class="fl" for="vehicleNo"><span data-en="Lorry">Lori</span> <span class="req">*</span></label>
+            <select class="in" id="vehicleNo" required>
+              <option value="" data-en="&mdash; Select lorry &mdash;">&mdash; Pilih lori &mdash;</option>
+            </select>
+            <div class="error-msg" id="err-vehicle" data-en="Please select a lorry">Sila pilih lori</div>
           </div>
 
           <div class="field">
@@ -197,11 +200,9 @@
           </div>
 
           <div class="field">
-            <label class="fl" for="vehicleNo"><span data-en="Lorry">Lori</span> <span class="req">*</span></label>
-            <select class="in" id="vehicleNo" required>
-              <option value="" data-en="&mdash; Select lorry &mdash;">&mdash; Pilih lori &mdash;</option>
-            </select>
-            <div class="error-msg" id="err-vehicle" data-en="Please select a lorry">Sila pilih lori</div>
+            <label class="fl" for="fuelDate"><span data-en="Date">Tarikh</span> <span class="req">*</span></label>
+            <div class="date-in" id="dateWrap"><input class="in" type="date" id="fuelDate" required><span class="date-txt" id="dateTxt" aria-hidden="true"></span></div>
+            <div class="error-msg" id="err-date" data-en="Please select a date">Sila pilih tarikh</div>
           </div>
         </div>
       </section>
@@ -499,7 +500,7 @@ function _tripRender(){
   var l1 = $('tripL1'), l2 = $('tripL2'), l3 = $('tripL3'), tg = $('tripToggle');
   if (!done){
     l1.textContent = L('Trip details', 'Maklumat perjalanan');
-    l2.textContent = L('Date, driver and lorry', 'Tarikh, pemandu dan lori');
+    l2.textContent = L('Lorry, driver and date', 'Lori, pemandu dan tarikh');
     l2.className = 'trip-l2'; l3.hidden = true; tg.hidden = true;
   } else {
     var sid = STAFF_IDS[dn];
@@ -884,10 +885,10 @@ async function validateFuel(){
   var first = null;
   function need(ok, errId, focusId){ if (!ok){ _err(errId); if (!first) first = focusId; } }
   var dt = $('fuelDate').value, dn = $('driverName').value, sd = $('secondDriver').value, veh = $('vehicleNo').value;
-  need(!!dt, 'err-date', 'fuelDate');
+  need(!!veh, 'err-vehicle', 'vehicleNo');   // screen order: lorry, driver, 2nd driver, date
   need(!!dn, 'err-driver', 'driverSearch');
   need(!(dn && sd && dn === sd), 'err-second', 'secondSearch');   // the same person twice would double-count the credit
-  need(!!veh, 'err-vehicle', 'vehicleNo');
+  need(!!dt, 'err-date', 'fuelDate');
   if (first){ _tripOpen = true; _tripRender(); }
   var mv = parseFloat($('mileage').value), av = parseFloat($('amount').value), lv = parseFloat($('litres').value);
   need(mv > 0, 'err-mileage', 'mileage');
@@ -1042,9 +1043,9 @@ async function submitNoFuel(){
   Object.keys(ERR_DEF).forEach(_errOff);
   var dt = $('fuelDate').value || _todayMYT(), dn = $('driverName').value, sd = $('secondDriver').value || '', veh = $('vehicleNo').value;
   var first = null;
+  if (!veh){ _err('err-vehicle'); first = first || 'vehicleNo'; }
   if (!dn){ _err('err-driver'); first = first || 'driverSearch'; }
   if (dn && sd && dn === sd){ _err('err-second'); first = first || 'secondSearch'; }
-  if (!veh){ _err('err-vehicle'); first = first || 'vehicleNo'; }
   if (first){ _tripOpen = true; _tripRender(); _focus(first); return; }
   var title = dt === _todayMYT() ? L('No refuel today?', 'Tak isi minyak hari ini?')
                                  : L('No refuel on ' + _dateLabel(dt) + '?', 'Tak isi minyak pada ' + _dateLabel(dt) + '?');
