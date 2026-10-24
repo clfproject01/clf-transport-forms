@@ -8,7 +8,7 @@
 <meta name="robots" content="noindex">
 <title>CLF Fleet - F2 design draft</title>
 <style>
-  /* F2 design draft v3 (2026-10-24), after two review rounds (governance/data, phone UX, then a check of both). Same tokens as the POD form
+  /* F2 design draft v3.1 (2026-10-24): two review rounds, then the boss's D6-D13 decisions (fuel report per lorry, month table kept). Same tokens as the POD form
      (Round 2, boss-approved): navy header, white cards, 12px radius, system fonts 13/15/17/22 + one 32px number.
      Colour = status only, always next to a word. Everything below runs on FAKE data generated in this file. */
   :root{
@@ -295,7 +295,7 @@
   }
 
   // ================================================================ state
-  var st = { branch: 'MTK', dayOff: 0, hour: 15.5, mode: 'normal', early: true, showDisc: false, fuelRule: 'driver', failZone: '', updating: false,
+  var st = { branch: 'MTK', dayOff: 0, hour: 15.5, mode: 'normal', early: true, showDisc: false, fuelRule: 'lorry',   // D12 (boss, 24 Oct): one fuel report per lorry out today failZone: '', updating: false,
              disc: [{ plate: 'VAA 1007', what: 'Fuel 14 Oct', q: 'Litres above tank size', open: true, words: '' }], open: buildOpen() };
   var FUELM = buildFuelMonth();
   var $ = function (id) { return document.getElementById(id); };
@@ -326,10 +326,10 @@
     var S = snapshot(f, kind === 'past' ? 24 : hour, kind === 'past');
     S.fleetSize = st.branch === 'ALL' ? FLEET.MTK + FLEET.KTN : FLEET[st.branch];
     S.leave = st.branch === 'ALL' ? LEAVE.MTK + LEAVE.KTN : LEAVE[st.branch];
-    // fuel report, MTK. Rule A (today's backend): every active driver, not crew, not on leave, sends a fuel or no-fuel slip.
-    // Rule B (D12): only the lorries out today. Server's today only.
+    // fuel report (D12, boss 24 Oct): one report per lorry out today; the fuel form fills in its driver and helper from
+    // the day's delivery list. A lorry that is not out owes nothing, so KTN (no lists yet) owes nothing. Today only.
     var lorryDrivers = buildFleet('MTK').out, spare = ['Driver 12', 'Driver 13', 'Driver 14', 'Driver 15', 'Driver 16', 'Driver 17'];
-    var people = lorryDrivers.map(function (L) { return { staff: L.staff, name: L.driver, plate: L.plate }; }).concat(spare.map(function (n, i) { return { staff: 'TER 5' + pad(10 + i * 4), name: n, plate: '' }; }));
+    var people = lorryDrivers.map(function (L) { return { staff: L.staff, name: L.driver, crew: L.crew, plate: L.plate }; }).concat(spare.map(function (n, i) { return { staff: 'TER 5' + pad(10 + i * 4), name: n, plate: '' }; }));
     var share = hour < 8.5 ? 0 : hour < 16 ? (hour - 8.5) / 7.5 * 0.75 : 0.94;   // reports trickle in through the day
     var due = st.fuelRule === 'lorry' ? people.filter(function (p) { return p.plate; }) : people;
     // who has sent: lorry drivers in lorry order, then spare drivers; at 6 pm one lorry driver is still out
@@ -407,7 +407,7 @@
     if (!past && !future) {
       var b5, c5 = '';
       if (off) { b5 = '<span class="big word" style="font-size:17px">Not expected</span>'; }
-      else if (st.branch === 'KTN') { b5 = '<span class="big word" style="font-size:17px">Rule pending</span>'; c5 = '<span class="sub">D12</span>'; }
+      else if (st.branch === 'KTN') { b5 = '<span class="big word" style="font-size:17px">Not expected</span>'; c5 = '<span class="sub">No lorries out</span>'; }
       else if (D.preImport) { b5 = '&mdash;'; }
       else {
         b5 = F.sent.length + '<span class="u">/ ' + F.due + '</span>';
@@ -510,14 +510,14 @@
   function pageFuel() {
     var D = data(), F = D.fuel, h = '', R = rng(33);
     if (D.kind === 'sunday' || D.kind === 'holiday') { openPage('Fuel report', '<div class="state"><b>Not expected</b>No fuel reports due on a rest day</div>'); return; }
-    if (st.branch === 'KTN') { openPage('Fuel report', '<div class="state"><b>Rule pending</b>Decision D12: should KTN drivers send fuel reports while KTN has no delivery lists?</div>'); return; }
+    if (st.branch === 'KTN') { openPage('Fuel report', '<div class="state"><b>Not expected</b>No KTN lorries out today, so no fuel reports are due</div>'); return; }
     if (D.kind !== 'today' || D.preImport) { openPage('Fuel report', '<div class="state"><b>Not yet</b>Fuel reports are tracked for today only</div>'); return; }
     var after4 = st.hour >= 16 && st.mode !== 'error';
     h += '<div class="tot"><div class="card"><div class="lbl">Sent</div><div class="big num">' + F.sent.length + '</div><div class="sub">' + F.unit + '</div></div><div class="card"><div class="lbl">' + (after4 ? 'Not in' : 'Due by 4 pm') + '</div><div class="big num">' + F.missing.length + '</div><div class="sub">' + F.unit + '</div></div></div>';
     if (F.missing.length && after4) {
       h += '<div class="h2">Not in after 4 pm &middot; by ' + (F.rule === 'lorry' ? 'plate' : 'staff ID') + '</div>';
       F.missing.slice().sort(function (a, b) { return a.staff < b.staff ? -1 : 1; }).forEach(function (p) {
-        h += F.rule === 'lorry' ? '<div class="li"><div class="mn"><div class="l1">' + p.plate + '</div></div></div>'
+        h += F.rule === 'lorry' ? '<div class="li"><div class="mn"><div class="l1">' + p.plate + '</div><div class="l2">On board: ' + esc(p.name) + ' + ' + esc(p.crew || '') + '</div></div></div>'
           : '<div class="li"><div class="mn"><div class="l1 s">' + p.staff + ' &middot; ' + esc(p.name) + '</div><div class="l2">' + (p.plate ? p.plate + ' today' : 'No lorry today') + '</div></div></div>';
       });
     } else if (F.missing.length) h += '<p class="note" style="margin-top:12px">Names of missing reports show after 4 pm.</p>';
@@ -526,7 +526,7 @@
       var fill = p.plate && j % 4 === 1, rm = 330 + Math.round(R() * 140), lit = Math.round(rm / 3.05), t = 8.2 + j * 0.45;   // 2-3 fills a day; the rest are "No fuel"
       h += '<button type="button" class="li done" data-slip="' + (p.plate || 'No lorry') + '|' + hhmm(t) + '|' + (fill ? rm : 0) + '|' + (j % 3 ? lit : '') + '"><div class="mn"><div class="l1 s">' + (p.plate || 'No lorry') + ' &middot; ' + hhmm(t) + '</div><div class="l2">' + (fill ? 'RM ' + rm + (j % 3 ? ' &middot; ' + lit + ' L' : '') : 'No fuel today') + '</div></div>' + GO + '</button>';
     });
-    h += '<div class="h2">Not due</div><div class="li done"><div class="mn"><div class="l1 s">' + F.onLeave + ' on leave &middot; ' + F.crew + ' crew</div><div class="l2">Not counted</div></div></div>';
+    h += '<div class="h2">Not due</div><div class="li done"><div class="mn"><div class="l1 s">' + (D.fleetSize - F.due) + ' lorries not out today</div><div class="l2">No fuel report needed</div></div></div>';
     openPage('Fuel report', h);
   }
 
@@ -562,7 +562,7 @@
     h += '</div><div class="h2">Stops visited per day &middot; whole fleet</div><div class="days">';
     for (var i = 1; i <= 24; i++) { var sun = new Date(2026, m, i).getDay() === 0; h += '<i class="' + (sun ? 'k' : '') + '" style="height:' + (sun ? 4 : 80 + R() * 20) + '%"></i>'; }
     h += '</div><div class="h2">By branch</div><div class="li"><div class="mn"><div class="l1">MTK</div><div class="l2">2,412 of 2,486 stops &middot; ' + fmtRM(M.rm) + ' fuel</div></div></div><div class="li done"><div class="mn"><div class="l1">KTN</div><div class="l2">No delivery lists yet</div></div></div>';
-    h += '<div class="h2">Month-end &middot; decision D13</div><button type="button" class="li" data-act="payroll"><div class="mn"><div class="l1 s">Per driver, by staff ID</div><div class="l2">Routes done &middot; 2nd trips &middot; leave days &middot; for allowances</div></div>' + GO + '</button>';
+    h += '<div class="h2">Month-end</div><button type="button" class="li" data-act="payroll"><div class="mn"><div class="l1 s">Per driver, by staff ID</div><div class="l2">Routes done &middot; 2nd trips &middot; leave days &middot; for allowances</div></div>' + GO + '</button>';
     openPage(MONTH[m] + ' summary', h);
   }
 
@@ -612,7 +612,7 @@
     $('sheet').innerHTML = '<div class="grab"></div><h3>Delete ' + SLIP.plate + ' &middot; ' + SLIP.time + (SLIP.rm ? ' &middot; RM ' + SLIP.rm : '') + '?</h3><div class="form2">' + pinBox() + '</div><div class="btnrow"><button type="button" class="btn b-ghost" data-close="1">Cancel</button><button type="button" class="btn b-pri" data-act="pinok">Delete</button></div><p class="note" style="margin-top:10px">Demo only: nothing is deleted.</p>';
   }
   function sheetPayroll() {
-    var h = '<h3>Per driver &middot; October</h3><div class="s2">For allowances. Sorted by staff ID, never by the numbers. Decision D13: keep it here, or as a month-end export.</div><table class="t" style="margin-top:12px"><thead><tr><th>Staff ID</th><th class="n">Routes</th><th class="n">2nd trips</th><th class="n">Leave</th></tr></thead><tbody>';
+    var h = '<h3>Per driver &middot; October</h3><div class="s2">For allowances. Sorted by staff ID, never by the numbers.</div><table class="t" style="margin-top:12px"><thead><tr><th>Staff ID</th><th class="n">Routes</th><th class="n">2nd trips</th><th class="n">Leave</th></tr></thead><tbody>';
     var R = rng(12);
     for (var i = 0; i < 8; i++) h += '<tr><td>TER 4' + pad(10 + i * 4) + '</td><td class="n">' + (16 + Math.floor(R() * 6)) + '</td><td class="n">' + Math.floor(R() * 4) + '</td><td class="n">' + Math.floor(R() * 3) + '</td></tr>';
     openSheet(h + '</tbody></table><p class="note" style="margin-top:8px">+ 9 more drivers</p>');
@@ -633,7 +633,7 @@
       '<div class="h2">Time today</div><div class="opts">' + o('hour', 7.5, '7:30 am') + o('hour', 9, '9:00 am') + o('hour', 12, '12:00 pm') + o('hour', 15.5, '3:30 pm') + o('hour', 18, '6:00 pm') + '</div>' +
       '<div class="h2">Other days</div><div class="opts">' + o('day', -1, 'Yesterday') + o('day', 2, 'Mon 26 Oct') + o('day', 1, 'Sun 25 Oct') + o('mode', 'holiday', 'Public holiday') + '</div>' +
       '<div class="h2">Screen states</div><div class="opts">' + o('mode', 'loading', 'First load') + o('mode', 'error', 'Offline') + o('mode', 'error0', 'Offline, nothing saved') + o('fail', 'fuel', 'Fuel source failed') + '</div>' +
-      '<div class="h2">Decisions and phases</div><div class="opts">' + o('rule', 'driver', 'Fuel: per driver') + o('rule', 'lorry', 'Fuel: per lorry') + o('early', 1, 'After 7 Nov preview') + o('disc', 1, 'Later: To discuss') + '</div>');
+      '<div class="h2">Decisions and phases</div><div class="opts">' + o('early', 1, 'After 7 Nov preview') + o('disc', 1, 'Later: To discuss') + '</div>');
   }
 
   // ================================================================ events
