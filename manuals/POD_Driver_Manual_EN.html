@@ -380,6 +380,34 @@
   <figure class="phone">
     <img src="img/pod/en-barcode-unknown.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="The list Which invoice is this photo: DO-10061 and DO-10062 barcode, DO-10063 this photo, DO-10064 no photo yet">
   </figure>
+  <h3>The AI checks photos without a barcode</h3>
+  <p>Barcode not read? The form sends the photo to the <b>AI</b>, which reads the invoice number, shop name and total. You can go on with the next photo.</p>
+  <ul>
+    <li>While the AI reads: <b>&hellip;</b> under the thumbnail (a few seconds).</li>
+    <li><b>Right</b>: the invoice number appears under the thumbnail. If the photo is another invoice of this shop, the form moves it to the right invoice by itself.</li>
+    <li><b>Red !</b>: this photo is another shop's invoice, an invoice that already has a photo, or an invoice that is not ticked. A red message appears at the top, also while the camera is open.</li>
+    <li><b>Amber !</b>: the photo is not clear, the invoice number cannot be read.</li>
+  </ul>
+  <div class="pair">
+    <figure class="crop">
+      <img src="img/pod/en-ai-reading.jpg" width="573" height="585" loading="lazy" decoding="async" alt="Stop card: two thumbnails marked with dots while the AI reads them">
+      <figcaption>The AI is reading (&hellip;).</figcaption>
+    </figure>
+    <figure class="crop">
+      <img src="img/pod/en-ai-flags.jpg" width="573" height="585" loading="lazy" decoding="async" alt="Stop card: one thumbnail marked with a red ! and one with an amber !">
+      <figcaption>Red ! = another invoice. Amber ! = not clear.</figcaption>
+    </figure>
+  </div>
+  <p>Tap the <b>!</b> to see why, then <span class="ui pri">Remove photo</span> or keep the photo.</p>
+  <p>At <span class="ui go">Save</span>, the form asks about every photo marked <b>!</b>:</p>
+  <ul>
+    <li><span class="ui pri">Retake</span>: the usual choice. The photo is removed. Take the right invoice.</li>
+    <li><span class="ui">Keep anyway</span> (red) or <span class="ui">Save as it is</span> (amber): only if you are sure the photo is right. The photo is marked for the office.</li>
+  </ul>
+  <figure class="phone">
+    <img src="img/pod/en-ai-ask.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="The question at Save: This photo is invoice DO-10021, not for this shop, with the buttons Keep anyway and Retake">
+  </figure>
+  <p>If the AI has not finished when you tap <span class="ui go">Save</span>, the form shows <span class="msg">Checking the photos&hellip;</span> for a moment. No signal? The photo keeps its <b>?</b>, and the office checks it later.</p>
   <div class="box warn"><p><b>A photo marked red</b> = a photo for an invoice that is not ticked &#10003;. Tick that invoice again, or remove the photo (&times;). Save only works when every invoice has its own photo: <span class="msg">Each invoice needs its own photo. Check the photos marked in red.</span></p></div>
 </section>
 

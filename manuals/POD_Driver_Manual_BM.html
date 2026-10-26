@@ -381,6 +381,34 @@
   <figure class="phone">
     <img src="img/pod/bm-barcode-unknown.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Senarai Foto ini untuk invois mana: DO-10061 dan DO-10062 kod bar, DO-10063 foto ini, DO-10064 belum ada foto">
   </figure>
+  <h3>AI semak foto tanpa kod bar</h3>
+  <p>Kod bar tidak dapat dibaca? Borang menghantar foto itu kepada <b>AI</b>, yang membaca nombor invois, nama kedai dan jumlah. Anda boleh terus ambil foto seterusnya.</p>
+  <ul>
+    <li>Semasa AI membaca: <b>&hellip;</b> di bawah gambar kecil (beberapa saat).</li>
+    <li><b>Betul</b>: nombor invois keluar di bawah gambar kecil. Jika foto itu invois lain kedai ini, borang alihkan sendiri ke invois yang betul.</li>
+    <li><b>! merah</b>: foto ini invois kedai lain, invois yang sudah ada foto, atau invois yang tidak ditanda. Mesej merah keluar di atas skrin, juga semasa kamera dibuka.</li>
+    <li><b>! kuning</b>: foto kurang jelas, nombor invois tidak dapat dibaca.</li>
+  </ul>
+  <div class="pair">
+    <figure class="crop">
+      <img src="img/pod/bm-ai-reading.jpg" width="573" height="585" loading="lazy" decoding="async" alt="Kad kedai: dua gambar kecil bertanda titik-titik semasa AI membaca">
+      <figcaption>AI sedang membaca (&hellip;).</figcaption>
+    </figure>
+    <figure class="crop">
+      <img src="img/pod/bm-ai-flags.jpg" width="573" height="585" loading="lazy" decoding="async" alt="Kad kedai: satu gambar kecil bertanda ! merah dan satu bertanda ! kuning">
+      <figcaption>! merah = invois lain. ! kuning = kurang jelas.</figcaption>
+    </figure>
+  </div>
+  <p>Tekan <b>!</b> untuk lihat sebabnya, kemudian <span class="ui pri">Buang foto</span> atau simpan foto itu.</p>
+  <p>Semasa <span class="ui go">Simpan</span>, borang bertanya untuk setiap foto bertanda <b>!</b>:</p>
+  <ul>
+    <li><span class="ui pri">Ambil semula</span>: pilihan biasa. Foto itu dibuang. Ambil foto invois yang betul.</li>
+    <li><span class="ui">Simpan juga</span> (merah) atau <span class="ui">Simpan begini</span> (kuning): hanya jika anda pasti foto itu betul. Foto itu ditanda untuk pejabat.</li>
+  </ul>
+  <figure class="phone">
+    <img src="img/pod/bm-ai-ask.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Soalan semasa Simpan: Foto ini invois DO-10021, bukan untuk kedai ini, dengan butang Simpan juga dan Ambil semula">
+  </figure>
+  <p>Jika AI belum selesai semasa anda tekan <span class="ui go">Simpan</span>, borang tulis <span class="msg">Menyemak foto&hellip;</span> sekejap. Tiada liputan? Foto kekal dengan tanda <b>?</b>, dan pejabat menyemaknya kemudian.</p>
   <div class="box warn"><p><b>Foto bertanda merah</b> = foto untuk invois yang tidak bertanda &#10003;. Tanda semula invois itu, atau buang foto itu (&times;). Simpan hanya boleh bila setiap invois ada fotonya sendiri: <span class="msg">Setiap invois perlu fotonya sendiri. Semak foto bertanda merah.</span></p></div>
 </section>
 
