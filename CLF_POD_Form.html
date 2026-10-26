@@ -145,6 +145,7 @@
   .th .inv{position:absolute;top:auto;left:0;right:0;bottom:0;width:auto;height:17px;border:0;border-radius:0;background:rgba(20,28,119,.88);color:#fff;font-size:10px;font-weight:800;line-height:17px;text-align:center;padding:0;white-space:nowrap;overflow:hidden}
   .th .inv.q{background:var(--amber);font-size:13px}
   .th .inv.bad{background:var(--red-700)}
+  .th .inv.ai-busy{background:var(--ink-2);font-size:13px;letter-spacing:1px}   /* [AI] the photo is being read */
   .th.lb .flag{bottom:19px}
   .sheet p.bc-note{color:var(--ink-2)}
   .sheet .row .yes.bc-pri{background:var(--navy)}
@@ -309,6 +310,11 @@ var SCAN_TEST = false;
       if (url.indexOf(SCRIPT_URL) === 0){
         var act = (url.match(/[?&]action=([^&]+)/) || [])[1] || '';
         if (method !== 'GET' || !/^get/i.test(act)){
+          // [AI 2026-10-26] the photo check at the shop only READS (the server writes nothing but its own log row in
+          // POD_AI_Live): let it through, so the test page shows what drivers will see. Every other write stays blocked.
+          var _d = null;
+          try{ var _b = init && init.body; if (method === 'POST' && _b && typeof _b.get === 'function') _d = JSON.parse(_b.get('data') || 'null'); }catch(e){ _d = null; }
+          if (_d && _d.formType === 'POD_AI_READ') return _realFetch(input, init);
           console.warn('[TEST] blocked write:', method, act || '(POST body)');
           return Promise.resolve(new Response(JSON.stringify({ status: 'error', message: 'TEST build — nothing is saved' }), { headers: { 'Content-Type': 'application/json' } }));
         }
@@ -1229,7 +1235,7 @@ async function _palletGetWrite(action, params){
 
 // Lightweight non-blocking toast (POD form uses alert()/none; pallet failures must NOT block the POD result)
 var _palletToastTmr = null;
-function _palletToast(kind, html, pos){   // [AutoCap v2] pos 'top' = show at the top so it never covers the button it points at
+function _palletToast(kind, html, pos, z){   // [AutoCap v2] pos 'top' = show at the top so it never covers the button it points at
   var t = document.getElementById('palletToast');
   if (!t){
     t = document.createElement('div');
@@ -1237,6 +1243,7 @@ function _palletToast(kind, html, pos){   // [AutoCap v2] pos 'top' = show at th
     t.style.cssText = 'position:fixed;left:0;right:0;margin:0 auto;width:-webkit-fit-content;width:fit-content;max-width:calc(100% - 32px);bottom:24px;z-index:120;padding:12px 16px;border-radius:12px;font-size:15px;font-weight:600;line-height:1.4;color:#fff;box-shadow:0 10px 24px rgba(15,23,42,.3);opacity:0;transition:opacity .2s;pointer-events:none;';
     document.body.appendChild(t);
   }
+  t.style.zIndex = String(z || 120);   // [AI] z: above the in-page camera (9500) for a message that must be seen while shooting
   t.style.background = (kind === 'ok') ? '#15803D' : (kind === 'err' ? '#C8101E' : '#B45309');
   if (pos === 'top'){   // just below the (sticky) app bar, so it never covers the logo / language switch
     var _bar = document.querySelector('.bar'), _bb = 0;
@@ -1647,6 +1654,8 @@ document.getElementById('shipmentSection').addEventListener('click', function(e)
     }
     return;
   }
+  var afb = e.target.closest('.ship-ai-flag');   // [AI] red / amber "!" under a thumbnail → what the check found: remove or keep
+  if (afb){ _aiExplain_(parseInt(afb.getAttribute('data-g'), 10), parseInt(afb.getAttribute('data-p'), 10)); return; }
   var ivb = e.target.closest('.ship-photo-inv');   // [R3] "?" (or a hand-picked invoice) under a thumbnail → choose the invoice
   if (ivb){ _bcPick_(parseInt(ivb.getAttribute('data-g'), 10), parseInt(ivb.getAttribute('data-p'), 10)); return; }
   var ph = e.target.closest('.ship-photo');
@@ -1738,7 +1747,9 @@ function _addPhotoToGroup(gKey, entry, fallbackGroup){
   }
   cur.photos.push(ph);
   _bcReconcile_(cur);
-  if (entry._bcLate && entry._bcP) entry._bcP.then(function(r){ _bcLateApply_(gKey, ph, r); });   // [R3] answer came after the wait
+  // [R3] the barcode answer came after the wait; [AI] a photo still "?" once the barcode had its say goes to Claude
+  if (entry._bcLate && entry._bcP) entry._bcP.then(function(r){ _bcLateApply_(gKey, ph, r); _aiStart_(gKey, ph); }, function(){ _aiStart_(gKey, ph); });
+  else _aiStart_(gKey, ph);
   return { added: true, group: cur, photo: ph };
 }
 
@@ -1757,7 +1768,7 @@ function _addPhotoToGroup(gKey, entry, fallbackGroup){
 // ══════════════════════════════════════════════════════════════════════════════════════
 var BC_WAIT_MS = 4000;   // after "Use", wait at most this long for the barcode; then the photo goes in as "?" (a late answer still lands)
 function _bcTaggedNos_(g){ return _acPending(g).map(function(x){ return String(x.invoiceNo); }); }
-function _bcSure_(p){ return !!p && (p.bcHow === 'barcode' || p.bcHow === 'picked'); }
+function _bcSure_(p){ return !!p && (p.bcHow === 'barcode' || p.bcHow === 'picked' || p.bcHow === 'ai'); }   // [AI] 'ai' = read by Claude at the shop
 // Re-deal the photos over the ticked invoices: sure photos keep theirs, guesses keep theirs while still free, the
 // rest take the free invoices in list order as guesses. A barcode photo whose invoice was un-ticked stays put as
 // an orphan (red) — the driver ticks the invoice again or removes the photo; Save waits for that.
@@ -1767,7 +1778,7 @@ function _bcReconcile_(g){
   g.photos.forEach(function(p){
     p._orphan = false;
     if (_bcSure_(p) && p.invoiceNo && tagged.indexOf(p.invoiceNo) >= 0 && !taken[p.invoiceNo]){ taken[p.invoiceNo] = p; return; }
-    if (p.bcHow === 'barcode' && p.invoiceNo && tagged.indexOf(p.invoiceNo) < 0){ p._orphan = true; return; }
+    if ((p.bcHow === 'barcode' || p.bcHow === 'ai') && p.invoiceNo && tagged.indexOf(p.invoiceNo) < 0){ p._orphan = true; return; }
   });
   g.photos.forEach(function(p){
     if (p._orphan || taken[p.invoiceNo] === p) return;
@@ -1815,8 +1826,12 @@ function _bcThumbLabel_(p, gi, pi, locked){
   var q = p.bcHow === 'guess' || !no;
   if (p.bcHow === 'barcode' || locked)   // locked: a Save of these photos is waiting for the server's answer
     return '<span class="inv' + (p._orphan || p.forced ? ' bad' : (p.bcHow !== 'barcode' && q ? ' q' : '')) + '" title="' + _escA(no) + '">' + (p.bcHow !== 'barcode' && q ? '?' : _esc(short)) + '</span>';
-  return '<button type="button" class="inv ship-photo-inv' + (p.forced ? ' bad' : (q ? ' q' : '')) + '" data-g="' + gi + '" data-p="' + pi + '" aria-label="'
-    + _escA(L('Which invoice is this photo?', 'Foto ini untuk invois mana?')) + '">' + (q ? '?' : _esc(short)) + '</button>';
+  if (p.ai && p.ai.flag)   // [AI] the check found a problem: red "!" (wrong paper) / amber "!" (not clear) → what it found, remove or keep
+    return '<button type="button" class="inv ship-ai-flag ' + (p.ai.flag === 'blur' ? 'q' : 'bad') + '" data-g="' + gi + '" data-p="' + pi + '" aria-label="'
+      + _escA(_aiFlagText_(p)) + '">!</button>';
+  var busy = q && p.ai && (p.ai.state === 'queue' || p.ai.state === 'busy');   // [AI] being read: "…" (still a button: the driver may choose)
+  return '<button type="button" class="inv ship-photo-inv' + (p._orphan || p.forced ? ' bad' : (busy ? ' ai-busy' : (q ? ' q' : ''))) + '" data-g="' + gi + '" data-p="' + pi + '" aria-label="'
+    + _escA(L('Which invoice is this photo?', 'Foto ini untuk invois mana?')) + '">' + (busy ? '&hellip;' : (q ? '?' : _esc(short))) + '</button>';
 }
 // two-button sheet in the driver's language; tapping outside = the safe choice. Resolves 'primary' | 'secondary'.
 function _bcAsk_(title, note, primaryTxt, secondaryTxt, safe){
@@ -1889,7 +1904,7 @@ async function _bcPlace_(gKey, entry, s){
 function _bcLateApply_(gKey, ph, res){
   try{
     var g = _groupByKey(gKey);
-    if (!res || !g || !g.photos || g.photos.indexOf(ph) < 0 || ph.bcHow !== 'guess' || ph.forced) return;
+    if (!res || !g || !g.photos || g.photos.indexOf(ph) < 0 || (ph.bcHow !== 'guess' && ph.bcHow !== 'ai') || ph.forced) return;   // [AI] a barcode beats Claude's reading
     var hit = _bcFind_(res.text, g);
     if (!hit || hit.g !== g || _bcTaggedNos_(g).indexOf(String(hit.x.invoiceNo)) < 0) return;
     var inv = String(hit.x.invoiceNo), cur = _bcPhotoFor_(g, inv);
@@ -1943,14 +1958,157 @@ function _bcPayload_(g, withOriginals){
   // not ride in the Save, and a copy of every original is megabytes a cheap phone should not hold for nothing
   var originals = !withOriginals ? [] : order.map(function(p, k){ return p.origDataUrl ? { base64: p.origDataUrl.split(',')[1],
     name: _bcFileName_(p.invoiceNo, String(p.name || ('invoice_' + k)).replace(/(_scan[CF])?\.jpg$/i, '') + '_orig.jpg'), type: 'image/jpeg', forIndex: k } : null; }).filter(Boolean);
-  var map = {};
-  order.forEach(function(p){ if (p.barcode) map[p.invoiceNo] = p.barcode; });
-  return { photos: photos, originals: originals, invoiceNos: order.map(function(p){ return p.invoiceNo; }), barcodeMap: map,
+  var map = {}, ai = {};
+  order.forEach(function(p){ if (p.barcode) map[p.invoiceNo] = p.barcode; if (p.ai && p.ai.verdict) ai[p.invoiceNo] = p.ai.verdict; });
+  return { photos: photos, originals: originals, invoiceNos: order.map(function(p){ return p.invoiceNo; }), barcodeMap: map, aiMap: ai,
            forcedMismatch: order.some(function(p){ return !!p.forced; }), order: order };
 }
 function _bcFileName_(invNo, name){
   var safe = String(invNo || '').replace(/[^A-Za-z0-9-]/g, ''), n = String(name || 'invoice.jpg');
   return safe && n.indexOf(safe + '_') !== 0 ? safe + '_' + n : n;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════════════
+// [AI 2026-10-26] a photo whose barcode the phone could not read ("?") goes to the server (formType POD_AI_READ,
+// backend POD_AI v1.3): Claude reads the invoice number / shop / total and the server judges it against this lorry's
+// list with the night check's rules. The answer comes back in a few seconds while the driver carries on:
+// read as one of this stop's ticked invoices → filed as that invoice (like a barcode; it moves if it sat on another);
+// another shop's / an invoice that already has its photo / one not ticked → red "!", Save asks;
+// not clear → amber "!", Save asks once. No answer (no signal, older backend, the day's cap, Claude busy) → the photo
+// simply stays "?" and the night check reads it. ?ai=0 turns it off on this phone.
+// ══════════════════════════════════════════════════════════════════════════════════════
+var AI_ON = !/[?&]ai=0(&|$)/.test(location.search);
+var AI_WAIT_MS = 30000;       // one photo: give up after this (the server stops at about 25 s)
+var AI_SAVE_WAIT_MS = 8000;   // Save waits at most this long for answers still on their way
+var AI_MAX_PAR = 2;           // photos on their way at once
+var AI_MAX_PX = 1568;         // long side sent: what Claude reads anyway, about 0.3 MB instead of 1 MB
+var AI_GOOD = { OK: 1, OK_NAME_AMOUNT: 1, LIKELY_OK: 1, LIKELY_TOTAL: 1 };
+var _aiQ = [], _aiBusy = 0, _aiDead = false;   // _aiDead: the server cannot answer today (older backend / off / cap / no key)
+function _aiStart_(gKey, ph){
+  if (!AI_ON || _aiDead || !ph || ph.bcHow !== 'guess' || ph.forced || ph.ai) return;
+  ph.ai = { state: 'queue' };
+  _aiQ.push({ gKey: gKey, ph: ph });
+  _aiPump_();
+}
+function _aiPump_(){
+  while (_aiBusy < AI_MAX_PAR && _aiQ.length){
+    var job = _aiQ.shift();
+    _aiBusy++;
+    _aiAsk_(job).catch(function(e){ console.warn('[AI] check failed:', e); })
+      .then(function(){ if (job.ph.ai && job.ph.ai.state !== 'done') job.ph.ai = { state: 'none' }; _aiBusy--; _aiRender_(); _aiPump_(); });
+  }
+}
+function _aiRender_(){ try{ renderShipGroups(); if (_ac) _acHeader(_ac); }catch(e){} }
+function _aiInv_(g, n){ var xs = (g && g.invs) || []; for (var i = 0; i < xs.length; i++) if (String(xs[i].invoiceNo) === String(n)) return xs[i]; return null; }
+// the photo at most AI_MAX_PX on its long side, as JPEG base64
+function _aiShrink_(dataUrl){
+  return new Promise(function(resolve){
+    var raw = String(dataUrl || '').split(',')[1] || '', im = new Image();
+    im.onload = function(){
+      try{
+        var k = Math.min(1, AI_MAX_PX / Math.max(im.naturalWidth, im.naturalHeight, 1)), c = document.createElement('canvas');
+        if (k >= 1) return resolve(raw);
+        c.width = Math.max(1, Math.round(im.naturalWidth * k)); c.height = Math.max(1, Math.round(im.naturalHeight * k));
+        c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+        resolve(c.toDataURL('image/jpeg', 0.85).split(',')[1] || raw);
+      }catch(e){ resolve(raw); }
+    };
+    im.onerror = function(){ resolve(raw); };
+    im.src = dataUrl;
+  });
+}
+async function _aiAsk_(job){
+  var ph = job.ph, g = _groupByKey(job.gKey);
+  if (!g || !g.photos || g.photos.indexOf(ph) < 0 || ph.bcHow !== 'guess' || ph.forced || !ph.invoiceNo){ ph.ai = { state: 'none' }; return; }
+  if (navigator.onLine === false){ ph.ai = { state: 'none' }; return; }
+  var sent = String(ph.invoiceNo), x = _aiInv_(g, sent), lorry = [];
+  ph.ai = { state: 'busy', sent: sent };
+  _aiRender_();
+  _shipGroups.forEach(function(sg){ (sg.invs || []).forEach(function(i){ lorry.push({ inv: String(i.invoiceNo), amount: i.amount, cust: sg.key, shop: sg.name }); }); });
+  var payload = { formType: 'POD_AI_READ', branch: BRANCH, lorry: (document.getElementById('vehicleNo') || {}).value || '',
+    shop: g.name, inv: sent, amount: x ? x.amount : '', stop: _acPending(g).map(function(i){ return { inv: String(i.invoiceNo), amount: i.amount }; }),
+    lorryInvs: lorry, image: await _aiShrink_(ph.dataUrl), mime: 'image/jpeg' };
+  var res = await _postRead_(payload, AI_WAIT_MS);
+  if (res && res.status === 'error' && (/unknown formtype/i.test(String(res.message || '')) || /^(OFF|CAP|NO_KEY)$/.test(String(res.code || '')))){
+    _aiDead = true;   // the server will not read today: stop sending photos from this phone
+    console.warn('[AI] server says', res.code || res.message);
+  }
+  if (!res || res.status !== 'success'){ ph.ai = { state: 'none' }; return; }   // stays "?": the night check reads it
+  _aiApply_(job.gKey, ph, sent, res);
+}
+function _aiApply_(gKey, ph, sent, res){
+  var g = _groupByKey(gKey);
+  ph.ai = { state: 'done', verdict: String(res.verdict || ''), shows: String(res.shows || ''), target: String(res.target || ''), flag: '', inv: '' };
+  if (!g || !g.photos || g.photos.indexOf(ph) < 0 || ph.bcHow !== 'guess' || ph.forced) return;   // removed, or settled by the driver / a barcode
+  var v = ph.ai.verdict, tagged = _bcTaggedNos_(g);
+  if (AI_GOOD[v]){ if (tagged.indexOf(sent) >= 0) _aiFile_(g, ph, sent); }
+  else if (v === 'WRONG_SLOT' || v === 'OTHER_SHOP'){
+    var hit = ph.ai.target ? _bcFind_(ph.ai.target, g) : null, t = hit ? String(hit.x.invoiceNo) : ph.ai.target;
+    if (hit && hit.g === g && tagged.indexOf(t) >= 0){
+      var cur = _bcPhotoFor_(g, t);
+      if (!cur || cur === ph || !_bcSure_(cur)) _aiFile_(g, ph, t);        // another invoice of this shop: the photo moves there
+      else { ph.ai.flag = 'dup'; ph.ai.inv = t; }                          // that invoice already has its photo: a second copy
+    }
+    else if (hit && hit.g === g){ ph.ai.flag = String(hit.x.status).toLowerCase() === 'delivered' ? 'done' : 'untagged'; ph.ai.inv = t; }
+    else if (t){ ph.ai.flag = 'other'; ph.ai.inv = t; }
+  }
+  else if (v === 'UNREADABLE') ph.ai.flag = 'blur';
+  _bcReconcile_(g);
+  // shown over the in-page camera too: the driver may already be shooting the next invoice
+  if (ph.ai.flag) _palletToast(ph.ai.flag === 'blur' ? 'warn' : 'err', _esc(_aiFlagText_(ph)), 'top', _ac ? 9700 : 0);
+}
+function _aiFile_(g, ph, inv){
+  var cur = _bcPhotoFor_(g, inv);
+  if (cur && cur !== ph && _bcSure_(cur)) return;   // never takes a sure photo's place
+  if (cur && cur !== ph) cur.invoiceNo = null;      // the "?" photo there moves on (re-dealt by _bcReconcile_)
+  ph.invoiceNo = inv; ph.bcHow = 'ai';
+}
+function _aiFlagText_(ph){
+  var f = ph && ph.ai && ph.ai.flag, n = (ph && ph.ai && ph.ai.inv) || '';
+  if (f === 'other')    return L('This photo is invoice ' + n + ', not for this shop. Retake.', 'Foto ini invois ' + n + ', bukan untuk kedai ini. Ambil semula.');
+  if (f === 'dup')      return L('This photo is invoice ' + n + ', which already has a photo.', 'Foto ini invois ' + n + ', yang sudah ada foto.');
+  if (f === 'untagged') return L('This photo is invoice ' + n + ', which is not ticked.', 'Foto ini invois ' + n + ', yang tidak ditanda.');
+  if (f === 'done')     return L('This photo is invoice ' + n + ', already delivered.', 'Foto ini invois ' + n + ', sudah dihantar.');
+  if (f === 'blur')     return L('Photo not clear: the invoice number cannot be read.', 'Foto kurang jelas: nombor invois tidak dapat dibaca.');
+  return '';
+}
+// the red / amber "!" under a thumbnail: what the check found → remove the photo, or keep it (the office sees it was kept)
+async function _aiExplain_(gi, pi){
+  var g = _shipGroups[gi], ph = g && g.photos && g.photos[pi];
+  if (!ph || !ph.ai || !ph.ai.flag) return;
+  var red = ph.ai.flag !== 'blur', key = g.key;
+  var a = await _bcAsk_(_aiFlagText_(ph), '', L('Remove photo', 'Buang foto'), red ? L('Keep anyway', 'Simpan juga') : L('Keep', 'Simpan'), 'primary');
+  var cur = _groupByKey(key) || g, k = cur.photos ? cur.photos.indexOf(ph) : -1;
+  if (k < 0) return;
+  if (a === 'primary') cur.photos.splice(k, 1);
+  else { if (red) ph.forced = true; else ph.qualityFlag = true; ph.ai.flag = ''; }
+  renderShipmentList();
+}
+// Save: wait a moment for answers still on their way, then no red / amber "!" photo goes without the driver's say.
+// false = a photo was removed for a retake (the Save stops; the camera button is back).
+async function _aiSaveGate_(g){
+  var t0 = Date.now(), shown = false, ov = document.getElementById('loadingOverlay');
+  function waiting(){ return (g.photos || []).some(function(p){ return p.ai && (p.ai.state === 'queue' || p.ai.state === 'busy'); }); }
+  while (waiting() && Date.now() - t0 < AI_SAVE_WAIT_MS){
+    if (!shown && ov){ shown = true; var lt = ov.querySelector('.loading-text'); if (lt) lt.textContent = L('Checking the photos…', 'Menyemak foto…'); ov.classList.add('show'); }
+    await new Promise(function(r){ setTimeout(r, 200); });
+  }
+  if (shown && ov) ov.classList.remove('show');
+  var flagged = (g.photos || []).filter(function(p){ return p.ai && p.ai.flag; });
+  for (var i = 0; i < flagged.length; i++){
+    var p = flagged[i], red = p.ai.flag !== 'blur';
+    var a = await _bcAsk_(_aiFlagText_(p), red ? L('Retake removes this photo.', 'Ambil semula akan buang foto ini.') : L('The office may not be able to read it.', 'Pejabat mungkin tidak dapat membacanya.'),
+      L('Retake', 'Ambil semula'), red ? L('Keep anyway', 'Simpan juga') : L('Save as it is', 'Simpan begini'), 'primary');
+    if (a === 'primary'){
+      var k = g.photos.indexOf(p);
+      if (k >= 0) g.photos.splice(k, 1);
+      _palletToast('warn', L('Tap the camera button and take this shop\'s invoice', 'Tekan butang kamera dan ambil invois kedai ini'), 'top');
+      return false;
+    }
+    if (red) p.forced = true; else p.qualityFlag = true;   // kept: DRIVER_FORCED / "sent although not clear" reach the office
+    p.ai.flag = '';
+  }
+  return true;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════════════
@@ -4062,13 +4220,18 @@ function _scanTestSummary_(g, photos, originals, invoiceNos, bp){
   var order = (bp && bp.order) || g.photos;
   try{ window._scanTestLast = { invoiceNos: invoiceNos.slice(), names: photos.map(function(p){ return p.name; }), origNames: originals.map(function(o){ return o.name; }),
     origIndex: originals.map(function(o){ return o.forIndex; }), how: order.map(function(p){ return p.bcHow + (p.forced ? '+forced' : ''); }),
-    barcodeMap: bp ? bp.barcodeMap : {}, forcedMismatch: !!(bp && bp.forcedMismatch), dataUrls: order.map(function(p){ return p.dataUrl; }) }; }catch(e){}
+    barcodeMap: bp ? bp.barcodeMap : {}, aiMap: bp ? bp.aiMap : {}, forcedMismatch: !!(bp && bp.forcedMismatch), dataUrls: order.map(function(p){ return p.dataUrl; }) }; }catch(e){}
   var rows = order.map(function(p, k){
     var sc = p.scan || {}, st = sc.ok ? (sc.cropped ? (sc.adjusted ? L('scanned (corners adjusted)', 'diimbas (sudut dilaras)') : L('scanned', 'diimbas')) : L('whitened, edges not found', 'diputihkan, tepi tidak dikesan')) : L('plain photo', 'foto biasa') + (sc.err ? ' — ' + _esc(sc.err) : '');
     if (sc.flat && sc.flat.on) st += ' + ' + L('flattened', 'diratakan');   // [R4 2026-10-24] curled page flattened
-    var how = p.forced ? L('kept although its barcode is another invoice', 'disimpan walaupun kod bar invois lain')
+    var how = p.forced ? (p.barcode ? L('kept although its barcode is another invoice', 'disimpan walaupun kod bar invois lain')
+                                    : L('kept although AI read another invoice', 'disimpan walaupun AI baca invois lain'))
             : p.bcHow === 'barcode' ? '&#10003; ' + L('barcode read', 'kod bar dibaca')
+            : p.bcHow === 'ai' ? '&#10003; ' + L('read by AI', 'dibaca AI')
             : p.bcHow === 'picked' ? L('chosen by the driver', 'dipilih pemandu') : '? ' + L('barcode not read, list order', 'kod bar tidak dibaca, ikut senarai');
+    // [AI] what Claude said about this photo (the test page shows it, so the boss sees the check at work)
+    if (p.ai && p.ai.state === 'done' && p.ai.verdict) how += '<br><span style="color:#475569;">AI: ' + _esc(p.ai.verdict) + (p.ai.shows ? ' &middot; ' + _esc(p.ai.shows) : '') + '</span>';
+    else if (p.ai && p.ai.state === 'none') how += '<br><span style="color:#475569;">AI: ' + L('no answer', 'tiada jawapan') + '</span>';
     return '<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-top:1px solid #E2E8F0;">'
       + '<img src="' + p.dataUrl + '" style="width:84px;border:1px solid #CBD5E1;border-radius:4px;background:#fff;">'
       + (p.origDataUrl ? '<img src="' + p.origDataUrl + '" style="width:58px;border:1px solid #CBD5E1;border-radius:4px;opacity:.85;">' : '')
@@ -4362,6 +4525,11 @@ async function saveDelivery(i){
     _palletToast('err', L('Choose the driver first, then tap Save again.', 'Pilih pemandu dulu, kemudian tekan Simpan semula.'), 'top');
     return;
   }
+  // [AI] after the instant checks: answers still on their way are waited for (briefly), and a red / amber "!" photo is
+  // not saved without the driver's say; a photo kept at that question now carries its forced / not-clear mark
+  if (!(await _aiSaveGate_(g))){ g._saving = false; renderShipmentList(); return; }
+  _bp = _bcPayload_(g, SCAN_TEST);
+  if (!_bp){ g._saving = false; renderShipmentList(); return; }
   var overlay = document.getElementById('loadingOverlay');
   document.querySelector('.loading-text').textContent = L('Saving…', 'Menyimpan…');
   overlay.classList.add('show');
@@ -4393,6 +4561,7 @@ async function saveDelivery(i){
       timestamp: now.toISOString(), photos: photos, clientToken: token,
       // [R3] raw barcode per invoice (Shipment_Items col 18) + a photo kept against its barcode (col 19 DRIVER_FORCED)
       barcodeMap: _bp.barcodeMap, forcedMismatch: _bp.forcedMismatch,
+      aiMap: _bp.aiMap,   // [AI] Claude's verdict per invoice read at the shop (kept by a later backend; ignored today)
       // [R3] photo i IS invoiceNos[i]: backend v2 then files each photo under its own invoice (an older backend ignores this)
       photoOrder: 'invoice',
       // [E5] true if ANY included photo was force-uploaded past the quality gate
