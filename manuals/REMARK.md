@@ -18,4 +18,9 @@ Rules going forward (boss decisions, 2026-07-20):
 language chooser, so the hub link and old bookmarks still work. The hub entry can later be split
 into BM / EN the way the Pallet manuals are listed.
 
-_First recorded 2026-06-24 (pending) · Published + PDF retired 2026-07-20 · POD manual BM/EN 2026-10-24_
+**2026-10-24 — Fuel form redesigned (yellow bar, photo first, BM / EN):** the Fuel driver manual is now one page
+per language, `Fuel_Driver_Manual_BM.html` (drivers' default) and `Fuel_Driver_Manual_EN.html`, with screenshots in
+`img/fuel/` (sample data only; made from the real form by `fuel-redesign/manual_shots.mjs`). The old address
+`Fuel_Driver_Manual.html` is kept as a language chooser. `CLF_Transport_User_Manual.html` A2 / A3 describe the new form.
+
+_First recorded 2026-06-24 (pending) · Published + PDF retired 2026-07-20 · POD manual BM/EN 2026-10-24 · Fuel manual BM/EN 2026-10-24_

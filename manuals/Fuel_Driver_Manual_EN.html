@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#FBCE07">
+<title>Driver Manual: Fuel Form (CLF Trading)</title>
+<!-- 2026-10-24: manual for the new Fuel form (yellow bar, photo first, BM / EN). Same layout as the POD manual;
+     the header is yellow like the form itself, so a driver sees at once which form it is about.
+     Screenshots in img/fuel/: the real form with SAMPLE data (made with fuel-redesign/manual_shots.mjs). -->
+<style>
+  :root{
+    --navy:#141C77; --navy-2:#0E1458; --navy-50:#EEF0FA;
+    --fuel:#FBCE07; --fuel-50:#FFF8DB;
+    --red:#FC091B; --red-700:#C8101E; --red-50:#FEF2F2;
+    --green:#15803D; --green-50:#ECFDF3;
+    --amber:#B45309; --amber-50:#FFFBEB;
+    --ink:#0F172A; --ink-2:#475569; --ink-3:#64748B;
+    --line:#E2E8F0; --bg:#FFFFFF; --bg-2:#F4F6FA;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg-2);color:var(--ink);font:17px/1.6 var(--font)}
+  a{color:var(--navy)}
+  .top{background:var(--fuel);color:var(--navy)}
+  .top-in{max-width:760px;margin:0 auto;padding:22px 16px 24px}
+  .kicker{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;opacity:.85}
+  h1{font-size:28px;line-height:1.2;margin:6px 0 8px;font-weight:800}
+  .lead{margin:0;font-size:16px}
+  .lang{display:inline-block;margin-top:14px;padding:6px 14px;border:1.5px solid var(--navy);border-radius:999px;color:var(--navy);text-decoration:none;font-weight:700;font-size:14px}
+  main{max-width:760px;margin:0 auto;background:var(--bg);padding:6px 16px 40px}
+  .summary{background:var(--fuel-50);border-radius:14px;padding:14px 16px;margin:16px 0}
+  .summary h2{margin:0 0 6px;font-size:19px}
+  .summary ol{margin:0;padding-left:22px}
+  .summary li{margin:5px 0}
+  nav.toc{margin:18px 0 6px}
+  nav.toc ol{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+  nav.toc a{display:flex;gap:8px;align-items:center;height:100%;padding:7px 9px;border:1px solid var(--line);border-radius:10px;text-decoration:none;color:var(--ink);font-weight:700;font-size:14px;line-height:1.3;background:#fff}
+  nav.toc a span{flex:none;width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+  @media (min-width:350px){ nav.toc ol{grid-template-columns:1fr 1fr} }
+  a.open{display:block;margin:8px 0;padding:10px 14px;border:1.5px solid var(--navy);border-radius:12px;background:var(--navy-50);color:var(--navy);text-decoration:none}
+  a.open b{display:block;font-size:17px}
+  a.open small{display:block;font-size:13px;line-height:1.4;color:var(--ink-2);overflow-wrap:anywhere}
+  section{border-top:1px solid var(--line);margin-top:30px;padding-top:4px}
+  h2{display:flex;align-items:center;gap:10px;font-size:22px;line-height:1.25;margin:20px 0 10px}
+  h2 .n{flex:none;width:34px;height:34px;border-radius:50%;background:var(--navy);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:17px}
+  h3{font-size:18px;line-height:1.3;margin:24px 0 6px}
+  p{margin:10px 0}
+  ol,ul{padding-left:24px;margin:10px 0}
+  li{margin:7px 0}
+  code{font:15px/1.4 Consolas,Menlo,monospace;background:var(--bg-2);border:1px solid var(--line);border-radius:6px;padding:1px 5px;word-break:break-all}
+  .ui{display:inline-block;padding:0 7px;border:1.5px solid #CBD5E1;border-radius:7px;background:#fff;font-weight:800;font-size:.9em;line-height:1.55;white-space:nowrap;color:var(--ink)}
+  .ui.go{background:var(--green);border-color:var(--green);color:#fff}
+  .ui.pri{background:var(--navy);border-color:var(--navy);color:#fff}
+  .ui.danger{background:var(--red-700);border-color:var(--red-700);color:#fff}
+  .ui.warn{background:var(--amber-50);border-color:var(--amber);color:var(--amber)}
+  .tag{display:inline-block;padding:0 8px;border-radius:999px;font-weight:800;font-size:.85em;line-height:1.6;white-space:nowrap}
+  .tag.wait{background:var(--amber-50);color:var(--amber)}
+  .tag.done{background:var(--green-50);color:var(--green)}
+  .tag.fail{background:var(--red-50);color:var(--red-700)}
+  .msg{font-weight:700}
+  .box{border-radius:12px;padding:12px 14px;margin:16px 0;border-left:5px solid}
+  .box p{margin:6px 0}
+  .box.tip{background:var(--navy-50);border-color:var(--navy)}
+  .box.warn{background:var(--amber-50);border-color:var(--amber)}
+  .box.stop{background:var(--red-50);border-color:var(--red-700)}
+  .box.good{background:var(--green-50);border-color:var(--green)}
+  figure{margin:18px auto;text-align:center}
+  figure img{display:block;width:100%;height:auto;margin:0 auto;background:#fff}
+  figure.phone{max-width:290px}
+  figure.phone img{border-radius:22px;border:1px solid #CBD5E1;box-shadow:0 6px 18px rgba(15,23,42,.15)}
+  figure.crop{max-width:400px}
+  figure.crop img{border-radius:14px;border:1px solid var(--line);box-shadow:0 3px 10px rgba(15,23,42,.08)}
+  figure.bar{max-width:560px}
+  figure.bar img{border-radius:10px;border:1px solid var(--line)}
+  figure.wide{max-width:600px}
+  figure.wide img{border-radius:12px;border:1px solid var(--line)}
+  figcaption{font-size:14px;color:var(--ink-3);margin-top:8px;line-height:1.45}
+  .pair{display:grid;gap:4px}
+  @media (min-width:640px){ .pair{grid-template-columns:1fr 1fr;align-items:start;gap:18px} .pair figure{margin:18px 0} }
+  ol.legend{list-style:none;padding:0;counter-reset:lg}
+  ol.legend > li{position:relative;padding-left:40px;min-height:30px;counter-increment:lg}
+  ol.legend > li::before{content:counter(lg);position:absolute;left:0;top:0;width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;font-weight:800;font-size:15px;line-height:28px;text-align:center;box-shadow:0 0 0 2px #fff,0 1px 4px rgba(0,0,0,.35)}
+  table{border-collapse:collapse;width:100%;margin:12px 0;font-size:16px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--bg-2)}
+  footer{max-width:760px;margin:0 auto;padding:18px 16px 40px;color:var(--ink-3);font-size:14px}
+  @media print{
+    body{background:#fff;font-size:11.5pt}
+    .top{background:#fff;border-bottom:3px solid var(--fuel)}
+    .top-in{padding:0 0 10px}
+    .lang,nav.toc{display:none}
+    main{max-width:none;padding:0}
+    section{border-top:1px solid #999}
+    figure,.box,.summary,table,ol.legend > li{break-inside:avoid}
+    h2,h3{break-after:avoid}
+    figure.phone{max-width:58mm} figure.crop{max-width:95mm} figure.bar{max-width:120mm} figure.wide{max-width:130mm}
+    figure img{box-shadow:none !important}
+    a{color:inherit;text-decoration:none}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in">
+    <div class="kicker">CLF Trading &middot; Driver Manual</div>
+    <h1>Fuel Form: Daily Fuel Receipt</h1>
+    <p class="lead">How to send your fuel receipt with your phone, step by step. For the new Fuel form (yellow bar).</p>
+    <a class="lang" href="Fuel_Driver_Manual_BM.html" lang="ms">Versi Bahasa Melayu</a>
+  </div>
+</header>
+
+<main>
+
+<div class="summary">
+  <h2>In short</h2>
+  <ol>
+    <li>Open the Fuel form (<b>yellow</b> bar). Check the <b>lorry</b>, <b>your name</b> and the <b>date</b>.</li>
+    <li>Tap <span class="ui">Take receipt photo</span>. The form reads the receipt and fills in the <b>RM</b> and <b>litres</b> for you.</li>
+    <li>Check them against the receipt, then type the <b>odometer</b>.</li>
+    <li>Tap <span class="ui go">Save</span>. Wait until you see <span class="tag done">Saved</span>.</li>
+    <li>No refuel today? Tap the red <span class="ui danger">No refuel</span> button.</li>
+  </ol>
+</div>
+
+<nav class="toc" aria-label="Contents">
+  <ol>
+    <li><a href="#open"><span>1</span>Open the form</a></li>
+    <li><a href="#trip"><span>2</span>Lorry, driver and date</a></li>
+    <li><a href="#photo"><span>3</span>Take the receipt photo</a></li>
+    <li><a href="#check"><span>4</span>Check RM and litres</a></li>
+    <li><a href="#odometer"><span>5</span>Odometer</a></li>
+    <li><a href="#save"><span>6</span>Save</a></li>
+    <li><a href="#no-refuel"><span>7</span>No refuel</a></li>
+    <li><a href="#checks"><span>8</span>Checks before saving</a></li>
+    <li><a href="#faq"><span>9</span>Common questions</a></li>
+    <li><a href="#rules"><span>10</span>Important rules</a></li>
+  </ol>
+</nav>
+
+<!-- 1 -->
+<section id="open">
+  <h2><span class="n">1</span>Open the form</h2>
+  <p>Open the link for <b>your</b> branch:</p>
+  <a class="open" href="https://clfproject01.github.io/clf-transport-forms/CLF_Fuel_Form.html"><b>Open the Mentakab Fuel form</b><small>clfproject01.github.io/clf-transport-forms/CLF_Fuel_Form.html</small></a>
+  <a class="open" href="https://clfproject01.github.io/clf-transport-forms/CLF_Fuel_Form.html?branch=KTN"><b>Open the Kuantan Fuel form</b><small>clfproject01.github.io/clf-transport-forms/CLF_Fuel_Form.html?branch=KTN</small></a>
+  <p>The Kuantan link ends with <code>?branch=KTN</code>. Your old link still works.</p>
+  <figure class="bar">
+    <img src="img/fuel/en-bar.jpg" width="585" height="84" loading="lazy" decoding="async" alt="Yellow bar at the top of the form: logo, FUEL, branch name Mentakab, green dot, BM and EN buttons">
+  </figure>
+  <ol class="legend">
+    <li><b>Yellow bar and FUEL</b> = the fuel form. The POD form has a <b>blue</b> bar. Make sure you open the right one.</li>
+    <li><b>Branch name.</b> It must be your branch. If it shows another branch, you opened the wrong link.</li>
+    <li><b>Green dot</b> = internet. <b>Grey dot</b> = no internet.</li>
+    <li><span class="ui">BM</span> <span class="ui">EN</span> to change the language. The phone remembers your choice, for the POD form too.</li>
+  </ol>
+</section>
+
+<!-- 2 -->
+<section id="trip">
+  <h2><span class="n">2</span>Lorry, driver and date</h2>
+  <p>The <b>Trip details</b> box is at the very top. The first time, it is open and empty.</p>
+  <div class="pair">
+    <figure class="crop">
+      <img src="img/fuel/en-trip-start.jpg" width="585" height="624" loading="lazy" decoding="async" alt="Empty Trip details box: Lorry, Driver, 2nd driver and Date">
+      <figcaption>The first time: an empty box.</figcaption>
+    </figure>
+    <figure class="crop">
+      <img src="img/fuel/en-trip-finding.jpg" width="585" height="624" loading="lazy" decoding="async" alt="Lorry VHT 4642 picked, the Driver box says Finding the driver">
+      <figcaption>Lorry picked: the form looks for the driver.</figcaption>
+    </figure>
+  </div>
+  <ol>
+    <li><b>Lorry:</b> pick the lorry you fuelled <b>first</b>. The Driver box says <span class="msg">Finding the driver&hellip;</span> for a moment.</li>
+    <li><b>Driver:</b> your name usually fills itself in, from the office plan for that lorry or from the phone's memory. Check it is right. If it is empty or wrong, type your staff ID (for example <code>901</code>) or your name, then tap your name in the list.</li>
+    <li><b>2nd driver (if any):</b> fill it only if two of you are in the lorry. If you are alone, leave it empty.</li>
+    <li><b>Date:</b> already filled with today's date (it says <span class="msg">Today</span>). Change it only if you fuelled on another day. Tomorrow cannot be picked.</li>
+  </ol>
+  <div class="box warn">
+    <p><b>Change the lorry = check the name again.</b> Every time the lorry changes, the name is looked up again for the new lorry. Make sure the name shown is yours.</p>
+  </div>
+  <h3>The box folds into 3 lines</h3>
+  <p>When the lorry, name and date are complete, the box folds into 3 lines: lorry, date, name. Tap <b>Change</b> to open it, <b>Done</b> to fold it again. The phone <b>remembers</b> your lorry and name, so tomorrow everything is filled in already.</p>
+  <div class="pair">
+    <figure class="crop">
+      <img src="img/fuel/en-trip-folded.jpg" width="585" height="156" loading="lazy" decoding="async" alt="Folded box: VHT 4642, Today, ALI BIN AHMAD, Change button">
+      <figcaption>All correct: the date says <b>Today</b>.</figcaption>
+    </figure>
+    <figure class="crop">
+      <img src="img/fuel/en-trip-amber.jpg" width="585" height="156" loading="lazy" decoding="async" alt="Folded box with yesterday's date in orange">
+      <figcaption>A date that is <b>not today</b> turns orange. Is it right? If not, tap <b>Change</b>.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- 3 -->
+<section id="photo">
+  <h2><span class="n">3</span>Take the receipt photo</h2>
+  <p>Once the lorry and name are set, the fuel box has only two buttons: <span class="ui">Take receipt photo</span> and the red <span class="ui danger">No refuel</span>.</p>
+  <figure class="phone">
+    <img src="img/fuel/en-step1.jpg" width="585" height="1266" loading="lazy" decoding="async" alt="Form screen: folded trip box, big Take receipt photo button and red No refuel button">
+  </figure>
+  <ol>
+    <li>Tap <span class="ui">Take receipt photo</span>. Choose the <b>camera</b>, or pick a receipt photo you already took from the <b>gallery</b>.</li>
+    <li>Photograph the <b>whole receipt</b>, as shown below.</li>
+    <li>Wait a few seconds. The form says <span class="msg">Reading the receipt&hellip;</span>.</li>
+  </ol>
+  <figure class="wide">
+    <img src="img/fuel/photo-tips.jpg" width="920" height="400" loading="lazy" decoding="async" alt="Three sample receipt photos: sharp and close (right), blurry (wrong), too far (wrong)">
+    <figcaption>Left: right. Middle: blurry. Right: too far.</figcaption>
+  </figure>
+  <div class="box tip">
+    <p><b>A good photo:</b></p>
+    <ul>
+      <li>Lay the receipt <b>flat</b>, shoot it <b>close</b>, in good <b>light</b>.</li>
+      <li>The whole receipt in the frame, numbers not blurred.</li>
+      <li><b>One photo, one receipt.</b></li>
+      <li>Keep your fingers off the numbers.</li>
+    </ul>
+  </div>
+  <figure class="crop">
+    <img src="img/fuel/en-reading.jpg" width="585" height="171" loading="lazy" decoding="async" alt="Small picture of the receipt and the words Reading the receipt">
+    <figcaption>The form is reading the receipt.</figcaption>
+  </figure>
+</section>
+
+<!-- 4 -->
+<section id="check">
+  <h2><span class="n">4</span>Check RM and litres</h2>
+  <p>When the receipt can be read for sure, the form fills in <b>Amount (RM)</b> and <b>Litres</b> for you.</p>
+  <figure class="crop">
+    <img src="img/fuel/en-read-ok.jpg" width="585" height="615" loading="lazy" decoding="async" alt="Read from the receipt: Petron, Diesel, today 09:12. Amount 250.00 and Litres 49.309 marked from receipt. Odometer empty. Save button">
+  </figure>
+  <ol class="legend">
+    <li><span class="msg">&#10003; Read from the receipt</span>, and under it: station &middot; fuel &middot; date and time on the receipt. If the receipt date is not the fuel date, or the fuel is not diesel, this line turns <b>orange</b>. Check your receipt.</li>
+    <li>The RM and litres boxes are filled, marked <span class="msg">&#10003; from receipt</span>.</li>
+    <li><b>Check them against the receipt.</b> If one is wrong, fix it. The <span class="msg">&#10003; from receipt</span> mark goes away when you change a number.</li>
+  </ol>
+  <h3>When the form does not fill them in</h3>
+  <p>The form <b>only</b> fills in numbers it is sure of. When it is not sure, the boxes stay empty:</p>
+  <figure class="crop">
+    <img src="img/fuel/en-unsure.jpg" width="585" height="231" loading="lazy" decoding="async" alt="Orange words Not sure, please type, and empty Amount and Litres boxes">
+  </figure>
+  <table>
+    <tr><th>Message</th><th>What to do</th></tr>
+    <tr><td><span class="msg">Not sure — please type</span><br><span class="msg">Could not read it — please type</span></td><td>Type the RM and litres from the receipt.</td></tr>
+    <tr><td><span class="msg">Photo blurry</span><br><span class="msg">Receipt too far</span><br><span class="msg">Numbers covered</span><br><span class="msg">Too dark or shiny</span></td><td>Tap <span class="ui warn">Retake photo</span> and take a better photo. Or type them yourself.</td></tr>
+    <tr><td><span class="msg">2 receipts in 1 photo</span></td><td>Tap <span class="ui warn">Retake photo</span> and photograph <b>one receipt only</b>.</td></tr>
+  </table>
+  <div class="pair">
+    <figure class="crop">
+      <img src="img/fuel/en-blurry.jpg" width="585" height="210" loading="lazy" decoding="async" alt="Photo blurry. Flat, close and in good light. Retake photo button">
+      <figcaption>Blurry photo: tap <b>Retake photo</b>.</figcaption>
+    </figure>
+    <figure class="crop">
+      <img src="img/fuel/en-two.jpg" width="585" height="210" loading="lazy" decoding="async" alt="2 receipts in 1 photo. One receipt per photo. Retake photo button">
+      <figcaption>Two receipts in one photo: take one receipt only.</figcaption>
+    </figure>
+  </div>
+  <!-- 2026-11-02 approved by the user: prepay receipts print no litres and the amount is "not final", so the driver copies RM and litres from the pump display -->
+  <h3>PREPAY receipts (no litres)</h3>
+  <p>Some receipts say <code>* PREPAY SALE IS NOT FINAL *</code>. These receipts have <b>no litres</b>, so the form cannot fill them in. Before you leave the pump, look at the <b>pump display</b> and type the <b>RM and litres as shown on the pump</b>.</p>
+</section>
+
+<!-- 5 -->
+<section id="odometer">
+  <h2><span class="n">5</span>Odometer</h2>
+  <p>Type the number on the <b>lorry's odometer now</b>, every time you fuel. Not a guess, not yesterday's number.</p>
+  <ul>
+    <li>Under the box you see the last reading, for example <span class="msg">Last: 85,420 km &middot; 23 Oct</span>. Your number must be higher.</li>
+    <li>If it says in green <span class="msg">Already sent today</span>, this lorry already has a fuel entry today. <b>Do not send the same receipt twice.</b></li>
+  </ul>
+  <figure class="crop">
+    <img src="img/fuel/en-already.jpg" width="585" height="164" loading="lazy" decoding="async" alt="Odometer box with green words Already sent today 85,612 km">
+  </figure>
+  <div class="box tip">
+    <p><b>Why every time?</b> The office works out distance and fuel per km from today's odometer minus the last one. A wrong number = wrong figures.</p>
+  </div>
+</section>
+
+<!-- 6 -->
+<section id="save">
+  <h2><span class="n">6</span>Save</h2>
+  <figure class="phone">
+    <img src="img/fuel/en-ready.jpg" width="585" height="1266" loading="lazy" decoding="async" alt="Full screen: RM 250.00, Litres 49.309, Odometer 85612, Save button">
+    <figcaption>All boxes filled. Tap <b>Save</b>.</figcaption>
+  </figure>
+  <ol>
+    <li>Tap <span class="ui go">Save</span>. A blue <span class="msg">Saving&hellip;</span> screen appears. Do not close the form.</li>
+    <li>Wait for the <span class="tag done">Saved</span> screen, with the RM, litres, lorry, odometer, date and time.</li>
+    <li>Tap <span class="ui pri">Done</span>. Your lorry and name stay for the next receipt.</li>
+  </ol>
+  <div class="pair">
+    <figure class="phone">
+      <img src="img/fuel/en-saving.jpg" width="585" height="1266" loading="lazy" decoding="async" alt="Blue screen with the word Saving">
+      <figcaption>Saving&hellip;</figcaption>
+    </figure>
+    <figure class="phone">
+      <img src="img/fuel/en-saved.jpg" width="585" height="1266" loading="lazy" decoding="async" alt="Saved screen: RM 250.00, 49.309 L, VHT 4642, 85,612 km, Today, Done button">
+      <figcaption>Saved: the entry is in the system.</figcaption>
+    </figure>
+  </div>
+  <h3>Not confirmed yet</h3>
+  <p>With a weak signal, the form may not be able to make sure the entry arrived. It will <b>not</b> say &ldquo;Saved&rdquo;. Instead an orange box appears:</p>
+  <figure class="crop">
+    <img src="img/fuel/en-unconfirmed.jpg" width="585" height="300" loading="lazy" decoding="async" alt="Orange box Not confirmed yet with odometer, RM, litres, lorry and a Check button">
+  </figure>
+  <ol>
+    <li>Tap <span class="ui pri">Check</span> when you have signal. The form checks whether the entry arrived.</li>
+    <li>If it says <span class="msg">Still not confirmed</span>, wait a minute and tap <span class="ui pri">Check</span> again.</li>
+    <li>Only if it says <span class="msg">It did not reach the system. Tap Send again.</span>, tap <span class="ui">Send again</span>.</li>
+  </ol>
+  <div class="box warn">
+    <p><b>Do not fill in a new form for the same receipt</b> while this box is there. Your entry is kept on the phone, even if the form is closed.</p>
+  </div>
+  <h3>Not saved. Try again.</h3>
+  <p>These red words mean the entry did <b>not</b> arrive. Everything you filled in is still there. Tap <span class="ui go">Save</span> again. With no internet you see <span class="msg">No signal. Try again when you have signal.</span></p>
+</section>
+
+<!-- 7 -->
+<section id="no-refuel">
+  <h2><span class="n">7</span>No refuel</h2>
+  <p>No fuel today? Do not fill in the whole form.</p>
+  <ol>
+    <li>Make sure your lorry and name are right.</li>
+    <li>Tap the red <span class="ui danger">No refuel</span> button (before taking a photo).</li>
+    <li>The question <span class="msg">No refuel today?</span> appears with the lorry and name. Tap <span class="ui pri">Yes, send</span>. Tap <span class="ui">Cancel</span> if you tapped by mistake.</li>
+  </ol>
+  <figure class="phone">
+    <img src="img/fuel/en-sheet-nofuel.jpg" width="585" height="1266" loading="lazy" decoding="async" alt="Question No refuel today? VHT 4642, ALI BIN AHMAD, Cancel and Yes, send buttons">
+  </figure>
+  <p>No odometer, RM, litres or photo needed. If the signal drops, you see <span class="msg">Not sure it was saved. Check your signal and try again.</span> Tap again when you have signal.</p>
+</section>
+
+<!-- 8 -->
+<section id="checks">
+  <h2><span class="n">8</span>Checks before saving</h2>
+  <p>When you tap Save, the form checks your numbers. Nothing is sent until they are right.</p>
+  <table>
+    <tr><th>You see</th><th>Meaning and what to do</th></tr>
+    <tr><td><span class="msg" style="color:var(--red-700)">Required</span></td><td>This box is empty. Fill it in.</td></tr>
+    <tr><td><span class="msg" style="color:var(--red-700)">Over RM 500 — check again</span></td><td>More than RM 500 cannot be saved. Check the receipt: probably a typing mistake. If it really is more than RM 500, tell your supervisor.</td></tr>
+    <tr><td><span class="msg">Odometer lower than last time?</span></td><td>Your odometer is lower than the last reading. Tap <span class="ui">Change</span> and fix it. Tap <span class="ui pri">Yes, correct</span> only if the number really is right.</td></tr>
+    <tr><td><span class="msg">+2,580 km since last time?</span></td><td>A jump of more than 1,500 km. Usually a typing mistake. Check the odometer.</td></tr>
+    <tr><td><span class="msg">RM 25.00 per litre?</span><br>Amount and litres swapped?</td><td>The price per litre makes no sense. The RM and litres may be swapped, or the litres are wrong.</td></tr>
+    <tr><td><span class="msg" style="color:var(--red-700)">Same as the driver</span></td><td>The 2nd driver is the same person as the driver. Pick someone else or leave it empty.</td></tr>
+  </table>
+  <figure class="crop">
+    <img src="img/fuel/en-over500.jpg" width="585" height="192" loading="lazy" decoding="async" alt="Amount box 2432.34 with red words Over RM 500, check again">
+  </figure>
+  <div class="pair">
+    <figure class="phone">
+      <img src="img/fuel/en-sheet-odo.jpg" width="585" height="1266" loading="lazy" decoding="async" alt="Question Odometer lower than last time? with Change and Yes, correct buttons">
+    </figure>
+    <figure class="phone">
+      <img src="img/fuel/en-sheet-rmpl.jpg" width="585" height="1266" loading="lazy" decoding="async" alt="Question RM 25.00 per litre? Amount and litres swapped? with Change and Yes, correct buttons">
+    </figure>
+  </div>
+</section>
+
+<!-- 9 -->
+<section id="faq">
+  <h2><span class="n">9</span>Common questions</h2>
+  <h3>The form disappeared after opening the camera</h3>
+  <p>Some phones close the form while the camera is open. Open the link again. The numbers you already typed are still there (for 1 hour). Take the photo again.</p>
+  <h3>The lorry list does not appear</h3>
+  <p>If the lorry box says <span class="msg">&#9888; Tap to retry</span>, tap it. The form also retries by itself.</p>
+  <h3>Grey dot</h3>
+  <p>No internet. You can still fill in the form, but wait for signal before tapping Save.</p>
+  <h3>Wrong date, lorry or name</h3>
+  <p>Tap <b>Change</b> on the trip box and fix it.</p>
+  <!-- 2026-11-02 approved by the user: two refuels on one day = one entry per receipt -->
+  <h3>Fuelled twice in one day</h3>
+  <p>Send <b>each receipt</b> as its own entry: photo of the first receipt, Save, Done, then photo of the second receipt and Save again.</p>
+</section>
+
+<!-- 10 -->
+<section id="rules">
+  <h2><span class="n">10</span>Important rules</h2>
+  <div class="box good">
+    <p><b>Please submit on the same day. Thank you!</b> Send it right after fuelling, while the receipt is still in your hand.</p>
+  </div>
+  <ul>
+    <li><b>1 receipt = 1 photo = 1 entry.</b> The whole receipt in the photo, numbers clear.</li>
+    <li>The <b>real</b> odometer every time.</li>
+    <li>RM and litres must match the receipt. Do not change numbers that are right.</li>
+    <li>Do not send the same receipt twice.</li>
+    <li>If you see <span class="tag wait">Not confirmed yet</span>, tap <span class="ui pri">Check</span>. Do not fill it in again.</li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  CLF Trading Sdn. Bhd. &middot; Driver manual, Fuel form &middot; October 2026<br>
+  The screenshots use <b>sample</b> lorries, drivers and receipts, not real data. If your screen looks a little different, follow your screen.
+</footer>
+
+</body>
+</html>

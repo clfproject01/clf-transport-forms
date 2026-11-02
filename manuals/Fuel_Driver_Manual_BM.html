@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#FBCE07">
+<title>Panduan Pemandu: Borang Minyak (CLF Trading)</title>
+<!-- 2026-10-24: manual for the new Fuel form (yellow bar, photo first, BM / EN). Same layout as the POD manual;
+     the header is yellow like the form itself, so a driver sees at once which form it is about.
+     Screenshots in img/fuel/: the real form with SAMPLE data (made with fuel-redesign/manual_shots.mjs). -->
+<style>
+  :root{
+    --navy:#141C77; --navy-2:#0E1458; --navy-50:#EEF0FA;
+    --fuel:#FBCE07; --fuel-50:#FFF8DB;
+    --red:#FC091B; --red-700:#C8101E; --red-50:#FEF2F2;
+    --green:#15803D; --green-50:#ECFDF3;
+    --amber:#B45309; --amber-50:#FFFBEB;
+    --ink:#0F172A; --ink-2:#475569; --ink-3:#64748B;
+    --line:#E2E8F0; --bg:#FFFFFF; --bg-2:#F4F6FA;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg-2);color:var(--ink);font:17px/1.6 var(--font)}
+  a{color:var(--navy)}
+  .top{background:var(--fuel);color:var(--navy)}
+  .top-in{max-width:760px;margin:0 auto;padding:22px 16px 24px}
+  .kicker{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;opacity:.85}
+  h1{font-size:28px;line-height:1.2;margin:6px 0 8px;font-weight:800}
+  .lead{margin:0;font-size:16px}
+  .lang{display:inline-block;margin-top:14px;padding:6px 14px;border:1.5px solid var(--navy);border-radius:999px;color:var(--navy);text-decoration:none;font-weight:700;font-size:14px}
+  main{max-width:760px;margin:0 auto;background:var(--bg);padding:6px 16px 40px}
+  .summary{background:var(--fuel-50);border-radius:14px;padding:14px 16px;margin:16px 0}
+  .summary h2{margin:0 0 6px;font-size:19px}
+  .summary ol{margin:0;padding-left:22px}
+  .summary li{margin:5px 0}
+  nav.toc{margin:18px 0 6px}
+  nav.toc ol{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+  nav.toc a{display:flex;gap:8px;align-items:center;height:100%;padding:7px 9px;border:1px solid var(--line);border-radius:10px;text-decoration:none;color:var(--ink);font-weight:700;font-size:14px;line-height:1.3;background:#fff}
+  nav.toc a span{flex:none;width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+  @media (min-width:350px){ nav.toc ol{grid-template-columns:1fr 1fr} }
+  a.open{display:block;margin:8px 0;padding:10px 14px;border:1.5px solid var(--navy);border-radius:12px;background:var(--navy-50);color:var(--navy);text-decoration:none}
+  a.open b{display:block;font-size:17px}
+  a.open small{display:block;font-size:13px;line-height:1.4;color:var(--ink-2);overflow-wrap:anywhere}
+  section{border-top:1px solid var(--line);margin-top:30px;padding-top:4px}
+  h2{display:flex;align-items:center;gap:10px;font-size:22px;line-height:1.25;margin:20px 0 10px}
+  h2 .n{flex:none;width:34px;height:34px;border-radius:50%;background:var(--navy);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:17px}
+  h3{font-size:18px;line-height:1.3;margin:24px 0 6px}
+  p{margin:10px 0}
+  ol,ul{padding-left:24px;margin:10px 0}
+  li{margin:7px 0}
+  code{font:15px/1.4 Consolas,Menlo,monospace;background:var(--bg-2);border:1px solid var(--line);border-radius:6px;padding:1px 5px;word-break:break-all}
+  .ui{display:inline-block;padding:0 7px;border:1.5px solid #CBD5E1;border-radius:7px;background:#fff;font-weight:800;font-size:.9em;line-height:1.55;white-space:nowrap;color:var(--ink)}
+  .ui.go{background:var(--green);border-color:var(--green);color:#fff}
+  .ui.pri{background:var(--navy);border-color:var(--navy);color:#fff}
+  .ui.danger{background:var(--red-700);border-color:var(--red-700);color:#fff}
+  .ui.warn{background:var(--amber-50);border-color:var(--amber);color:var(--amber)}
+  .tag{display:inline-block;padding:0 8px;border-radius:999px;font-weight:800;font-size:.85em;line-height:1.6;white-space:nowrap}
+  .tag.wait{background:var(--amber-50);color:var(--amber)}
+  .tag.done{background:var(--green-50);color:var(--green)}
+  .tag.fail{background:var(--red-50);color:var(--red-700)}
+  .msg{font-weight:700}
+  .box{border-radius:12px;padding:12px 14px;margin:16px 0;border-left:5px solid}
+  .box p{margin:6px 0}
+  .box.tip{background:var(--navy-50);border-color:var(--navy)}
+  .box.warn{background:var(--amber-50);border-color:var(--amber)}
+  .box.stop{background:var(--red-50);border-color:var(--red-700)}
+  .box.good{background:var(--green-50);border-color:var(--green)}
+  figure{margin:18px auto;text-align:center}
+  figure img{display:block;width:100%;height:auto;margin:0 auto;background:#fff}
+  figure.phone{max-width:290px}
+  figure.phone img{border-radius:22px;border:1px solid #CBD5E1;box-shadow:0 6px 18px rgba(15,23,42,.15)}
+  figure.crop{max-width:400px}
+  figure.crop img{border-radius:14px;border:1px solid var(--line);box-shadow:0 3px 10px rgba(15,23,42,.08)}
+  figure.bar{max-width:560px}
+  figure.bar img{border-radius:10px;border:1px solid var(--line)}
+  figure.wide{max-width:600px}
+  figure.wide img{border-radius:12px;border:1px solid var(--line)}
+  figcaption{font-size:14px;color:var(--ink-3);margin-top:8px;line-height:1.45}
+  .pair{display:grid;gap:4px}
+  @media (min-width:640px){ .pair{grid-template-columns:1fr 1fr;align-items:start;gap:18px} .pair figure{margin:18px 0} }
+  ol.legend{list-style:none;padding:0;counter-reset:lg}
+  ol.legend > li{position:relative;padding-left:40px;min-height:30px;counter-increment:lg}
+  ol.legend > li::before{content:counter(lg);position:absolute;left:0;top:0;width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;font-weight:800;font-size:15px;line-height:28px;text-align:center;box-shadow:0 0 0 2px #fff,0 1px 4px rgba(0,0,0,.35)}
+  table{border-collapse:collapse;width:100%;margin:12px 0;font-size:16px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--bg-2)}
+  footer{max-width:760px;margin:0 auto;padding:18px 16px 40px;color:var(--ink-3);font-size:14px}
+  @media print{
+    body{background:#fff;font-size:11.5pt}
+    .top{background:#fff;border-bottom:3px solid var(--fuel)}
+    .top-in{padding:0 0 10px}
+    .lang,nav.toc{display:none}
+    main{max-width:none;padding:0}
+    section{border-top:1px solid #999}
+    figure,.box,.summary,table,ol.legend > li{break-inside:avoid}
+    h2,h3{break-after:avoid}
+    figure.phone{max-width:58mm} figure.crop{max-width:95mm} figure.bar{max-width:120mm} figure.wide{max-width:130mm}
+    figure img{box-shadow:none !important}
+    a{color:inherit;text-decoration:none}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in">
+    <div class="kicker">CLF Trading &middot; Panduan Pemandu</div>
+    <h1>Borang Minyak: Resit Minyak Harian</h1>
+    <p class="lead">Cara hantar resit minyak dengan telefon, langkah demi langkah. Untuk borang Minyak yang baharu (bar kuning).</p>
+    <a class="lang" href="Fuel_Driver_Manual_EN.html" lang="en">English version</a>
+  </div>
+</header>
+
+<main>
+
+<div class="summary">
+  <h2>Ringkasnya</h2>
+  <ol>
+    <li>Buka borang Minyak (bar <b>kuning</b>). Semak <b>lori</b>, <b>nama anda</b> dan <b>tarikh</b>.</li>
+    <li>Tekan <span class="ui">Ambil foto resit</span>. Borang baca resit dan isi <b>RM</b> dan <b>liter</b> untuk anda.</li>
+    <li>Semak dengan resit, kemudian taip <b>odometer</b>.</li>
+    <li>Tekan <span class="ui go">Simpan</span>. Tunggu sehingga keluar <span class="tag done">Disimpan</span>.</li>
+    <li>Tak isi minyak hari ini? Tekan butang merah <span class="ui danger">Tak isi minyak</span>.</li>
+  </ol>
+</div>
+
+<nav class="toc" aria-label="Kandungan">
+  <ol>
+    <li><a href="#buka"><span>1</span>Buka borang</a></li>
+    <li><a href="#perjalanan"><span>2</span>Lori, pemandu dan tarikh</a></li>
+    <li><a href="#foto"><span>3</span>Ambil foto resit</a></li>
+    <li><a href="#semak"><span>4</span>Semak RM dan liter</a></li>
+    <li><a href="#odometer"><span>5</span>Odometer</a></li>
+    <li><a href="#simpan"><span>6</span>Simpan</a></li>
+    <li><a href="#tak-isi"><span>7</span>Tak isi minyak</a></li>
+    <li><a href="#semakan"><span>8</span>Semakan sebelum simpan</a></li>
+    <li><a href="#soalan"><span>9</span>Soalan lazim</a></li>
+    <li><a href="#peraturan"><span>10</span>Peraturan penting</a></li>
+  </ol>
+</nav>
+
+<!-- 1 -->
+<section id="buka">
+  <h2><span class="n">1</span>Buka borang</h2>
+  <p>Buka pautan cawangan <b>anda</b>:</p>
+  <a class="open" href="https://clfproject01.github.io/clf-transport-forms/CLF_Fuel_Form.html"><b>Buka borang Minyak Mentakab</b><small>clfproject01.github.io/clf-transport-forms/CLF_Fuel_Form.html</small></a>
+  <a class="open" href="https://clfproject01.github.io/clf-transport-forms/CLF_Fuel_Form.html?branch=KTN"><b>Buka borang Minyak Kuantan</b><small>clfproject01.github.io/clf-transport-forms/CLF_Fuel_Form.html?branch=KTN</small></a>
+  <p>Pautan Kuantan berakhir dengan <code>?branch=KTN</code>. Pautan lama anda masih boleh digunakan.</p>
+  <figure class="bar">
+    <img src="img/fuel/bm-bar.jpg" width="585" height="84" loading="lazy" decoding="async" alt="Bar kuning di atas borang: logo, MINYAK, nama cawangan Mentakab, titik hijau, butang BM dan EN">
+  </figure>
+  <ol class="legend">
+    <li><b>Bar kuning dan MINYAK</b> = borang minyak. Borang POD ada bar <b>biru</b>. Pastikan anda buka borang yang betul.</li>
+    <li><b>Nama cawangan.</b> Mesti cawangan anda. Jika tertulis cawangan lain, anda buka pautan yang salah.</li>
+    <li><b>Titik hijau</b> = ada internet. <b>Titik kelabu</b> = tiada internet.</li>
+    <li><span class="ui">BM</span> <span class="ui">EN</span> untuk tukar bahasa. Telefon ingat pilihan anda, juga untuk borang POD.</li>
+  </ol>
+</section>
+
+<!-- 2 -->
+<section id="perjalanan">
+  <h2><span class="n">2</span>Lori, pemandu dan tarikh</h2>
+  <p>Kotak <b>Maklumat perjalanan</b> berada di atas sekali. Kali pertama, kotak ini terbuka dan kosong.</p>
+  <div class="pair">
+    <figure class="crop">
+      <img src="img/fuel/bm-trip-start.jpg" width="585" height="624" loading="lazy" decoding="async" alt="Kotak Maklumat perjalanan yang belum diisi: Lori, Pemandu, Pemandu kedua dan Tarikh">
+      <figcaption>Kali pertama: kotak kosong.</figcaption>
+    </figure>
+    <figure class="crop">
+      <img src="img/fuel/bm-trip-finding.jpg" width="585" height="624" loading="lazy" decoding="async" alt="Lori VHT 4642 dipilih, kotak Pemandu tertulis Mencari pemandu">
+      <figcaption>Lori dipilih: borang cari pemandu.</figcaption>
+    </figure>
+  </div>
+  <ol>
+    <li><b>Lori:</b> pilih nombor lori yang anda isi minyak <b>dahulu</b>. Kotak Pemandu tertulis <span class="msg">Mencari pemandu&hellip;</span> sekejap.</li>
+    <li><b>Pemandu:</b> nama anda biasanya terisi sendiri, dari jadual pejabat untuk lori itu atau dari ingatan telefon. Semak betul atau tidak. Jika kosong atau salah, taip ID staf anda (contoh <code>901</code>) atau nama anda, kemudian tekan nama anda dalam senarai.</li>
+    <li><b>Pemandu kedua (jika ada):</b> isi hanya jika dua orang dalam lori. Jika seorang, biarkan kosong.</li>
+    <li><b>Tarikh:</b> sudah diisi dengan tarikh hari ini (tertulis <span class="msg">Hari ini</span>). Tukar hanya jika anda isi minyak pada hari lain. Tarikh esok tidak boleh dipilih.</li>
+  </ol>
+  <div class="box warn">
+    <p><b>Tukar lori = semak nama semula.</b> Setiap kali lori ditukar, nama dicari semula untuk lori baharu. Pastikan nama yang keluar ialah nama anda.</p>
+  </div>
+  <h3>Kotak dilipat jadi 3 baris</h3>
+  <p>Bila lori, nama dan tarikh sudah lengkap, kotak dilipat jadi 3 baris: lori, tarikh, nama. Tekan <b>Ubah</b> untuk buka semula, tekan <b>Siap</b> untuk lipat semula. Telefon <b>ingat</b> lori dan nama anda, jadi esok semuanya sudah terisi.</p>
+  <div class="pair">
+    <figure class="crop">
+      <img src="img/fuel/bm-trip-folded.jpg" width="585" height="156" loading="lazy" decoding="async" alt="Kotak dilipat: VHT 4642, Hari ini, ALI BIN AHMAD, butang Ubah">
+      <figcaption>Semua betul: tarikh tertulis <b>Hari ini</b>.</figcaption>
+    </figure>
+    <figure class="crop">
+      <img src="img/fuel/bm-trip-amber.jpg" width="585" height="156" loading="lazy" decoding="async" alt="Kotak dilipat dengan tarikh semalam berwarna oren">
+      <figcaption>Tarikh <b>bukan hari ini</b> bertukar oren. Betul ke? Jika salah, tekan <b>Ubah</b>.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- 3 -->
+<section id="foto">
+  <h2><span class="n">3</span>Ambil foto resit</h2>
+  <p>Selepas lori dan nama siap, kotak minyak hanya ada dua butang: <span class="ui">Ambil foto resit</span> dan butang merah <span class="ui danger">Tak isi minyak</span>.</p>
+  <figure class="phone">
+    <img src="img/fuel/bm-step1.jpg" width="585" height="1266" loading="lazy" decoding="async" alt="Skrin borang: kotak perjalanan dilipat, butang besar Ambil foto resit dan butang merah Tak isi minyak">
+  </figure>
+  <ol>
+    <li>Tekan <span class="ui">Ambil foto resit</span>. Pilih <b>kamera</b>, atau pilih foto resit yang sudah diambil dari <b>galeri</b>.</li>
+    <li>Ambil foto <b>seluruh resit</b> seperti di bawah.</li>
+    <li>Tunggu beberapa saat. Borang tertulis <span class="msg">Membaca resit&hellip;</span>.</li>
+  </ol>
+  <figure class="wide">
+    <img src="img/fuel/photo-tips.jpg" width="920" height="400" loading="lazy" decoding="async" alt="Tiga foto resit contoh: jelas dan dekat (betul), kabur (salah), terlalu jauh (salah)">
+    <figcaption>Kiri: betul. Tengah: kabur. Kanan: terlalu jauh.</figcaption>
+  </figure>
+  <div class="box tip">
+    <p><b>Foto yang baik:</b></p>
+    <ul>
+      <li>Letak resit <b>rata</b>, ambil dari <b>dekat</b>, di tempat <b>terang</b>.</li>
+      <li>Seluruh resit dalam bingkai, nombor tidak kabur.</li>
+      <li><b>Satu foto, satu resit.</b></li>
+      <li>Jangan tutup nombor dengan jari.</li>
+    </ul>
+  </div>
+  <figure class="crop">
+    <img src="img/fuel/bm-reading.jpg" width="585" height="171" loading="lazy" decoding="async" alt="Gambar kecil resit dan tulisan Membaca resit">
+    <figcaption>Borang sedang membaca resit.</figcaption>
+  </figure>
+</section>
+
+<!-- 4 -->
+<section id="semak">
+  <h2><span class="n">4</span>Semak RM dan liter</h2>
+  <p>Jika resit dapat dibaca dengan pasti, borang isi <b>Jumlah (RM)</b> dan <b>Liter</b> untuk anda.</p>
+  <figure class="crop">
+    <img src="img/fuel/bm-read-ok.jpg" width="585" height="615" loading="lazy" decoding="async" alt="Dibaca dari resit: Petron, Diesel, hari ini 09:12. Jumlah 250.00 dan Liter 49.309 dengan tanda dari resit. Odometer kosong. Butang Simpan">
+  </figure>
+  <ol class="legend">
+    <li><span class="msg">&#10003; Dibaca dari resit</span>, dan di bawahnya: stesen &middot; jenis minyak &middot; tarikh dan masa pada resit. Jika tarikh resit bukan tarikh isi minyak, atau minyak bukan diesel, baris ini bertukar <b>oren</b>. Semak resit anda.</li>
+    <li>Kotak RM dan liter sudah diisi, dengan tanda <span class="msg">&#10003; dari resit</span>.</li>
+    <li><b>Semak dengan resit.</b> Jika salah, betulkan nombor itu. Tanda <span class="msg">&#10003; dari resit</span> hilang bila anda ubah nombor.</li>
+  </ol>
+  <h3>Bila borang tidak isi</h3>
+  <p>Borang <b>hanya</b> isi nombor yang ia pasti betul. Jika tidak pasti, kotak dibiarkan kosong:</p>
+  <figure class="crop">
+    <img src="img/fuel/bm-unsure.jpg" width="585" height="231" loading="lazy" decoding="async" alt="Tulisan oren Tak pasti, isi sendiri, dan kotak Jumlah dan Liter kosong">
+  </figure>
+  <table>
+    <tr><th>Mesej</th><th>Apa perlu buat</th></tr>
+    <tr><td><span class="msg">Tak pasti — isi sendiri</span><br><span class="msg">Tak dapat dibaca — isi sendiri</span></td><td>Taip RM dan liter dari resit.</td></tr>
+    <tr><td><span class="msg">Foto kabur</span><br><span class="msg">Resit terlalu jauh</span><br><span class="msg">Nombor terlindung</span><br><span class="msg">Terlalu gelap / silau</span></td><td>Tekan <span class="ui warn">Ambil foto semula</span> dan ambil foto yang lebih baik. Atau taip sendiri.</td></tr>
+    <tr><td><span class="msg">2 resit dalam 1 foto</span></td><td>Tekan <span class="ui warn">Ambil foto semula</span> dan ambil foto <b>satu resit sahaja</b>.</td></tr>
+  </table>
+  <div class="pair">
+    <figure class="crop">
+      <img src="img/fuel/bm-blurry.jpg" width="585" height="210" loading="lazy" decoding="async" alt="Foto kabur. Rata, dekat dan terang. Butang Ambil foto semula">
+      <figcaption>Foto kabur: tekan <b>Ambil foto semula</b>.</figcaption>
+    </figure>
+    <figure class="crop">
+      <img src="img/fuel/bm-two.jpg" width="585" height="210" loading="lazy" decoding="async" alt="2 resit dalam 1 foto. Satu resit, satu foto. Butang Ambil foto semula">
+      <figcaption>Dua resit dalam satu foto: ambil satu resit sahaja.</figcaption>
+    </figure>
+  </div>
+  <!-- 2026-11-02 approved by the user: prepay receipts print no litres and the amount is "not final", so the driver copies RM and litres from the pump display -->
+  <h3>Resit PREPAY (tiada liter)</h3>
+  <p>Sesetengah resit tertulis <code>* PREPAY SALE IS NOT FINAL *</code>. Resit ini <b>tidak ada liter</b>, jadi borang tidak dapat isi. Sebelum tinggalkan pam, lihat <b>skrin pam</b> dan taip <b>RM dan liter seperti di skrin pam</b>.</p>
+</section>
+
+<!-- 5 -->
+<section id="odometer">
+  <h2><span class="n">5</span>Odometer</h2>
+  <p>Taip nombor pada <b>odometer lori sekarang</b>, setiap kali anda isi minyak. Bukan anggaran, bukan nombor semalam.</p>
+  <ul>
+    <li>Di bawah kotak tertulis bacaan lepas, contoh <span class="msg">Lepas: 85,420 km &middot; 23 Okt</span>. Nombor anda mesti lebih besar.</li>
+    <li>Jika tertulis hijau <span class="msg">Sudah dihantar hari ini</span>, lori ini sudah ada rekod minyak hari ini. <b>Jangan hantar resit yang sama dua kali.</b></li>
+  </ul>
+  <figure class="crop">
+    <img src="img/fuel/bm-already.jpg" width="585" height="164" loading="lazy" decoding="async" alt="Kotak Odometer dengan tulisan hijau Sudah dihantar hari ini 85,612 km">
+  </figure>
+  <div class="box tip">
+    <p><b>Kenapa setiap kali?</b> Pejabat kira jarak dan minyak setiap km daripada odometer hari ini tolak odometer lepas. Nombor salah = kiraan salah.</p>
+  </div>
+</section>
+
+<!-- 6 -->
+<section id="simpan">
+  <h2><span class="n">6</span>Simpan</h2>
+  <figure class="phone">
+    <img src="img/fuel/bm-ready.jpg" width="585" height="1266" loading="lazy" decoding="async" alt="Skrin lengkap: RM 250.00, Liter 49.309, Odometer 85612, butang Simpan">
+    <figcaption>Semua kotak diisi. Tekan <b>Simpan</b>.</figcaption>
+  </figure>
+  <ol>
+    <li>Tekan <span class="ui go">Simpan</span>. Skrin biru <span class="msg">Menyimpan&hellip;</span> keluar. Jangan tutup borang.</li>
+    <li>Tunggu skrin <span class="tag done">Disimpan</span>, dengan RM, liter, lori, odometer, tarikh dan masa.</li>
+    <li>Tekan <span class="ui pri">Selesai</span>. Lori dan nama anda kekal untuk resit seterusnya.</li>
+  </ol>
+  <div class="pair">
+    <figure class="phone">
+      <img src="img/fuel/bm-saving.jpg" width="585" height="1266" loading="lazy" decoding="async" alt="Skrin biru dengan tulisan Menyimpan">
+      <figcaption>Menyimpan&hellip;</figcaption>
+    </figure>
+    <figure class="phone">
+      <img src="img/fuel/bm-saved.jpg" width="585" height="1266" loading="lazy" decoding="async" alt="Skrin Disimpan: RM 250.00, 49.309 L, VHT 4642, 85,612 km, Hari ini, butang Selesai">
+      <figcaption>Disimpan: rekod masuk ke sistem.</figcaption>
+    </figure>
+  </div>
+  <h3>Belum disahkan</h3>
+  <p>Jika liputan lemah, borang mungkin tidak dapat pastikan rekod sudah masuk. Ia <b>tidak</b> akan tulis &ldquo;Disimpan&rdquo;. Sebaliknya keluar kotak oren:</p>
+  <figure class="crop">
+    <img src="img/fuel/bm-unconfirmed.jpg" width="585" height="300" loading="lazy" decoding="async" alt="Kotak oren Belum disahkan dengan odometer, RM, liter, lori dan butang Semak">
+  </figure>
+  <ol>
+    <li>Tekan <span class="ui pri">Semak</span> bila ada liputan. Borang semak sama ada rekod sudah masuk.</li>
+    <li>Jika tertulis <span class="msg">Masih belum disahkan</span>, tunggu sebentar dan tekan <span class="ui pri">Semak</span> lagi.</li>
+    <li>Hanya jika tertulis <span class="msg">Tidak masuk ke sistem. Tekan Hantar semula.</span>, tekan <span class="ui">Hantar semula</span>.</li>
+  </ol>
+  <div class="box warn">
+    <p><b>Jangan isi borang baharu untuk resit yang sama</b> semasa kotak ini ada. Rekod anda masih disimpan dalam telefon, walaupun borang ditutup.</p>
+  </div>
+  <h3>Tidak disimpan. Cuba lagi.</h3>
+  <p>Tulisan merah ini bermaksud rekod <b>tidak</b> masuk. Semua yang anda isi masih ada. Tekan <span class="ui go">Simpan</span> semula. Jika tiada internet, keluar <span class="msg">Tiada liputan. Cuba lagi bila ada liputan.</span></p>
+</section>
+
+<!-- 7 -->
+<section id="tak-isi">
+  <h2><span class="n">7</span>Tak isi minyak</h2>
+  <p>Hari ini tidak isi minyak? Jangan isi borang penuh.</p>
+  <ol>
+    <li>Pastikan lori dan nama anda betul.</li>
+    <li>Tekan butang merah <span class="ui danger">Tak isi minyak</span> (sebelum ambil foto).</li>
+    <li>Keluar soalan <span class="msg">Tak isi minyak hari ini?</span> dengan lori dan nama. Tekan <span class="ui pri">Ya, hantar</span>. Tekan <span class="ui">Batal</span> jika tersalah tekan.</li>
+  </ol>
+  <figure class="phone">
+    <img src="img/fuel/bm-sheet-nofuel.jpg" width="585" height="1266" loading="lazy" decoding="async" alt="Soalan Tak isi minyak hari ini? VHT 4642, ALI BIN AHMAD, butang Batal dan Ya, hantar">
+  </figure>
+  <p>Tiada odometer, RM, liter atau foto diperlukan. Jika liputan putus, keluar <span class="msg">Belum pasti disimpan. Semak liputan dan cuba lagi.</span> Tekan semula bila ada liputan.</p>
+</section>
+
+<!-- 8 -->
+<section id="semakan">
+  <h2><span class="n">8</span>Semakan sebelum simpan</h2>
+  <p>Bila anda tekan Simpan, borang semak nombor anda. Tiada apa dihantar sehingga semua betul.</p>
+  <table>
+    <tr><th>Anda nampak</th><th>Maksud dan apa perlu buat</th></tr>
+    <tr><td><span class="msg" style="color:var(--red-700)">Wajib diisi</span></td><td>Kotak ini kosong. Isi kotak itu.</td></tr>
+    <tr><td><span class="msg" style="color:var(--red-700)">Lebih RM 500 — semak semula</span></td><td>RM lebih 500 tidak boleh disimpan. Semak resit: mungkin salah taip. Jika memang lebih RM 500, beritahu penyelia.</td></tr>
+    <tr><td><span class="msg">Odometer lebih rendah dari lepas?</span></td><td>Odometer anda lebih kecil daripada bacaan lepas. Tekan <span class="ui">Ubah</span> dan betulkan. Tekan <span class="ui pri">Ya, betul</span> hanya jika nombor itu memang betul.</td></tr>
+    <tr><td><span class="msg">+2,580 km sejak lepas?</span></td><td>Lompatan lebih 1,500 km. Biasanya salah taip. Semak odometer.</td></tr>
+    <tr><td><span class="msg">RM 25.00 seliter?</span><br>Jumlah dan liter tertukar?</td><td>Harga seliter tidak masuk akal. Mungkin RM dan liter tertukar, atau liter salah.</td></tr>
+    <tr><td><span class="msg" style="color:var(--red-700)">Sama dengan pemandu</span></td><td>Pemandu kedua sama dengan pemandu. Pilih orang lain atau kosongkan.</td></tr>
+  </table>
+  <figure class="crop">
+    <img src="img/fuel/bm-over500.jpg" width="585" height="192" loading="lazy" decoding="async" alt="Kotak Jumlah 2432.34 dengan tulisan merah Lebih RM 500, semak semula">
+  </figure>
+  <div class="pair">
+    <figure class="phone">
+      <img src="img/fuel/bm-sheet-odo.jpg" width="585" height="1266" loading="lazy" decoding="async" alt="Soalan Odometer lebih rendah dari lepas? dengan butang Ubah dan Ya, betul">
+    </figure>
+    <figure class="phone">
+      <img src="img/fuel/bm-sheet-rmpl.jpg" width="585" height="1266" loading="lazy" decoding="async" alt="Soalan RM 25.00 seliter? Jumlah dan liter tertukar? dengan butang Ubah dan Ya, betul">
+    </figure>
+  </div>
+</section>
+
+<!-- 9 -->
+<section id="soalan">
+  <h2><span class="n">9</span>Soalan lazim</h2>
+  <h3>Borang hilang selepas buka kamera</h3>
+  <p>Sesetengah telefon tutup borang semasa kamera dibuka. Buka pautan semula. Nombor yang anda sudah taip masih ada (selama 1 jam). Ambil foto lagi.</p>
+  <h3>Senarai lori tidak keluar</h3>
+  <p>Jika kotak lori tertulis <span class="msg">&#9888; Tekan untuk cuba lagi</span>, tekan kotak itu. Borang juga cuba semula sendiri.</p>
+  <h3>Titik kelabu</h3>
+  <p>Tiada internet. Anda masih boleh isi borang, tetapi tunggu ada liputan sebelum tekan Simpan.</p>
+  <h3>Tarikh, lori atau nama salah</h3>
+  <p>Tekan <b>Ubah</b> pada kotak perjalanan dan betulkan.</p>
+  <!-- 2026-11-02 approved by the user: two refuels on one day = one entry per receipt -->
+  <h3>Isi minyak dua kali dalam sehari</h3>
+  <p>Hantar <b>setiap resit</b> sebagai satu rekod: foto resit pertama, Simpan, Selesai, kemudian foto resit kedua dan Simpan lagi.</p>
+</section>
+
+<!-- 10 -->
+<section id="peraturan">
+  <h2><span class="n">10</span>Peraturan penting</h2>
+  <div class="box good">
+    <p><b>Sila hantar pada hari yang sama. Terima kasih!</b> Hantar sejurus selepas isi minyak, semasa resit masih di tangan.</p>
+  </div>
+  <ul>
+    <li><b>1 resit = 1 foto = 1 rekod.</b> Seluruh resit dalam foto, nombor jelas.</li>
+    <li>Odometer <b>sebenar</b> setiap kali.</li>
+    <li>RM dan liter mesti sama dengan resit. Jangan ubah nombor yang betul.</li>
+    <li>Jangan hantar resit yang sama dua kali.</li>
+    <li>Jika <span class="tag wait">Belum disahkan</span>, tekan <span class="ui pri">Semak</span>. Jangan isi semula.</li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  CLF Trading Sdn. Bhd. &middot; Panduan pemandu, borang Minyak &middot; Oktober 2026<br>
+  Gambar skrin menggunakan lori, pemandu dan resit <b>contoh</b>, bukan data sebenar. Jika skrin anda berbeza sedikit, ikut skrin.
+</footer>
+
+</body>
+</html>
