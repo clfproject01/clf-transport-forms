@@ -4686,7 +4686,7 @@ document.getElementById('vehicleNo').addEventListener('change', function(){
     if (saved && ROSTER.some(function(d){ return d.name === saved; })){ ds._pick(saved, true); if (_rb) _rb.style.display = 'inline-flex'; _tripRender(); }
   }).catch(function(){});
 });
-document.getElementById('deliveryDate').addEventListener('change', function(){ _tripRender(); checkShipmentForVehicle(); });
+document.getElementById('deliveryDate').addEventListener('change', function(){ _tripRender(); if (_smMode){ if (this.value && _smAuthed()) smLoadDeliveries(); return; } checkShipmentForVehicle(); });   // [Salesman] a new date re-reads the deliveries
 
 
 /* ============================================================================
@@ -4812,6 +4812,7 @@ async function smLoadDeliveries(quiet){
   var date = document.getElementById('deliveryDate').value || new Date().toISOString().slice(0,10);
   if (!quiet){ sec.style.display='block'; sec.innerHTML = '<div style="padding:14px;text-align:center;color:#5B21B6;">' + L('Loading your deliveries…', 'Memuatkan penghantaran anda…') + '</div>'; }
   var rd = await smPost({ formType:'GET_SALESMAN_SHIPMENTS', salesmanId:_smId, pin:_smPin, date:date });
+  if (document.getElementById('deliveryDate').value && document.getElementById('deliveryDate').value !== date) return;   // the date moved on while this was loading: the newer read paints
   if (!rd || rd.status === 'error'){
     _smPin = quiet ? _smPin : '';
     smRenderGate((rd && rd.message) || L('Could not load. Check your connection.', 'Tidak dapat dimuat. Semak talian anda.'));
