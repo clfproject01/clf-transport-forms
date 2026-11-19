@@ -2390,6 +2390,7 @@ function _scanLoadImg_(blob){
 var SCAN_GOOD = 0.92;        // good enough — stop trying more candidates
 var SCAN_SURE = 0.80;        // below this the review screen asks the driver to check the edges
 var SCAN_DETECT_MS = 4000;   // no new candidate is started after this (slow phones)
+var SCAN_CROP_SURE_ONLY = true;   // [Crop-sure 2026-11-17] crop only on a sure outline; false = crop on any outline, as before
 
 // paper-ness per pixel on a ≤maxDim copy: min(R,G,B) minus 3× any warmth beyond the paper's own
 // colour cast (cast = mean R−B of the brightest 3% of pixels, so a warm-lit page is not punished)
@@ -2628,6 +2629,12 @@ async function scanInvoice_(blob, plainEntry, job){
     det = await _scanDetect_(src, job);
     var corners = det.corners;
     info.score = det.score; info.how = det.how; info.sure = det.score >= SCAN_SURE;
+    // [Crop-sure 2026-11-17] an outline the paper map does not confirm is a GUESS. Bench 2026-11-17: with other sheets
+    // of the pile around the invoice, or the page held a little close, the "page" came back as a table box inside
+    // the invoice or a skewed slice of it (score 0.12 - 0.33), the review showed that as the scan, and "Use" would
+    // have uploaded it (no original rides along). Cutting content off is the dangerous mistake: an unsure outline is
+    // no longer cropped. The whole photo is kept; Adjust opens on the guessed corners for a driver who wants the crop.
+    if (SCAN_CROP_SURE_ONLY && corners && !info.sure){ info.guess = corners; corners = null; }
     // already past 60% of the budget after finding the paper → this phone will not make it; stop now
     if (Date.now() - t0 > SCAN_SLOW_MS * 0.6 && !_scanWasHidden_(t0)) throw new Error('too slow (' + (Date.now() - t0) + ' ms)');
     // [R4 2026-10-24] flattening only on a sure outline (an unsure one already asks the driver to check the edges;
@@ -2707,12 +2714,15 @@ function _srTag_(entry){
   else if (sc.ok && sc.cropped){ t.textContent = '✓ ' + (sc.flat && sc.flat.on ? L('Flattened', 'Diratakan') : L('Scanned', 'Diimbas')); t.style.background = '#15803D'; t.style.color = '#fff';   // [R4] curled page flattened
     h.innerHTML = L('All clear? Tap <b>Use</b>. Edges cut off? Tap <b>Adjust</b>.', 'Semua jelas? Tekan <b>Guna</b>. Tepi terpotong? Tekan <b>Laras</b>.'); }
   else if (sc.ok){ t.textContent = '⚠ ' + L('Edges not found', 'Tepi tidak dikesan'); t.style.background = '#FBBF24'; t.style.color = '#412402';
-    h.innerHTML = L('Tap <b>Adjust</b> and drag the 4 corners, or <b>Retake</b>.', 'Tekan <b>Laras</b> dan tarik 4 sudut, atau <b>Ambil semula</b>.'); }
+    // [Crop-sure 2026-11-17] nothing was cut away, so the one question left is whether the whole invoice is in the photo
+    h.innerHTML = L('The whole photo is kept. Whole invoice in it? Tap <b>Use</b>. If not, <b>Retake</b>.', 'Foto penuh disimpan. Seluruh invois ada? Tekan <b>Guna</b>. Jika tidak, <b>Ambil semula</b>.'); }
   else { t.textContent = L('Normal photo (not scanned)', 'Foto biasa (tidak diimbas)'); t.style.background = '#64748B'; t.style.color = '#fff';
     var er = String(sc.err || '');
     h.innerHTML = /too slow/.test(er) ? L('Scanning is too slow on this phone. The normal photo will be used.', 'Imbasan terlalu lama di telefon ini. Foto biasa akan digunakan.')
       : /not loaded/.test(er) ? L('The scanner has not loaded yet (weak signal?). The normal photo will be used.', 'Pengimbas belum dimuat (isyarat lemah?). Foto biasa akan digunakan.')
       : L('This photo could not be scanned. The normal photo will be used.', 'Foto ini tidak dapat diimbas. Foto biasa akan digunakan.'); }
+  // [Cut-soft 2026-11-17] the border check was unhappy and no scan was there to check the edges: ask the driver
+  if (entry._cutWarn && !sc.ok) h.innerHTML += '<br>' + L('Is the whole invoice in the photo? If not, tap <b>Retake</b>.', 'Seluruh invois ada dalam foto? Jika tidak, tekan <b>Ambil semula</b>.');
   document.getElementById('srAdjust').style.display = entry._scanSrc ? '' : 'none';
   document.getElementById('srToggle').style.display = entry.origDataUrl ? '' : 'none';
 }
@@ -2773,7 +2783,7 @@ function scanAndReview_(blob, plainEntry){
         if (!entry._scanSrc || !_scanic) return;
         btns.style.visibility = 'hidden'; img.style.display = 'none'; ed.style.display = 'block';
         hint.innerHTML = L('Drag the 4 dots onto the paper corners, then tap <b>Done</b>.', 'Tarik 4 titik ke sudut kertas, kemudian tekan <b>Siap</b>.');
-        var src = entry._scanSrc, c0 = entry.scan && entry.scan.corners;
+        var src = entry._scanSrc, c0 = entry.scan && (entry.scan.corners || entry.scan.guess);   // [Crop-sure] an unsure outline is where Adjust starts
         if (!c0){ var mx = src.width * 0.08, my = src.height * 0.08;
           c0 = { topLeft: { x: mx, y: my }, topRight: { x: src.width - mx, y: my }, bottomRight: { x: src.width - mx, y: src.height - my }, bottomLeft: { x: mx, y: src.height - my } }; }
         try{
@@ -3728,9 +3738,13 @@ async function onShipPhoto(input){
     // [E5] quality gate (same rules the retired manual upload had): 1-2 = retake only (shot discarded; the
     // input resets below so tapping re-opens the camera), >=3 may "Upload anyway" → flagged.
     try {
-      if (entry.quality && !entry.quality.ok){
+      // [Cut-soft 2026-11-17] "cut" alone goes on to the scan review (the scanner checks the edges), like the in-page camera
+      var _softO = AC_CUT_SOFT && typeof SCANNER_ON !== 'undefined' && SCANNER_ON;
+      var _badO = (entry.quality && !entry.quality.ok) ? entry.quality.reasons.filter(function(x){ return !(_softO && x === 'cut'); }) : [];
+      if (entry.quality && !entry.quality.ok && !_badO.length) entry._cutWarn = true;
+      if (_badO.length){
         _qGateTries++;
-        var act = await showQualityGate_(entry.quality.reasons, _qGateTries >= 3);
+        var act = await showQualityGate_(_badO, _qGateTries >= 3);
         if (act !== 'anyway') continue;   // discarded — not buffered
         entry.qualityFlag = true;
       }
@@ -3785,6 +3799,14 @@ var AC_STABLE_FRAMES = 5;        // consecutive passing+still frames before auto
 var AC_MOTION_MAX = 6;           // mean |Δluminance| per pixel (0-255) on a 48px map: below = "still"
 var AC_CHANGE_MIN = 12;          // mean |Δ| vs the frame we just SHOT before re-arming (stops double-shooting the same page)
 var AC_COOLDOWN_MS = 1500;
+// [Cut-soft 2026-11-17] Field video 2026-11-16: a 20-invoice stop sat on "Fit the whole invoice in the frame" for
+// 30 s and never shot. The border check ("cut") cannot tell the invoice from other white things at the edge of the
+// view (the rest of the pile, a paper beside it) and it fires when the page is held a little close. It now only
+// DELAYS the auto shutter (the hint shows for ~1 s, then the normal "Hold" second runs) and it never refuses a
+// shot: the scanner checks the page's 4 edges next and the review screen asks the driver when it is not sure.
+// Blur and exposure block exactly as before. With the scanner switched off the old strict behaviour stays.
+var AC_CUT_SOFT = true;          // false = "cut" blocks the shutter and refuses the shot, as before
+var AC_CUT_NUDGE_FRAMES = 5;     // how long the "fit the whole invoice" hint shows before the shutter arms anyway (~1 s)
 var AC_MANUAL_HINT_MS = 8000;    // no auto shot after this → remind the driver the big button works too
 var AC_READY_TIMEOUT_MS = 6000;  // camera stream not ready in time → fallback
 // [Round2 2026-10-23] a faint drawing of an invoice sits in the A4 frame while the camera starts and for a moment
@@ -4056,8 +4078,10 @@ function _acTick(s){
     }
     // 4) the very same three checks as the upload gate
     var qr = checkPhotoQuality_(c, ctx), r = qr.reasons || [], msg = null;
+    // [Cut-soft] "cut" is a hint, not a wall, while the scanner + review screen are there to judge the edges
+    var soft = AC_CUT_SOFT && typeof SCANNER_ON !== 'undefined' && SCANNER_ON, isCut = r.indexOf('cut') >= 0;
     if (r.indexOf('exposure') >= 0) msg = mean < 40 ? L('Too dark, more light please', 'Terlalu gelap, perlu cahaya') : L('Too bright or glare', 'Terlalu terang atau silau');
-    else if (r.indexOf('cut') >= 0) msg = L('Fit the whole invoice in the frame', 'Masukkan seluruh invois dalam bingkai');
+    else if (isCut && !soft) msg = L('Fit the whole invoice in the frame', 'Masukkan seluruh invois dalam bingkai');
     else if (r.indexOf('blur') >= 0) msg = mean < 90 ? L('Put the invoice in the frame', 'Letak invois dalam bingkai') : L('Move closer and hold steady', 'Dekat sikit dan pegang stabil');
     else if (motion > AC_MOTION_MAX) msg = L('Hold still…', 'Pegang stabil…');
     if (msg){
@@ -4066,11 +4090,18 @@ function _acTick(s){
       _acStatus(msg, 0, r.length ? 'warn' : null);
       return;
     }
+    // [Cut-soft] sharp, lit and still. A run in which the border check complained shows its hint for the first
+    // AC_CUT_NUDGE_FRAMES ticks (~1 s: time to move back a little), then the normal "Hold" second, then it shoots.
+    // The complaint is sticky for the run, so a verdict that flickers from frame to frame cannot stall the shutter.
+    if (!s.stable) s.cutSeen = false;
+    if (isCut) s.cutSeen = true;
+    var lead = s.cutSeen ? AC_CUT_NUDGE_FRAMES : 0;
     s.stable++;
     _acPulse(false);
     if (s.stable === 1) _acGhost(0, true);
-    _acStatus(L('Hold…', 'Tahan…'), s.stable / AC_STABLE_FRAMES, 'ok');
-    if (s.stable >= AC_STABLE_FRAMES){ s.stable = 0; _acCapture(s, false); }
+    if (s.stable <= lead) _acStatus(L('Fit the whole invoice in the frame', 'Masukkan seluruh invois dalam bingkai'), 0, 'warn');
+    else _acStatus(L('Hold…', 'Tahan…'), (s.stable - lead) / AC_STABLE_FRAMES, 'ok');
+    if (s.stable >= AC_STABLE_FRAMES + lead){ s.stable = 0; _acCapture(s, false); }
   }catch(e){
     console.warn('AutoCap tick failed:', e);   // fail-open: the manual shutter and the OS-camera link still work
   }
@@ -4100,11 +4131,16 @@ async function _acCapture(s, manual){
       if (cb) cb(entry);
       return;
     }
-    if (entry.quality && !entry.quality.ok){
+    // [Cut-soft 2026-11-17] "cut" alone no longer refuses a shot, by tap or by itself: the scanner checks the page's
+    // 4 edges next and the review screen asks the driver when it is not sure. Blur and exposure refuse as before.
+    var _soft = AC_CUT_SOFT && typeof SCANNER_ON !== 'undefined' && SCANNER_ON;
+    var _bad = (entry.quality && !entry.quality.ok) ? entry.quality.reasons.filter(function(x){ return !(_soft && x === 'cut'); }) : [];
+    if (entry.quality && !entry.quality.ok && !_bad.length) entry._cutWarn = true;
+    if (_bad.length){
       // Auto mode can get here too (full-res vs 640px resample near a threshold) — count it, say why, and
       // offer "Upload anyway" at 3 either way, instead of silently re-shooting every second (review F5).
       var TXT = { cut: L('cut off', 'terpotong'), blur: L('blurry', 'kabur'), exposure: L('too bright or dark', 'terlalu terang atau gelap') };
-      var why = entry.quality.reasons.map(function(x){ return TXT[x] || x; }).join(', ');
+      var why = _bad.map(function(x){ return TXT[x] || x; }).join(', ');
       s.fails++;
       if (s.fails >= 3){ s.pendingEntry = entry; _acShowAnyway(true); _acStatus(L('Not clear: ' + why + '. Retake, or tap Upload anyway.', 'Tidak jelas: ' + why + '. Ambil semula, atau tekan Hantar juga.'), 0, 'warn'); }
       else if (manual || s.fails >= 2) _acStatus(L('Not clear: ' + why + '. Retake.', 'Tidak jelas: ' + why + '. Ambil semula.'), 0, 'warn');
