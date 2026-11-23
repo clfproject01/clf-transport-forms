@@ -21,7 +21,9 @@
                 invoices:[ { invoiceNo, barcodeRaw, customer, custCode, area, amount,
                 status:'delivered'|'failed'|'pending', deliveredAt, deliveredDate,
                 photoUrls:[], matchSource:'barcode'|'ai'|'none', mismatch:bool,
-                efiScanned:bool, efiBy, failReason } ] } ] }
+                efiScanned:bool, efiBy, failReason, photoOk:bool, photoOkBy } ] } ] }
+    POST data={ formType:'MARK_PHOTO_OK', shipmentKey, invoiceNo, ok:1|0, authToken, clientToken }
+         -> { status:'success' }  [2026-11-23] office checked the photo: it IS this invoice
     POST data={ formType:'MARK_EFI_SCANNED', shipmentKey, invoiceNo, scanned:1|0,
                 authToken, clientToken }  (no-cors + poll getImportResult)
          -> { status:'success' } (idempotent). POST (not GET) so the session
@@ -140,6 +142,12 @@
   /* [2026-10-24] photo check: the barcode on the photo is ANOTHER invoice / not read */
   .src.bad{background:#FEE2E2;color:#991B1B;}
   .src.q{background:#FEF3C7;color:#92400E;}
+  /* [2026-11-23] office looked at the photo and confirmed it is this invoice */
+  .src.chk{background:#DBEAFE;color:#1E40AF;}
+  .ok-btn{font:inherit;font-size:11px;font-weight:700;margin-left:6px;padding:2px 8px;border-radius:999px;border:1px solid var(--green-500);background:#fff;color:var(--green-700);cursor:pointer;white-space:nowrap;}
+  .ok-btn:hover{background:var(--green-50);}
+  .ok-btn.undo{border-color:var(--gray-200);color:var(--gray-500);font-weight:600;}
+  .ok-btn:disabled{opacity:.5;cursor:default;}
   .bc-warn{font-size:11px;color:var(--red-700);font-weight:700;margin-top:3px;text-align:center;}
   .lh-bad{font-size:11.5px;font-weight:700;color:var(--red-700);background:var(--red-50);border:1px solid var(--red-500);border-radius:999px;padding:1px 8px;margin-left:8px;white-space:nowrap;}
   .stat.ver .n{color:var(--green-700);} .stat.ver .bar i{background:var(--green-500);}
@@ -436,12 +444,13 @@ function scheduleRefresh(){ clearTimeout(_refreshTmr); _refreshTmr=setTimeout(lo
 function render(){
   var d=_boardData; if(!d){ return; }
   var lorries = d.lorries||[];
+  _canOk = DEMO || lorries.some(function(L){ return (L.invoices||[]).some(function(v){ return v && ('photoOk' in v); }); });
   // summary
   var done=0,pend=0,prob=0,efi=0,total=0,ver=0,chk=0;
   lorries.forEach(function(L){ (L.invoices||[]).forEach(function(v){
     total++;
     var st=String(v.status||'').toLowerCase();
-    if(st==='delivered'){ done++; if(v.efiScanned) efi++; if(photoCheck(v)==='ok') ver++; if(needsCheck(v)) chk++; }
+    if(st==='delivered'){ done++; if(v.efiScanned) efi++; var pc=photoCheck(v); if(pc==='ok' || pc==='checked') ver++; if(needsCheck(v)) chk++; }
     else if(st==='failed') prob++; else pend++;
   }); });
   $('summary').style.display = total?'grid':'none';
@@ -519,7 +528,14 @@ function render(){
 // matchSource says 'barcode' for ANY code, and its mismatch flag (DRIVER_FORCED) is stamped on every invoice of the
 // save, so neither can say which invoice is wrong.
 function bcNorm(s){ return String(s==null?'':s).toUpperCase().replace(/[^A-Z0-9]/g,''); }   // same rule as the driver form
-function photoCheck(v){   // '' (not delivered) | ok | wrong | unread | ai | nophoto
+// [2026-11-23] "Photo OK": the office opened the photo and it IS this invoice (the phone misread the barcode, or
+// read nothing). photoOk comes from the board (Shipment_Items col 19 token PHOTO_OK:<staff>); such a row is no
+// longer "wrong" / "needs check". A driver re-save of the invoice clears it (new photo = look again).
+function photoCheck(v){   // '' (not delivered) | ok | wrong | unread | ai | nophoto | checked
+  var c=photoCheck0(v);
+  return (v.photoOk && (c==='wrong' || c==='unread' || c==='ai')) ? 'checked' : c;
+}
+function photoCheck0(v){
   if(String(v.status||'').toLowerCase()!=='delivered') return '';
   if(!(v.photoUrls||[]).length) return 'nophoto';
   var raw=bcNorm(v.barcodeRaw);
@@ -529,19 +545,22 @@ function photoCheck(v){   // '' (not delivered) | ok | wrong | unread | ai | nop
 function _bcEra(v){ return String(v.deliveredDate || (_boardData && _boardData.date) || '') >= BC_SINCE; }
 function needsCheck(v){
   var c=photoCheck(v);
+  if(v.photoOk && c && c!=='nophoto') return false;
   return c==='wrong' || c==='nophoto' || c==='ai' || (c==='unread' && _bcEra(v)) || (!!c && !!v.photoFlag);
 }
 function statusBadge(v){
   var st=String(v.status||'').toLowerCase();
   if(photoCheck(v)==='wrong') return '<span class="badge mismatch" title="The barcode on this photo is invoice '+esc(v.barcodeRaw)+', not this one">⚑ Wrong photo</span>';
   if(st==='delivered') return '<span class="badge done">✓ Delivered</span>'
-    +(v.photoFlag?' <span class="badge pend" title="The driver saved although the phone said the photo was not clear">⚠ Unclear photo</span>':'');
+    +(v.photoFlag && !v.photoOk?' <span class="badge pend" title="The driver saved although the phone said the photo was not clear">⚠ Unclear photo</span>':'');
   if(st==='failed') return '<span class="badge prob">✕ '+esc(v.failReason||'Problem')+'</span>';
   return '<span class="badge pend">… Pending</span>';
 }
 function srcTag(v){
   var c=photoCheck(v);
   if(c==='ok')      return '<span class="src bc" title="The barcode on the photo is this invoice">BC&#10003;</span>';
+  if(c==='checked' || (c==='ok' && v.photoOk)) return '<span class="src chk" title="Photo checked by the office'+(v.photoOkBy?' ('+esc(v.photoOkBy)+')':'')
+    +(bcNorm(v.barcodeRaw) && bcNorm(v.barcodeRaw)!==bcNorm(v.invoiceNo)?' - the phone read '+esc(v.barcodeRaw):'')+'">Checked&#10003;'+(v.photoOkBy?' '+esc(v.photoOkBy):'')+'</span>';
   if(c==='wrong')   return '<span class="src bad" title="The barcode on this photo is another invoice — open the photo">photo = '+esc(v.barcodeRaw)+'</span>';
   if(c==='ai')      return '<span class="src ai" title="Matched by AI (Gemini) — double-check">AI~</span>';
   if(c==='nophoto') return '<span class="src bad" title="Delivered without a photo">no photo</span>';
@@ -644,6 +663,29 @@ function barcodeCell(v){
   if(!svg) return '<span class="bc-na">no barcode<br>type manually:<br><b>'+esc(raw)+'</b></span>'+warn;
   return '<div class="bc-cell"><div class="bc-box">'+svg+'</div><div class="bc-txt">'+esc(raw)+'</div></div>'+warn;
 }
+// [2026-11-23] "Photo OK" / "Undo" button on a delivered row that needs a look (or was marked). Shown only when the
+// backend sends the photoOk field (so the page can go live before the backend paste).
+var _canOk = false;
+function okBtn(L, v){
+  if(!_canOk || String(v.status||'').toLowerCase()!=='delivered' || !(v.photoUrls||[]).length) return '';
+  var at=' data-ship="'+esc(L.shipmentKey||'')+'" data-inv="'+esc(String(v.invoiceNo))+'"';
+  if(v.photoOk) return '<button type="button" class="ok-btn undo" data-ok="0"'+at+' title="Remove the Photo OK mark">Undo</button>';
+  if(needsCheck(v)) return '<button type="button" class="ok-btn" data-ok="1"'+at+' title="I opened the photo: it is this invoice">&#10003; Photo OK</button>';
+  return '';
+}
+async function markPhotoOk(btn){
+  var ship=btn.getAttribute('data-ship'), inv=btn.getAttribute('data-inv'), ok=btn.getAttribute('data-ok')==='1';
+  function patch(){ (_boardData.lorries||[]).forEach(function(L){ if(String(L.shipmentKey)===String(ship)){ (L.invoices||[]).forEach(function(v){
+    if(String(v.invoiceNo)===String(inv)){ v.photoOk=ok; v.photoOkBy=ok?_operator():''; } }); } }); render(); }
+  if(DEMO){ patch(); toast('ok','Demo: Photo OK not sent'); return; }
+  if(!_authToken()){ showLock('Unlock to record the check · Buka untuk rekod'); return; }
+  btn.disabled=true; _writesInFlight++;
+  var tok=_newToken('pok');
+  var rd = await postWithToken({ formType:'MARK_PHOTO_OK', shipmentKey:ship, invoiceNo:inv, ok:ok?1:0, authToken:_authToken(), clientToken:tok }, tok);
+  _writesInFlight--;
+  if(rd && rd.status==='success'){ patch(); toast('ok', (ok?'Photo OK recorded &#10003;':'Photo OK removed')+' · '+esc(inv)); }
+  else { btn.disabled=false; toast('err','Not saved: '+esc((rd&&rd.message)||'server error')); }
+}
 function efiCell(L, v){
   var st=String(v.status||'').toLowerCase();
   if(st!=='delivered') return '';
@@ -669,7 +711,7 @@ function invRow(L, v, idx, S, skey){
     +'<td class="inv-no">'+esc(v.invoiceNo)+srcTag(v)+'</td>'
     +'<td>'+rowPhotoCell(v, S, skey)+'</td>'
     +'<td class="amt">'+(v.amount!=null?money(v.amount):'')+'</td>'
-    +'<td>'+statusBadge(v)+proof+'</td>'
+    +'<td>'+statusBadge(v)+proof+okBtn(L, v)+'</td>'
     +'<td class="time">'+esc(fmtTime(v.deliveredDate||_boardData.date, v.deliveredAt))+'</td>'
     +'<td class="bc-cell">'+barcodeCell(v)+'</td>'
     +'<td>'+efiCell(L, v)+'</td>'
@@ -783,6 +825,7 @@ $('date').addEventListener('change', loadBoard);
 $('refreshBtn').addEventListener('click', loadBoard);
 // Collapse/expand: click a lorry header to toggle just that card (no full re-render, checkboxes stay live).
 $('board').addEventListener('click', function(e){
+  var okb = e.target.closest('.ok-btn'); if(okb){ if(!okb.disabled) markPhotoOk(okb); return; }
   var head = e.target.closest('.lorry-head'); if(!head) return;
   var key = head.getAttribute('data-key'), card = head.closest('.lorry');
   if(_openKeys.has(key)){ _openKeys.delete(key); card.classList.remove('open'); }
