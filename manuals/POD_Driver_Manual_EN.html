@@ -313,7 +313,11 @@
     <li><span class="ui">Adjust</span>: an edge is cut off? Drag the 4 dots onto the paper corners, then tap <b>&#10003;</b> (Done).</li>
     <li><span class="ui">Original</span>: see the photo as it was before the scan.</li>
   </ul>
-  <p>The label at the top: <b>&#10003; Scanned</b> = good. <b>&#10003; Flattened</b> = a curled page was flattened by itself, also good. <b>&#9888; Check the edges</b> or <b>&#9888; Edges not found</b> = look carefully, tap <span class="ui">Adjust</span> or <span class="ui">Retake</span>.</p>
+  <p>The label at the top: <b>&#10003; Scanned</b> = good. <b>&#10003; Flattened</b> = a curled page was flattened by itself, also good. </p>
+  <ul>
+    <li><b>&#9888; Check the edges</b>: the form cropped the page along its edges but is not fully sure. Look at all four edges. Part of the invoice cut off? Tap <span class="ui">Adjust</span>.</li>
+    <li><b>&#9888; Edges not found</b>: the whole photo is kept, nothing is cut away. Is the whole invoice in the photo? Tap <span class="ui go">&#10003; Use</span>. If not, <span class="ui">Retake</span>.</li>
+  </ul>
 
   <h3>Next invoice</h3>
   <p>After <span class="ui go">&#10003; Use</span>, put the <b>next invoice</b> down. The text <span class="msg">Put the NEXT invoice in the frame</span> means the camera still sees the invoice you just took. Change the paper.</p>
@@ -330,7 +334,8 @@
   </ul>
 
   <h3>Photo not clear</h3>
-  <p>If the picture is blurry, too dark or cut off, the camera says <span class="msg">Not clear: …</span> and asks you to retake. After <b>3 tries</b>, the <span class="ui">Upload anyway</span> button appears. Use it only when the invoice really is hard to photograph (for example shiny paper). That photo is marked <b>!</b> for the office.</p>
+  <p>The text <span class="msg">Fit the whole invoice in the frame</span> is only a reminder: the camera still takes the picture after about 1 second. Make sure the whole invoice is in the photo.</p>
+  <p>If the picture is blurry or too dark, the camera says <span class="msg">Not clear: …</span> and asks you to retake. After <b>3 tries</b>, the <span class="ui">Upload anyway</span> button appears. Use it only when the invoice really is hard to photograph (for example shiny paper). That photo is marked <b>!</b> for the office.</p>
   <figure class="phone">
     <img src="img/pod/en-not-clear.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Blurry photo: text Not clear, blurry, and the Upload anyway button">
   </figure>
@@ -380,6 +385,18 @@
   <figure class="phone">
     <img src="img/pod/en-barcode-unknown.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="The list Which invoice is this photo: DO-10061 and DO-10062 barcode, DO-10063 this photo, DO-10064 no photo yet">
   </figure>
+  <h3>Match the photos <span class="new">NEW</span></h3>
+  <p><b>2 or more photos</b> marked <b>?</b> at one shop? When you tap <span class="ui go">Save</span>, the form shows each of those photos and asks <span class="msg">Which invoice is this photo?</span></p>
+  <figure class="phone">
+    <img src="img/pod/en-barcode-match.jpg" width="546" height="1182" loading="lazy" decoding="async" alt="Match the photos: the invoice photo, the invoice numbers DO-10063 and DO-10064, the buttons Back and Not sure">
+  </figure>
+  <ul>
+    <li>Look at the photo, then tap the right <b>invoice number</b>. The amount (RM) beside each number helps you.</li>
+    <li>Text too small? Tap the photo to zoom in, drag to move around. Tap again to zoom out.</li>
+    <li><span class="ui">Not sure</span>: that photo keeps its <b>?</b> and the form goes on to the next photo. The office will check it.</li>
+    <li><span class="ui">Back</span>: cancel and go back to the shop card (for example to retake a photo). Nothing is saved yet.</li>
+  </ul>
+  <p>After the last photo, the form saves straight away.</p>
   <h3>The AI checks photos without a barcode</h3>
   <p>Barcode not read? The form sends the photo to the <b>AI</b>, which reads the invoice number, shop name and total. You can go on with the next photo.</p>
   <ul>
