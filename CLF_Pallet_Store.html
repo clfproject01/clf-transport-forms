@@ -5,276 +5,248 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>CLF Trading — Pallet Store · Stor Pallet</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
-
-  :root {
-    --navy: #0B1F3A;
-    --navy-mid: #1A3A5C;
-    --navy-light: #1E4976;
-    --orange: #6F4E37;
-    --orange-dark: #4A3426;
-    --orange-light: #A98467;
-    --orange-pale: #F3ECE4;
-    --teal: #0E7490;
-    --teal-light: #22D3EE;
-    --gold: #C9A84C;
-    --gold-light: #E8C97A;
-    --white: #FFFFFF;
-    --off-white: #FAFAFA;
-    --gray: #8A9BB0;
-    --gray-light: #E5E7EB;
-    --success: #22C55E;
-    --error: #EF4444;
-    --warn: #C9A227;
-    --radius: 14px;
-    --radius-sm: 8px;
+  /* ==========================================================================
+     LOOK: "direction B - Brand" (2026-11), same as CLF_POD_Admin.
+     Navy band + white logo + 3px red line (red is used ONLY there), warm page,
+     white cards, pill buttons / tabs / tags, system fonts, no web requests.
+     navy = actions, green = done, amber = check, dark red = fault, lime = a dot.
+     ========================================================================== */
+  :root{
+    --page:#FAF7F2; --surface:#FFFFFF; --text:#1A1B2E; --muted:#5F6072; --line:#ECE7DE; --soft:#F4F0EA; --hover:#FCFBF8;
+    --ctl:#C5C8E0; --navy:#141C77; --navy-2:#2A3189; --navy-tint:#EEF0FA; --on-navy:#D9DBF2;
+    --ok:#15803D; --ok-tint:#ECFDF3; --warn:#B45309; --warn-tint:#FFFBEB; --fault:#C8101E; --fault-tint:#FDF1F1;
+    --red:#FC091B; --lime:#87C329;
+    --shadow:0 1px 2px rgba(26,27,46,.05),0 8px 24px rgba(26,27,46,.07);
   }
+  *,*::before,*::after{box-sizing:border-box;}
+  *{margin:0;padding:0;}
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+  body{min-height:100vh;background:var(--page);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;}
+  button,input,select,textarea{font:inherit;color:inherit;}
+  button{cursor:pointer;-webkit-tap-highlight-color:transparent;}
+  button:disabled{cursor:default;}
+  :focus-visible{outline:3px solid var(--navy);outline-offset:2px;}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* line icons (24px grid, drawn inline - no icon font, no emoji) */
+  .i{flex:none;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-4px;}
+  .i.i16{width:16px;height:16px;vertical-align:-3px;}
+  .i.i32{width:32px;height:32px;stroke-width:1.75;}
 
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--off-white);
-    min-height: 100vh;
-    color: var(--navy);
-    -webkit-font-smoothing: antialiased;
+  .app{min-height:100vh;display:flex;flex-direction:column;}
+
+  /* ---- navy band ---- */
+  .band{position:relative;background:var(--navy);color:#fff;overflow:hidden;padding:13px 0;}
+  .band::after{content:"";position:absolute;right:-60px;top:-260px;width:600px;height:600px;border-radius:50%;background:#1B2485;}
+  .band__in{position:relative;z-index:1;display:flex;align-items:center;gap:10px 18px;flex-wrap:wrap;max-width:1328px;margin:0 auto;padding:0 24px;}
+  .band__logo{display:block;height:40px;width:auto;}
+  .band__sep{width:1px;height:38px;background:#4148A0;}
+  .band__txt{flex:1 1 200px;min-width:0;}
+  .band h1{font-size:21px;font-weight:800;line-height:1.2;}
+  .band__meta{display:flex;align-items:baseline;gap:8px;margin-top:2px;color:var(--on-navy);font-size:13px;font-weight:600;line-height:1.35;}
+  .band__meta::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--lime);}
+  .redline{height:3px;background:var(--red);}
+
+  /* ---- pill tabs ---- */
+  .tabs{position:sticky;top:0;z-index:30;display:flex;flex-wrap:wrap;justify-content:center;gap:8px;padding:12px 24px;background:var(--page);}
+  .tab{display:inline-grid;grid-template-columns:auto auto;column-gap:8px;align-items:center;justify-content:center;min-height:48px;padding:5px 18px 5px 14px;border:0;border-radius:999px;background:var(--surface);box-shadow:var(--shadow);color:var(--navy);font-size:14px;font-weight:800;line-height:1.2;text-align:left;white-space:nowrap;}
+  .tab svg{grid-row:1 / span 2;width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+  .tab .bm{display:block;grid-column:2;font-size:12px;font-weight:600;color:var(--muted);}
+  .tab:hover{background:var(--navy-tint);}
+  .tab.active{background:var(--navy);color:#fff;}
+  .tab.active .bm{color:var(--on-navy);}
+
+  /* ---- one white card per tab ---- */
+  .form-body{flex:1;width:100%;max-width:760px;margin:0 auto;padding:4px 24px 24px;}
+  .panel{display:none;}
+  .panel.active{display:block;background:var(--surface);border-radius:20px;box-shadow:var(--shadow);padding:24px;}
+  .foot{padding:0 24px 28px;text-align:center;font-size:12px;font-weight:600;color:var(--muted);}
+
+  .notice{background:var(--navy-tint);border-radius:14px;padding:12px 14px;margin-bottom:18px;font-size:13px;line-height:1.5;color:var(--text);}
+  .notice b{color:var(--navy);}
+  .notice.is-ok{background:var(--ok-tint);}
+  .notice.is-ok b{color:var(--ok);}
+  .bm-line{color:var(--muted);}
+
+  .section-label{font-size:13px;font-weight:800;color:var(--navy);margin:20px 0 8px;}
+  .section-label.is-ok{color:var(--ok);}
+  .section-label.is-warn{color:var(--warn);}
+  .subsec{margin-top:26px;border-top:1px solid var(--line);padding-top:22px;}
+
+  .field{margin-bottom:14px;min-width:0;}
+  .field label{display:block;font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px;}
+  .field label .req{color:var(--fault);margin-left:2px;}
+
+  input[type="text"],input[type="number"],input[type="date"],input[type="password"],select,textarea{
+    width:100%;min-height:48px;padding:11px 14px;background:var(--surface);border:1.5px solid var(--ctl);border-radius:14px;
+    font-size:16px;color:var(--text);outline:none;transition:border-color .15s,box-shadow .15s;-webkit-appearance:none;appearance:none;
   }
+  input:focus,select:focus,textarea:focus{border-color:var(--navy);box-shadow:0 0 0 3px var(--navy-tint);}
+  input::placeholder{color:var(--muted);font-size:14px;opacity:.85;}
+  select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235F6072' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 16px center;padding-right:40px;}
 
-  .app { max-width: 480px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; background: var(--white); }
+  /* segmented control: a soft pill holding pill buttons */
+  .seg{display:flex;gap:4px;padding:4px;border-radius:999px;background:var(--soft);margin-bottom:14px;}
+  .seg-btn{flex:1;min-width:0;min-height:48px;padding:4px 6px;border:0;border-radius:999px;background:transparent;color:var(--navy);font-size:14px;font-weight:800;line-height:1.2;text-align:center;}
+  .seg-btn .bm{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-top:1px;}
+  .seg-btn:hover{background:var(--navy-tint);}
+  .seg-btn.sel{background:var(--navy);color:#fff;}
+  .seg-btn.sel .bm{color:var(--on-navy);}
 
-  .header {
-    background: linear-gradient(135deg, var(--orange) 0%, var(--orange-dark) 100%);
-    padding: 24px 24px 20px;
-    border-bottom: 1px solid rgba(255,255,255,0.2);
-    position: relative; overflow: hidden;
+  /* live balance readback */
+  .balcard{display:none;background:var(--soft);border-radius:18px;padding:14px;margin:4px 0 16px;}
+  .balcard.show{display:block;}
+  .balcard-name{font-size:15px;font-weight:800;color:var(--text);margin-bottom:10px;}
+  .balcard-grid{display:flex;gap:8px;}
+  .balcard-cell{flex:1;min-width:0;text-align:center;background:var(--surface);border-radius:14px;padding:9px 4px 8px;}
+  .balcard-cell .lbl{font-size:12px;font-weight:800;color:var(--text);line-height:1.2;}
+  .balcard-cell .lbl .bm{display:block;font-weight:600;color:var(--muted);}
+  .balcard-cell .val{font-size:24px;font-weight:800;line-height:1.2;font-variant-numeric:tabular-nums;color:var(--navy);margin-top:3px;}
+  .balcard-cell.rosak .val{color:var(--fault);}
+  .balcard-foot{font-size:12px;font-weight:600;color:var(--muted);margin-top:9px;text-align:center;}
+
+  /* result line under a count */
+  .var-pill{display:none;margin-top:8px;padding:10px 14px;border-radius:14px;font-size:14px;line-height:1.45;font-weight:600;}
+  .var-pill.show{display:block;}
+  .var-pill.ok{background:var(--ok-tint);color:var(--ok);}
+  .var-pill.diff{background:var(--warn-tint);color:var(--warn);}
+  .var-pill b{font-weight:800;}
+
+  .photo-btn{position:relative;width:100%;padding:18px;display:flex;flex-direction:column;align-items:center;gap:8px;background:var(--surface);border:2px dashed var(--ctl);border-radius:18px;cursor:pointer;}
+  .photo-btn:hover{background:var(--hover);}
+  .photo-btn.has-photo{border-style:solid;border-color:var(--ok);background:var(--ok-tint);}
+  .photo-btn input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;}
+  .photo-icon{width:44px;height:44px;background:var(--navy);border-radius:14px;display:flex;align-items:center;justify-content:center;}
+  .photo-icon svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+  .photo-label{font-size:14px;font-weight:800;color:var(--navy);text-align:center;}
+  .photo-sublabel{font-size:12px;font-weight:600;color:var(--muted);text-align:center;}
+  .photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-top:10px;}
+  .photo-grid:empty{display:none;}
+  .photo-thumb{position:relative;padding-top:100%;border-radius:12px;overflow:hidden;background:var(--soft);border:1px solid var(--line);}
+  .photo-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+  /* 44px touch target, 26px visible disc */
+  .photo-thumb .remove-x{position:absolute;top:0;right:0;width:44px;height:44px;border:0;background:transparent;font-size:0;cursor:pointer;}
+  .photo-thumb .remove-x::after{content:"×";position:absolute;top:5px;right:5px;width:26px;height:26px;border-radius:50%;background:rgba(26,27,46,.78);color:#fff;font-size:18px;font-weight:700;line-height:25px;text-align:center;}
+  .photo-counter{font-size:12px;font-weight:600;color:var(--muted);margin-top:6px;text-align:center;}
+
+  /* pill buttons */
+  .btn-wrap{position:relative;margin-top:8px;}
+  .submit-btn{width:100%;min-height:52px;padding:10px 20px;display:flex;align-items:center;justify-content:center;gap:8px;border:1.5px solid var(--navy);border-radius:999px;background:var(--navy);color:#fff;font-size:16px;font-weight:800;line-height:1.25;text-align:center;transition:background .15s;}
+  .submit-btn:hover{background:var(--navy-2);border-color:var(--navy-2);}
+  .submit-btn:active{transform:scale(.99);}
+  .submit-btn svg{flex:none;width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+  .submit-btn.is-ok{background:var(--ok);border-color:var(--ok);}
+  .submit-btn.is-ok:hover{background:#126E34;border-color:#126E34;}
+  .submit-btn.is-warn{background:var(--warn);border-color:var(--warn);}
+  .submit-btn.is-warn:hover{background:#9A4707;border-color:#9A4707;}
+  .submit-btn.is-ghost{background:var(--surface);border-color:var(--ctl);color:var(--navy);}
+  .submit-btn.is-ghost:hover{background:var(--navy-tint);border-color:var(--ctl);}
+  .teal-bar{display:none;}
+
+  .pin-box{background:var(--warn-tint);border-radius:16px;padding:14px;margin:4px 0 14px;}
+  .pin-box .pin-head{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800;color:var(--warn);margin-bottom:8px;}
+
+  .error-msg{display:none;font-size:13px;font-weight:700;color:var(--fault);margin-top:5px;}
+  .error-msg.show{display:block;}
+
+  .loading-overlay{display:none;position:fixed;inset:0;z-index:99;background:rgba(20,28,119,.92);flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px;}
+  .loading-overlay.show{display:flex;}
+  .spinner{width:44px;height:44px;border:3px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loading-text{color:#fff;font-size:15px;font-weight:700;text-align:center;}
+
+  .toast{position:fixed;left:50%;bottom:24px;z-index:120;transform:translateX(-50%) translateY(160%);width:calc(100% - 32px);max-width:440px;display:flex;gap:10px;align-items:flex-start;padding:13px 16px;border-radius:18px;background:var(--navy);color:#fff;font-size:14px;line-height:1.45;box-shadow:0 8px 28px rgba(26,27,46,.3);transition:transform .3s cubic-bezier(.2,.8,.2,1);}
+  .toast.show{transform:translateX(-50%) translateY(0);}
+  .toast.ok{background:var(--ok);}
+  .toast.err{background:var(--fault);}
+  .toast.warn{background:var(--warn);}
+  .toast .ico{flex:none;display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.22);font-size:13px;font-weight:800;line-height:1;}
+  .toast b{font-weight:800;}
+  #toastMsg{min-width:0;overflow-wrap:anywhere;}
+
+  .hint{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:14px;overflow-wrap:anywhere;}
+  .hint:empty{display:none;}
+  .hint b{color:var(--text);}
+  .empty{text-align:center;color:var(--muted);font-size:14px;font-weight:600;padding:26px 14px;border:1.5px dashed var(--ctl);border-radius:16px;}
+
+  /* pill tags */
+  .ok-txt{display:inline-block;padding:3px 10px;border-radius:999px;background:var(--ok-tint);color:var(--ok);font-size:12px;font-weight:700;}
+  .bad-txt{color:var(--fault);font-weight:700;}
+  .staff-name{font-size:13px;font-weight:600;color:var(--muted);margin-top:6px;min-height:18px;line-height:1.3;}
+  .staff-name.ok,.staff-name.bad{display:inline-block;padding:4px 10px;border-radius:999px;font-weight:700;}
+  .staff-name.ok{background:var(--ok-tint);color:var(--ok);}
+  .staff-name.bad{background:var(--fault-tint);color:var(--fault);}
+
+  /* per-pallet rows (assign / accept / receive) */
+  .plt-row{border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-bottom:8px;background:var(--surface);}
+  .plt-row-top{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .plt-row-top>div:first-child{min-width:0;}
+  .plt-row .nm{font-size:15px;font-weight:800;color:var(--text);overflow-wrap:anywhere;}
+  .plt-row .sub{font-size:13px;font-weight:600;color:var(--muted);margin-top:2px;}
+  .plt-row .sub b{color:var(--text);}
+  .plt-row .field label{font-size:13px;}
+  .plt-row.corrected{border-color:var(--ok);background:var(--ok-tint);}
+  .stepper{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+  .step-btn{flex:none;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--ctl);border-radius:50%;background:var(--surface);color:var(--navy);font-size:22px;font-weight:700;line-height:1;}
+  .step-btn:hover{background:var(--navy-tint);}
+  .step-btn:disabled{opacity:.4;cursor:not-allowed;}
+  .stepper input.step-qty{flex:none;width:60px;min-height:44px;padding:8px 4px;text-align:center;font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;}
+  .mini-btn{flex:none;min-height:44px;padding:0 16px;border-radius:999px;border:1.5px solid var(--ok);background:var(--surface);color:var(--ok);font-size:13px;font-weight:800;white-space:nowrap;}
+  .mini-btn.sel{background:var(--ok);color:#fff;}
+  select.ship-pick{margin:6px 0;font-size:15px;}
+  /* receive-from-lorry: balance line + customer allocation */
+  .rc-ok{font-size:13px;font-weight:700;color:var(--ok);}
+  .rc-short,.rc-extra{font-size:13px;font-weight:700;margin-bottom:6px;}
+  .rc-short{color:var(--fault);}
+  .rc-extra{color:var(--warn);}
+  .rc-alloc{display:flex;gap:8px;}
+  .rc-alloc select.cust-pick{flex:1;min-width:0;width:auto;font-size:14px;padding-left:12px;}
+  .rc-alloc input.rc-qty{flex:none;width:76px;padding:10px;font-size:15px;font-weight:700;text-align:center;}
+  .rc-note{font-size:12px;font-weight:600;color:var(--warn);margin-top:5px;}
+
+  /* ---- sign-in overlay (built in JS) ---- */
+  .lock{position:fixed;inset:0;z-index:200;background:rgba(20,28,119,.96);display:flex;align-items:center;justify-content:center;padding:20px;}
+  .lock__card{width:100%;max-width:360px;padding:26px 22px 22px;border-radius:20px;background:var(--surface);box-shadow:0 20px 60px rgba(0,0,0,.35);}
+  .lock__ic{display:flex;align-items:center;justify-content:center;width:52px;height:52px;margin:0 auto;border-radius:16px;background:var(--navy-tint);color:var(--navy);}
+  .lock__title{font-weight:800;font-size:18px;line-height:1.3;text-align:center;text-wrap:balance;margin:10px 0 2px;}
+  .lock__sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:16px;}
+  .lock label{display:block;font-size:13px;font-weight:700;}
+  .lock input,.lock input[type="password"]{display:block;width:100%;min-height:48px;margin:4px 0 12px;padding:11px 14px;font-size:16px;border:1.5px solid var(--ctl);border-radius:14px;background:#fff;outline:none;}
+  .lock__err{min-height:18px;font-size:13px;color:var(--fault);font-weight:700;}
+  .lock__btn{width:100%;height:48px;margin-top:8px;border:0;border-radius:999px;background:var(--navy);color:#fff;font-weight:800;font-size:15px;}
+  .lock__btn:hover{background:var(--navy-2);}
+  .lock__btn:disabled{opacity:.6;}
+
+  /* ---- phones: 16px gutter, nothing scrolls sideways ---- */
+  @media (max-width:720px){
+    .band__in{padding:0 16px;}
+    .band__sep{display:none;}
+    .band__logo{height:32px;}
+    .band h1{font-size:18px;}
+    .tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:10px 16px;}
+    .tab{grid-template-columns:minmax(0,1fr);min-height:46px;padding:4px 6px;font-size:13px;text-align:center;box-shadow:0 1px 2px rgba(26,27,46,.08);}
+    .tab svg{display:none;}
+    .tab .bm{grid-column:1;font-size:11px;}
+    .tab:last-child{grid-column:span 2;}
+    .form-body{padding:2px 16px 20px;}
+    .panel.active{padding:18px 16px;}
+    .foot{padding:0 16px 24px;}
   }
-  .logo-row { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; position: relative; z-index: 1; }
-  .logo-box {
-    width: 48px; height: 48px; background: var(--white);
-    border-radius: 12px; display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0; overflow: hidden; border: 2px solid rgba(255,255,255,0.5);
-  }
-  .logo-text-clf { font-size: 12px; font-weight: 600; color: var(--orange-dark); line-height: 1; text-align: center; }
-  .logo-text-clf span { display: block; font-size: 8px; color: var(--orange); font-weight: 500; margin-top: 2px; }
-  .company-name { font-size: 15px; font-weight: 600; color: var(--white); line-height: 1.2; }
-  .company-reg { font-size: 10px; color: rgba(255,255,255,0.85); margin-top: 2px; font-weight: 400; }
-
-  .form-identity { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; }
-  .form-icon {
-    width: 50px; height: 50px; flex-shrink: 0;
-    background: rgba(255,255,255,0.16); border: 1.5px solid rgba(255,255,255,0.55);
-    border-radius: 14px; display: flex; align-items: center; justify-content: center;
-  }
-  .form-icon svg { width: 28px; height: 28px; stroke: var(--white); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-  .form-title { font-size: 26px; font-weight: 600; color: var(--white); letter-spacing: 1px; line-height: 1; margin: 0; }
-  .form-subtitle { font-size: 11px; color: rgba(255,255,255,0.85); line-height: 1.5; margin-top: 3px; }
-
-  /* tabs */
-  .tabs { display: flex; background: var(--white); border-bottom: 1px solid var(--gray-light); position: sticky; top: 0; z-index: 30; }
-  .tab {
-    flex: 1; padding: 13px 4px 11px; background: none; border: none; cursor: pointer;
-    font-family: 'DM Sans', sans-serif; font-size: 11.5px; font-weight: 600; color: var(--gray);
-    border-bottom: 3px solid transparent; display: flex; flex-direction: column; align-items: center; gap: 3px;
-    line-height: 1.2; letter-spacing: 0.2px;
-  }
-  .tab svg { width: 19px; height: 19px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-  .tab.active { color: var(--orange-dark); border-bottom-color: var(--orange); }
-  .tab .bm { font-size: 9px; font-weight: 400; opacity: .7; }
-
-  .form-body { flex: 1; background: var(--white); padding: 20px 18px 36px; }
-  .panel { display: none; }
-  .panel.active { display: block; }
-
-  .notice {
-    background: var(--orange-pale); border: 1px solid rgba(111,78,55,0.2);
-    border-left: 3px solid var(--orange); border-radius: var(--radius-sm);
-    padding: 10px 14px; margin-bottom: 18px;
-    font-size: 12px; color: var(--navy-mid); line-height: 1.5;
-  }
-  .notice b { color: var(--orange-dark); }
-
-  .section-label {
-    font-size: 10px; font-weight: 600; letter-spacing: 1.2px;
-    text-transform: uppercase; color: var(--orange-dark); margin: 18px 0 10px;
-  }
-
-  .field { margin-bottom: 14px; }
-  .field label { display: block; font-size: 13px; font-weight: 500; color: var(--navy); margin-bottom: 6px; }
-  .field label .bm { display: block; font-size: 11px; font-weight: 400; color: var(--gray); margin-top: 1px; }
-  .field label .req { color: var(--orange); margin-left: 2px; }
-
-  input[type="text"], input[type="number"], input[type="date"], input[type="password"], select, textarea {
-    width: 100%; padding: 13px 16px;
-    background: var(--white); border: 1.5px solid var(--gray-light);
-    border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif;
-    font-size: 16px; color: var(--navy); outline: none;
-    transition: border-color 0.2s; -webkit-appearance: none; appearance: none;
-  }
-  input:focus, select:focus, textarea:focus {
-    border-color: var(--orange);
-    box-shadow: 0 0 0 3px rgba(111,78,55,0.15);
-  }
-  input::placeholder { color: var(--gray); font-size: 14px; }
-  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238A9BB0' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; padding-right: 40px; }
-
-  /* state segmented control */
-  .seg { display: flex; gap: 8px; }
-  .seg-btn {
-    flex: 1; padding: 12px 4px; border: 1.5px solid var(--gray-light); border-radius: var(--radius-sm);
-    background: var(--white); cursor: pointer; font-family: 'DM Sans', sans-serif;
-    font-size: 13px; font-weight: 600; color: var(--navy-mid); text-align: center; line-height: 1.3;
-  }
-  .seg-btn .bm { display: block; font-size: 10px; font-weight: 400; color: var(--gray); margin-top: 1px; }
-  .seg-btn.sel { border-color: var(--orange); background: var(--orange-pale); color: var(--orange-dark); }
-  .seg-btn.sel .bm { color: var(--orange); }
-
-  /* live balance readback card */
-  .balcard {
-    background: var(--off-white); border: 1px solid var(--gray-light); border-radius: var(--radius);
-    padding: 14px; margin: 4px 0 16px; display: none;
-  }
-  .balcard.show { display: block; }
-  .balcard-name { font-size: 14px; font-weight: 600; color: var(--navy); margin-bottom: 10px; }
-  .balcard-grid { display: flex; gap: 8px; }
-  .balcard-cell { flex: 1; text-align: center; background: var(--white); border: 1px solid var(--gray-light); border-radius: var(--radius-sm); padding: 9px 4px; }
-  .balcard-cell .lbl { font-size: 10px; font-weight: 600; letter-spacing: .5px; color: var(--gray); text-transform: uppercase; }
-  .balcard-cell .val { font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 500; color: var(--navy); margin-top: 3px; }
-  .balcard-cell.rosak .val { color: var(--error); }
-  .balcard-foot { font-size: 11px; color: var(--gray); margin-top: 9px; text-align: center; }
-
-  /* variance pill on stocktake/reconcile */
-  .var-pill { display: none; margin-top: 8px; padding: 10px 12px; border-radius: var(--radius-sm); font-size: 13px; line-height: 1.45; }
-  .var-pill.show { display: block; }
-  .var-pill.ok { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.3); color: #15803D; }
-  .var-pill.diff { background: rgba(201,162,39,0.12); border: 1px solid rgba(201,162,39,0.4); color: #7A5C00; }
-  .var-pill b { font-weight: 700; }
-
-  .photo-btn {
-    width: 100%; padding: 18px; background: var(--white);
-    border: 2px dashed var(--gray-light); border-radius: var(--radius);
-    display: flex; flex-direction: column; align-items: center; gap: 8px;
-    cursor: pointer; transition: all 0.2s; position: relative;
-  }
-  .photo-btn:active { transform: scale(0.98); }
-  .photo-btn.has-photo { border-style: solid; border-color: var(--success); background: rgba(34,197,94,0.06); }
-  .photo-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-  .photo-icon {
-    width: 42px; height: 42px; background: var(--orange);
-    border-radius: 12px; display: flex; align-items: center; justify-content: center;
-  }
-  .photo-icon svg { width: 21px; height: 21px; stroke: var(--white); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-  .photo-label { font-size: 14px; font-weight: 600; color: var(--navy); text-align: center; }
-  .photo-sublabel { font-size: 12px; color: var(--gray); text-align: center; }
-  .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 6px; margin-top: 10px; }
-  .photo-thumb { position: relative; padding-top: 100%; border-radius: var(--radius-sm); overflow: hidden; background: var(--off-white); border: 1px solid var(--gray-light); }
-  .photo-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-  .photo-thumb .remove-x { position: absolute; top: 2px; right: 2px; width: 22px; height: 22px; background: rgba(0,0,0,0.7); color: white; border: 0; border-radius: 50%; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; padding: 0; }
-  .photo-counter { font-size: 11px; color: var(--gray); margin-top: 6px; text-align: center; }
-
-  .btn-wrap { position: relative; margin-top: 8px; }
-  .submit-btn {
-    width: 100%; padding: 16px; background: var(--orange);
-    color: var(--white); border: none; border-radius: var(--radius);
-    font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600;
-    cursor: pointer; transition: all 0.2s;
-    display: flex; align-items: center; justify-content: center; gap: 8px; letter-spacing: 0.3px;
-    box-shadow: 0 4px 12px rgba(111,78,55,0.25);
-  }
-  .submit-btn:active { transform: scale(0.98); opacity: 0.9; }
-  .submit-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .teal-bar { display: none; }
-
-  .pin-box { background: #FFF8E1; border: 1px solid #F0D9A8; border-radius: var(--radius-sm); padding: 12px 14px; margin: 4px 0 14px; }
-  .pin-box .pin-head { font-size: 12px; font-weight: 600; color: #854F0B; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
-
-  .error-msg { font-size: 12px; color: var(--error); margin-top: 4px; display: none; }
-  .error-msg.show { display: block; }
-
-  /* balances list (reconcile picker / overview) */
-  .bal-row { border: 1px solid var(--gray-light); border-radius: var(--radius-sm); padding: 11px 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; cursor: pointer; }
-  .bal-row:active { background: var(--off-white); }
-  .bal-row .nm { font-size: 14px; font-weight: 600; color: var(--navy); }
-  .bal-row .sub { font-size: 11px; color: var(--gray); margin-top: 2px; }
-  .bal-row .nums { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--navy-mid); white-space: nowrap; text-align: right; }
-  .bal-row .nums .r { color: var(--error); }
-
-  .loading-overlay {
-    display: none; position: fixed; inset: 0; background: rgba(74,52,38,0.92);
-    z-index: 99; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
-  }
-  .loading-overlay.show { display: flex; }
-  .spinner { width: 44px; height: 44px; border: 3px solid rgba(255,255,255,0.25); border-top-color: var(--white); border-radius: 50%; animation: spin 0.8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-text { color: var(--white); font-size: 14px; }
-
-  .toast {
-    position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(120%);
-    max-width: 420px; width: calc(100% - 32px); z-index: 120;
-    background: var(--navy); color: var(--white); border-radius: var(--radius);
-    padding: 14px 16px; font-size: 13.5px; line-height: 1.5; box-shadow: 0 8px 28px rgba(0,0,0,.3);
-    transition: transform .3s cubic-bezier(.2,.8,.2,1); display: flex; gap: 10px; align-items: flex-start;
-  }
-  .toast.show { transform: translateX(-50%) translateY(0); }
-  .toast.ok { background: #16653A; }
-  .toast.err { background: #991B1B; }
-  .toast.warn { background: #7A5C00; }
-  .toast .ico { font-size: 18px; line-height: 1.2; flex-shrink: 0; }
-  .toast b { font-weight: 700; }
-
-  .hint { font-size: 11px; color: var(--gray); margin-top: -8px; margin-bottom: 14px; line-height: 1.5; }
-
-  .empty { text-align: center; color: var(--gray); font-size: 13px; padding: 26px 14px; }
-
-  /* phase-2 placeholder lorry-assign card */
-  .soon-card { border: 1.5px dashed var(--gray-light); border-radius: var(--radius); padding: 18px 16px; text-align: center; color: var(--gray); font-size: 13px; line-height: 1.6; }
-  .soon-tag { display: inline-block; background: var(--gray-light); color: var(--navy-mid); font-size: 10px; font-weight: 700; letter-spacing: .6px; padding: 3px 8px; border-radius: 20px; margin-bottom: 8px; text-transform: uppercase; }
-  /* assign/accept per-pallet rows + qty stepper (phase 2/3) */
-  .plt-row { border: 1px solid var(--gray-light); border-radius: var(--radius-sm); padding: 11px 12px; margin-bottom: 8px; }
-  .plt-row-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-  .plt-row .nm { font-size: 14px; font-weight: 600; color: var(--navy); }
-  .plt-row .sub { font-size: 11px; color: var(--gray); margin-top: 2px; }
-  .plt-row .sub .r { color: var(--error); }
-  .stepper { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-  .step-btn { width: 38px; height: 38px; border: 1.5px solid var(--gray-light); border-radius: var(--radius-sm); background: var(--white); font-size: 22px; font-weight: 600; color: var(--orange-dark); cursor: pointer; line-height: 1; display: flex; align-items: center; justify-content: center; }
-  .step-btn:active { background: var(--orange-pale); }
-  .step-btn:disabled { opacity: .4; cursor: not-allowed; }
-  .step-qty { width: 56px; text-align: center; font-family: 'DM Mono', monospace; font-size: 18px; padding: 9px 4px; border: 1.5px solid var(--gray-light); border-radius: var(--radius-sm); color: var(--navy); }
-  .plt-row.corrected { border-color: var(--success); background: rgba(34,197,94,0.05); }
-  .mini-btn { padding: 8px 14px; border-radius: var(--radius-sm); border: 1.5px solid var(--success); background: var(--white); color: #15803D; font-family: 'DM Sans', sans-serif; font-size: 12.5px; font-weight: 600; cursor: pointer; }
-  .mini-btn.sel { background: var(--success); color: var(--white); }
-  .mini-btn.accept { border-color: var(--orange); color: var(--orange-dark); }
-  .rt-expand { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--gray-light); display: none; }
-  .rt-expand.show { display: block; }
-  .rt-gd { display: flex; gap: 8px; }
-  .rt-gd .field { flex: 1; margin-bottom: 8px; }
-  .staff-name { font-size: 12px; margin-top: 5px; min-height: 15px; line-height: 1.3; }
-  .staff-name.ok { color: #15803D; font-weight: 600; }
-  .staff-name.bad { color: var(--error); }
 </style>
 </head>
 <body>
 
 <div class="app">
-  <div class="header">
-    <div class="logo-row">
-      <div class="logo-box">
-        <div class="logo-text-clf">CLF<span>Trading</span></div>
-      </div>
-      <div>
-        <div class="company-name">CLF Trading Sdn. Bhd.</div>
-        <div class="company-reg">557522-A · Mentakab, Pahang</div>
-      </div>
-    </div>
-    <div class="form-identity">
-      <div class="form-icon">
-        <svg viewBox="0 0 24 24"><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="8.5" y="3" width="7" height="7"/></svg>
-      </div>
-      <div>
-        <div class="form-title">PALLET STORE</div>
-        <div class="form-subtitle">Pallet In/Out · Stocktake · Stor Pallet</div>
+  <header class="band">
+    <div class="band__in">
+      <img class="band__logo" src="data:image/png;base64,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" alt="CLF Trading">
+      <span class="band__sep"></span>
+      <div class="band__txt">
+        <h1>Pallet Store · Stor Pallet</h1>
+        <div class="band__meta">Pallet In/Out · Stocktake · Keluar/Masuk · Kira Stok</div>
       </div>
     </div>
-  </div>
+  </header>
+  <div class="redline"></div>
 
   <!-- TAB BAR -->
   <div class="tabs">
@@ -314,7 +286,7 @@
     <div class="panel active" id="panel-stocktake">
       <div class="notice">
         <b>Stocktake · Kira Stok:</b> Count the real pallets and enter the number. The system records the difference automatically — history is never overwritten.<br>
-        <span style="opacity:.75;">Kira pallet sebenar, masukkan jumlah. Sistem rekod perbezaan automatik.</span>
+        <span class="bm-line">Kira pallet sebenar, masukkan jumlah. Sistem rekod perbezaan automatik.</span>
       </div>
 
       <div class="section-label">Pallet Type · Jenis Pallet</div>
@@ -336,9 +308,9 @@
       <div class="balcard" id="st-balcard">
         <div class="balcard-name" id="st-balcard-name"></div>
         <div class="balcard-grid">
-          <div class="balcard-cell"><div class="lbl">Dalam</div><div class="val" id="st-bd">–</div></div>
-          <div class="balcard-cell"><div class="lbl">Luar</div><div class="val" id="st-bl">–</div></div>
-          <div class="balcard-cell rosak"><div class="lbl">Rosak</div><div class="val" id="st-br">–</div></div>
+          <div class="balcard-cell"><div class="lbl">Dalam<span class="bm">In store</span></div><div class="val" id="st-bd">–</div></div>
+          <div class="balcard-cell"><div class="lbl">Luar<span class="bm">Out</span></div><div class="val" id="st-bl">–</div></div>
+          <div class="balcard-cell rosak"><div class="lbl">Rosak<span class="bm">Damaged</span></div><div class="val" id="st-br">–</div></div>
         </div>
         <div class="balcard-foot" id="st-balcard-foot">System balance · Baki sistem</div>
       </div>
@@ -375,7 +347,7 @@
     <div class="panel" id="panel-reconcile">
       <div class="notice">
         <b>Reconcile · Padan:</b> Compare system balance vs the real count and record a snapshot. If they differ, a manager can pull it level with a PIN.<br>
-        <span style="opacity:.75;">Banding baki sistem dengan kiraan sebenar. Jika tak sama, pengurus boleh laras dengan PIN.</span>
+        <span class="bm-line">Banding baki sistem dengan kiraan sebenar. Jika tak sama, pengurus boleh laras dengan PIN.</span>
       </div>
 
       <div class="field">
@@ -396,9 +368,9 @@
       <div class="balcard" id="rc-balcard">
         <div class="balcard-name" id="rc-balcard-name"></div>
         <div class="balcard-grid">
-          <div class="balcard-cell"><div class="lbl">Dalam</div><div class="val" id="rc-bd">–</div></div>
-          <div class="balcard-cell"><div class="lbl">Luar</div><div class="val" id="rc-bl">–</div></div>
-          <div class="balcard-cell rosak"><div class="lbl">Rosak</div><div class="val" id="rc-br">–</div></div>
+          <div class="balcard-cell"><div class="lbl">Dalam<span class="bm">In store</span></div><div class="val" id="rc-bd">–</div></div>
+          <div class="balcard-cell"><div class="lbl">Luar<span class="bm">Out</span></div><div class="val" id="rc-bl">–</div></div>
+          <div class="balcard-cell rosak"><div class="lbl">Rosak<span class="bm">Damaged</span></div><div class="val" id="rc-br">–</div></div>
         </div>
         <div class="balcard-foot">System balance · Baki sistem</div>
       </div>
@@ -423,7 +395,7 @@
       </div>
       <div class="field">
         <label>Note · Catatan</label>
-        <input type="text" id="rc-note" autocomplete="off" placeholder="optional">
+        <input type="text" id="rc-note" autocomplete="off" placeholder="optional · pilihan">
       </div>
 
       <div class="btn-wrap">
@@ -436,22 +408,22 @@
 
       <!-- Manager pull-level (ADJUST) — only shown after a non-zero variance reconcile -->
       <div id="rc-adjust-wrap" style="display:none;margin-top:22px;">
-        <div class="section-label" style="color:#7A5C00;">Manager Adjust · Laras Pengurus</div>
+        <div class="section-label is-warn">Manager Adjust · Laras Pengurus</div>
         <div class="hint">Variance found. A manager can pull the system balance to the real count. This needs a PIN and is recorded with who &amp; why.<br>Perbezaan dijumpai. Pengurus boleh laras baki ke kiraan sebenar — perlu PIN.</div>
         <div class="pin-box">
-          <div class="pin-head">🔒 Manager PIN · PIN Pengurus required</div>
-          <input type="password" id="adj-pin" inputmode="numeric" autocomplete="off" placeholder="Manager PIN">
+          <div class="pin-head"><svg class="i i16" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Manager PIN required · PIN Pengurus diperlukan</div>
+          <input type="password" id="adj-pin" inputmode="numeric" autocomplete="off" placeholder="Manager PIN · PIN Pengurus">
         </div>
         <div class="field">
           <label>Reason · Sebab <span class="req">*</span></label>
           <input type="text" id="adj-reason" autocomplete="off" placeholder="e.g. broken in transit, miscount">
         </div>
         <div class="btn-wrap">
-          <button type="button" class="submit-btn" style="background:var(--warn);box-shadow:0 4px 12px rgba(201,162,39,.3);" onclick="submitAdjust()">
+          <button type="button" class="submit-btn is-warn" onclick="submitAdjust()">
             <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
             Pull System → Real · Laras Baki
           </button>
-          <div class="teal-bar" style="background:#A07E00;"></div>
+          <div class="teal-bar"></div>
         </div>
       </div>
     </div>
@@ -460,7 +432,7 @@
     <div class="panel" id="panel-damage">
       <div class="notice">
         <b>Mark Damaged · Tanda Rosak:</b> Move pallets from DALAM/LUAR to ROSAK. A photo of the broken pallet is required.<br>
-        <span style="opacity:.75;">Pindah pallet dari DALAM/LUAR ke ROSAK. Foto pallet rosak diperlukan.</span>
+        <span class="bm-line">Pindah pallet dari DALAM/LUAR ke ROSAK. Foto pallet rosak diperlukan.</span>
       </div>
 
       <div class="field">
@@ -480,9 +452,9 @@
       <div class="balcard" id="dm-balcard">
         <div class="balcard-name" id="dm-balcard-name"></div>
         <div class="balcard-grid">
-          <div class="balcard-cell"><div class="lbl">Dalam</div><div class="val" id="dm-bd">–</div></div>
-          <div class="balcard-cell"><div class="lbl">Luar</div><div class="val" id="dm-bl">–</div></div>
-          <div class="balcard-cell rosak"><div class="lbl">Rosak</div><div class="val" id="dm-br">–</div></div>
+          <div class="balcard-cell"><div class="lbl">Dalam<span class="bm">In store</span></div><div class="val" id="dm-bd">–</div></div>
+          <div class="balcard-cell"><div class="lbl">Luar<span class="bm">Out</span></div><div class="val" id="dm-bl">–</div></div>
+          <div class="balcard-cell rosak"><div class="lbl">Rosak<span class="bm">Damaged</span></div><div class="val" id="dm-br">–</div></div>
         </div>
         <div class="balcard-foot">System balance · Baki sistem</div>
       </div>
@@ -503,7 +475,7 @@
             <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
           </div>
           <div class="photo-label" id="dm-photo-label">+ Tap to take photo<br>Ketik untuk ambil foto</div>
-          <div class="photo-sublabel" id="dm-photo-sub">Up to 10 · Show the damage clearly</div>
+          <div class="photo-sublabel" id="dm-photo-sub">Up to 10 · Maksimum 10 — show the damage clearly · tunjuk kerosakan dengan jelas</div>
         </div>
         <div class="photo-grid" id="dm-photo-grid"></div>
         <div class="photo-counter" id="dm-photo-counter"></div>
@@ -512,7 +484,7 @@
 
       <div class="field">
         <label>Reason · Sebab</label>
-        <input type="text" id="dm-reason" autocomplete="off" placeholder="optional — e.g. forklift, broken board">
+        <input type="text" id="dm-reason" autocomplete="off" placeholder="optional · pilihan — e.g. forklift, broken board">
       </div>
       <div class="field">
         <label>Date · Tarikh</label>
@@ -535,11 +507,11 @@
       <div class="hint" style="margin-top:14px;">Photos upload in the background. After saving, please verify the entry shows in the dashboard within 1 minute. · Foto dimuat naik di latar. Sila sahkan dalam papan pemuka dalam 1 minit.</div>
 
       <!-- ===== Repaired → back to store (ROSAK → DALAM) · R7 ===== -->
-      <div style="margin-top:26px;border-top:1px solid var(--gray-light);padding-top:22px;">
-        <div class="section-label" style="color:var(--success);">Repaired → Back to Store · Dibaiki → Masuk Stor</div>
-        <div class="notice" style="background:rgba(34,197,94,0.06);border-color:rgba(34,197,94,0.25);border-left-color:var(--success);">
+      <div class="subsec">
+        <div class="section-label is-ok">Repaired → Back to Store · Dibaiki → Masuk Stor</div>
+        <div class="notice is-ok">
           <b>Fixed a broken pallet? · Pallet rosak dah dibaiki?</b> Move it back from ROSAK to DALAM. No photo needed.<br>
-          <span style="opacity:.75;">Pindah balik dari ROSAK ke DALAM. Tiada foto diperlukan.</span>
+          <span class="bm-line">Pindah balik dari ROSAK ke DALAM. Tiada foto diperlukan.</span>
         </div>
 
         <div class="field">
@@ -553,9 +525,9 @@
         <div class="balcard" id="rp-balcard">
           <div class="balcard-name" id="rp-balcard-name"></div>
           <div class="balcard-grid">
-            <div class="balcard-cell"><div class="lbl">Dalam</div><div class="val" id="rp-bd">–</div></div>
-            <div class="balcard-cell"><div class="lbl">Luar</div><div class="val" id="rp-bl">–</div></div>
-            <div class="balcard-cell rosak"><div class="lbl">Rosak</div><div class="val" id="rp-br">–</div></div>
+            <div class="balcard-cell"><div class="lbl">Dalam<span class="bm">In store</span></div><div class="val" id="rp-bd">–</div></div>
+            <div class="balcard-cell"><div class="lbl">Luar<span class="bm">Out</span></div><div class="val" id="rp-bl">–</div></div>
+            <div class="balcard-cell rosak"><div class="lbl">Rosak<span class="bm">Damaged</span></div><div class="val" id="rp-br">–</div></div>
           </div>
           <div class="balcard-foot">System balance · Baki sistem</div>
         </div>
@@ -570,7 +542,7 @@
 
         <div class="field">
           <label>Reason · Sebab</label>
-          <input type="text" id="rp-reason" autocomplete="off" placeholder="optional — e.g. new board, repaired leg">
+          <input type="text" id="rp-reason" autocomplete="off" placeholder="optional · pilihan — e.g. new board, repaired leg">
         </div>
         <div class="field">
           <label>Date · Tarikh</label>
@@ -584,7 +556,7 @@
         </div>
 
         <div class="btn-wrap">
-          <button type="button" class="submit-btn" style="background:var(--success);box-shadow:0 4px 12px rgba(34,197,94,.25);" onclick="submitRepair()">
+          <button type="button" class="submit-btn is-ok" onclick="submitRepair()">
             <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
             Repaired → Store · Masuk Balik
           </button>
@@ -597,7 +569,7 @@
     <div class="panel" id="panel-assign">
       <div class="notice">
         <b>Assign to Lorry · Naik Lori:</b> Pick the date & lorry — the shipment loads automatically. Then set how many of each pallet go out. Saves DALAM → on-lorry per pallet type.<br>
-        <span style="opacity:.75;">Pilih tarikh & lori — shipment keluar sendiri. Set bilangan setiap pallet keluar. DALAM → atas lori.</span>
+        <span class="bm-line">Pilih tarikh & lori — shipment keluar sendiri. Set bilangan setiap pallet keluar. DALAM → atas lori.</span>
       </div>
 
       <div class="field">
@@ -613,7 +585,7 @@
       </div>
 
       <div class="btn-wrap" style="margin-bottom:10px;">
-        <button type="button" class="submit-btn" style="background:var(--navy-mid);box-shadow:0 4px 12px rgba(26,58,92,.25);" onclick="loadAssign()">
+        <button type="button" class="submit-btn is-ghost" onclick="loadAssign()">
           <svg viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35"/><circle cx="11" cy="11" r="7"/></svg>
           Load Shipment · Muat Shipment
         </button>
@@ -645,7 +617,7 @@
     <div class="panel" id="panel-accept">
       <div class="notice">
         <b>Driver Confirm · Sahkan Driver:</b> Enter the lorry no — today's shipment loads automatically. Check the assigned pallets, then tap <b>Correct</b> or edit the number you actually received.<br>
-        <span style="opacity:.75;">Masukkan no lori — shipment hari ini keluar sendiri. Semak pallet, tekan Betul atau ubah jumlah sebenar diterima. (Boleh juga di halaman driver.)</span>
+        <span class="bm-line">Masukkan no lori — shipment hari ini keluar sendiri. Semak pallet, tekan Betul atau ubah jumlah sebenar diterima. (Boleh juga di halaman driver.)</span>
       </div>
 
       <div class="field">
@@ -656,7 +628,7 @@
         <div id="ac-ship-info" class="hint" style="margin-top:8px;"></div>
       </div>
       <div class="btn-wrap" style="margin-bottom:10px;">
-        <button type="button" class="submit-btn" style="background:var(--navy-mid);box-shadow:0 4px 12px rgba(26,58,92,.25);" onclick="loadAccept()">
+        <button type="button" class="submit-btn is-ghost" onclick="loadAccept()">
           <svg viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35"/><circle cx="11" cy="11" r="7"/></svg>
           Load Shipment · Muat Shipment
         </button>
@@ -669,12 +641,12 @@
 
       <div class="field" style="margin-top:14px;">
         <label>Driver name · Nama driver <span class="req">*</span></label>
-        <input type="text" id="ac-driver" autocomplete="off" placeholder="Driver name">
+        <input type="text" id="ac-driver" autocomplete="off" placeholder="Driver name · Nama driver">
         <div class="error-msg" id="err-ac-driver">Enter driver name · Masukkan nama driver</div>
       </div>
 
       <div class="btn-wrap">
-        <button type="button" class="submit-btn" style="background:var(--success);box-shadow:0 4px 12px rgba(34,197,94,.25);" onclick="submitAccept()">
+        <button type="button" class="submit-btn is-ok" onclick="submitAccept()">
           <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
           Confirm Received · Sahkan Terima
         </button>
@@ -686,7 +658,7 @@
     <div class="panel" id="panel-returns">
       <div class="notice">
         <b>Receive from Lorry · Terima dari Lori:</b> Enter the lorry — see what should still be on it, count what actually came back (good vs damaged). A shortfall must be assigned to a customer; extras are customer returns.<br>
-        <span style="opacity:.75;">Masukkan lori — kira apa yang balik (elok / rosak). Kekurangan diberi kepada pelanggan; lebihan = pulangan pelanggan.</span>
+        <span class="bm-line">Masukkan lori — kira apa yang balik (elok / rosak). Kekurangan diberi kepada pelanggan; lebihan = pulangan pelanggan.</span>
       </div>
 
       <div class="field">
@@ -697,7 +669,7 @@
         <div id="rt-ship-info" class="hint" style="margin-top:8px;"></div>
       </div>
       <div class="btn-wrap" style="margin-bottom:10px;">
-        <button type="button" class="submit-btn" style="background:var(--navy-mid);box-shadow:0 4px 12px rgba(26,58,92,.25);" onclick="loadReceive()">
+        <button type="button" class="submit-btn is-ghost" onclick="loadReceive()">
           <svg viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35"/><circle cx="11" cy="11" r="7"/></svg>
           Load Lorry · Muat Lori
         </button>
@@ -707,7 +679,7 @@
       <div id="rt-rows"><div class="empty">Load a lorry to receive · Muat lori dahulu</div></div>
 
       <div class="btn-wrap" style="margin-top:14px;">
-        <button type="button" class="submit-btn" style="background:var(--success);box-shadow:0 4px 12px rgba(34,197,94,.25);" onclick="submitReceive()">
+        <button type="button" class="submit-btn is-ok" onclick="submitReceive()">
           <svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
           Receive All · Terima Semua
         </button>
@@ -720,7 +692,7 @@
     <div class="panel" id="panel-principal">
       <div class="notice">
         <b>Principal · Prinsipal:</b> <b>Return to</b> = send pallets back to the owner (stock drops). <b>Receive from</b> = principal sends pallets in (stock rises). Records who, when & a reference.<br>
-        <span style="opacity:.75;">Pulang ke = hantar balik (stok turun). Terima dari = prinsipal hantar masuk (stok naik). Rekod rujukan.</span>
+        <span class="bm-line">Pulang ke = hantar balik (stok turun). Terima dari = prinsipal hantar masuk (stok naik). Rekod rujukan.</span>
       </div>
 
       <div class="field">
@@ -746,9 +718,9 @@
       <div class="balcard" id="pr-balcard">
         <div class="balcard-name" id="pr-balcard-name"></div>
         <div class="balcard-grid">
-          <div class="balcard-cell"><div class="lbl">Dalam</div><div class="val" id="pr-bd">–</div></div>
-          <div class="balcard-cell"><div class="lbl">Luar</div><div class="val" id="pr-bl">–</div></div>
-          <div class="balcard-cell rosak"><div class="lbl">Rosak</div><div class="val" id="pr-br">–</div></div>
+          <div class="balcard-cell"><div class="lbl">Dalam<span class="bm">In store</span></div><div class="val" id="pr-bd">–</div></div>
+          <div class="balcard-cell"><div class="lbl">Luar<span class="bm">Out</span></div><div class="val" id="pr-bl">–</div></div>
+          <div class="balcard-cell rosak"><div class="lbl">Rosak<span class="bm">Damaged</span></div><div class="val" id="pr-br">–</div></div>
         </div>
         <div class="balcard-foot">System balance · Baki sistem</div>
       </div>
@@ -787,6 +759,7 @@
     </div>
 
   </div>
+  <div class="foot">CLF Trading Sdn. Bhd. · 557522-A · Mentakab, Pahang</div>
 </div>
 
 <div class="loading-overlay" id="loadingOverlay">
@@ -859,7 +832,7 @@ async function fetchMaster(){
     ['st-pallet','rc-pallet','dm-pallet','rp-pallet','pr-pallet'].forEach(function(id){
       var s = document.getElementById(id); if (s) s.innerHTML = '<option value="">⚠ Load failed — pull to retry · Gagal</option>';
     });
-    toast('err', '<b>Could not load pallet list.</b><br>Check connection · Semak sambungan.');
+    toast('err', '<b>Could not load pallet list · Senarai pallet gagal dimuat.</b><br>Check connection · Semak sambungan.');
   }
 }
 
@@ -960,7 +933,7 @@ async function submitStocktake(){
   if (data && data.status === 'success'){
     var msg = data.dedup ? 'Already saved · Sudah disimpan' :
       ('New balance · Baki baru: <b>' + data.newBalance + '</b> ' + _esc(data.state) +
-       (data.delta ? ' (' + (data.delta > 0 ? '+' : '') + data.delta + ')' : ' — matched'));
+       (data.delta ? ' (' + (data.delta > 0 ? '+' : '') + data.delta + ')' : ' — matched · padan'));
     toast('ok', '<b>Stocktake saved · Kiraan disimpan</b><br>' + msg);
     document.getElementById('st-count').value = '';
     document.getElementById('st-var').classList.remove('show');
@@ -1137,16 +1110,16 @@ function renderDamageGrid(){
     return '<div class="photo-thumb"><img src="' + p.dataUrl + '" alt="Damage ' + (i+1) + '">' +
            '<button type="button" class="remove-x" onclick="removeDamagePhoto(' + i + ')" aria-label="Remove">×</button></div>';
   }).join('');
-  counter.textContent = dmPhotos.length ? (dmPhotos.length + ' / ' + MAX_PHOTOS + ' photos') : '';
+  counter.textContent = dmPhotos.length ? (dmPhotos.length + ' / ' + MAX_PHOTOS + ' photos · foto') : '';
   var btn = document.getElementById('dm-photo-btn');
   if (dmPhotos.length > 0){
     btn.classList.add('has-photo');
-    document.getElementById('dm-photo-label').textContent = '+ Add another (' + dmPhotos.length + '/' + MAX_PHOTOS + ')';
-    document.getElementById('dm-photo-sub').textContent = 'Tap to take another photo';
+    document.getElementById('dm-photo-label').textContent = '+ Add another · Tambah lagi (' + dmPhotos.length + '/' + MAX_PHOTOS + ')';
+    document.getElementById('dm-photo-sub').textContent = 'Tap to take another photo · Ketik untuk foto lagi';
   } else {
     btn.classList.remove('has-photo');
     document.getElementById('dm-photo-label').innerHTML = '+ Tap to take photo<br>Ketik untuk ambil foto';
-    document.getElementById('dm-photo-sub').textContent = 'Up to 10 · Show the damage clearly';
+    document.getElementById('dm-photo-sub').textContent = 'Up to 10 · Maksimum 10 — show the damage clearly · tunjuk kerosakan dengan jelas';
   }
   document.getElementById('dm-photo').disabled = dmPhotos.length >= MAX_PHOTOS;
 }
@@ -1181,7 +1154,7 @@ async function submitDamage(){
     document.getElementById('dm-reason').value = '';
     refreshBalances(true);
   } else if (confirmed && confirmed.status === 'error'){
-    toast('err', '<b>NOT saved · TIDAK disimpan</b><br>' + _esc(confirmed.message || 'Server error') + '<br>Photos kept — tap again · Foto kekal, cuba lagi');
+    toast('err', '<b>NOT saved · TIDAK disimpan</b><br>' + _esc(confirmed.message || 'Server error · Ralat') + '<br>Photos kept — tap again · Foto kekal, cuba lagi');
   } else {
     // weak signal: POST likely landed (no-cors), but we could not confirm — keep photos, tell user to verify.
     toast('warn', '<b>Sent — please verify · Sila sahkan</b><br>Could not confirm. Check the dashboard in 1 min before re-sending.<br>Tak dapat sahkan — semak papan pemuka dulu.');
@@ -1267,7 +1240,7 @@ async function loadAssign(){
     if (data && data.status === 'ok' && Array.isArray(data.shipments)) AS_SHIPMENTS = data.shipments;
   }catch(err){ console.warn('getShipmentForLorry failed', err); }
   if (!AS_SHIPMENTS.length){
-    info.innerHTML = '<span style="color:var(--error);">No shipment for ' + _esc(lorryNo) + ' on ' + _esc(date) + ' · Tiada shipment untuk lori ini</span>';
+    info.innerHTML = '<span class="bad-txt">No shipment for ' + _esc(lorryNo) + ' on ' + _esc(date) + ' · Tiada shipment untuk lori ini</span>';
     document.getElementById('as-existing').textContent = '';
     AS_LINES = []; renderAssignRows({});
     return;
@@ -1284,13 +1257,13 @@ async function pickAssignShipment(idx){
   var picker = '';
   if (AS_SHIPMENTS.length > 1){
     picker = 'This lorry runs <b>' + AS_SHIPMENTS.length + '</b> shipments today — pick one · Pilih: '
-      + '<select id="as-ship-pick" onchange="pickAssignShipment(this.value)" style="margin-top:6px;padding:9px;font-size:14px;border:1.5px solid #d8c8a0;border-radius:8px;width:100%;background:#fff;color:#412402;">'
+      + '<select id="as-ship-pick" onchange="pickAssignShipment(this.value)" class="ship-pick">'
       + AS_SHIPMENTS.map(function(s, i){ return '<option value="' + i + '"' + (i===idx?' selected':'') + '>' + _esc(s.shipmentKey) + (s.itemCount ? (' · ' + s.itemCount + ' inv') : '') + '</option>'; }).join('')
       + '</select><br>';
   }
   document.getElementById('as-ship-info').innerHTML = picker
-    + '<span style="color:#15803D;font-weight:600;">✓ ' + _esc(shipKey) + '</span>'
-    + (sh.itemCount ? (' · ' + sh.itemCount + ' invoice(s)') : '');
+    + '<span class="ok-txt">✓ ' + _esc(shipKey) + '</span>'
+    + (sh.itemCount ? (' · ' + sh.itemCount + ' invoice(s) · invois') : '');
   await refreshBalances(false);   // fresh DALAM caps
   var existing = {};
   try{
@@ -1300,7 +1273,7 @@ async function pickAssignShipment(idx){
       var found = data.shipments.filter(function(s){ return s.shipmentKey === shipKey; })[0];
       if (found && found.lines){ found.lines.forEach(function(l){ existing[l.palletKey] = l.assigned; }); }
       document.getElementById('as-existing').innerHTML = (found && found.lines && found.lines.length)
-        ? 'Already assigned on this shipment: ' + found.lines.map(function(l){ return _esc(l.displayName || l.palletKey) + ' ×' + l.assigned; }).join(', ')
+        ? 'Already assigned on this shipment · Sudah ditugas: ' + found.lines.map(function(l){ return _esc(l.displayName || l.palletKey) + ' ×' + l.assigned; }).join(', ')
         : 'No pallets assigned yet · Belum ada';
     }
   }catch(err){ console.warn('loadAssign read failed', err); document.getElementById('as-existing').textContent = ''; }
@@ -1310,7 +1283,7 @@ async function pickAssignShipment(idx){
 function renderAssignRows(existing){
   existing = existing || {};
   var html = AS_LINES.map(function(l, i){
-    var alreadyTxt = existing[l.palletKey] ? (' · already ×' + existing[l.palletKey]) : '';
+    var alreadyTxt = existing[l.palletKey] ? (' · already · sudah ×' + existing[l.palletKey]) : '';
     return '<div class="plt-row"><div class="plt-row-top">' +
       '<div><div class="nm">' + _esc(l.displayName) + '</div><div class="sub">DALAM ' + l.dalam + alreadyTxt + '</div></div>' +
       '<div class="stepper">' +
@@ -1358,7 +1331,7 @@ async function submitAssign(){
     document.getElementById('as-existing').textContent = '';
     refreshBalances(true);
   } else {
-    toast('warn', '<b>' + done + ' saved, ' + failed.length + ' not · Sebahagian gagal</b><br>Retry: ' + _esc(failed.join(', ')) + '. Already-saved ones are deduped, safe to resend.');
+    toast('warn', '<b>' + done + ' saved, ' + failed.length + ' not · Sebahagian gagal</b><br>Retry: ' + _esc(failed.join(', ')) + '. Already-saved ones are deduped, safe to resend · Selamat dihantar semula.');
   }
 }
 
@@ -1383,7 +1356,7 @@ async function loadAccept(){
     if (data && data.status === 'ok' && Array.isArray(data.shipments)) AC_SHIPMENTS = data.shipments;
   }catch(err){ console.warn('getShipmentForLorry failed', err); }
   if (!AC_SHIPMENTS.length){
-    info.innerHTML = '<span style="color:var(--error);">No shipment today for ' + _esc(lorryNo) + ' · Tiada shipment hari ini</span>';
+    info.innerHTML = '<span class="bad-txt">No shipment today for ' + _esc(lorryNo) + ' · Tiada shipment hari ini</span>';
     document.getElementById('ac-head').textContent = '';
     document.getElementById('ac-rows').innerHTML = '<div class="empty">Load a shipment to confirm · Muat shipment dahulu</div>';
     AC_LINES = []; return;
@@ -1400,13 +1373,13 @@ async function pickAcceptShipment(idx){
   var picker = '';
   if (AC_SHIPMENTS.length > 1){
     picker = 'This lorry runs <b>' + AC_SHIPMENTS.length + '</b> shipments today — pick one · Pilih: '
-      + '<select id="ac-ship-pick" onchange="pickAcceptShipment(this.value)" style="margin-top:6px;padding:9px;font-size:14px;border:1.5px solid #d8c8a0;border-radius:8px;width:100%;background:#fff;color:#412402;">'
+      + '<select id="ac-ship-pick" onchange="pickAcceptShipment(this.value)" class="ship-pick">'
       + AC_SHIPMENTS.map(function(s, i){ return '<option value="' + i + '"' + (i===idx?' selected':'') + '>' + _esc(s.shipmentKey) + (s.itemCount ? (' · ' + s.itemCount + ' inv') : '') + '</option>'; }).join('')
       + '</select><br>';
   }
   document.getElementById('ac-ship-info').innerHTML = picker
-    + '<span style="color:#15803D;font-weight:600;">✓ ' + _esc(shipKey) + '</span>'
-    + (chosen.itemCount ? (' · ' + chosen.itemCount + ' invoice(s)') : '');
+    + '<span class="ok-txt">✓ ' + _esc(shipKey) + '</span>'
+    + (chosen.itemCount ? (' · ' + chosen.itemCount + ' invoice(s) · invois') : '');
   showLoading('Loading… · Memuatkan…');
   var sh = null;
   try{
@@ -1429,9 +1402,9 @@ async function pickAcceptShipment(idx){
 }
 function renderAcceptRows(){
   document.getElementById('ac-rows').innerHTML = AC_LINES.map(function(l, i){
-    var miss = l.entryId ? '' : ' · <span style="color:var(--error)">no entryId</span>';
+    var miss = l.entryId ? '' : ' · <span class="bad-txt">no entryId</span>';
     return '<div class="plt-row" id="ac-row-' + i + '"><div class="plt-row-top">' +
-      '<div><div class="nm">' + _esc(l.displayName) + '</div><div class="sub">Assigned ' + l.assigned + miss + '</div></div>' +
+      '<div><div class="nm">' + _esc(l.displayName) + '</div><div class="sub">Assigned · Ditugas ' + l.assigned + miss + '</div></div>' +
       '<button type="button" class="mini-btn sel" id="ac-ok-' + i + '" onclick="acceptCorrect(' + i + ')">Correct · Betul</button>' +
       '</div><div class="stepper" style="margin-top:8px;justify-content:flex-end;">' +
         '<span class="sub" style="margin-right:auto;">Received · Terima</span>' +
@@ -1461,7 +1434,7 @@ async function submitAccept(){
   document.getElementById('err-ac-driver').classList.toggle('show', !driver); if (!driver) return;
   if (!AC_LINES.length){ toast('err', 'Load a shipment first · Muat shipment dulu'); return; }
   var noId = AC_LINES.filter(function(l){ return !l.entryId; });
-  if (noId.length){ toast('err', '<b>Cannot confirm · Tak boleh sah</b><br>Assign lines are missing their entryId. Backend read needs to return it (see note).'); return; }
+  if (noId.length){ toast('err', '<b>Cannot confirm · Tak boleh sah</b><br>Assign lines are missing their entryId. Backend read needs to return it (see note). · Baris tugasan tiada entryId, hubungi pejabat.'); return; }
   showLoading('Confirming receipt… · Mengesahkan…');
   var done = 0, failed = [];
   for (var k = 0; k < AC_LINES.length; k++){
@@ -1475,7 +1448,7 @@ async function submitAccept(){
     toast('ok', '<b>Received ✓ · Diterima</b><br>' + done + ' line(s) confirmed by ' + _esc(driver));
     refreshBalances(true);
   } else {
-    toast('warn', '<b>' + done + ' confirmed, ' + failed.length + ' not</b><br>Retry: ' + _esc(failed.join(', ')) + '. Safe to resend (deduped).');
+    toast('warn', '<b>' + done + ' confirmed, ' + failed.length + ' not · Sebahagian gagal</b><br>Retry: ' + _esc(failed.join(', ')) + '. Safe to resend (deduped) · Selamat dihantar semula.');
   }
 }
 
@@ -1511,7 +1484,7 @@ async function loadReceive(){
     }
   }catch(err){ console.warn('getShipmentForLorry failed', err); }
   if (!RC_SHIPMENTS.length){
-    info.innerHTML = '<span style="color:var(--error);">No shipment today for ' + _esc(lorryNo) + ' · Tiada shipment hari ini</span>';
+    info.innerHTML = '<span class="bad-txt">No shipment today for ' + _esc(lorryNo) + ' · Tiada shipment hari ini</span>';
     RC_LINES = []; document.getElementById('rt-rows').innerHTML = '<div class="empty">Load a lorry to receive · Muat lori dahulu</div>';
     return;
   }
@@ -1527,11 +1500,11 @@ async function pickReceiveShipment(idx){
   var picker = '';
   if (RC_SHIPMENTS.length > 1){
     picker = 'This lorry runs <b>' + RC_SHIPMENTS.length + '</b> shipments today — pick one · Pilih: '
-      + '<select id="rt-ship-pick" onchange="pickReceiveShipment(this.value)" style="margin-top:6px;padding:9px;font-size:14px;border:1.5px solid #d8c8a0;border-radius:8px;width:100%;background:#fff;color:#412402;">'
+      + '<select id="rt-ship-pick" onchange="pickReceiveShipment(this.value)" class="ship-pick">'
       + RC_SHIPMENTS.map(function(s, i){ return '<option value="' + i + '"' + (i===idx?' selected':'') + '>' + _esc(s.shipmentKey) + (s.itemCount ? (' · ' + s.itemCount + ' inv') : '') + '</option>'; }).join('')
       + '</select><br>';
   }
-  document.getElementById('rt-ship-info').innerHTML = picker + '<span style="color:#15803D;font-weight:600;">&#10003; ' + _esc(shipKey) + '</span>' + (RC_DRIVER ? (' · ' + _esc(RC_DRIVER)) : '');
+  document.getElementById('rt-ship-info').innerHTML = picker + '<span class="ok-txt">&#10003; ' + _esc(shipKey) + '</span>' + (RC_DRIVER ? (' · ' + _esc(RC_DRIVER)) : '');
   showLoading('Loading… · Memuatkan…');
   RC_LINES = [];
   try{
@@ -1549,12 +1522,12 @@ async function pickReceiveShipment(idx){
 function _rcCustPicker(id){
   var opts = '<option value="">— customer · pelanggan —</option>';
   RC_CUSTOMERS.forEach(function(c){ opts += '<option value="' + _esc(c.custCode) + '">' + _esc(c.custCode) + (c.customerName ? (' · ' + _esc(String(c.customerName).slice(0, 22))) : '') + '</option>'; });
-  return '<select id="' + id + '" style="flex:1;min-width:0;padding:10px;font-size:13px;border:1.5px solid #d8c8a0;border-radius:8px;background:#fff;color:#412402;">' + opts + '</select>';
+  return '<select id="' + id + '" class="cust-pick">' + opts + '</select>';
 }
 
 function renderReceiveRows(){
   if (!RC_LINES.length){
-    document.getElementById('rt-rows').innerHTML = '<div class="empty">Nothing left on this lorry &#127881; · Tiada apa atas lori ini</div>';
+    document.getElementById('rt-rows').innerHTML = '<div class="empty">Nothing left on this lorry · Tiada apa atas lori ini</div>';
     return;
   }
   document.getElementById('rt-rows').innerHTML = RC_LINES.map(function(l, i){
@@ -1578,17 +1551,17 @@ function recalcReceive(i){
   var diff = l.expected - good - bad;
   var box = document.getElementById('rc-diff-' + i);
   if (diff === 0){
-    box.innerHTML = '<div style="font-size:12px;color:#15803D;font-weight:600;">&#10003; Balanced · Seimbang</div>';
+    box.innerHTML = '<div class="rc-ok">&#10003; Balanced · Seimbang</div>';
   } else if (diff > 0){
-    box.innerHTML = '<div style="font-size:12px;color:#C62828;font-weight:700;margin-bottom:5px;">Short ' + diff + ' — left at customer? · Kurang ' + diff + ' — tinggal di pelanggan?</div>'
-      + '<div style="display:flex;gap:8px;">' + _rcCustPicker('rc-scust-' + i)
-      + '<input type="number" id="rc-sqty-' + i + '" inputmode="numeric" min="0" value="' + diff + '" style="width:74px;padding:10px;font-size:13px;border:1.5px solid #d8c8a0;border-radius:8px;"></div>'
-      + '<div style="font-size:11px;color:#854F0B;margin-top:4px;">Driver cannot say where they went? Do not receive — ask first. · Tanya driver dulu.</div>';
+    box.innerHTML = '<div class="rc-short">Short ' + diff + ' — left at customer? · Kurang ' + diff + ' — tinggal di pelanggan?</div>'
+      + '<div class="rc-alloc">' + _rcCustPicker('rc-scust-' + i)
+      + '<input type="number" id="rc-sqty-' + i + '" inputmode="numeric" min="0" value="' + diff + '" class="rc-qty"></div>'
+      + '<div class="rc-note">Driver cannot say where they went? Do not receive — ask first. · Tanya driver dulu.</div>';
   } else {
     var extra = -diff;
-    box.innerHTML = '<div style="font-size:12px;color:#0E7C5A;font-weight:700;margin-bottom:5px;">Extra ' + extra + ' — collected from customer? · Lebih ' + extra + ' — diambil dari pelanggan?</div>'
-      + '<div style="display:flex;gap:8px;">' + _rcCustPicker('rc-ccust-' + i)
-      + '<input type="number" id="rc-cqty-' + i + '" inputmode="numeric" min="0" value="' + extra + '" style="width:74px;padding:10px;font-size:13px;border:1.5px solid #d8c8a0;border-radius:8px;"></div>';
+    box.innerHTML = '<div class="rc-extra">Extra ' + extra + ' — collected from customer? · Lebih ' + extra + ' — diambil dari pelanggan?</div>'
+      + '<div class="rc-alloc">' + _rcCustPicker('rc-ccust-' + i)
+      + '<input type="number" id="rc-cqty-' + i + '" inputmode="numeric" min="0" value="' + extra + '" class="rc-qty"></div>';
   }
 }
 
@@ -1629,10 +1602,10 @@ async function submitReceive(){
       var rr = await getWrite('PALLET_RETURN', { palletKey: key, goodQty: p.good, damagedQty: p.bad, shipmentKey: shipKey, driverName: RC_DRIVER, entryDate: _today(), clientToken: _newToken('rcv') });
       if (!(rr && rr.status === 'success')){ failed.push(nm + ' return: ' + ((rr && rr.message) || 'error')); continue; }
     }
-    msgs.push(nm + ': ' + p.good + ' good' + (p.bad ? (' · ' + p.bad + ' dmg') : '') + (p.shortQty ? (' · ' + p.shortQty + '&rarr;' + _esc(p.shortCust)) : '') + (p.colQty ? (' · +' + p.colQty + ' from ' + _esc(p.colCust)) : ''));
+    msgs.push(nm + ': ' + p.good + ' good · elok' + (p.bad ? (' · ' + p.bad + ' dmg · rosak') : '') + (p.shortQty ? (' · ' + p.shortQty + '&rarr;' + _esc(p.shortCust)) : '') + (p.colQty ? (' · +' + p.colQty + ' from · dari ' + _esc(p.colCust)) : ''));
   }
   hideLoading();
-  if (failed.length) toast('err', '<b>Some lines failed · Sebahagian gagal</b><br>' + _esc(failed.join(' | ')) + '<br>Fix &amp; resend — saved ones are deduped.');
+  if (failed.length) toast('err', '<b>Some lines failed · Sebahagian gagal</b><br>' + _esc(failed.join(' | ')) + '<br>Fix &amp; resend — saved ones are deduped · Betulkan &amp; hantar semula.');
   else toast('ok', '<b>Received &#10003; · Diterima</b><br>' + msgs.join('<br>'));
   refreshBalances(true);
   var pick = document.getElementById('rt-ship-pick');
@@ -1704,7 +1677,7 @@ async function submitPrincipal(){
       document.getElementById('pr-var').classList.remove('show');
       refreshBalances(true);
     } else {
-      toast('err', '<b>NOT saved · TIDAK disimpan</b><br>' + _esc((rdata && rdata.message) || 'Server error'));
+      toast('err', '<b>NOT saved · TIDAK disimpan</b><br>' + _esc((rdata && rdata.message) || 'Server error · Ralat'));
     }
     return;
   }
@@ -1876,17 +1849,17 @@ function showLock(msg){
   if (!ov){
     ov = document.createElement('div');
     ov.id = 'lockOverlay';
-    ov.style.cssText = 'position:fixed;inset:0;z-index:200;background:rgba(38,24,8,.96);display:flex;align-items:center;justify-content:center;padding:20px;';
-    ov.innerHTML = '<div style="background:#fff;border-radius:16px;max-width:360px;width:100%;padding:26px 22px;box-shadow:0 20px 60px rgba(0,0,0,.4);">'
-      + '<div style="font-size:34px;text-align:center;">&#128274;</div>'
-      + '<div style="font-weight:800;font-size:17px;text-align:center;margin:6px 0 2px;color:#412402;">Pallet Store is locked</div>'
-      + '<div style="font-size:12.5px;color:#854F0B;text-align:center;margin-bottom:14px;">Authorised staff only &middot; Staf sah sahaja</div>'
-      + '<label style="font-size:12px;font-weight:700;color:#854F0B;">Staff ID &middot; ID Staf</label>'
-      + '<input id="lk-emp" autocomplete="off" placeholder="e.g. TER282" style="width:100%;box-sizing:border-box;margin:4px 0 10px;padding:12px;font-size:15px;border:1.5px solid #d8c8a0;border-radius:9px;">'
-      + '<label style="font-size:12px;font-weight:700;color:#854F0B;">PIN</label>'
-      + '<input id="lk-pin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN" style="width:100%;box-sizing:border-box;margin:4px 0 6px;padding:12px;font-size:15px;border:1.5px solid #d8c8a0;border-radius:9px;">'
-      + '<div id="lk-err" style="min-height:16px;font-size:12px;color:#C62828;font-weight:600;"></div>'
-      + '<button id="lk-btn" style="width:100%;margin-top:8px;background:#5C3A1E;color:#fff;border:none;border-radius:10px;padding:14px;font-weight:800;font-size:15px;cursor:pointer;">Unlock &middot; Buka</button></div>';
+    ov.className = 'lock';
+    ov.innerHTML = '<div class="lock__card">'
+      + '<div class="lock__ic"><svg class="i i32" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>'
+      + '<div class="lock__title">Pallet Store is locked &middot; Stor Pallet dikunci</div>'
+      + '<div class="lock__sub">Authorised staff only &middot; Staf sah sahaja</div>'
+      + '<label for="lk-emp">Staff ID &middot; ID Staf</label>'
+      + '<input id="lk-emp" autocomplete="off" placeholder="e.g. TER282">'
+      + '<label for="lk-pin">PIN</label>'
+      + '<input id="lk-pin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN">'
+      + '<div id="lk-err" class="lock__err"></div>'
+      + '<button id="lk-btn" class="lock__btn">Unlock &middot; Buka</button></div>';
     document.body.appendChild(ov);
     document.getElementById('lk-btn').onclick = doUnlock;
     document.getElementById('lk-pin').addEventListener('keydown', function(e){ if (e.key === 'Enter') doUnlock(); });
