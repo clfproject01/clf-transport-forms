@@ -270,6 +270,17 @@
     </div>
   </div>
 
+  <!-- ===================== LORRIES NOT RETURNED ===================== -->
+  <h2 class="sec"><span class="sec__ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>Lorries not returned · Lori belum pulang palet <span class="sub">pallets sent out on a lorry and not yet received back · palet yang keluar dengan lori dan belum diterima balik</span></h2>
+
+  <div class="grid">
+    <div class="card c12">
+      <div class="card-sub">One row per shipment. Pallets left at a customer are not counted here (they are in the customer list below). Red = out 3 days or more, yellow = 1 to 2 days.<br>Satu baris setiap shipment. Palet yang ditinggalkan di pelanggan tidak dikira di sini (lihat senarai pelanggan di bawah). Merah = 3 hari atau lebih, kuning = 1 hingga 2 hari.</div>
+      <div id="lorryBody"></div>
+      <div class="note-line" id="lorryNote"></div>
+    </div>
+  </div>
+
   <!-- ===================== OUTSTANDING BY CUSTOMER ===================== -->
   <h2 class="sec"><span class="sec__ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg></span>Outgoing by customer · Luar mengikut pelanggan <span class="sub">where the outgoing pallets are, when a customer is recorded · di mana palet luar berada, jika pelanggan direkodkan</span></h2>
 
@@ -384,6 +395,7 @@
       renderTotals(dash, bal);
       renderPerPallet();
       renderOutstanding(out);
+      renderLorries(dash);
       renderAudit();
 
       if(dash || bal) LAST_UPDATED = Date.now();
@@ -511,6 +523,37 @@
         + '<div class="derived-note">Inside · Dalam: <b>'+fmtInt(b.dalam)+'</b></div>'
         + '</div>';
     }).join('') + '</div>';
+  }
+
+  // ---------- Lorries that still hold pallets (getPalletDashboard .lorriesOut) ----------
+  function renderLorries(dash){
+    var body = $('lorryBody'), note = $('lorryNote');
+    if(!dash || !Array.isArray(dash.lorriesOut)){
+      body.innerHTML = '<div class="empty">Unavailable — not loaded (this is not the same as "none") · Tidak tersedia — belum dimuatkan (bukan bermakna tiada)</div>';
+      note.textContent = ''; return;
+    }
+    var rows = dash.lorriesOut;
+    if(!rows.length){
+      body.innerHTML = '<div class="empty">Every lorry has returned its pallets · Semua lori sudah pulangkan palet</div>';
+      note.textContent = ''; return;
+    }
+    var total = 0, late = 0, SHOW = 60;
+    rows.forEach(function(r){ total += intOr0(r.total); if(intOr0(r.daysOut) >= 1) late++; });
+    var html = '<div style="overflow-x:auto;"><table class="act"><thead><tr><th>Lorry · Lori</th><th>Went out · Keluar</th><th>Still out · Belum pulang</th><th class="rm">Qty · Jumlah</th></tr></thead><tbody>';
+    rows.slice(0, SHOW).forEach(function(r){
+      var d = num(r.daysOut);
+      var cls = (d != null && d >= 3) ? ' class="fail"' : ((d != null && d >= 1) ? ' class="warn"' : '');
+      var age = d == null ? '' : (d <= 0 ? 'today · hari ini' : (d + (d === 1 ? ' day · hari' : ' days · hari')));
+      var lines = (r.lines || []).map(function(l){ return esc(l.displayName || l.palletKey) + ' ×' + fmtInt(l.onLorry); }).join('<br>');
+      html += '<tr' + cls + '><td class="pkey">' + esc(r.lorryNo || '—') + '<div class="psub">' + esc(r.shipmentKey) + (r.driverName ? (' · ' + esc(r.driverName)) : '') + '</div></td>'
+        + '<td>' + esc(r.assignDate || '—') + '<div class="psub">' + age + '</div></td>'
+        + '<td>' + lines + '</td>'
+        + '<td class="rm"><span class="chip blue mono">' + fmtInt(r.total) + '</span></td></tr>';
+    });
+    body.innerHTML = html + '</tbody></table></div>';
+    note.textContent = rows.length + ' shipment(s), ' + fmtInt(total) + ' pallet(s) not back — ' + late + ' out for 1 day or more · '
+      + rows.length + ' shipment, ' + fmtInt(total) + ' palet belum pulang — ' + late + ' sudah 1 hari atau lebih'
+      + (rows.length > SHOW ? ('. Showing the ' + SHOW + ' longest out · Menunjukkan ' + SHOW + ' yang paling lama') : '');
   }
 
   // ---------- Outstanding by customer ----------
