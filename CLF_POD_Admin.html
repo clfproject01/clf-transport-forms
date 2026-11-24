@@ -21,13 +21,31 @@
                 invoices:[ { invoiceNo, barcodeRaw, customer, custCode, area, amount,
                 status:'delivered'|'failed'|'pending', deliveredAt, deliveredDate,
                 photoUrls:[], matchSource:'barcode'|'ai'|'none', mismatch:bool,
-                efiScanned:bool, efiBy, failReason, photoOk:bool, photoOkBy } ] } ] }
+                efiScanned:bool, efiBy, failReason, photoOk:bool, photoOkBy,
+                reupBy:'<empNo>'|'' } ],
+                nas:{ state, at, by, files, msg } } ] }   (reupBy + nas: see the two POSTs below)
     POST data={ formType:'MARK_PHOTO_OK', shipmentKey, invoiceNo, ok:1|0, authToken, clientToken }
          -> { status:'success' }  [2026-11-23] office checked the photo: it IS this invoice
     POST data={ formType:'MARK_EFI_SCANNED', shipmentKey, invoiceNo, scanned:1|0,
                 authToken, clientToken }  (no-cors + poll getImportResult)
          -> { status:'success' } (idempotent). POST (not GET) so the session
             authToken travels in the body, never in the access log / URL.
+    POST data={ formType:'REUPLOAD_POD_PHOTO', shipmentKey, invoiceNo, photos:[{ name, data }],
+                authToken, clientToken }   [2026-11] office replaces an unclear photo
+         photos = 1..5 JPEGs, downscaled in the browser to max 2000 px on the long side, quality 0.85;
+         data = base64 WITHOUT the "data:image/jpeg;base64," prefix. The old photo is kept in Drive.
+         -> { status:'success', photoUrls:[...], reupBy:'<empNo>' }
+            The page then shows the new photo, clears barcodeRaw + photoOk and tags the row
+            "Re-uploaded <empNo>" (photoCheck = 'reup': verified, not "Needs check").
+            The board must send the field reupBy on invoices ('' when none) - the Re-upload button
+            only appears when that field exists, so this page can go live before the backend.
+    POST data={ formType:'ARCHIVE_POD_NAS', shipmentKey, date, branch, authToken, clientToken }
+         [2026-11] one button per lorry, after the office checked everything: copy its POD files to the NAS
+         -> { status:'success', nas:{ state:''|'queued'|'done'|'error', at:'<ISO or HH:mm>', by:'<empNo>',
+                                       files:<n>, msg:'' } }
+            The board must send the same nas object on every lorry (state '' = not on the NAS) - the
+            NAS pill, button and summary tile only appear when that field exists. The button is enabled
+            only when no invoice of the lorry is still pending and no delivered invoice needs a check.
 
   PHOTO CHECK (2026-10-24): barcodeRaw = the barcode the driver's phone read on the photo filed under
     that invoice. BC✓ only when it IS this invoice; another number = "Wrong photo" on that row only, and
@@ -50,187 +68,317 @@
   ============================================================================
 -->
 <style>
+  /* ==========================================================================
+     LOOK: "direction B - Brand" (2026-11). Navy band + white logo + 3px red line
+     (red is used ONLY there), warm page, white cards, pill buttons and tags.
+     navy = actions, green = done, amber = check, dark red = fault, lime = a dot.
+     The barcode box (.bc-box) is deliberately left exactly as before: pure black
+     on pure white, no radius, no shadow, nothing drawn over it.
+     ========================================================================== */
   :root{
-    --blue:#1A56DB; --blue-600:#2563EB; --blue-50:#EFF4FF;
-    --green-50:#ECFDF5; --green-500:#16A34A; --green-700:#15803D;
-    --amber-50:#FFFBEB; --amber-500:#D97706; --amber-700:#B45309;
-    --red-50:#FEF2F2; --red-500:#EF4444; --red-700:#B91C1C;
-    --gray-50:#F9FAFB; --gray-100:#F3F4F6; --gray-200:#E5E7EB; --gray-300:#D1D5DB;
-    --gray-400:#9CA3AF; --gray-500:#6B7280; --gray-600:#4B5563; --gray-700:#374151; --gray-900:#111827;
-    --card:#fff; --radius:14px; --shadow:0 1px 2px rgba(17,24,39,.06),0 1px 3px rgba(17,24,39,.08);
+    --page:#FAF7F2; --surface:#FFFFFF; --text:#1A1B2E; --muted:#5F6072; --line:#ECE7DE; --soft:#F4F0EA; --hover:#FCFBF8;
+    --ctl:#C5C8E0; --navy:#141C77; --navy-2:#2A3189; --navy-tint:#EEF0FA; --on-navy:#D9DBF2;
+    --ok:#15803D; --ok-tint:#ECFDF3; --warn:#B45309; --warn-tint:#FFFBEB; --fault:#C8101E; --fault-tint:#FDF1F1;
+    --red:#FC091B; --lime:#87C329;
+    --shadow:0 1px 2px rgba(26,27,46,.05),0 8px 24px rgba(26,27,46,.07);
   }
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--gray-50);color:var(--gray-900);line-height:1.5;-webkit-font-smoothing:antialiased;padding-bottom:60px;}
-  .wrap{max-width:1120px;margin:0 auto;padding:18px 16px;}
-  .topbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;}
-  .topbar h1{font-size:19px;font-weight:700;letter-spacing:-.01em;display:flex;align-items:center;gap:9px;}
-  .topbar h1 .logo{background:var(--blue);color:#fff;font-size:12px;font-weight:800;border-radius:7px;padding:4px 8px;letter-spacing:.02em;}
-  .topbar .meta{font-size:12.5px;color:var(--gray-500);}
-  .controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
-  .controls label{font-size:13px;color:var(--gray-700);font-weight:500;}
-  .controls input[type=date]{font-family:inherit;font-size:13px;padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;background:#fff;color:var(--gray-900);}
-  .seg{display:inline-flex;border:1px solid var(--gray-200);border-radius:8px;overflow:hidden;}
-  .seg-btn{font-family:inherit;font-size:13px;font-weight:600;padding:6px 15px;border:0;background:#fff;color:var(--gray-500);cursor:pointer;}
-  .seg-btn+.seg-btn{border-left:1px solid var(--gray-200);}
-  .seg-btn.active{background:var(--blue);color:#fff;}
-  .btn{font-family:inherit;font-size:13px;font-weight:600;padding:7px 14px;border:1px solid var(--gray-200);border-radius:8px;background:#fff;color:var(--gray-700);cursor:pointer;}
-  .btn:hover{background:var(--gray-50);}
-  .btn-primary{background:var(--blue);color:#fff;border-color:var(--blue);}
-  .btn-primary:hover{background:#1749b8;}
+  *,*::before,*::after{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+  body{margin:0;min-height:100vh;background:var(--page);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:14px;line-height:1.4;-webkit-font-smoothing:antialiased;padding-bottom:60px;}
+  h1{margin:0;}
+  button,input{font:inherit;color:inherit;}
+  button{cursor:pointer;}
+  button:disabled{cursor:default;}
+  code{font-family:Consolas,"SFMono-Regular",monospace;font-size:.95em;}
+  :focus-visible{outline:3px solid var(--navy);outline-offset:2px;}
+  .band :focus-visible,.lock :focus-visible,#lightbox :focus-visible{outline-color:#fff;}
+  .lock input:focus-visible,.lock button:focus-visible{outline-color:var(--navy);}
 
-  .demo-banner{display:none;background:#FEF3C7;border:1px solid var(--amber-500);color:var(--amber-700);font-size:13px;font-weight:600;padding:9px 13px;border-radius:8px;margin-bottom:14px;}
-  .demo-banner.show{display:block;}
-  .err-banner{display:none;background:var(--red-50);border:1px solid var(--red-500);color:var(--red-700);font-size:13px;padding:10px 13px;border-radius:8px;margin-bottom:14px;align-items:center;justify-content:space-between;gap:10px;}
+  /* line icons (24px grid, drawn inline - no icon font, no emoji) */
+  .i{flex:none;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-4px;}
+  .i.i12{width:12px;height:12px;stroke-width:2.6;vertical-align:-1px;}
+  .i.i14{width:14px;height:14px;stroke-width:2.4;vertical-align:-2px;}
+  .i.i16{width:16px;height:16px;vertical-align:-3px;}
+  .i.i32{width:32px;height:32px;stroke-width:1.75;}
+
+  /* ---- navy band ---- */
+  .band{position:relative;background:var(--navy);color:#fff;overflow:hidden;padding:13px 0;}
+  .band::after{content:"";position:absolute;right:-60px;top:-260px;width:600px;height:600px;border-radius:50%;background:#1B2485;}
+  .band__in{position:relative;z-index:1;display:flex;align-items:center;gap:10px 18px;flex-wrap:wrap;max-width:1328px;margin:0 auto;padding:0 24px;}
+  .band__logo{display:block;height:40px;width:auto;}
+  .band__sep{width:1px;height:38px;background:#4148A0;}
+  .band h1{font-size:21px;font-weight:800;line-height:1.2;}
+  .band__meta{display:flex;align-items:center;gap:8px;margin-top:2px;min-height:18px;color:var(--on-navy);font-size:13px;font-weight:600;}
+  .band__meta::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--lime);}
+  .band__meta:empty::before{display:none;}
+  .sp{flex:1 1 auto;}
+  .band__link{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:999px;background:var(--navy-2);color:#fff;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;}
+  .band__link:hover{background:#373F9C;}
+  .redline{height:3px;background:var(--red);}
+
+  .wrap{max-width:1328px;margin:0 auto;padding:16px 24px 24px;}
+
+  /* ---- toolbar ---- */
+  .controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+  .field{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 6px 0 14px;border-radius:999px;background:var(--surface);box-shadow:var(--shadow);font-size:13px;font-weight:700;color:var(--muted);}
+  .field input[type=date]{height:30px;padding:0 8px;border:0;border-radius:999px;background:transparent;color:var(--text);font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;}
+  .seg{display:inline-flex;padding:3px;border-radius:999px;background:var(--surface);box-shadow:var(--shadow);}
+  .seg-btn{height:32px;padding:0 16px;border:0;border-radius:999px;background:transparent;color:var(--navy);font-size:13px;font-weight:800;white-space:nowrap;}
+  .seg-btn:hover{background:var(--navy-tint);}
+  .seg-btn.active{background:var(--navy);color:#fff;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:38px;padding:0 16px;border-radius:999px;border:1.5px solid var(--ctl);background:var(--surface);color:var(--navy);font-size:13px;font-weight:800;white-space:nowrap;text-decoration:none;}
+  .btn:hover{background:var(--navy-tint);}
+  .btn-primary{background:var(--navy);border-color:var(--navy);color:#fff;}
+  .btn-primary:hover{background:var(--navy-2);}
+  .btn .cnt{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--warn-tint);color:var(--warn);font-size:12px;font-weight:800;font-variant-numeric:tabular-nums;}
+  .btn .cnt.zero{background:var(--soft);color:var(--muted);}
+  .btn-primary .cnt,.btn-primary .cnt.zero{background:#fff;color:var(--navy);}
+
+  .demo-banner{display:none;align-items:center;gap:8px;background:var(--warn-tint);color:var(--warn);font-size:13px;font-weight:700;padding:9px 14px;border-radius:14px;margin-bottom:14px;}
+  .demo-banner.show{display:flex;}
+  .err-banner{display:none;background:var(--fault-tint);color:var(--fault);font-size:13px;font-weight:600;padding:9px 9px 9px 14px;border-radius:14px;margin-bottom:14px;align-items:center;justify-content:space-between;gap:10px;}
   .err-banner.show{display:flex;}
 
-  .summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:18px;}
-  .stat{background:var(--card);border:1px solid var(--gray-200);border-radius:12px;box-shadow:var(--shadow);padding:12px 14px;}
-  .stat .n{font-size:26px;font-weight:800;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
-  .stat .l{font-size:11.5px;color:var(--gray-500);font-weight:600;margin-top:5px;text-transform:uppercase;letter-spacing:.03em;}
-  .stat.done .n{color:var(--green-700);} .stat.efi .n{color:var(--blue);}
-  .stat.pend .n{color:var(--amber-700);} .stat.prob .n{color:var(--red-700);}
-  .stat .bar{height:6px;background:var(--gray-100);border-radius:99px;overflow:hidden;margin-top:9px;}
-  .stat .bar i{display:block;height:100%;background:var(--blue);border-radius:99px;transition:width .3s;}
+  /* ---- today's numbers: one calm card, cells split by hairlines ---- */
+  .summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));background:var(--surface);border-radius:18px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:16px;}
+  .stat{display:block;min-width:0;margin:0;padding:11px 18px 13px;border:0;border-radius:0;background:transparent;text-align:left;box-shadow:1px 0 0 var(--line),0 1px 0 var(--line);}
+  .stat .l{font-size:12px;font-weight:700;color:var(--muted);}
+  .stat .n{font-size:26px;font-weight:800;line-height:1.2;font-variant-numeric:tabular-nums;color:var(--text);}
+  .stat .n small{font-size:13px;font-weight:700;color:var(--muted);}
+  .stat .n.zero{color:var(--muted);}
+  .stat.prob .n{color:var(--fault);} .stat.chk .n{color:var(--warn);}
+  .stat.prob .n.zero,.stat.chk .n.zero{color:var(--muted);}
+  .stat .bar{height:6px;background:#E6E8F4;border-radius:999px;overflow:hidden;margin-top:5px;}
+  .stat .bar i{display:block;height:100%;background:var(--navy);border-radius:999px;transition:width .3s;}
+  .stat.ver .bar i,.stat.onnas .bar i{background:var(--ok);}
+  .stat.chk{cursor:pointer;width:100%;}
+  .stat.chk:hover{background:var(--hover);}
+  .stat.chk .hint{font-size:12px;font-weight:600;color:var(--muted);}
+  .stat.chk .hint::after{content:"Click to show only these";}
+  .stat.chk.on{background:var(--warn-tint);box-shadow:inset 0 0 0 2px var(--warn);}
+  .stat.chk.on .hint{color:var(--warn);}
+  .stat.chk.on .hint::after{content:"Filter is on - click to clear";}
+  .stat.chk:focus-visible{outline-offset:-3px;}
 
-  .lorry{background:var(--card);border:1px solid var(--gray-200);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:16px;overflow:hidden;}
-  .lorry-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:13px 16px;background:var(--blue-50);border-bottom:1px solid var(--gray-200);cursor:pointer;user-select:none;}
-  .lorry-head .chev{display:inline-block;width:14px;color:var(--blue);font-size:13px;transition:transform .15s;}
+  /* ---- pills (status words always come with an icon or a word, never colour alone) ---- */
+  .badge,.lh-bad,.st-warn,.nas-pill,.pill{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 10px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;vertical-align:middle;font-variant-numeric:tabular-nums;}
+  .badge.done,.nas-pill.is-done{background:var(--ok-tint);color:var(--ok);}
+  .badge.prob,.badge.mismatch,.lh-bad,.nas-pill.is-error{background:var(--fault-tint);color:var(--fault);}
+  .badge.pend,.nas-pill.is-none{background:var(--soft);color:var(--muted);}
+  .badge.check,.st-warn{background:var(--warn-tint);color:var(--warn);}
+  .nas-pill.is-queued,.pill.is-navy{background:var(--navy-tint);color:var(--navy);}
+
+  /* ---- lorry card ---- */
+  .lorry{background:var(--surface);border-radius:18px;box-shadow:var(--shadow);margin-bottom:14px;overflow:hidden;}
+  .lorry-head{display:flex;align-items:center;gap:6px 14px;flex-wrap:wrap;padding:9px 18px 9px 12px;cursor:pointer;user-select:none;}
+  .lorry-head:hover{background:var(--hover);}
+  .lorry.open>.lorry-head{border-bottom:1px solid var(--line);}
   .lorry .lorry-body{display:none;}
   .lorry.open .lorry-body{display:block;}
-  .lorry:not(.open) .lorry-head{border-bottom:none;}
-  .lorry-head .plate{font-size:17px;font-weight:800;color:var(--blue);letter-spacing:.01em;}
-  .lorry-head .crew{font-size:12.5px;color:var(--gray-600);}
-  .lorry-head .mini{font-size:12px;color:var(--gray-500);font-variant-numeric:tabular-nums;}
+  .tog{display:inline-flex;align-items:center;gap:8px;min-height:36px;max-width:100%;padding:0 8px 0 4px;border:0;border-radius:999px;background:transparent;text-align:left;flex-wrap:wrap;}
+  .chev{display:inline-flex;color:var(--muted);transition:transform .15s;}
+  .lorry.open>.lorry-head .chev,.station.open>.station-head .chev{transform:rotate(90deg);}
+  .lorry-head .plate{font-size:17px;font-weight:800;color:var(--navy);letter-spacing:.01em;white-space:nowrap;}
+  .lorry-head .crew{font-size:13px;font-weight:600;color:var(--muted);}
+  .lorry-head .mini{font-size:13px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .lorry-head .mini b{font-weight:800;color:var(--text);}
+  .nas{display:inline-flex;align-items:center;gap:6px 8px;flex-wrap:wrap;margin-left:auto;cursor:default;}
+  .nas-btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;border:0;border-radius:999px;background:var(--navy);color:#fff;font-size:13px;font-weight:800;white-space:nowrap;}
+  .nas-btn:hover{background:var(--navy-2);}
+  .nas-btn:disabled{background:var(--soft);color:var(--muted);cursor:not-allowed;}
+  .nas-why{font-size:12px;font-weight:700;color:var(--warn);}
 
-  /* one STATION (customer) = one photo bucket, shown once */
-  .station{border-top:1px solid var(--gray-200);}
+  /* ---- one shop inside a lorry ---- */
+  .station{border-top:1px solid var(--line);}
   .station:first-child{border-top:none;}
-  .station-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:11px 16px 9px;cursor:pointer;user-select:none;}
-  .station-head:hover{background:var(--gray-50);}
-  .st-meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0;}
-  .st-chev{color:var(--blue);font-size:12px;width:12px;display:inline-block;}
-  .st-cust{font-size:14.5px;font-weight:700;color:var(--gray-900);}
-  .st-area{font-size:12px;color:var(--gray-500);}
-  .st-count{font-size:11.5px;font-weight:700;color:var(--blue);background:var(--blue-50);border:1px solid var(--blue-100,#DBEAFE);border-radius:999px;padding:2px 9px;white-space:nowrap;}
-  .st-efi{font-size:11px;color:var(--gray-500);font-variant-numeric:tabular-nums;white-space:nowrap;}
-  .st-warn{font-size:11.5px;font-weight:700;color:var(--red-700);background:var(--red-50);border:1px solid var(--red-500);border-radius:999px;padding:2px 9px;white-space:nowrap;}
+  .station-head{display:flex;align-items:center;justify-content:space-between;gap:4px 12px;flex-wrap:wrap;min-height:50px;padding:5px 18px 5px 12px;cursor:pointer;user-select:none;}
+  .station-head:hover{background:var(--hover);}
+  .st-meta{display:flex;align-items:center;gap:2px 10px;flex-wrap:wrap;min-width:0;}
+  .st-cust{font-size:14px;font-weight:700;color:var(--text);}
+  .st-area{font-size:13px;color:var(--muted);}
+  .st-count,.st-efi{font-size:12px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;}
   .st-photos .thumbs{justify-content:flex-end;}
   .station-body{display:none;}
   .station.open .station-body{display:block;}
 
-  table.inv{width:100%;border-collapse:collapse;font-size:13px;}
-  table.inv th{text-align:left;color:var(--gray-500);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;padding:8px 12px;border-bottom:1px solid var(--gray-200);background:var(--gray-50);}
-  table.inv td{padding:10px 12px;border-bottom:1px solid var(--gray-100);vertical-align:middle;}
-  table.inv tr:last-child td{border-bottom:none;}
-  table.inv tr.row-done{background:#fff;}
-  table.inv tr.row-prob{background:var(--red-50);}
-  table.inv tr.row-pend{background:var(--amber-50);}
-  table.inv tr.row-mismatch{background:#FDF2F8;}
-  .inv-no{font-weight:700;font-variant-numeric:tabular-nums;font-family:"SFMono-Regular",Consolas,monospace;}
-  .cust{color:var(--gray-900);font-weight:500;}
-  .cust .area{color:var(--gray-400);font-weight:400;font-size:11.5px;display:block;}
+  /* ---- invoice table (dense: one barcode-high row per invoice) ---- */
+  .tblwrap{overflow-x:auto;}
+  table.inv{width:100%;min-width:1120px;table-layout:fixed;border-collapse:collapse;font-size:13px;}
+  /* fixed columns: every shop of every lorry lines up, so the eye runs straight down the barcodes */
+  table.inv th.c-inv{width:200px;} table.inv th.c-ph{width:104px;} table.inv th.c-amt{width:96px;text-align:right;}
+  table.inv th.c-time{width:116px;} table.inv th.c-bc{width:340px;} table.inv th.c-efi{width:104px;}
+  table.inv th{height:28px;padding:0 10px;text-align:left;font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap;background:var(--soft);}
+  table.inv td{padding:6px 10px;border-top:1px solid var(--line);vertical-align:middle;}
+  table.inv tr:first-child td{border-top:none;}
+  table.inv th:first-child,table.inv td:first-child{padding-left:42px;}
+  table.inv th:last-child,table.inv td:last-child{padding-right:18px;}
+  table.inv tr.row-mismatch td{background:var(--fault-tint);}
+  table.inv tr.row-mismatch td:first-child{box-shadow:inset 3px 0 0 var(--fault);}
+  table.inv tr.row-pend .inv-no,table.inv tr.row-pend .amt{color:var(--muted);}
+  .inv-no{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .src-line{display:block;margin-top:3px;}
   .amt{font-variant-numeric:tabular-nums;text-align:right;font-weight:600;white-space:nowrap;}
-  .badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap;}
-  .badge.done{background:var(--green-50);color:var(--green-700);border:1px solid var(--green-500);}
-  .badge.prob{background:var(--red-50);color:var(--red-700);border:1px solid var(--red-500);}
-  .badge.pend{background:var(--amber-50);color:var(--amber-700);border:1px solid var(--amber-500);}
-  .badge.mismatch{background:#FCE7F3;color:#9D174D;border:1px solid #DB2777;}
-  .src{font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;margin-left:5px;vertical-align:1px;}
-  .src.bc{background:#DCFCE7;color:#166534;}    /* barcode-read tag */
-  .src.ai{background:#FEF9C3;color:#854D0E;}    /* AI ~ */
-  .src.no{background:#F3F4F6;color:#6B7280;}    /* ✗ */
-  /* [2026-10-24] photo check: the barcode on the photo is ANOTHER invoice / not read */
-  .src.bad{background:#FEE2E2;color:#991B1B;}
-  .src.q{background:#FEF3C7;color:#92400E;}
-  /* [2026-11-23] office looked at the photo and confirmed it is this invoice */
-  .src.chk{background:#DBEAFE;color:#1E40AF;}
-  .ok-btn{font:inherit;font-size:11px;font-weight:700;margin-left:6px;padding:2px 8px;border-radius:999px;border:1px solid var(--green-500);background:#fff;color:var(--green-700);cursor:pointer;white-space:nowrap;}
-  .ok-btn:hover{background:var(--green-50);}
-  .ok-btn.undo{border-color:var(--gray-200);color:var(--gray-500);font-weight:600;}
-  .ok-btn:disabled{opacity:.5;cursor:default;}
-  .bc-warn{font-size:11px;color:var(--red-700);font-weight:700;margin-top:3px;text-align:center;}
-  .lh-bad{font-size:11.5px;font-weight:700;color:var(--red-700);background:var(--red-50);border:1px solid var(--red-500);border-radius:999px;padding:1px 8px;margin-left:8px;white-space:nowrap;}
-  .stat.ver .n{color:var(--green-700);} .stat.ver .bar i{background:var(--green-500);}
-  .stat.chk{cursor:pointer;} .stat.chk .n{color:var(--red-700);} .stat.chk.on{outline:2px solid var(--red-500);}
-  td.hidden-ok{font-size:11.5px;color:var(--gray-500);font-style:italic;}
-  .time{font-variant-numeric:tabular-nums;color:var(--gray-500);font-size:12px;white-space:nowrap;}
+  .src{display:inline-flex;align-items:center;gap:3px;height:20px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;}
+  .src.bc{background:var(--ok-tint);color:var(--ok);}          /* the barcode on the photo is this invoice */
+  .src.ai{background:var(--warn-tint);color:var(--warn);}      /* matched by AI - look */
+  .src.q{background:var(--warn-tint);color:var(--warn);}       /* no barcode read - look */
+  .src.no{background:var(--soft);color:var(--muted);}          /* before the barcode era */
+  .src.bad{background:var(--fault-tint);color:var(--fault);}   /* another invoice / no photo */
+  .src.chk{background:var(--navy-tint);color:var(--navy);}     /* the office checked or replaced the photo */
+  table.inv tr.row-mismatch .src.bad,table.inv tr.row-mismatch .badge.mismatch{background:#fff;}
+  .acts{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:5px;}
+  .ok-btn,.reup-btn{display:inline-flex;align-items:center;gap:4px;height:26px;padding:0 10px;border-radius:999px;border:1.5px solid var(--ctl);background:var(--surface);color:var(--navy);font-size:12px;font-weight:800;white-space:nowrap;}
+  .ok-btn:hover,.reup-btn:hover{background:var(--navy-tint);}
+  .ok-btn{border-color:var(--navy);background:var(--navy);color:#fff;}
+  .ok-btn:hover{background:var(--navy-2);}
+  .ok-btn.undo{border-color:transparent;background:transparent;color:var(--muted);font-weight:700;}
+  .ok-btn.undo:hover{background:var(--soft);}
+  .ok-btn:disabled,.reup-btn:disabled{opacity:.6;cursor:default;}
+  .bc-warn{display:flex;align-items:center;justify-content:center;gap:4px;font-size:12px;color:var(--fault);font-weight:700;margin-top:3px;text-align:center;}
+  td.hidden-ok{font-size:12px;color:var(--muted);}
+  .time{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px;white-space:nowrap;}
   .thumbs{display:flex;gap:4px;flex-wrap:wrap;}
-  .thumb{width:38px;height:38px;border-radius:6px;object-fit:cover;border:1px solid var(--gray-200);cursor:pointer;background:var(--gray-100);}
-  .thumb-link{display:inline-flex;width:38px;height:38px;border-radius:6px;border:1px solid var(--gray-200);align-items:center;justify-content:center;text-decoration:none;font-size:18px;background:var(--gray-50);}
-  .thumb-none{font-size:11px;color:var(--gray-400);}
+  .thumb{width:38px;height:38px;border-radius:8px;object-fit:cover;border:1px solid var(--line);cursor:pointer;background:var(--soft);}
+  .thumb:hover{border-color:var(--navy);}
+  .thumb-link{display:inline-flex;width:38px;height:38px;border-radius:8px;border:1px solid var(--ctl);align-items:center;justify-content:center;text-decoration:none;font-size:12px;font-weight:800;color:var(--navy);background:var(--surface);}
+  button.thumb-more{display:inline-flex;align-items:center;justify-content:center;padding:0;font-size:12px;font-weight:800;color:var(--navy);background:var(--navy-tint);border:1px solid var(--ctl);}
+  .thumb-none{font-size:12px;color:var(--muted);}
+  /* barcode: unchanged geometry - do not round, shade or cover */
   td.bc-cell{width:340px;}
   .bc-box{width:320px;max-width:100%;}
   .bc-box svg{display:block;width:100%;height:auto;}
-  .bc-txt{font-family:"SFMono-Regular",Consolas,monospace;font-size:11px;color:var(--gray-600);margin-top:1px;text-align:center;letter-spacing:.04em;}
-  .bc-na{font-size:11px;color:var(--gray-400);font-style:italic;}
+  .bc-txt{font-family:Consolas,"SFMono-Regular",monospace;font-size:12px;color:var(--muted);margin-top:1px;text-align:center;letter-spacing:.04em;}
+  .bc-na{font-size:12px;color:var(--muted);}
   .efi-wrap{display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;}
-  .efi-wrap input{width:19px;height:19px;accent-color:var(--blue);cursor:pointer;}
-  .efi-wrap .by{font-size:10.5px;color:var(--gray-400);}
+  .efi-wrap input{width:19px;height:19px;margin:0;accent-color:var(--navy);cursor:pointer;}
+  .efi-wrap .by{font-size:12px;font-weight:600;color:var(--muted);}
 
-  .empty{text-align:center;color:var(--gray-400);font-size:14px;padding:40px 16px;}
-  .empty .big{font-size:32px;margin-bottom:8px;}
-  .loading{text-align:center;color:var(--gray-500);font-size:14px;padding:40px 16px;}
-  .spin{display:inline-block;width:26px;height:26px;border:3px solid var(--gray-200);border-top-color:var(--blue);border-radius:50%;animation:sp .8s linear infinite;}
+  .empty{text-align:center;color:var(--muted);font-size:14px;font-weight:600;padding:40px 16px;}
+  .empty .big{margin-bottom:8px;color:var(--ctl);}
+  .loading{text-align:center;color:var(--muted);font-size:14px;padding:40px 16px;}
+  .spin{display:inline-block;width:26px;height:26px;border:3px solid var(--ctl);border-top-color:var(--navy);border-radius:50%;animation:sp .8s linear infinite;}
   @keyframes sp{to{transform:rotate(360deg);}}
-  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:120;max-width:90%;padding:12px 16px;border-radius:10px;font-size:13px;color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.25);opacity:0;transition:opacity .2s;pointer-events:none;}
-  .toast.ok{background:var(--green-700);} .toast.err{background:var(--red-700);} .toast.show{opacity:1;}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:160;max-width:90%;padding:11px 18px;border-radius:14px;font-size:13px;font-weight:600;color:#fff;box-shadow:0 6px 18px rgba(26,27,46,.25);opacity:0;transition:opacity .2s;pointer-events:none;}
+  .toast.ok{background:var(--ok);} .toast.err{background:var(--fault);} .toast.show{opacity:1;}
 
-  /* lightbox */
-  #lightbox{display:none;position:fixed;inset:0;z-index:150;background:rgba(0,0,0,.85);align-items:center;justify-content:center;flex-direction:column;padding:24px;}
+  /* ---- confirm sheet (re-upload, save to NAS) ---- */
+  .sheet{display:none;position:fixed;inset:0;z-index:140;background:rgba(20,28,119,.42);align-items:center;justify-content:center;padding:20px;}
+  .sheet.show{display:flex;}
+  .sheet__card{width:100%;max-width:440px;padding:22px;border-radius:20px;background:var(--surface);box-shadow:0 20px 60px rgba(26,27,46,.3);}
+  .sheet__title{font-size:17px;font-weight:800;line-height:1.3;margin-bottom:6px;}
+  .sheet__text{font-size:14px;}
+  .sheet__thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;}
+  .sheet__thumbs:empty{display:none;}
+  .sheet__thumbs img{width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--line);background:var(--soft);}
+  .sheet__note{margin-top:10px;font-size:12px;font-weight:700;color:var(--warn);}
+  .sheet__note:empty{display:none;}
+  .sheet__acts{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;}
+
+  /* ---- photo viewer ---- */
+  #lightbox{display:none;position:fixed;inset:0;z-index:150;background:rgba(14,16,40,.9);align-items:center;justify-content:center;flex-direction:column;padding:24px;}
   #lightbox.show{display:flex;}
   #lightbox img{max-width:96vw;max-height:82vh;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,.5);}
-  #lightbox .lb-cap{color:#fff;font-size:13px;margin-top:12px;text-align:center;}
-  #lightbox .lb-nav{position:absolute;top:70px;bottom:0;width:80px;z-index:5;display:flex;align-items:center;justify-content:center;color:#fff;font-size:40px;cursor:pointer;user-select:none;opacity:.7;}
+  #lightbox .lb-cap{color:#fff;font-size:13px;font-weight:600;margin-top:12px;text-align:center;}
+  #lightbox .lb-nav{position:absolute;top:70px;bottom:0;width:80px;z-index:5;display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;user-select:none;opacity:.75;}
   #lightbox .lb-nav:hover{opacity:1;} #lightbox .lb-prev{left:0;} #lightbox .lb-next{right:0;}
-  #lightbox .lb-close{position:absolute;top:10px;right:14px;color:#fff;font-size:30px;cursor:pointer;line-height:1;z-index:30;padding:8px 16px;background:rgba(255,255,255,.14);border-radius:10px;}
+  #lightbox .lb-prev .i{transform:rotate(180deg);}
+  #lightbox .lb-close{position:absolute;top:12px;right:14px;display:flex;align-items:center;justify-content:center;width:44px;height:44px;color:#fff;cursor:pointer;z-index:30;background:rgba(255,255,255,.16);border-radius:50%;}
+  #lightbox .lb-close:hover{background:rgba(255,255,255,.28);}
 
-  /* lock overlay is built in JS (mirrors CLF_Pallet_Store) */
+  /* ---- sign-in overlay (built in JS, same logic as CLF_Pallet_Store) ---- */
+  .lock{position:fixed;inset:0;z-index:200;background:rgba(20,28,119,.96);display:flex;align-items:center;justify-content:center;padding:20px;}
+  .lock__card{width:100%;max-width:360px;padding:26px 22px 22px;border-radius:20px;background:var(--surface);box-shadow:0 20px 60px rgba(0,0,0,.35);}
+  .lock__ic{display:flex;align-items:center;justify-content:center;width:52px;height:52px;margin:0 auto;border-radius:16px;background:var(--navy-tint);color:var(--navy);}
+  .lock__title{font-weight:800;font-size:18px;text-align:center;margin:10px 0 2px;}
+  .lock__sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:16px;}
+  .lock label{display:block;font-size:13px;font-weight:700;}
+  .lock input{display:block;width:100%;margin:4px 0 12px;padding:11px 14px;font-size:15px;border:1.5px solid var(--ctl);border-radius:14px;background:#fff;}
+  .lock__err{min-height:18px;font-size:13px;color:var(--fault);font-weight:700;}
+  .lock__btn{width:100%;height:48px;margin-top:8px;border:0;border-radius:999px;background:var(--navy);color:#fff;font-weight:800;font-size:15px;}
+  .lock__btn:hover{background:var(--navy-2);}
+  .lock__btn:disabled{opacity:.6;}
 
+  /* ---- narrow screens: stack, never scroll the page sideways ---- */
+  @media (max-width:720px){
+    .band__in,.wrap{padding-left:14px;padding-right:14px;}
+    .band__sep,.sp{display:none;}
+    .band__logo{height:32px;}
+    .band h1{font-size:18px;}
+    .summary{grid-template-columns:1fr 1fr;}
+    .nas{margin-left:0;width:100%;padding-left:4px;}
+    .lorry-head .mini{padding-left:4px;}
+    .controls .btn,.controls .field{height:40px;}
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="topbar">
-    <h1><span class="logo">CLF</span> POD Admin · Barcode Board</h1>
-    <div class="controls">
-      <label>Date <input type="date" id="date"></label>
-      <span class="seg" id="branchSeg">
-        <button class="seg-btn active" data-branch="MTK">Mentakab</button>
-        <button class="seg-btn" data-branch="KTN">Kuantan</button>
-      </span>
-      <button class="btn" id="toggleAllBtn">▾ Expand all</button>
-      <button class="btn" id="checkBtn" title="Show only the invoices whose photo needs a look">⚑ Needs check</button>
-      <button class="btn" id="refreshBtn">↻ Refresh</button>
-      <a class="btn" id="scanifyLink" href="CLF_POD_Scanify.html" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:3px;">📄 Scan copies</a>
-      <a class="btn" href="CLF_Driver_Admin.html" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:3px;">👥 Drivers</a>
+<header class="band">
+  <div class="band__in">
+    <img class="band__logo" src="data:image/png;base64,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" alt="CLF Trading">
+    <span class="band__sep"></span>
+    <div>
+      <h1>POD Admin · Barcode Board</h1>
+      <div class="band__meta" id="lastUpdated"></div>
     </div>
+    <span class="sp"></span>
+    <a class="band__link" id="scanifyLink" href="CLF_POD_Scanify.html" target="_blank" rel="noopener" data-ic="file">Scan copies</a>
+    <a class="band__link" href="CLF_Driver_Admin.html" target="_blank" rel="noopener" data-ic="users">Drivers</a>
   </div>
-  <div class="meta" id="lastUpdated" style="font-size:12px;color:var(--gray-500);margin:-8px 0 12px;"></div>
+</header>
+<div class="redline"></div>
 
-  <div class="demo-banner" id="demoBanner">⚠ DEMO DATA — not live. Remove <code>?demo=1</code> from the URL to load real deliveries.</div>
-  <div class="err-banner" id="errBanner"><span id="errText"></span><button class="btn" onclick="loadBoard()">Retry</button></div>
+<div class="wrap">
+  <div class="controls">
+    <label class="field">Date <input type="date" id="date"></label>
+    <span class="seg" id="branchSeg">
+      <button type="button" class="seg-btn active" data-branch="MTK">Mentakab</button>
+      <button type="button" class="seg-btn" data-branch="KTN">Kuantan</button>
+    </span>
+    <button type="button" class="btn" id="toggleAllBtn">Expand all</button>
+    <button type="button" class="btn" id="checkBtn" aria-pressed="false" title="Show only the invoices whose photo needs a look">Needs check</button>
+    <button type="button" class="btn" id="refreshBtn" data-ic="refresh">Refresh</button>
+  </div>
+
+  <div class="demo-banner" id="demoBanner" data-ic="warn"><span>DEMO DATA — not live. Remove <code>?demo=1</code> from the URL to load real deliveries.</span></div>
+  <div class="err-banner" id="errBanner"><span id="errText"></span><button type="button" class="btn" onclick="loadBoard()">Retry</button></div>
 
   <div class="summary" id="summary" style="display:none;">
-    <div class="stat done"><div class="n" id="s-done">0</div><div class="l">Delivered</div></div>
-    <div class="stat efi"><div class="n" id="s-efi">0</div><div class="l">EFI entered</div><div class="bar"><i id="s-efi-bar" style="width:0%"></i></div></div>
-    <div class="stat pend"><div class="n" id="s-pend">0</div><div class="l">To deliver</div></div>
-    <div class="stat prob"><div class="n" id="s-prob">0</div><div class="l">Problem</div></div>
-    <div class="stat ver" title="Delivered invoices whose photo barcode IS the invoice"><div class="n" id="s-ver">0</div><div class="l">Photo verified</div><div class="bar"><i id="s-ver-bar" style="width:0%"></i></div></div>
-    <div class="stat chk" id="s-chk-card" title="Tap: show only these"><div class="n" id="s-chk">0</div><div class="l">Needs check</div></div>
+    <div class="stat done"><div class="l">Delivered</div><div class="n" id="s-done">0</div></div>
+    <div class="stat efi"><div class="l">EFI entered</div><div class="n" id="s-efi">0</div><div class="bar"><i id="s-efi-bar" style="width:0%"></i></div></div>
+    <div class="stat pend"><div class="l">To deliver</div><div class="n" id="s-pend">0</div></div>
+    <div class="stat prob"><div class="l">Problem</div><div class="n" id="s-prob">0</div></div>
+    <div class="stat ver" title="Delivered invoices whose photo is confirmed: barcode read, checked by the office, or re-uploaded"><div class="l">Photo verified</div><div class="n" id="s-ver">0</div><div class="bar"><i id="s-ver-bar" style="width:0%"></i></div></div>
+    <button type="button" class="stat chk" id="s-chk-card" aria-pressed="false" title="Show only these"><div class="l">Needs check</div><div class="n" id="s-chk">0</div><div class="hint"></div></button>
+    <div class="stat onnas" id="s-nas-card" style="display:none;" title="Lorries whose POD files are saved on the NAS"><div class="l">On NAS</div><div class="n"><span id="s-nas">0</span><small> / <span id="s-nas-of">0</span> lorries</small></div><div class="bar"><i id="s-nas-bar" style="width:0%"></i></div></div>
   </div>
 
   <div id="board"><div class="loading"><div class="spin"></div><div style="margin-top:10px;">Loading…</div></div></div>
 </div>
 
 <div id="lightbox">
-  <div class="lb-close" onclick="closeLightbox()">×</div>
-  <div class="lb-nav lb-prev" onclick="lbStep(-1)">‹</div>
-  <div class="lb-nav lb-next" onclick="lbStep(1)">›</div>
+  <div class="lb-close" onclick="closeLightbox()" title="Close" data-ic="x"></div>
+  <div class="lb-nav lb-prev" onclick="lbStep(-1)" title="Previous photo" data-ic="right" data-ic-size="32"></div>
+  <div class="lb-nav lb-next" onclick="lbStep(1)" title="Next photo" data-ic="right" data-ic-size="32"></div>
   <img id="lb-img" alt="POD photo">
   <div class="lb-cap" id="lb-cap"></div>
 </div>
 
-<div class="toast" id="toast"></div>
+<!-- confirm sheet: used by Re-upload and Save to NAS -->
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="sheet__card">
+    <div class="sheet__title" id="sheetTitle"></div>
+    <div class="sheet__text" id="sheetText"></div>
+    <div class="sheet__thumbs" id="sheetThumbs"></div>
+    <div class="sheet__note" id="sheetNote"></div>
+    <div class="sheet__acts">
+      <button type="button" class="btn" id="sheetCancel">Cancel</button>
+      <button type="button" class="btn btn-primary" id="sheetOk">OK</button>
+    </div>
+  </div>
+</div>
+<input type="file" id="reupFile" accept="image/*" multiple hidden>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 /* ============================================================================
@@ -262,7 +410,7 @@ var _onlyCheck = false;     // "Needs check" filter
 // The driver form reads the invoice barcode on every photo from this day on (POD round 3). Earlier deliveries never
 // had one, so "no barcode" only counts as a photo to check from here.
 var BC_SINCE = '2026-10-24';
-var THUMB_ONERR = 'this.onerror=null;var a=document.createElement(\'a\');a.href=this.src;a.target=\'_blank\';a.rel=\'noopener\';a.className=\'thumb-link\';a.textContent=\'📷\';this.replaceWith(a);';
+var THUMB_ONERR = 'this.onerror=null;var a=document.createElement(\'a\');a.href=this.src;a.target=\'_blank\';a.rel=\'noopener\';a.className=\'thumb-link\';a.textContent=\'Open\';this.replaceWith(a);';
 
 /* ============================================================================
    UTIL
@@ -288,6 +436,33 @@ function toast(kind, html){
   var t=$('toast'); t.className='toast '+(kind==='ok'?'ok':'err')+' show'; t.innerHTML=html;
   clearTimeout(toast._tmr); toast._tmr=setTimeout(function(){ t.classList.remove('show'); }, kind==='err'?6000:3500);
 }
+
+/* ============================================================================
+   ICONS — inline SVG line icons on a 24 px grid (no emoji: they draw differently
+   on every PC, no icon font, no CDN).
+   ============================================================================ */
+var IC = {
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  okc: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+  warn: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+  undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/>',
+  clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+  x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  right: '<path d="m9 18 6-6-6-6"/>',
+  down: '<path d="m6 9 6 6 6-6"/>',
+  up: '<path d="m18 15-6-6-6 6"/>',
+  file: '<path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
+  users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/>',
+  usr: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/>',
+  filter: '<path d="M2 5h20"/><path d="M6 12h12"/><path d="M9 19h6"/>',
+  help: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
+  lock: '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+  upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/>',
+  nas: '<path d="M22 12H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><path d="M6 16h.01"/><path d="M10 16h.01"/>',
+  inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>'
+};
+function ic(n, size){ return '<svg class="i'+(size?' i'+size:'')+'" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'+(IC[n]||'')+'</svg>'; }
 
 /* ============================================================================
    BARCODE — self-contained Code 39 (default) + Code 128B, drawn as inline SVG.
@@ -368,17 +543,17 @@ function showLock(msg){
   var ov=$('lockOverlay');
   if(!ov){
     ov=document.createElement('div'); ov.id='lockOverlay';
-    ov.style.cssText='position:fixed;inset:0;z-index:200;background:rgba(17,24,39,.94);display:flex;align-items:center;justify-content:center;padding:20px;';
-    ov.innerHTML='<div style="background:#fff;border-radius:16px;max-width:360px;width:100%;padding:26px 22px;box-shadow:0 20px 60px rgba(0,0,0,.4);">'
-      +'<div style="font-size:34px;text-align:center;">&#128274;</div>'
-      +'<div style="font-weight:800;font-size:17px;text-align:center;margin:6px 0 2px;color:#111827;">POD Admin is locked</div>'
-      +'<div style="font-size:12.5px;color:#6B7280;text-align:center;margin-bottom:14px;">Authorised staff only &middot; Staf sah sahaja</div>'
-      +'<label style="font-size:12px;font-weight:700;color:#374151;">Staff ID &middot; ID Staf</label>'
-      +'<input id="lk-emp" autocomplete="off" placeholder="e.g. TER282" style="width:100%;box-sizing:border-box;margin:4px 0 10px;padding:12px;font-size:15px;border:1.5px solid #D1D5DB;border-radius:9px;">'
-      +'<label style="font-size:12px;font-weight:700;color:#374151;">PIN</label>'
-      +'<input id="lk-pin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN" style="width:100%;box-sizing:border-box;margin:4px 0 6px;padding:12px;font-size:15px;border:1.5px solid #D1D5DB;border-radius:9px;">'
-      +'<div id="lk-err" style="min-height:16px;font-size:12px;color:#B91C1C;font-weight:600;"></div>'
-      +'<button id="lk-btn" style="width:100%;margin-top:8px;background:#1A56DB;color:#fff;border:none;border-radius:10px;padding:14px;font-weight:800;font-size:15px;cursor:pointer;">Unlock &middot; Buka</button></div>';
+    ov.className='lock';
+    ov.innerHTML='<div class="lock__card">'
+      +'<div class="lock__ic">'+ic('lock',32)+'</div>'
+      +'<div class="lock__title">POD Admin is locked</div>'
+      +'<div class="lock__sub">Authorised staff only &middot; Staf sah sahaja</div>'
+      +'<label for="lk-emp">Staff ID &middot; ID Staf</label>'
+      +'<input id="lk-emp" autocomplete="off" placeholder="e.g. TER282">'
+      +'<label for="lk-pin">PIN</label>'
+      +'<input id="lk-pin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN">'
+      +'<div id="lk-err" class="lock__err"></div>'
+      +'<button id="lk-btn" class="lock__btn">Unlock &middot; Buka</button></div>';
     document.body.appendChild(ov);
     $('lk-btn').onclick=doUnlock;
     $('lk-pin').addEventListener('keydown',function(e){ if(e.key==='Enter') doUnlock(); });
@@ -435,34 +610,44 @@ async function loadBoard(){
   }catch(err){
     $('errText').textContent='Could not load the board — '+(err&&err.message?err.message:'check connection')+'. (Backend endpoint getPodAdminBoard must be deployed — see Program A.)';
     $('errBanner').classList.add('show');
-    if(!_boardData) $('board').innerHTML='<div class="empty"><div class="big">⚠</div>Not loaded yet.</div>';
+    if(!_boardData) $('board').innerHTML='<div class="empty"><div class="big">'+ic('warn',32)+'</div>Not loaded yet.</div>';
   }
   scheduleRefresh();
 }
 function scheduleRefresh(){ clearTimeout(_refreshTmr); _refreshTmr=setTimeout(loadBoard, REFRESH_MS); }
 
+function _syncToggleAll(){ var tab=$('toggleAllBtn'); if(tab) tab.innerHTML=ic(_openKeys.size?'up':'down',16)+(_openKeys.size?'Collapse all':'Expand all'); }
 function render(){
   var d=_boardData; if(!d){ return; }
   var lorries = d.lorries||[];
   _canOk = DEMO || lorries.some(function(L){ return (L.invoices||[]).some(function(v){ return v && ('photoOk' in v); }); });
+  // [2026-11] Re-upload / Save to NAS show only when the board sends their fields (page may go live before the backend)
+  _canReup = DEMO || lorries.some(function(L){ return (L.invoices||[]).some(function(v){ return v && ('reupBy' in v); }); });
+  _canNas = DEMO || lorries.some(function(L){ return L && ('nas' in L); });
   // summary
-  var done=0,pend=0,prob=0,efi=0,total=0,ver=0,chk=0;
-  lorries.forEach(function(L){ (L.invoices||[]).forEach(function(v){
+  var done=0,pend=0,prob=0,efi=0,total=0,ver=0,chk=0,onNas=0;
+  lorries.forEach(function(L){ if(nasState(L)==='done') onNas++; (L.invoices||[]).forEach(function(v){
     total++;
     var st=String(v.status||'').toLowerCase();
-    if(st==='delivered'){ done++; if(v.efiScanned) efi++; var pc=photoCheck(v); if(pc==='ok' || pc==='checked') ver++; if(needsCheck(v)) chk++; }
+    if(st==='delivered'){ done++; if(v.efiScanned) efi++; var pc=photoCheck(v); if(pc==='ok' || pc==='checked' || pc==='reup') ver++; if(needsCheck(v)) chk++; }
     else if(st==='failed') prob++; else pend++;
   }); });
   $('summary').style.display = total?'grid':'none';
   $('s-done').textContent=done; $('s-pend').textContent=pend; $('s-prob').textContent=prob; $('s-efi').textContent=efi;
   $('s-efi-bar').style.width = (done? Math.round(efi/done*100):0)+'%';
   $('s-ver').textContent=ver; $('s-ver-bar').style.width = (done? Math.round(ver/done*100):0)+'%';
-  $('s-chk').textContent=chk; $('s-chk-card').classList.toggle('on', _onlyCheck);
-  var cb=$('checkBtn'); cb.textContent='⚑ Needs check ('+chk+')'; cb.classList.toggle('btn-primary', _onlyCheck);
+  $('s-chk').textContent=chk; $('s-chk-card').classList.toggle('on', _onlyCheck); $('s-chk-card').setAttribute('aria-pressed', _onlyCheck?'true':'false');
+  $('s-pend').classList.toggle('zero', !pend); $('s-prob').classList.toggle('zero', !prob); $('s-chk').classList.toggle('zero', !chk);
+  $('s-nas-card').style.display = _canNas?'':'none';
+  $('s-nas').textContent=onNas; $('s-nas-of').textContent=lorries.length;
+  $('s-nas-bar').style.width = (lorries.length? Math.round(onNas/lorries.length*100):0)+'%';
+  var cb=$('checkBtn'); cb.innerHTML=ic('filter',16)+'Needs check <span class="cnt'+(chk?'':' zero')+'">'+chk+'</span>';
+  cb.classList.toggle('btn-primary', _onlyCheck); cb.setAttribute('aria-pressed', _onlyCheck?'true':'false');
   $('lastUpdated').textContent = 'Updated '+new Date().toLocaleTimeString('en-MY',{hour:'2-digit',minute:'2-digit'})+' · auto-refresh 60s · '+(BRANCH==='KTN'?'Kuantan':'Mentakab');
+  _syncToggleAll();
 
   var board=$('board');
-  if(!lorries.length){ board.innerHTML='<div class="empty"><div class="big">📭</div>No deliveries for this date / branch yet.</div>'; return; }
+  if(!lorries.length){ board.innerHTML='<div class="empty"><div class="big">'+ic('inbox',32)+'</div>No deliveries for this date / branch yet.</div>'; return; }
 
   var html='', shown=0;
   _lbSets = {};
@@ -477,13 +662,18 @@ function render(){
     shown++;
     var isOpen=_onlyCheck || _openKeys.has(lkey);
     var bad=invs.filter(function(v){ return photoCheck(v)==='wrong'; }).length;
-    // [Salesman 2026-07-24] salesman-handled DL renders as a purple card
+    // [Salesman 2026-07-24] a salesman-handled DL is marked with a "Salesman" pill instead of a lorry plate
     var hb=L.handledBy && L.handledBy.type==='SALESMAN' ? L.handledBy : null;
-    html+='<div class="lorry'+(isOpen?' open':'')+'"'+(hb?' style="border-left:4px solid #6D28D9;"':'')+'><div class="lorry-head" data-key="'+esc(lkey)+'"'+(hb?' style="background:#F5F3FF;"':'')+'>'
+    html+='<div class="lorry'+(isOpen?' open':'')+'"><div class="lorry-head" data-key="'+esc(lkey)+'">'
+      +'<button type="button" class="tog" aria-expanded="'+(isOpen?'true':'false')+'"><span class="chev">'+ic('right')+'</span>'
       +(hb
-        ? '<div><span class="chev">'+(isOpen?'▾':'▸')+'</span> <span class="plate" style="color:#5B21B6;">&#129333; SALESMAN</span> <span class="crew" style="color:#6D28D9;font-weight:700;">'+esc(hb.id||'')+' · '+esc(hb.name||'')+'</span>'+(L.vehicleNo&&L.vehicleNo!=='?'?' <span class="crew">('+esc(L.vehicleNo)+')</span>':'')+'</div>'
-        : '<div><span class="chev">'+(isOpen?'▾':'▸')+'</span> <span class="plate">'+esc(L.vehicleNo||'?')+'</span>'+(L.drivers?' <span class="crew">· '+esc(L.drivers)+'</span>':'')+'</div>')
-      +'<div class="mini">EFI '+efid+'/'+ld+' · '+ld+' / '+invs.length+' delivered'+(bad?'<span class="lh-bad">⚑ '+bad+' wrong photo'+(bad===1?'':'s')+'</span>':'')+'</div></div>';
+        ? '<span class="pill is-navy">'+ic('usr',14)+'Salesman</span><span class="plate">'+esc(hb.id||'')+'</span><span class="crew">'+esc(hb.name||'')+(L.vehicleNo&&L.vehicleNo!=='?'?' ('+esc(L.vehicleNo)+')':'')+'</span>'
+        : '<span class="plate">'+esc(L.vehicleNo||'?')+'</span>'+(L.drivers?'<span class="crew">'+esc(L.drivers)+'</span>':''))
+      +'</button>'
+      +'<span class="mini">EFI <b>'+efid+'/'+ld+'</b> · <b>'+ld+'/'+invs.length+'</b> delivered</span>'
+      +(bad?'<span class="lh-bad">'+ic('warn',14)+bad+' wrong photo'+(bad===1?'':'s')+'</span>':'')
+      +nasCell(L)
+      +'</div>';
     html+='<div class="lorry-body">';
     // One STATION (customer) = its photos shown once in the header. Older saves shared one photo set across every
     // invoice of the stop; since POD save v2 (2026-10-24) each invoice holds its OWN photo, shown on its row too.
@@ -493,22 +683,22 @@ function render(){
       var pc = S.photoUrls.length;
       // count-match check (driver form now enforces photos == delivered invoices; flag legacy/odd data)
       var warn = S.warn
-        ? '<span class="st-warn" title="Photos do not match delivered invoices">&#9873; '+pc+' photo'+(pc===1?'':'s')+' &ne; '+sd+' delivered</span>' : '';
+        ? '<span class="st-warn" title="Photos do not match delivered invoices">'+ic('warn',14)+pc+' photo'+(pc===1?'':'s')+' but '+sd+' delivered</span>' : '';
       var skey = lkey+'¦'+S.custKey;   // stable across auto-refresh so an open station stays open
       var sOpen = _onlyCheck || _openStations.has(skey);
       _lbSets[skey] = { urls: S.photos.map(function(p){ return p.u; }),
                         caps: S.photos.map(function(p){ return (p.inv ? 'Invoice '+p.inv+' · ' : '')+(S.customer||''); }) };
       html+='<div class="station'+(sOpen?' open':'')+'">'
         +'<div class="station-head" data-skey="'+esc(skey)+'">'
-          +'<div class="st-meta"><span class="chev st-chev">'+(sOpen?'▾':'▸')+'</span>'
-            +'<span class="st-cust">'+esc(S.customer||S.custKey||'&mdash;')+'</span>'
+          +'<div class="st-meta"><button type="button" class="tog" aria-expanded="'+(sOpen?'true':'false')+'"><span class="chev st-chev">'+ic('right',16)+'</span>'
+            +'<span class="st-cust">'+esc(S.customer||S.custKey||'&mdash;')+'</span></button>'
             +(S.area?'<span class="st-area">'+esc(S.area)+'</span>':'')
             +'<span class="st-count">'+S.invs.length+' invoice'+(S.invs.length===1?'':'s')+'</span>'
             +(sd?'<span class="st-efi">EFI '+ec+'/'+sd+'</span>':'')+warn+'</div>'
           +'<div class="st-photos">'+stationPhotoCell(S.photoUrls, skey)+'</div>'
         +'</div>'
-        +'<div class="station-body"><div style="overflow-x:auto;"><table class="inv"><thead><tr>'
-          +'<th>Invoice</th><th>Photo</th><th style="text-align:right;">Amount</th><th>Status</th><th>Time</th><th>Barcode</th><th>EFI</th>'
+        +'<div class="station-body"><div class="tblwrap"><table class="inv"><thead><tr>'
+          +'<th class="c-inv">Invoice</th><th class="c-ph">Photo</th><th class="c-amt">Amount</th><th>Status</th><th class="c-time">Time</th><th class="c-bc">Barcode</th><th class="c-efi">EFI</th>'
           +'</tr></thead><tbody>';
       var rows = _onlyCheck ? S.invs.filter(needsCheck) : S.invs;
       rows.forEach(function(v, idx){ html+=invRow(L, v, idx, S, skey); });
@@ -517,9 +707,8 @@ function render(){
     });
     html+='</div></div>';
   });
-  if(_onlyCheck && !shown) html='<div class="empty"><div class="big">✓</div>Nothing to check for this date / branch.</div>';
+  if(_onlyCheck && !shown) html='<div class="empty"><div class="big">'+ic('okc',32)+'</div>Nothing to check for this date / branch.</div>';
   board.innerHTML=html;
-  var tab=$('toggleAllBtn'); if(tab) tab.textContent=_openKeys.size?'▸ Collapse all':'▾ Expand all';
   wireEfiCheckboxes();
 }
 
@@ -531,8 +720,11 @@ function bcNorm(s){ return String(s==null?'':s).toUpperCase().replace(/[^A-Z0-9]
 // [2026-11-23] "Photo OK": the office opened the photo and it IS this invoice (the phone misread the barcode, or
 // read nothing). photoOk comes from the board (Shipment_Items col 19 token PHOTO_OK:<staff>); such a row is no
 // longer "wrong" / "needs check". A driver re-save of the invoice clears it (new photo = look again).
-function photoCheck(v){   // '' (not delivered) | ok | wrong | unread | ai | nophoto | checked
+function photoCheck(v){   // '' (not delivered) | ok | wrong | unread | ai | nophoto | checked | reup
   var c=photoCheck0(v);
+  // [2026-11] 'reup': the office replaced the photo (Re-upload). It stands as verified whatever the phone read on
+  // the old one. The other values are decided exactly as before.
+  if(v.reupBy && c && c!=='nophoto') return 'reup';
   return (v.photoOk && (c==='wrong' || c==='unread' || c==='ai')) ? 'checked' : c;
 }
 function photoCheck0(v){
@@ -545,27 +737,29 @@ function photoCheck0(v){
 function _bcEra(v){ return String(v.deliveredDate || (_boardData && _boardData.date) || '') >= BC_SINCE; }
 function needsCheck(v){
   var c=photoCheck(v);
+  if(c==='reup') return false;   // [2026-11] the office replaced the photo
   if(v.photoOk && c && c!=='nophoto') return false;
   return c==='wrong' || c==='nophoto' || c==='ai' || (c==='unread' && _bcEra(v)) || (!!c && !!v.photoFlag);
 }
 function statusBadge(v){
-  var st=String(v.status||'').toLowerCase();
-  if(photoCheck(v)==='wrong') return '<span class="badge mismatch" title="The barcode on this photo is invoice '+esc(v.barcodeRaw)+', not this one">⚑ Wrong photo</span>';
-  if(st==='delivered') return '<span class="badge done">✓ Delivered</span>'
-    +(v.photoFlag && !v.photoOk?' <span class="badge pend" title="The driver saved although the phone said the photo was not clear">⚠ Unclear photo</span>':'');
-  if(st==='failed') return '<span class="badge prob">✕ '+esc(v.failReason||'Problem')+'</span>';
-  return '<span class="badge pend">… Pending</span>';
+  var st=String(v.status||'').toLowerCase(), pc=photoCheck(v);
+  if(pc==='wrong') return '<span class="badge mismatch" title="The barcode on this photo is invoice '+esc(v.barcodeRaw)+', not this one">'+ic('warn',14)+'Wrong photo</span>';
+  if(st==='delivered') return '<span class="badge done">'+ic('check',14)+'Delivered</span>'
+    +(v.photoFlag && !v.photoOk && pc!=='reup'?' <span class="badge check" title="The driver saved although the phone said the photo was not clear">'+ic('warn',14)+'Unclear photo</span>':'');
+  if(st==='failed') return '<span class="badge prob">'+ic('x',14)+esc(v.failReason||'Problem')+'</span>';
+  return '<span class="badge pend">'+ic('clock',14)+'Pending</span>';
 }
 function srcTag(v){
   var c=photoCheck(v);
-  if(c==='ok')      return '<span class="src bc" title="The barcode on the photo is this invoice">BC&#10003;</span>';
+  if(c==='reup')    return '<span class="src chk reup" title="The office replaced the photo'+(v.reupBy?' ('+esc(v.reupBy)+')':'')+' - the old photo is kept in Drive">'+ic('upload',12)+'Re-uploaded'+(v.reupBy?' '+esc(v.reupBy):'')+'</span>';
+  if(c==='ok')      return '<span class="src bc" title="The barcode on the photo is this invoice">BC'+ic('check',12)+'</span>';
   if(c==='checked' || (c==='ok' && v.photoOk)) return '<span class="src chk" title="Photo checked by the office'+(v.photoOkBy?' ('+esc(v.photoOkBy)+')':'')
-    +(bcNorm(v.barcodeRaw) && bcNorm(v.barcodeRaw)!==bcNorm(v.invoiceNo)?' - the phone read '+esc(v.barcodeRaw):'')+'">Checked&#10003;'+(v.photoOkBy?' '+esc(v.photoOkBy):'')+'</span>';
+    +(bcNorm(v.barcodeRaw) && bcNorm(v.barcodeRaw)!==bcNorm(v.invoiceNo)?' - the phone read '+esc(v.barcodeRaw):'')+'">'+ic('check',12)+'Checked'+(v.photoOkBy?' '+esc(v.photoOkBy):'')+'</span>';
   if(c==='wrong')   return '<span class="src bad" title="The barcode on this photo is another invoice — open the photo">photo = '+esc(v.barcodeRaw)+'</span>';
-  if(c==='ai')      return '<span class="src ai" title="Matched by AI (Gemini) — double-check">AI~</span>';
-  if(c==='nophoto') return '<span class="src bad" title="Delivered without a photo">no photo</span>';
-  if(c==='unread')  return _bcEra(v) ? '<span class="src q" title="No barcode read on the photo — not verified, open the photo">?</span>'
-                                     : '<span class="src no" title="Not auto-identified">✗</span>';
+  if(c==='ai')      return '<span class="src ai" title="Matched by AI (Gemini) — double-check">AI match</span>';
+  if(c==='nophoto') return '<span class="src bad" title="Delivered without a photo">No photo</span>';
+  if(c==='unread')  return _bcEra(v) ? '<span class="src q" title="No barcode read on the photo — not verified, open the photo">'+ic('help',12)+'Not read</span>'
+                                     : '<span class="src no" title="Not auto-identified">No barcode</span>';
   return '';
 }
 // Group a lorry's invoices into stations (one customer = one photo set).
@@ -608,7 +802,7 @@ function stationPhotoCell(urls, skey){
   if(!urls.length) return '<span class="thumb-none">no photo</span>';
   if(PHOTO_DISPLAY==='link'){
     return '<div class="thumbs">'+urls.map(function(u,i){
-      return '<a class="thumb-link" href="'+esc(u)+'" target="_blank" rel="noopener" title="POD '+(i+1)+'">📷</a>';
+      return '<a class="thumb-link" href="'+esc(u)+'" target="_blank" rel="noopener" title="POD '+(i+1)+'">Open</a>';
     }).join('')+'</div>';
   }
   var h='<div class="thumbs" data-set="'+esc(skey)+'">';
@@ -624,9 +818,10 @@ function rowPhotoCell(v, S, skey){
   var urls=v.photoUrls||[];
   if(!urls.length) return '<span class="thumb-none">no photo</span>';
   var i=S.idxOf[urls[0]];
-  if(urls.length!==1 || i==null || S.photos[i].inv!==String(v.invoiceNo)) return '<span class="thumb-none" title="Saved by an older form: this shop\'s photos are shared, see the shop row">shared</span>';
-  if(PHOTO_DISPLAY==='link') return '<a class="thumb-link" href="'+esc(urls[0])+'" target="_blank" rel="noopener" title="POD '+esc(v.invoiceNo)+'">📷</a>';
-  return '<div class="thumbs" data-set="'+esc(skey)+'"><img class="thumb" src="'+esc(urls[0])+'" alt="POD '+esc(v.invoiceNo)+'" data-idx="'+i+'" loading="lazy" onerror="'+THUMB_ONERR+'"></div>';
+  if(!_ownPhotos(v, S)) return '<span class="thumb-none" title="Saved by an older form: this shop\'s photos are shared, see the shop row">shared</span>';
+  if(PHOTO_DISPLAY==='link') return '<a class="thumb-link" href="'+esc(urls[0])+'" target="_blank" rel="noopener" title="POD '+esc(v.invoiceNo)+'">Open</a>';
+  return '<div class="thumbs" data-set="'+esc(skey)+'"><img class="thumb" src="'+esc(urls[0])+'" alt="POD '+esc(v.invoiceNo)+'" data-idx="'+i+'" loading="lazy" onerror="'+THUMB_ONERR+'">'
+    +(urls.length>1?'<button type="button" class="thumb thumb-more" data-idx="'+S.idxOf[urls[1]]+'" title="'+(urls.length-1)+' more photo'+(urls.length>2?'s':'')+' of this invoice">+'+(urls.length-1)+'</button>':'')+'</div>';
 }
 function photoCell(v){
   var urls=v.photoUrls||[];
@@ -635,7 +830,7 @@ function photoCell(v){
   // (Google login gates access); use if inline thumbnails prove flaky cross-origin during the pilot.
   if(PHOTO_DISPLAY==='link'){
     return '<div class="thumbs">'+urls.map(function(u,i){
-      return '<a class="thumb-link" href="'+esc(u)+'" target="_blank" rel="noopener" title="POD '+(i+1)+'">📷</a>';
+      return '<a class="thumb-link" href="'+esc(u)+'" target="_blank" rel="noopener" title="POD '+(i+1)+'">Open</a>';
     }).join('')+'</div>';
   }
   // 'thumbnail' mode (default): XSS-safe inline thumbnail — no data injected into a JS string.
@@ -647,7 +842,7 @@ function photoCell(v){
   urls.forEach(function(u,i){
     var su=esc(u);
     h+='<img class="thumb" src="'+su+'" alt="POD" data-idx="'+i+'" loading="lazy" '
-      +'onerror="this.onerror=null;var a=document.createElement(\'a\');a.href=this.src;a.target=\'_blank\';a.rel=\'noopener\';a.className=\'thumb-link\';a.textContent=\'📷\';this.replaceWith(a);">';
+      +'onerror="this.onerror=null;var a=document.createElement(\'a\');a.href=this.src;a.target=\'_blank\';a.rel=\'noopener\';a.className=\'thumb-link\';a.textContent=\'Open\';this.replaceWith(a);">';
   });
   return h+'</div>';
 }
@@ -658,7 +853,7 @@ function barcodeCell(v){
   // (keeps EFI's exact printed form); a photo showing another invoice must never put that other number into EFI.
   var c = photoCheck(v);
   var raw = (c==='ok') ? String(v.barcodeRaw) : String(v.invoiceNo||'');
-  var warn = (c==='wrong') ? '<div class="bc-warn">⚠ The photo shows '+esc(v.barcodeRaw)+' — open the photo before EFI</div>' : '';
+  var warn = (c==='wrong') ? '<div class="bc-warn">'+ic('warn',14)+'<span>Photo shows '+esc(v.barcodeRaw)+' — open it before EFI</span></div>' : '';
   var svg = barcodeSvg(raw, {height:40});
   if(!svg) return '<span class="bc-na">no barcode<br>type manually:<br><b>'+esc(raw)+'</b></span>'+warn;
   return '<div class="bc-cell"><div class="bc-box">'+svg+'</div><div class="bc-txt">'+esc(raw)+'</div></div>'+warn;
@@ -669,8 +864,8 @@ var _canOk = false;
 function okBtn(L, v){
   if(!_canOk || String(v.status||'').toLowerCase()!=='delivered' || !(v.photoUrls||[]).length) return '';
   var at=' data-ship="'+esc(L.shipmentKey||'')+'" data-inv="'+esc(String(v.invoiceNo))+'"';
-  if(v.photoOk) return '<button type="button" class="ok-btn undo" data-ok="0"'+at+' title="Remove the Photo OK mark">Undo</button>';
-  if(needsCheck(v)) return '<button type="button" class="ok-btn" data-ok="1"'+at+' title="I opened the photo: it is this invoice">&#10003; Photo OK</button>';
+  if(v.photoOk) return '<button type="button" class="ok-btn undo" data-ok="0"'+at+' title="Remove the Photo OK mark">'+ic('undo',14)+'Undo</button>';
+  if(needsCheck(v)) return '<button type="button" class="ok-btn" data-ok="1"'+at+' title="I opened the photo: it is this invoice">'+ic('check',14)+'Photo OK</button>';
   return '';
 }
 async function markPhotoOk(btn){
@@ -704,14 +899,14 @@ function invRow(L, v, idx, S, skey){
   if(st==='failed' && (v.photoUrls||[]).length){
     proof='<span class="thumbs" data-inv="'+esc(String(v.invoiceNo))+'" style="display:inline-flex;vertical-align:middle;margin-left:6px;">'
       +'<img class="thumb" src="'+esc(v.photoUrls[0])+'" alt="Proof" title="Driver proof photo" data-idx="0" loading="lazy" style="width:28px;height:28px;" '
-      +'onerror="this.onerror=null;var a=document.createElement(\'a\');a.href=this.src;a.target=\'_blank\';a.rel=\'noopener\';a.className=\'thumb-link\';a.textContent=\'📷\';this.replaceWith(a);">'
+      +'onerror="this.onerror=null;var a=document.createElement(\'a\');a.href=this.src;a.target=\'_blank\';a.rel=\'noopener\';a.className=\'thumb-link\';a.textContent=\'Open\';this.replaceWith(a);">'
       +'</span>';
   }
   return '<tr class="'+cls+'">'
-    +'<td class="inv-no">'+esc(v.invoiceNo)+srcTag(v)+'</td>'
+    +'<td class="inv-no">'+esc(v.invoiceNo)+(srcTag(v)?'<span class="src-line">'+srcTag(v)+'</span>':'')+'</td>'
     +'<td>'+rowPhotoCell(v, S, skey)+'</td>'
     +'<td class="amt">'+(v.amount!=null?money(v.amount):'')+'</td>'
-    +'<td>'+statusBadge(v)+proof+okBtn(L, v)+'</td>'
+    +'<td>'+statusBadge(v)+proof+rowActs(L, v)+'</td>'
     +'<td class="time">'+esc(fmtTime(v.deliveredDate||_boardData.date, v.deliveredAt))+'</td>'
     +'<td class="bc-cell">'+barcodeCell(v)+'</td>'
     +'<td>'+efiCell(L, v)+'</td>'
@@ -765,6 +960,220 @@ function _patchCache(ship, inv, val){
 }
 
 /* ============================================================================
+   CONFIRM SHEET — one small dialog shared by Re-upload and Save to NAS
+   ============================================================================ */
+var _sheetOk = null, _sheetUrls = [], _sheetFocus = null;
+function openSheet(o){
+  $('sheetTitle').textContent=o.title||''; $('sheetText').textContent=o.text||''; $('sheetNote').textContent=o.note||'';
+  var th=$('sheetThumbs'); th.innerHTML=''; _sheetUrls=[];
+  (o.files||[]).forEach(function(f){
+    var u=URL.createObjectURL(f); _sheetUrls.push(u);
+    var im=document.createElement('img'); im.src=u; im.alt=f.name||'Chosen photo'; im.title=f.name||''; th.appendChild(im);
+  });
+  $('sheetOk').textContent=o.okText||'OK'; _sheetOk=o.onOk||null;
+  _sheetFocus=document.activeElement;
+  $('sheet').classList.add('show'); $('sheetOk').focus();
+}
+function closeSheet(){
+  $('sheet').classList.remove('show'); _sheetOk=null;
+  _sheetUrls.forEach(function(u){ try{ URL.revokeObjectURL(u); }catch(e){} }); _sheetUrls=[];
+  $('sheetThumbs').innerHTML='';
+  if(_sheetFocus && _sheetFocus.focus && document.contains(_sheetFocus)) _sheetFocus.focus();
+  _sheetFocus=null;
+}
+function _liveBtn(cls, ship, inv){
+  var found=null;
+  document.querySelectorAll('.'+cls).forEach(function(b){
+    if(b.getAttribute('data-ship')===String(ship) && (inv==null || b.getAttribute('data-inv')===String(inv))) found=b;
+  });
+  return found;
+}
+function _findLorry(ship){
+  var out=null; ((_boardData && _boardData.lorries)||[]).forEach(function(L){ if(String(L.shipmentKey)===String(ship)) out=L; }); return out;
+}
+
+/* ============================================================================
+   RE-UPLOAD — the office replaces an unclear photo            [2026-11]
+   Pick 1..5 images -> confirm sheet -> downscale in the browser -> POST
+   REUPLOAD_POD_PHOTO. The old photo is kept in Drive by the backend.
+   Shown only when the board sends the field reupBy on invoices (_canReup).
+   ============================================================================ */
+var _canReup = false;
+var REUP_MAX_FILES = 5, REUP_MAX_SIDE = 2000, REUP_QUALITY = 0.85;
+var _reupTarget = null;     // { ship, inv } of the row whose file picker is open
+var _reupBusy = {};         // 'ship|inv' -> true while its upload runs (survives a re-render)
+function reupBtn(L, v){
+  if(!_canReup || String(v.status||'').toLowerCase()!=='delivered') return '';
+  var busy=_reupBusy[String(L.shipmentKey||'')+'|'+String(v.invoiceNo)];
+  return '<button type="button" class="reup-btn" data-ship="'+esc(L.shipmentKey||'')+'" data-inv="'+esc(String(v.invoiceNo))+'"'
+    +' title="Replace the photo with a clearer one (the old photo is kept in Drive)"'+(busy?' disabled>Uploading…':'>'+ic('upload',14)+'Re-upload')+'</button>';
+}
+// Every photo of this row belongs to this invoice alone: one photo from the driver form, or 1..5 after a Re-upload.
+function _ownPhotos(v, S){
+  var urls=v.photoUrls||[];
+  return urls.length>0 && (urls.length===1 || !!v.reupBy) && urls.every(function(u){ var i=S.idxOf[u]; return i!=null && S.photos[i].inv===String(v.invoiceNo); });
+}
+function rowActs(L, v){ var a=okBtn(L, v)+reupBtn(L, v); return a ? '<div class="acts">'+a+'</div>' : ''; }
+function askReup(btn){
+  if(!DEMO && !_authToken()){ showLock('Unlock to re-upload a photo'); return; }
+  _reupTarget={ ship:btn.getAttribute('data-ship'), inv:btn.getAttribute('data-inv') };
+  var f=$('reupFile'); f.value=''; f.click();
+}
+function reupPicked(files){
+  var t=_reupTarget; if(!t) return;
+  var all=Array.prototype.slice.call(files||[]).filter(function(f){ return String(f.type||'').indexOf('image/')===0; });
+  if(!all.length){ toast('err','Choose a photo file (JPG or PNG)'); return; }
+  var use=all.slice(0, REUP_MAX_FILES);
+  openSheet({ title:'Re-upload photo', text:'Replace the photo of invoice '+t.inv+'? The old photo is kept in Drive.', files:use,
+    note: all.length>use.length ? 'Only the first '+REUP_MAX_FILES+' of the '+all.length+' photos you picked will be used.' : '',
+    okText:'Replace', onOk:function(){ doReup(t.ship, t.inv, use); } });
+}
+// One picked image -> JPEG, max 2000 px on the long side, quality 0.85, base64 without the "data:" prefix.
+function _reupShrink(file){
+  return new Promise(function(resolve, reject){
+    var url=URL.createObjectURL(file), img=new Image();
+    img.onload=function(){
+      try{
+        var w=img.naturalWidth, h=img.naturalHeight, k=Math.min(1, REUP_MAX_SIDE/Math.max(w, h, 1));
+        var cw=Math.max(1, Math.round(w*k)), ch=Math.max(1, Math.round(h*k));
+        var cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
+        var cx=cv.getContext('2d'); cx.fillStyle='#fff'; cx.fillRect(0,0,cw,ch); cx.drawImage(img,0,0,cw,ch);
+        var du=cv.toDataURL('image/jpeg', REUP_QUALITY);
+        URL.revokeObjectURL(url);
+        var base=String(file.name||'photo'), dot=base.lastIndexOf('.');
+        resolve({ name:(dot>0?base.slice(0,dot):base)+'.jpg', data:du.slice(du.indexOf(',')+1) });
+      }catch(e){ URL.revokeObjectURL(url); reject(e); }
+    };
+    img.onerror=function(){ URL.revokeObjectURL(url); reject(new Error('could not read '+(file.name||'the photo')+' - use a JPG or PNG')); };
+    img.src=url;
+  });
+}
+async function doReup(ship, inv, files){
+  var key=String(ship)+'|'+String(inv);
+  function patch(urls, by){
+    ((_boardData && _boardData.lorries)||[]).forEach(function(L){ if(String(L.shipmentKey)===String(ship)){ (L.invoices||[]).forEach(function(v){
+      if(String(v.invoiceNo)===String(inv)){ v.photoUrls=urls; v.reupBy=by; v.barcodeRaw=''; v.photoOk=false; v.photoOkBy=''; } }); } });
+    render();
+  }
+  if(_reupBusy[key]) return;
+  if(DEMO){ patch(files.map(function(f){ return URL.createObjectURL(f); }), 'DEMO'); toast('ok','Demo: photo not sent'); return; }
+  if(!_authToken()){ showLock('Unlock to re-upload a photo'); return; }
+  var btn=_liveBtn('reup-btn', ship, inv);
+  if(btn){ btn.disabled=true; btn.textContent='Uploading…'; }
+  _reupBusy[key]=true; _writesInFlight++;
+  var rd;
+  try{
+    var photos=[];
+    for(var i=0;i<files.length;i++){ photos.push(await _reupShrink(files[i])); }
+    var tok=_newToken('reup');
+    rd=await postWithToken({ formType:'REUPLOAD_POD_PHOTO', shipmentKey:ship, invoiceNo:inv, photos:photos,
+                             authToken:_authToken(), clientToken:tok }, tok);
+  }catch(e){ rd={ status:'error', message:(e && e.message) || 'could not read the photo' }; }
+  _writesInFlight--; delete _reupBusy[key];
+  if(rd && rd.status==='success' && Array.isArray(rd.photoUrls) && rd.photoUrls.length){
+    patch(rd.photoUrls, rd.reupBy || _operator());
+    toast('ok','Photo replaced &#10003; · '+esc(inv));
+  } else {
+    // nothing was patched: the row keeps its photo, tag and marks; only the button comes back
+    btn=_liveBtn('reup-btn', ship, inv) || btn;
+    if(btn){ btn.disabled=false; btn.innerHTML=ic('upload',14)+'Re-upload'; }
+    toast('err','Photo not replaced: '+esc((rd && rd.message) || 'server error'));
+  }
+}
+
+/* ============================================================================
+   SAVE TO NAS — one button per lorry, after the office checked everything  [2026-11]
+   L.nas = { state:''|'queued'|'done'|'error', at, by, files, msg }.
+   Shown only when the board sends the field nas on lorries (_canNas).
+   ============================================================================ */
+var _canNas = false;
+var _nasBusy = {};          // shipmentKey -> true while its request runs (survives a re-render)
+function nasState(L){ var s=String((L && L.nas && L.nas.state) || '').toLowerCase(); return (s==='queued' || s==='done' || s==='error') ? s : ''; }
+// What still blocks a lorry, and how many POD files it has (one per distinct photo of a delivered invoice).
+function nasCounts(L){
+  var pending=0, check=0, files=0, seen={};
+  ((L && L.invoices)||[]).forEach(function(v){
+    var st=String(v.status||'').toLowerCase();
+    if(st==='delivered'){
+      if(needsCheck(v)) check++;
+      (v.photoUrls||[]).forEach(function(u){ if(u && !seen[u]){ seen[u]=1; files++; } });
+    } else if(st!=='failed') pending++;
+  });
+  return { pending:pending, check:check, files:files };
+}
+function nasWhy(L){   // '' = complete, the button is enabled; otherwise the reason in plain words
+  var c=nasCounts(L), why=[];
+  if(c.check) why.push(c.check+' photo'+(c.check===1?'':'s')+' to check');
+  if(c.pending) why.push(c.pending+' not delivered yet');
+  if(!why.length && !c.files) why.push('no POD photo yet');
+  return why.join(' · ');
+}
+function nasTime(at){   // 'HH:mm' stays; an ISO time becomes HH:mm (today) or "23 Nov, 14:02" - Malaysia time
+  var s=String(at==null?'':at).trim(); if(!s) return '';
+  if(s.length<=5 && s.indexOf(':')>0) return s;
+  var d=new Date(s); if(isNaN(d.getTime())) return s;
+  var hm=d.toLocaleTimeString('en-GB',{ timeZone:'Asia/Kuala_Lumpur', hour:'2-digit', minute:'2-digit', hour12:false });
+  if(d.toLocaleDateString('en-CA',{ timeZone:'Asia/Kuala_Lumpur' })===todayKL()) return hm;
+  return d.toLocaleDateString('en-MY',{ timeZone:'Asia/Kuala_Lumpur', day:'2-digit', month:'short' })+', '+hm;
+}
+function nasPill(L){
+  var n=(L && L.nas) || {}, s=nasState(L);
+  if(s==='queued') return '<span class="nas-pill is-queued" data-state="queued" title="Waiting for the NAS to copy the files'+(n.by?' (sent by '+esc(n.by)+')':'')+'">'+ic('clock',14)+'Queued for NAS</span>';
+  if(s==='done'){
+    var bits=['On NAS'], t=nasTime(n.at);
+    if(n.files!=null && n.files!=='') bits.push(n.files+' file'+(Number(n.files)===1?'':'s'));
+    if(t) bits.push(t);
+    return '<span class="nas-pill is-done" data-state="done" title="Saved on the NAS'+(n.by?' by '+esc(n.by):'')+'">'+ic('check',14)+esc(bits.join(' · '))+'</span>';
+  }
+  if(s==='error') return '<span class="nas-pill is-error" data-state="error" title="'+esc(n.msg || 'The NAS did not take the files')+'">'+ic('warn',14)+'NAS error — try again</span>';
+  return '<span class="nas-pill is-none" data-state=""'+(n.msg?' title="'+esc(n.msg)+'"':'')+'>Not on NAS'+(n.msg?' · photo changed':'')+'</span>';
+}
+function nasCell(L){
+  if(!_canNas) return '';
+  var s=nasState(L), h='<span class="nas">'+nasPill(L);
+  if(s==='' || s==='error'){
+    var ship=String(L.shipmentKey||''), why=nasWhy(L), busy=!!_nasBusy[ship];
+    h+='<button type="button" class="nas-btn" data-ship="'+esc(ship)+'"'+((why || busy || !ship)?' disabled':'')+'>'
+      +(busy ? 'Sending…' : ic(s==='error'?'refresh':'nas',14)+(s==='error'?'Try again':'Save to NAS'))+'</button>'
+      +(why?'<span class="nas-why">'+esc(why)+'</span>':'');
+  }
+  return h+'</span>';
+}
+function _lorryName(L){ var hb=L.handledBy && L.handledBy.type==='SALESMAN' ? L.handledBy : null; return hb ? ('salesman '+(hb.id||'')) : String(L.vehicleNo||'this lorry'); }
+function askNas(btn){
+  var ship=btn.getAttribute('data-ship'), L=_findLorry(ship); if(!L || nasWhy(L)) return;
+  if(!DEMO && !_authToken()){ showLock('Unlock to save to the NAS'); return; }
+  var n=nasCounts(L).files;
+  openSheet({ title:'Save to NAS', text:'Save all '+n+' POD file'+(n===1?'':'s')+' of '+_lorryName(L)+' to the NAS?',
+    okText:'Save to NAS', onOk:function(){ saveNas(ship); } });
+}
+async function saveNas(ship){
+  var L=_findLorry(ship); if(!L || _nasBusy[ship]) return;
+  if(DEMO){
+    L.nas={ state:'queued', at:new Date().toLocaleTimeString('en-GB',{ timeZone:'Asia/Kuala_Lumpur', hour:'2-digit', minute:'2-digit', hour12:false }), by:'DEMO', files:nasCounts(L).files, msg:'' };
+    render(); toast('ok','Demo: Save to NAS not sent'); return;
+  }
+  if(!_authToken()){ showLock('Unlock to save to the NAS'); return; }
+  var btn=_liveBtn('nas-btn', ship), label=btn ? btn.innerHTML : '';
+  if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
+  _nasBusy[ship]=true; _writesInFlight++;
+  var tok=_newToken('nas');
+  var rd=await postWithToken({ formType:'ARCHIVE_POD_NAS', shipmentKey:ship, date:String((_boardData && _boardData.date) || $('date').value),
+                               branch:BRANCH, authToken:_authToken(), clientToken:tok }, tok);
+  _writesInFlight--; delete _nasBusy[ship];
+  L=_findLorry(ship);
+  if(rd && rd.status==='success' && rd.nas && L){
+    L.nas=rd.nas; render();
+    var s=nasState(L);
+    if(s==='error') toast('err','NAS error: '+esc(rd.nas.msg || 'try again'));
+    else toast('ok',(s==='done'?'Saved on the NAS &#10003;':'Queued for the NAS')+' · '+esc(_lorryName(L)));
+  } else {
+    btn=_liveBtn('nas-btn', ship) || btn;
+    if(btn){ btn.disabled=false; if(label) btn.innerHTML=label; }
+    toast('err','Not saved to the NAS: '+esc((rd && rd.message) || 'server error'));
+  }
+}
+/* ============================================================================
    LIGHTBOX
    ============================================================================ */
 function _findInvoice(invoiceNo){
@@ -802,17 +1211,36 @@ function demoData(){
   function P(no){ return 'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="420"><rect width="300" height="420" fill="#fff" stroke="#9CA3AF"/>'
     +'<text x="20" y="44" font-family="monospace" font-size="18" fill="#6B7280">SAMPLE ONLY</text><text x="20" y="96" font-family="monospace" font-size="30" font-weight="700">'+no+'</text></svg>'); }
   return { status:'ok', date: todayKL(), branch: BRANCH, lorries:[
-    { vehicleNo:'VBT 1234', shipmentKey:'SHIP-DEMO-1', drivers:'Ahmad · Rosli', invoices:[
+    { vehicleNo:'VBT 1234', shipmentKey:'SHIP-DEMO-1', drivers:'Ahmad · Rosli', nas:{ state:'' }, invoices:[
       { invoiceNo:'IV100231', barcodeRaw:'IV100231', customer:'Kedai Runcit Aman', custCode:'C0231', area:'Mentakab', amount:1240.50, status:'delivered', deliveredAt:'10:14', matchSource:'barcode', efiScanned:true, efiBy:'TER282', photoUrls:[P('IV100231')] },
       { invoiceNo:'IV100232', barcodeRaw:'', customer:'Restoran Sri Muda', custCode:'C0244', area:'Temerloh', amount:398.00, status:'delivered', deliveredAt:'10:52', matchSource:'ai', efiScanned:false, photoUrls:[P('IV100232')] },
       { invoiceNo:'IV100240', barcodeRaw:'', customer:'Pasar Mini Jaya', custCode:'C0261', area:'Lanchang', amount:2015.75, status:'delivered', deliveredAt:'11:37', matchSource:'none', efiScanned:false, photoUrls:[P('IV100240')] },
       { invoiceNo:'IV100255', customer:'Warung Pak Din', custCode:'C0288', area:'Kerdau', amount:150.00, status:'failed', failReason:'Shop closed', photoUrls:[] }
     ]},
-    { vehicleNo:'WXX 5678', shipmentKey:'SHIP-DEMO-2', drivers:'Kumar', invoices:[
+    { vehicleNo:'WXX 5678', shipmentKey:'SHIP-DEMO-2', drivers:'Kumar', nas:{ state:'' }, invoices:[
       { invoiceNo:'IV100301', barcodeRaw:'IV100301', customer:'Gerai Selera Kampung', custCode:'C0301', area:'Mentakab', amount:730.25, status:'delivered', deliveredAt:'09:41', matchSource:'barcode', efiScanned:true, efiBy:'TER278', photoUrls:[P('IV100301')] },
       { invoiceNo:'IV100302', barcodeRaw:'IV100309', customer:'Gerai Selera Kampung', custCode:'C0301', area:'Mentakab', amount:412.00, status:'delivered', deliveredAt:'09:41', matchSource:'barcode', mismatch:true, efiScanned:false, photoUrls:[P('IV100309')] },
       { invoiceNo:'IV100305', barcodeRaw:'IV100305', customer:'Kedai Buku Ilmu', custCode:'C0312', area:'Bandar', amount:88.90, status:'delivered', deliveredAt:'12:03', matchSource:'barcode', efiScanned:false, photoUrls:[P('IV100305')] },
       { invoiceNo:'IV100320', customer:'Hardware Seng Hin', custCode:'C0333', area:'Mentakab', amount:0, status:'pending', photoUrls:[] }
+    ]},
+    // [2026-11] one lorry per NAS state (not on NAS + ready / queued / done / error), and one re-uploaded row
+    { vehicleNo:'CDK 7781', shipmentKey:'SHIP-DEMO-3', drivers:'Faizal · Hakim', nas:{ state:'' }, invoices:[
+      { invoiceNo:'IV100401', barcodeRaw:'IV100401', customer:'Kedai Runcit Maju', custCode:'C0401', area:'Temerloh', amount:560.00, status:'delivered', deliveredAt:'09:12', matchSource:'barcode', efiScanned:true, efiBy:'TER282', photoUrls:[P('IV100401')] },
+      { invoiceNo:'IV100402', barcodeRaw:'', reupBy:'TER282', customer:'Mini Market Sentosa', custCode:'C0402', area:'Temerloh', amount:1320.40, status:'delivered', deliveredAt:'09:48', matchSource:'none', efiScanned:false, photoUrls:[P('IV100402')] },
+      { invoiceNo:'IV100403', customer:'Kedai Kopi Lama', custCode:'C0403', area:'Mengkarak', amount:95.00, status:'failed', failReason:'Shop closed', photoUrls:[] }
+    ]},
+    { vehicleNo:'PKA 2206', shipmentKey:'SHIP-DEMO-4', drivers:'Suresh', nas:{ state:'queued', at:'13:40', by:'TER282', files:2, msg:'' }, invoices:[
+      { invoiceNo:'IV100411', barcodeRaw:'IV100411', customer:'Pasaraya Seri Jaya', custCode:'C0411', area:'Jerantut', amount:2480.00, status:'delivered', deliveredAt:'10:05', matchSource:'barcode', efiScanned:true, efiBy:'TER282', photoUrls:[P('IV100411')] },
+      { invoiceNo:'IV100412', barcodeRaw:'IV100412', customer:'Kedai Ubat Sihat', custCode:'C0412', area:'Jerantut', amount:310.60, status:'delivered', deliveredAt:'10:40', matchSource:'barcode', efiScanned:true, efiBy:'TER282', photoUrls:[P('IV100412')] }
+    ]},
+    { vehicleNo:'JQB 9034', shipmentKey:'SHIP-DEMO-5', drivers:'Azman · Lim', nas:{ state:'done', at:'14:02', by:'TER278', files:3, msg:'' }, invoices:[
+      { invoiceNo:'IV100421', barcodeRaw:'IV100421', customer:'Restoran Nasi Kukus', custCode:'C0421', area:'Bera', amount:645.30, status:'delivered', deliveredAt:'08:55', matchSource:'barcode', efiScanned:true, efiBy:'TER278', photoUrls:[P('IV100421')] },
+      { invoiceNo:'IV100422', barcodeRaw:'IV100422', customer:'Kedai Runcit Bera', custCode:'C0422', area:'Bera', amount:1105.00, status:'delivered', deliveredAt:'09:30', matchSource:'barcode', efiScanned:true, efiBy:'TER278', photoUrls:[P('IV100422')] },
+      { invoiceNo:'IV100423', barcodeRaw:'IV100423', customer:'Kantin Sekolah Triang', custCode:'C0423', area:'Triang', amount:228.75, status:'delivered', deliveredAt:'10:20', matchSource:'barcode', efiScanned:true, efiBy:'TER278', photoUrls:[P('IV100423')] }
+    ]},
+    { vehicleNo:'BMH 4410', shipmentKey:'SHIP-DEMO-6', drivers:'Ravi', nas:{ state:'error', at:'14:10', by:'TER278', files:0, msg:'The NAS could not be reached' }, invoices:[
+      { invoiceNo:'IV100431', barcodeRaw:'IV100431', customer:'Kedai Serbaneka Karak', custCode:'C0431', area:'Karak', amount:890.00, status:'delivered', deliveredAt:'11:15', matchSource:'barcode', efiScanned:true, efiBy:'TER278', photoUrls:[P('IV100431')] },
+      { invoiceNo:'IV100432', barcodeRaw:'IV100432', customer:'Gerai Buah Bentong', custCode:'C0432', area:'Bentong', amount:156.20, status:'delivered', deliveredAt:'12:02', matchSource:'barcode', efiScanned:false, photoUrls:[P('IV100432')] }
     ]}
   ]};
 }
@@ -826,12 +1254,15 @@ $('refreshBtn').addEventListener('click', loadBoard);
 // Collapse/expand: click a lorry header to toggle just that card (no full re-render, checkboxes stay live).
 $('board').addEventListener('click', function(e){
   var okb = e.target.closest('.ok-btn'); if(okb){ if(!okb.disabled) markPhotoOk(okb); return; }
+  var rub = e.target.closest('.reup-btn'); if(rub){ if(!rub.disabled) askReup(rub); return; }
+  var nsb = e.target.closest('.nas-btn'); if(nsb){ if(!nsb.disabled) askNas(nsb); return; }
+  if(e.target.closest('.nas')) return;                // the NAS pill / reason is not the open-close handle
   var head = e.target.closest('.lorry-head'); if(!head) return;
   var key = head.getAttribute('data-key'), card = head.closest('.lorry');
   if(_openKeys.has(key)){ _openKeys.delete(key); card.classList.remove('open'); }
   else { _openKeys.add(key); card.classList.add('open'); }
-  var ch = head.querySelector('.chev'); if(ch) ch.textContent = _openKeys.has(key) ? '▾' : '▸';
-  var tab=$('toggleAllBtn'); if(tab) tab.textContent=_openKeys.size?'▸ Collapse all':'▾ Expand all';
+  var tg = head.querySelector('.tog'); if(tg) tg.setAttribute('aria-expanded', _openKeys.has(key) ? 'true' : 'false');
+  _syncToggleAll();
 });
 $('toggleAllBtn').addEventListener('click', function(){
   var keys = ((_boardData && _boardData.lorries) || []).map(function(L){ return String(L.shipmentKey||L.vehicleNo||''); });
@@ -846,7 +1277,7 @@ $('board').addEventListener('click', function(e){
   var skey = head.getAttribute('data-skey'), st = head.closest('.station');
   if(_openStations.has(skey)){ _openStations.delete(skey); st.classList.remove('open'); }
   else { _openStations.add(skey); st.classList.add('open'); }
-  var ch = head.querySelector('.st-chev'); if(ch) ch.textContent = _openStations.has(skey) ? '▾' : '▸';
+  var tg = head.querySelector('.tog'); if(tg) tg.setAttribute('aria-expanded', _openStations.has(skey) ? 'true' : 'false');
 });
 // Delegated thumbnail click (replaces inline onclick — XSS-safe, reads data-* attrs).
 $('board').addEventListener('click', function(e){
@@ -871,6 +1302,26 @@ document.querySelectorAll('#branchSeg .seg-btn').forEach(function(b){ b.classLis
 function _syncScanifyLink_(){ var sl=$('scanifyLink'); if(sl) sl.href='CLF_POD_Scanify.html?branch='+encodeURIComponent(BRANCH); }
 _syncScanifyLink_();
 document.addEventListener('visibilitychange', function(){ if(!document.hidden) loadBoard(); });
+
+// [2026-11] static buttons and links get their line icon here (data-ic), so the markup stays readable
+document.querySelectorAll('[data-ic]').forEach(function(el){ el.insertAdjacentHTML('afterbegin', ic(el.getAttribute('data-ic'), el.getAttribute('data-ic-size')||'')); });
+_syncToggleAll();
+$('checkBtn').insertAdjacentHTML('afterbegin', ic('filter',16));
+// confirm sheet + the hidden file picker of Re-upload
+$('sheetCancel').addEventListener('click', closeSheet);
+$('sheetOk').addEventListener('click', function(){ var f=_sheetOk; closeSheet(); if(f) f(); });
+$('sheet').addEventListener('click', function(e){ if(e.target===this) closeSheet(); });   // click the dim area = cancel
+document.addEventListener('keydown', function(e){
+  if(!$('sheet').classList.contains('show')) return;
+  if(e.key==='Escape'){ closeSheet(); return; }
+  if(e.key==='Tab'){   // keep the keyboard inside the sheet
+    var a=$('sheetCancel'), b=$('sheetOk'), on=document.activeElement;
+    if(on!==a && on!==b){ e.preventDefault(); b.focus(); }
+    else if(e.shiftKey && on===a){ e.preventDefault(); b.focus(); }
+    else if(!e.shiftKey && on===b){ e.preventDefault(); a.focus(); }
+  }
+});
+$('reupFile').addEventListener('change', function(){ reupPicked(this.files); });
 
 window.onload = function(){
   if(!DEMO && !_auth()){ showLock(); }   // office tool: lock until unlocked (shared session with Pallet Store)
