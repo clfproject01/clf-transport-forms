@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CLF Pallet Dashboard · Papan Pemuka Palet</title>
+<title data-en="CLF Pallet Dashboard" data-bm="CLF Dashboard Pallet">CLF Pallet Dashboard</title>
 <style>
   /* ==========================================================================
      LOOK: same as CLF_POD_Admin "direction B - Brand" (2026-11). Navy band +
@@ -181,6 +181,70 @@
     .controls .btn,.controls .refresh-btn{height:40px;}
     .card{padding:16px;}
   }
+
+  /* ==========================================================================
+     2026-11 language switch (EN | BM) + shorter page. Only existing colours.
+     ========================================================================== */
+  [hidden]{display:none !important;}
+
+  /* ---- EN | BM switch (navy band and sign-in overlay) ---- */
+  .lang{flex:none;display:inline-flex;border:1.5px solid #4148A0;border-radius:999px;}
+  .lang-btn{min-width:50px;min-height:44px;padding:0 14px;border:0;border-radius:999px;background:transparent;color:var(--on-navy);font-size:13px;font-weight:800;line-height:1;}
+  .lang-btn:hover{background:var(--navy-2);}
+  .lang-btn.active,.lang-btn.active:hover{background:#fff;color:var(--navy);}
+  .lang-btn:focus-visible{outline-offset:-4px;}
+  .lang-btn.active:focus-visible{outline-color:var(--navy);}
+
+  /* ---- toolbar pieces ---- */
+  .tools{margin-bottom:12px;}
+  .hint-line{font-size:13px;font-weight:600;color:var(--muted);margin-top:10px;}
+  .sum-line{font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px;}
+  .sum-line:empty{display:none;}
+  .card-sub .l2{display:block;margin-top:2px;}
+
+  /* ---- help toggle: a small text button, closed by default ---- */
+  .help-btn{display:inline-flex;align-items:center;gap:6px;min-height:32px;margin-top:10px;padding:0;border:0;background:transparent;color:var(--navy);font-size:13px;font-weight:700;text-align:left;}
+  .help-btn:hover{text-decoration:underline;}
+  .help-caret{flex:none;display:inline-block;width:14px;}
+  .help{margin-top:6px;padding:12px 14px;border-radius:12px;background:var(--soft);color:var(--muted);font-size:13px;}
+  .help p{margin:0 0 6px;}
+  .help p:last-child{margin-bottom:0;}
+  .help b{color:var(--text);}
+
+  /* ---- manager actions: collapsed list ---- */
+  button.collapser{display:flex;align-items:center;gap:6px;width:100%;min-height:32px;margin:0;padding:0;border:0;background:transparent;color:var(--navy);font-size:14px;font-weight:800;text-align:left;}
+  #auditBody{margin-top:8px;}
+
+  /* ---- per pallet: row 1 = now (big), row 2 = movements (small, muted) ---- */
+  .now{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border-radius:12px;overflow:hidden;margin-top:6px;box-shadow:0 0 0 1px var(--line);}
+  .now .cell{background:var(--surface);padding:10px 4px;text-align:center;min-width:0;}
+  .now .cell .n{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1;color:var(--text);}
+  .now .cell .k{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px;line-height:1.25;overflow-wrap:anywhere;}
+  .now .cell.dalam .n{color:var(--ok);}
+  .now .cell.luar .n{color:var(--navy);}
+  .now .cell.rosak .n{color:var(--fault);}
+  .flow{font-size:12px;font-weight:600;color:var(--muted);margin-top:8px;font-variant-numeric:tabular-nums;}
+  .flow b{font-weight:800;}
+
+  /* ---- sign-in overlay: switch sits above the card, on the navy ---- */
+  .lock__in{width:100%;max-width:360px;}
+  .lock__bar{display:flex;justify-content:flex-end;margin-bottom:10px;}
+  .lock__bar :focus-visible{outline-color:#fff;}
+  .lock__bar .lang-btn.active:focus-visible{outline-color:var(--navy);}
+
+  @media (max-width:720px){
+    /* header: logo + switch on row 1, title + status below, link beside the title */
+    .band__in{gap:10px 12px;}
+    .band__logo{order:0;}
+    .band .lang{order:1;margin-left:auto;}
+    .band__txt{order:2;flex:1 1 0;min-width:calc(100% - 170px);}
+    .band__link{order:3;}
+    /* every control is a 44px tap target */
+    .seg-btn{height:44px;}
+    .field{height:44px;}
+    .controls .btn,.controls .refresh-btn{height:44px;}
+    .help-btn,button.collapser{min-height:44px;}
+  }
 </style>
 </head>
 <body>
@@ -189,10 +253,11 @@
     <img class="band__logo" src="data:image/png;base64,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" alt="CLF Trading">
     <span class="band__sep"></span>
     <div class="band__txt">
-      <h1>Pallet Dashboard · Papan Pemuka Palet</h1>
-      <div class="band__meta" id="dashMeta">Loading… · Memuatkan…</div>
+      <h1 data-en="Pallet Dashboard" data-bm="Dashboard Pallet">Pallet Dashboard</h1>
+      <div class="band__meta" id="dashMeta" data-en="Loading…" data-bm="Memuatkan…">Loading…</div>
     </div>
-    <a class="band__link" href="CLF_Pallet_Store.html">Pallet Store · Stor Pallet</a>
+    <span class="lang" role="group" aria-label="Language" data-en-aria="Language" data-bm-aria="Bahasa"><button type="button" class="lang-btn active" data-lang="en" aria-pressed="true">EN</button><button type="button" class="lang-btn" data-lang="bm" aria-pressed="false">BM</button></span>
+    <a class="band__link" href="CLF_Pallet_Store.html" data-en="Pallet Store" data-bm="Stor Pallet">Pallet Store</a>
   </div>
 </header>
 <div class="redline"></div>
@@ -202,113 +267,130 @@
   <div class="banner" id="errBanner" role="status"></div>
 
   <div class="controls">
-    <label class="field"><svg class="i i16" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg><input type="search" id="searchInput" placeholder="Search pallet · Cari palet" title="Search principal / type / colour · Cari prinsipal / jenis / warna" aria-label="Search principal / type / colour · Cari prinsipal / jenis / warna"></label>
-    <span class="seg">
-      <button type="button" class="seg-btn active" id="fAll">All · Semua</button>
-      <button type="button" class="seg-btn" id="fHeld">Held &gt; 0 · Dipegang &gt; 0</button>
-    </span>
-    <button type="button" class="refresh-btn" id="refreshBtn"><svg class="i i16" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>Refresh · Muat semula</button>
+    <button type="button" class="refresh-btn" id="refreshBtn"><svg class="i i16" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg><span data-en="Refresh" data-bm="Muat semula">Refresh</span></button>
     <span class="meta" id="lastRefresh"></span>
   </div>
 
-  <!-- ===================== RECONCILE STATUS (top: the boss looks here first) ===================== -->
-  <h2 class="sec"><span class="sec__ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg></span>Reconcile · Penyesuaian <span class="sub" id="recScope">balanced vs unbalanced · seimbang vs tidak seimbang</span></h2>
-
-  <div class="grid">
-    <div class="card c12" id="recBalanceCard">
-      <div class="card-title">Open variances · Varians terbuka</div>
-      <div class="card-sub">Variance = physical − computed · Varians = fizikal − kiraan</div>
-      <div id="recBody"></div>
-    </div>
-  </div>
-
-  <!-- ===================== FLEET TOTALS ===================== -->
-  <h2 class="sec"><span class="sec__ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2.97 12.92A2 2 0 0 0 2 14.63v3.24a2 2 0 0 0 .97 1.71l3 1.8a2 2 0 0 0 2.06 0L12 19v-5.5l-5-3-4.03 2.42Z"/><path d="m7 16.5-4.74-2.85"/><path d="m7 16.5 5-3"/><path d="M7 16.5v5.17"/><path d="M12 13.5V19l3.97 2.38a2 2 0 0 0 2.06 0l3-1.8a2 2 0 0 0 .97-1.71v-3.24a2 2 0 0 0-.97-1.71L17 10.5l-5 3Z"/><path d="m17 16.5-5-3"/><path d="m17 16.5 4.74-2.85"/><path d="M17 16.5v5.17"/><path d="M7.97 4.42A2 2 0 0 0 7 6.13v4.37l5 3 5-3V6.13a2 2 0 0 0-.97-1.71l-3-1.8a2 2 0 0 0-2.06 0l-3 1.8Z"/><path d="M12 8 7.26 5.15"/><path d="m12 8 4.74-2.85"/><path d="M12 13.5V8"/></svg></span>Holdings · Pegangan <span class="sub">company-wide · seluruh syarikat</span></h2>
+  <!-- ===================== 1. OUR PALLETS (company totals) ===================== -->
+  <h2 class="sec"><span class="sec__ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2.97 12.92A2 2 0 0 0 2 14.63v3.24a2 2 0 0 0 .97 1.71l3 1.8a2 2 0 0 0 2.06 0L12 19v-5.5l-5-3-4.03 2.42Z"/><path d="m7 16.5-4.74-2.85"/><path d="m7 16.5 5-3"/><path d="M7 16.5v5.17"/><path d="M12 13.5V19l3.97 2.38a2 2 0 0 0 2.06 0l3-1.8a2 2 0 0 0 .97-1.71v-3.24a2 2 0 0 0-.97-1.71L17 10.5l-5 3Z"/><path d="m17 16.5-5-3"/><path d="m17 16.5 4.74-2.85"/><path d="M17 16.5v5.17"/><path d="M7.97 4.42A2 2 0 0 0 7 6.13v4.37l5 3 5-3V6.13a2 2 0 0 0-.97-1.71l-3-1.8a2 2 0 0 0-2.06 0l-3 1.8Z"/><path d="M12 8 7.26 5.15"/><path d="m12 8 4.74-2.85"/><path d="M12 13.5V8"/></svg></span><span data-en="Our pallets" data-bm="Stok pallet">Our pallets</span></h2>
 
   <div class="summary">
     <div class="stat dalam">
-      <div class="l">Inside · Dalam</div>
+      <div class="l" data-en="Inside" data-bm="Dalam">Inside</div>
       <div class="n" id="kpiDalam">—</div>
-      <div class="h">in store + yard · dalam stor + yard</div>
+      <div class="h" data-en="Store + yard" data-bm="Stor + yard">Store + yard</div>
     </div>
     <div class="stat luar">
-      <div class="l">Outgoing · Luar</div>
+      <div class="l" data-en="Out" data-bm="Luar">Out</div>
       <div class="n" id="kpiLuar">—</div>
-      <div class="h">lorry / customer · lori / pelanggan</div>
+      <div class="h" data-en="On lorries or at customers" data-bm="Atas lori atau di pelanggan">On lorries or at customers</div>
     </div>
     <div class="stat rosak">
-      <div class="l">Damaged · Rosak</div>
+      <div class="l" data-en="Damaged" data-bm="Rosak">Damaged</div>
       <div class="n" id="kpiRosak">—</div>
-      <div class="h">damaged right now · rosak sekarang</div>
     </div>
     <div class="stat total">
-      <div class="l">Total held · Jumlah dipegang</div>
+      <div class="l" data-en="Total" data-bm="Jumlah">Total</div>
       <div class="n" id="kpiTotal">—</div>
-      <div class="h">inside + outgoing + damaged · dalam + luar + rosak</div>
+      <div class="h" data-en="Inside + Out + Damaged" data-bm="Dalam + Luar + Rosak">Inside + Out + Damaged</div>
     </div>
   </div>
+  <div id="totBody" hidden></div>
 
-  <!-- ===================== PER-PALLET 6 NUMBERS ===================== -->
-  <h2 class="sec"><span class="sec__ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg></span>Per pallet · Setiap palet <span class="sub" id="perScope">principal × type × colour · prinsipal × jenis × warna</span></h2>
+  <!-- ===================== 2. STOCK COUNT ===================== -->
+  <h2 class="sec"><span class="sec__ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg></span><span data-en="Stock count" data-bm="Semakan stok">Stock count</span> <span class="sub" id="recScope"></span></h2>
 
   <div class="grid">
-    <div class="card c12">
-      <div class="card-sub">
-        Each pallet = <b>principal × type × colour</b> · Setiap palet = <b>prinsipal × jenis × warna</b>. The 6 numbers · 6 angka:
-        <span class="legend">
-          <span><b>Out · Keluar</b> — assigned out, cumulative · dihantar keluar, terkumpul</span>
-          <span><b>Outgoing · Luar</b> — out right now · di luar sekarang</span>
-          <span><b>Return · Pulang</b> — came back good · pulang dalam keadaan baik</span>
-          <span><b>Damaged · Rosak</b> — damaged right now · rosak sekarang</span>
-          <span><b>Fixed · Dibaiki</b> — repaired · telah dibaiki</span>
-          <span><b>Balance · Baki</b> — total held · jumlah dipegang</span>
-        </span>
+    <div class="card c12" id="recBalanceCard">
+      <div id="recBody"></div>
+      <div class="hint-line" id="recNote" data-en="− short · + extra" data-bm="− kurang · + lebih" hidden>− short · + extra</div>
+      <button type="button" class="help-btn" aria-expanded="false" aria-controls="helpRec"><span class="help-caret" aria-hidden="true">▸</span><span data-en="What do these numbers mean?" data-bm="Apa maksud nombor ini?">What do these numbers mean?</span></button>
+      <div class="help" id="helpRec" hidden>
+        <p data-en="Difference = Counted − System." data-bm="Beza = Fizikal − Sistem.">Difference = Counted − System.</p>
+        <p data-en="Minus (red) = pallets missing. Plus (yellow) = extra pallets found." data-bm="Tanda − (merah) = pallet kurang. Tanda + (kuning) = pallet lebih.">Minus (red) = pallets missing. Plus (yellow) = extra pallets found.</p>
       </div>
-      <div id="perPalletWrap"></div>
-      <div class="derived-note">Outgoing / Damaged / Balance = live balance (getPalletBalances). Out / Return / Fixed = rolled from ledger actions (ASSIGN / RETURN / REPAIR — openings &amp; stocktake corrections don't count). Pallets the ledger hasn't loaded show "—" for the 3 flow numbers, not zero.</div>
-      <div class="derived-note">Luar / Rosak / Baki = baki semasa (getPalletBalances). Keluar / Pulang / Dibaiki = dijumlahkan daripada tindakan lejar (ASSIGN / RETURN / REPAIR — baki pembukaan dan pembetulan kiraan stok tidak dikira). Palet yang lejarnya belum dimuatkan menunjukkan "—" bagi 3 angka aliran, bukan sifar.</div>
     </div>
   </div>
 
-  <!-- ===================== LORRIES NOT RETURNED ===================== -->
-  <h2 class="sec"><span class="sec__ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>Lorries not returned · Lori belum pulang palet <span class="sub">pallets sent out on a lorry and not yet received back · palet yang keluar dengan lori dan belum diterima balik</span></h2>
+  <!-- ===================== 3. PALLETS ON LORRIES ===================== -->
+  <h2 class="sec"><span class="sec__ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span><span data-en="Pallets on lorries" data-bm="Pallet atas lori">Pallets on lorries</span></h2>
 
   <div class="grid">
     <div class="card c12">
-      <div class="card-sub">One row per shipment. Pallets left at a customer are not counted here (they are in the customer list below). Red = out 3 days or more, yellow = 1 to 2 days.<br>Satu baris setiap shipment. Palet yang ditinggalkan di pelanggan tidak dikira di sini (lihat senarai pelanggan di bawah). Merah = 3 hari atau lebih, kuning = 1 hingga 2 hari.</div>
+      <div class="card-sub"><span data-en="Pallets left at a customer are not counted here." data-bm="Pallet yang ditinggalkan di pelanggan tidak dikira di sini.">Pallets left at a customer are not counted here.</span><span class="l2" data-en="Red 3+ days · Yellow 1–2 days" data-bm="Merah 3+ hari · Kuning 1–2 hari">Red 3+ days · Yellow 1–2 days</span></div>
+      <div class="sum-line" id="lorryNote"></div>
       <div id="lorryBody"></div>
-      <div class="note-line" id="lorryNote"></div>
+      <button type="button" class="help-btn" aria-expanded="false" aria-controls="helpLorry"><span class="help-caret" aria-hidden="true">▸</span><span data-en="What do these numbers mean?" data-bm="Apa maksud nombor ini?">What do these numbers mean?</span></button>
+      <div class="help" id="helpLorry" hidden>
+        <p data-en="One row per shipment: pallets sent out on a lorry and not yet received back." data-bm="Satu baris = satu shipment: pallet yang keluar dengan lori dan belum diterima balik.">One row per shipment: pallets sent out on a lorry and not yet received back.</p>
+        <p data-en="Red = out 3 days or more. Yellow = out 1 to 2 days." data-bm="Merah = 3 hari ke atas. Kuning = 1 hingga 2 hari.">Red = out 3 days or more. Yellow = out 1 to 2 days.</p>
+        <p data-en="Pallets left at a customer are listed under Out by customer." data-bm="Pallet yang ditinggalkan di pelanggan ada di bahagian Luar ikut pelanggan.">Pallets left at a customer are listed under Out by customer.</p>
+      </div>
     </div>
   </div>
 
-  <!-- ===================== OUTSTANDING BY CUSTOMER ===================== -->
-  <h2 class="sec"><span class="sec__ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg></span>Outgoing by customer · Luar mengikut pelanggan <span class="sub">where the outgoing pallets are, when a customer is recorded · di mana palet luar berada, jika pelanggan direkodkan</span></h2>
+  <!-- ===================== 4. OUT BY CUSTOMER ===================== -->
+  <h2 class="sec"><span class="sec__ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg></span><span data-en="Out by customer" data-bm="Luar ikut pelanggan">Out by customer</span></h2>
 
   <div class="grid">
     <div class="card c12">
-      <div class="card-title">Outgoing — by customer (where recorded) · Luar — mengikut pelanggan (jika direkodkan)</div>
-      <div class="card-sub">Outgoing (LUAR) = genuinely out of our premises (on lorries / at customers). Rows with a customer code are confirmed at that customer; "not recorded" = out on a lorry, no customer logged yet.<br>Luar (LUAR) = benar-benar di luar premis kita (atas lori / di pelanggan). Baris yang ada kod pelanggan disahkan berada di pelanggan itu; "tidak direkodkan" = di luar atas lori, pelanggan belum dicatat.</div>
+      <div class="sum-line" id="outNote"></div>
       <div id="outBody"></div>
-      <div class="note-line" id="outNote"></div>
+      <button type="button" class="help-btn" aria-expanded="false" aria-controls="helpOut"><span class="help-caret" aria-hidden="true">▸</span><span data-en="What do these numbers mean?" data-bm="Apa maksud nombor ini?">What do these numbers mean?</span></button>
+      <div class="help" id="helpOut" hidden>
+        <p data-en="Out = off our premises: on a lorry or at a customer." data-bm="Luar = di luar premis kita: atas lori atau di pelanggan.">Out = off our premises: on a lorry or at a customer.</p>
+        <p data-en="A row with a customer code is confirmed at that customer." data-bm="Ada kod pelanggan = sah di pelanggan itu.">A row with a customer code is confirmed at that customer.</p>
+        <p data-en="&quot;On lorry, no customer yet&quot; = went out on a lorry and the customer is not entered yet." data-bm="&quot;Atas lori, pelanggan belum direkodkan&quot; = sudah keluar dengan lori, pelanggan belum dimasukkan.">"On lorry, no customer yet" = went out on a lorry and the customer is not entered yet.</p>
+      </div>
     </div>
   </div>
 
-  <!-- ===================== ADJUSTMENT / AUDIT LEDGER ===================== -->
-  <h2 class="sec"><span class="sec__ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M13 5h8"/><path d="M13 12h8"/><path d="M13 19h8"/><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/></svg></span>Adjustment audit · Audit pelarasan <span class="sub">ADJUST / REVERSE / OPENING / RECONCILE — who, when, why · siapa, bila, kenapa</span></h2>
+  <!-- ===================== 5. BY PALLET TYPE ===================== -->
+  <h2 class="sec"><span class="sec__ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg></span><span data-en="By pallet type" data-bm="Ikut jenis pallet">By pallet type</span> <span class="sub" id="perScope"></span></h2>
+
+  <div class="controls tools">
+    <label class="field"><svg class="i i16" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg><input type="search" id="searchInput" placeholder="Search pallets" title="Search by principal, type or colour" aria-label="Search by principal, type or colour" data-en-ph="Search pallets" data-bm-ph="Cari pallet" data-en-title="Search by principal, type or colour" data-bm-title="Cari prinsipal, jenis atau warna" data-en-aria="Search by principal, type or colour" data-bm-aria="Cari prinsipal, jenis atau warna"></label>
+    <span class="seg">
+      <button type="button" class="seg-btn active" id="fAll" data-en="All" data-bm="Semua">All</button>
+      <button type="button" class="seg-btn" id="fHeld" data-en="With pallets" data-bm="Ada stok">With pallets</button>
+    </span>
+  </div>
 
   <div class="grid">
     <div class="card c12">
-      <div class="card-title collapser" id="auditToggle"><span id="auditCaret">▾</span> Manager / office actions · Tindakan pengurus / pejabat <span class="hint">(click to show / hide · klik untuk tunjuk / sembunyi)</span></div>
-      <div id="auditBody">
-        <div class="card-sub">PIN-verified entries float to the top with a PIN badge · reason &amp; operator shown · append-only — nothing here was ever overwritten<br>Entri yang disahkan PIN berada di atas dengan lencana PIN · sebab &amp; operator ditunjukkan · tambah sahaja — tiada apa-apa di sini pernah ditimpa</div>
+      <div id="perPalletWrap"></div>
+      <div class="hint-line" id="perNote" data-en="&quot;—&quot; means not loaded, not zero. Press Refresh." data-bm="&quot;—&quot; = belum dimuatkan, bukan 0. Tekan Muat semula." hidden>"—" means not loaded, not zero. Press Refresh.</div>
+      <button type="button" class="help-btn" aria-expanded="false" aria-controls="helpPer"><span class="help-caret" aria-hidden="true">▸</span><span data-en="What do these numbers mean?" data-bm="Apa maksud nombor ini?">What do these numbers mean?</span></button>
+      <div class="help" id="helpPer" hidden>
+        <p data-en="One card per principal, type and colour." data-bm="Satu kad bagi setiap prinsipal, jenis dan warna.">One card per principal, type and colour.</p>
+        <p data-en="Right now: Inside = in our store or yard. Out = on lorries or at customers. Damaged = damaged pallets we hold. Total = Inside + Out + Damaged." data-bm="Sekarang: Dalam = dalam stor atau yard. Luar = atas lori atau di pelanggan. Rosak = pallet rosak yang ada pada kita. Jumlah = Dalam + Luar + Rosak.">Right now: Inside = in our store or yard. Out = on lorries or at customers. Damaged = damaged pallets we hold. Total = Inside + Out + Damaged.</p>
+        <p data-en="Movements: Sent out = pallets sent out on lorries. Returned = came back in good condition. Repaired = damaged pallets fixed." data-bm="Pergerakan: Dihantar = pallet yang dihantar keluar dengan lori. Pulang = sudah pulang, elok. Dibaiki = pallet rosak yang sudah dibaiki.">Movements: Sent out = pallets sent out on lorries. Returned = came back in good condition. Repaired = damaged pallets fixed.</p>
+        <p data-en="Sent out, Returned and Repaired are counted from the latest 400 records only. Opening stock and stock-count corrections are not included." data-bm="Dihantar, Pulang dan Dibaiki dikira daripada 400 rekod terkini sahaja. Baki pembukaan dan pembetulan kira stok tidak dikira.">Sent out, Returned and Repaired are counted from the latest 400 records only. Opening stock and stock-count corrections are not included.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== 6. MANAGER ACTIONS (collapsed) ===================== -->
+  <h2 class="sec"><span class="sec__ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M13 5h8"/><path d="M13 12h8"/><path d="M13 19h8"/><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/></svg></span><span data-en="Manager actions" data-bm="Rekod pelarasan">Manager actions</span> <span class="sub" data-en="Who, when, why" data-bm="Siapa, bila, kenapa">Who, when, why</span></h2>
+
+  <div class="grid">
+    <div class="card c12">
+      <button type="button" class="collapser" id="auditToggle" aria-expanded="false" aria-controls="auditBody"><span id="auditCaret" aria-hidden="true">▸</span><span id="auditLabel" data-en="Show list" data-bm="Buka senarai">Show list</span></button>
+      <div id="auditBody" style="display:none;">
         <div class="seg seg--wrap filters">
-          <button type="button" class="seg-btn active" id="aAll">All · Semua</button>
+          <button type="button" class="seg-btn active" id="aAll" data-en="All" data-bm="Semua">All</button>
           <button type="button" class="seg-btn" id="aAdjust">ADJUST</button>
           <button type="button" class="seg-btn" id="aReverse">REVERSE</button>
           <button type="button" class="seg-btn" id="aOpening">OPENING</button>
           <button type="button" class="seg-btn" id="aReconcile">RECONCILE</button>
         </div>
         <div id="auditWrap"></div>
+        <button type="button" class="help-btn" aria-expanded="false" aria-controls="helpAudit"><span class="help-caret" aria-hidden="true">▸</span><span data-en="What do these numbers mean?" data-bm="Apa maksud nombor ini?">What do these numbers mean?</span></button>
+        <div class="help" id="helpAudit" hidden>
+          <p data-en="Only actions from 25 Nov 2026 are listed." data-bm="Hanya rekod mulai 25 Nov 2026 disenaraikan.">Only actions from 25 Nov 2026 are listed.</p>
+          <p data-en="Entries confirmed with a PIN are listed first and marked PIN. Nothing in this list is ever changed or deleted." data-bm="Rekod yang disahkan dengan PIN berada di atas sekali dan bertanda PIN. Rekod tidak boleh diubah atau dipadam.">Entries confirmed with a PIN are listed first and marked PIN. Nothing in this list is ever changed or deleted.</p>
+          <p data-en="ADJUST = manual correction. REVERSE = cancels an earlier entry. OPENING = starting stock. RECONCILE = change made after a stock count." data-bm="ADJUST = pelarasan manual. REVERSE = batalkan rekod. OPENING = baki pembukaan. RECONCILE = pembetulan selepas kira stok.">ADJUST = manual correction. REVERSE = cancels an earlier entry. OPENING = starting stock. RECONCILE = change made after a stock count.</p>
+        </div>
       </div>
     </div>
   </div>
@@ -326,7 +408,38 @@
   function fmtInt(n){ n=num(n); return n==null ? '—' : Math.round(n).toLocaleString(); }
   function intOr0(n){ n=num(n); return n==null?0:Math.round(n); }
 
-  function showErr(msg,warn){ var b=$('errBanner'); if(b){ b.textContent=msg; b.classList.toggle('warn',!!warn); b.classList.add('show'); } }
+  // ---------- language: EN | BM (one visible at a time) ----------
+  // Static text carries both languages in data-en / data-bm (placeholders: data-en-ph, titles: data-en-title,
+  // aria-labels: data-en-aria). JS-built text uses L(en, bm). The choice is kept in localStorage 'clf_lang'.
+  var LANG_KEY = 'clf_lang';
+  var LANG = 'en';
+  try{ if(localStorage.getItem(LANG_KEY) === 'bm') LANG = 'bm'; }catch(e){}
+  function L(en, bm){ return LANG === 'bm' ? bm : en; }
+  function setTxt(el, en, bm){ if(!el) return; el.setAttribute('data-en', en); el.setAttribute('data-bm', bm); el.textContent = L(en, bm); }
+  function clearTxt(el){ if(!el) return; el.removeAttribute('data-en'); el.removeAttribute('data-bm'); el.textContent = ''; }
+  function applyLang(){
+    var sfx = (LANG === 'bm') ? 'bm' : 'en';
+    document.documentElement.lang = (LANG === 'bm') ? 'ms' : 'en';
+    function each(sel, fn){ Array.prototype.forEach.call(document.querySelectorAll(sel), fn); }
+    each('[data-en]', function(el){ el.textContent = el.getAttribute('data-' + sfx); });
+    each('[data-en-ph]', function(el){ el.setAttribute('placeholder', el.getAttribute('data-' + sfx + '-ph')); });
+    each('[data-en-title]', function(el){ el.setAttribute('title', el.getAttribute('data-' + sfx + '-title')); });
+    each('[data-en-aria]', function(el){ el.setAttribute('aria-label', el.getAttribute('data-' + sfx + '-aria')); });
+    each('[data-lang]', function(b){ var on = (b.getAttribute('data-lang') === LANG); b.classList.toggle('active', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+  }
+  // Switch in place: no reload, no backend call. Sections are re-drawn from the data already loaded.
+  function setLang(v){
+    v = (v === 'bm') ? 'bm' : 'en';
+    if(v === LANG) return;
+    LANG = v;
+    try{ localStorage.setItem(LANG_KEY, v); }catch(e){}
+    applyLang();
+    if(HAS_DATA) renderSections();
+    paintUpdated();
+  }
+
+
+  function showErr(en,bm,warn){ var b=$('errBanner'); if(b){ setTxt(b,en,bm); b.classList.toggle('warn',!!warn); b.classList.add('show'); } }
   function hideErr(){ var b=$('errBanner'); if(b) b.classList.remove('show'); }
 
   // ---------- read-only fetch (GET → JSON), mirrors fleet dashboard ----------
@@ -349,13 +462,25 @@
 
   var LOAD_SEQ = 0;
   var LAST_UPDATED = null;
+  var LAST_BAL = null;        // last getPalletBalances reply (null = not loaded), kept so a language switch can re-draw
+  var LAST_OUT = null;        // last getPalletOutstandingByCustomer reply (null = not loaded)
+  var HAS_DATA = false;       // true once a load has finished (even a failed one)
+  // OWNER DECISION 2026-11-24: the Manager actions list shows entries dated 2026-11-25 or later only.
+  // Display only: the ledger is untouched and the Sent out / Returned / Repaired roll-up still uses every loaded row.
+  var AUDIT_FROM = '2026-11-25';
 
   function fmtUpdated(){
     if(!LAST_UPDATED) return '';
     var d = new Date(LAST_UPDATED);
     var hm = ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
     var ageMin = Math.floor((Date.now()-LAST_UPDATED)/60000);
-    return 'Updated · Dikemas kini '+hm+(ageMin>=2 ? ' ('+(ageMin>=60 ? Math.floor(ageMin/60)+'h '+(ageMin%60)+'m' : ageMin+'m')+' ago · lalu)' : '');
+    var age = '';
+    if(ageMin>=2){
+      if(ageMin>=60) age = L(Math.floor(ageMin/60)+'h '+(ageMin%60)+'m ago', Math.floor(ageMin/60)+' jam '+(ageMin%60)+' min lalu');
+      else age = L(ageMin+'m ago', ageMin+' min lalu');
+      age = ' ('+age+')';
+    }
+    return L('Updated ','Dikemas kini ')+hm+age;
   }
   function paintUpdated(){
     var el = $('lastRefresh'); if(!el) return;
@@ -368,7 +493,7 @@
   function load(){
     if (!_rgAuth()) { _rgShowLock(); return; }
     hideErr();
-    $('dashMeta').textContent = 'Loading… · Memuatkan…';
+    setTxt($('dashMeta'),'Loading…','Memuatkan…');
     var seq = ++LOAD_SEQ;
     Promise.all([
       api('getPalletDashboard').catch(function(){return null;}),
@@ -380,27 +505,23 @@
       if(seq !== LOAD_SEQ) return;
       var dash=ok(res[0]), bal=ok(res[1]), out=ok(res[2]), led=ok(res[3]);
 
-      if(!dash && !bal){ showErr('Cannot reach server — please Refresh · Tidak dapat menghubungi pelayan — sila Muat semula.'); $('dashMeta').textContent=''; }
-      else if(!dash || !bal || !out || !led){ showErr('Some data failed to load — sections marked "unavailable" are not empty, just not loaded. Refresh to retry. · Sebahagian data gagal dimuatkan — bahagian bertanda "tidak tersedia" bukan kosong, cuma belum dimuatkan. Muat semula untuk cuba lagi.', true); }
+      if(!dash && !bal){ showErr("Can't reach the server. Check your internet, then press Refresh.",'Tidak dapat sambung ke sistem. Semak internet, kemudian tekan Muat semula.'); clearTxt($('dashMeta')); }
+      else if(!dash || !bal || !out || !led){ showErr('Some data did not load. Sections marked "Not loaded" are not empty. Press Refresh.','Sebahagian data gagal dimuatkan. Bahagian bertanda "Belum dimuatkan" bukan kosong. Tekan Muat semula.', true); }
 
       DASH = dash;
       BALANCES = (bal && bal.balances) ? bal.balances : ((dash && dash.balances) ? dash.balances : []);
       OUTSTANDING = (out && out.outstanding) ? out.outstanding : [];
       LEDGER = (led && led.ledger) ? led.ledger : [];
       LEDGER_LOADED = !!led;
+      LAST_BAL = bal; LAST_OUT = out; HAS_DATA = true;
       rollFlows();
 
       renderTop(dash, bal);
-      renderReconcile(dash);
-      renderTotals(dash, bal);
-      renderPerPallet();
-      renderOutstanding(out);
-      renderLorries(dash);
-      renderAudit();
+      renderSections();
 
       if(dash || bal) LAST_UPDATED = Date.now();
       paintUpdated();
-    }).catch(function(){ if(seq !== LOAD_SEQ) return; showErr('Something went wrong loading the dashboard — please Refresh · Ada masalah semasa memuatkan papan pemuka — sila Muat semula.'); $('dashMeta').textContent=''; });
+    }).catch(function(){ if(seq !== LOAD_SEQ) return; showErr('Something went wrong. Press Refresh.','Ada masalah memuatkan dashboard. Tekan Muat semula.'); clearTxt($('dashMeta')); });
   }
 
   // Roll the 3 cumulative flow numbers from the ledger (out / returned / fixed) per palletKey.
@@ -429,61 +550,152 @@
     });
   }
 
+  // ---------- shared bits for the sections ----------
+  var IC_WARN = '<svg class="i i16" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>';
+  var IC_OK = '<svg class="i i16" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg>';
+  // A section whose read failed: always says so, never a zero and never an "all good" line.
+  function notLoaded(extraEn, extraBm){
+    return '<span class="unavail">'+IC_WARN+'<span>'+L('Not loaded. Press Refresh.','Belum dimuatkan. Tekan Muat semula.')+(extraEn ? (' '+L(extraEn, extraBm)) : '')+'</span></span>';
+  }
+  // Stored state codes (DALAM / LUAR / ROSAK) shown in the current language; anything else is shown as stored.
+  function stateName(s){
+    var u = String(s==null?'':s).toUpperCase();
+    if(u==='DALAM') return L('Inside','Dalam');
+    if(u==='LUAR')  return L('Out','Luar');
+    if(u==='ROSAK') return L('Damaged','Rosak');
+    return String(s==null?'':s);
+  }
+  // Everything below the header, drawn from the data already in memory (used by load and by the language switch).
+  function renderSections(){
+    renderTotals(DASH, LAST_BAL);
+    renderReconcile(DASH);
+    renderLorries(DASH);
+    renderOutstanding(LAST_OUT);
+    renderPerPallet();
+    renderAudit();
+  }
+
   function renderTop(dash, bal){
     var b = (bal && bal.balances) ? bal.balances : (dash && dash.balances) ? dash.balances : null;
     if(b){
       var held = b.filter(function(x){ return intOr0(x.totalHeld)>0; }).length;
-      $('dashMeta').textContent = b.length + ' pallet types, ' + held + ' currently held · ' + b.length + ' jenis palet, ' + held + ' sedang dipegang';
+      setTxt($('dashMeta'), b.length + ' pallet types · ' + held + ' with pallets', b.length + ' jenis pallet · ' + held + ' ada stok');
     } else {
-      $('dashMeta').textContent = 'data unavailable · data tidak tersedia';
+      setTxt($('dashMeta'), 'Not loaded', 'Belum dimuatkan');
     }
     var gen = (dash && dash.generatedAt) || (bal && bal.generatedAt) || '';
-    if(gen) $('perScope').textContent = 'principal × type × colour · prinsipal × jenis × warna — as of · setakat ' + esc(String(gen).replace('T',' ').slice(0,16));
+    if(gen){ var g = String(gen).replace('T',' ').slice(0,16); setTxt($('perScope'), 'As of ' + g, 'Setakat ' + g); }
   }
 
-  // ---------- Reconcile (top of page) ----------
-  function renderReconcile(dash){
-    var body = $('recBody');
-    if(!dash){ body.innerHTML = '<span class="unavail"><svg class="i i16" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg><span>Reconcile data unavailable — tap Refresh · Data penyesuaian tidak tersedia — tekan Muat semula</span></span>'; $('recScope').textContent='unavailable · tidak tersedia'; return; }
-    var vars = (dash.openVariances||[]);
-    if(!vars.length){
-      body.innerHTML = '<div class="chip green"><svg class="i i16" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg><span>All reconciled — no open variance · Semua sudah disesuaikan — tiada varians terbuka</span></div>';
-      $('recScope').textContent = 'balanced · seimbang';
-      $('recScope').style.color = 'var(--ok)';
-      return;
-    }
-    $('recScope').textContent = vars.length + ' unbalanced · tidak seimbang';
-    $('recScope').style.color = 'var(--fault)';
-    var rows = vars.slice().sort(function(a,b){ return Math.abs(intOr0(b.variance))-Math.abs(intOr0(a.variance)); });
-    var html = '<table class="act"><thead><tr><th>Pallet · Palet</th><th>State · Keadaan</th><th class="rm">Computed · Kiraan</th><th class="rm">Physical · Fizikal</th><th class="rm">Variance · Varians</th><th>Date · Tarikh</th></tr></thead><tbody>';
-    rows.forEach(function(v){
-      var d = intOr0(v.variance);
-      // Shortage (variance<0) = real loss → red. Overage (variance>0) = neutral/amber, not alarming.
-      var loss = d < 0;
-      var rowCls = loss ? 'fail' : 'warn';
-      var stCls  = loss ? 'st-fail' : 'st-warn';
-      html += '<tr class="'+rowCls+'">'
-        + '<td class="pkey">'+esc(v.displayName||v.palletKey)+'<div class="psub">'+esc(v.palletKey)+'</div></td>'
-        + '<td><span class="'+stCls+'">'+esc(v.state)+'</span></td>'
-        + '<td class="rm">'+fmtInt(v.computedBalance)+'</td>'
-        + '<td class="rm">'+fmtInt(v.physicalCount)+'</td>'
-        + '<td class="rm '+stCls+'">'+(d>0?'+':'')+d+'</td>'
-        + '<td>'+esc(fmtDate(v.reconcileDate))+'</td></tr>';
-    });
-    body.innerHTML = html + '</tbody></table>';
-  }
-
-  // ---------- Fleet totals ----------
+  // ---------- 1. Our pallets (company totals) ----------
   function renderTotals(dash, bal){
     var t = (bal && bal.totals) || (dash && dash.totals) || null;
-    if(!t){ ['kpiDalam','kpiLuar','kpiRosak','kpiTotal'].forEach(function(id){ $(id).textContent='—'; }); return; }
+    var nb = $('totBody');
+    if(!t){ ['kpiDalam','kpiLuar','kpiRosak','kpiTotal'].forEach(function(id){ $(id).textContent='—'; }); nb.innerHTML = notLoaded(); nb.hidden = false; return; }
+    nb.innerHTML = ''; nb.hidden = true;
     $('kpiDalam').textContent = fmtInt(t.dalam);
     $('kpiLuar').textContent  = fmtInt(t.luar);
     $('kpiRosak').textContent = fmtInt(t.rosak);
     $('kpiTotal').textContent = fmtInt(t.total!=null ? t.total : (intOr0(t.dalam)+intOr0(t.luar)+intOr0(t.rosak)));
   }
 
-  // ---------- Per-pallet 6 numbers ----------
+  // ---------- 2. Stock count ----------
+  function renderReconcile(dash){
+    var body = $('recBody'), scope = $('recScope'), note = $('recNote');
+    if(!dash){ body.innerHTML = notLoaded(); setTxt(scope,'Not loaded','Belum dimuatkan'); scope.style.color = 'var(--warn)'; note.hidden = true; return; }
+    var vars = (dash.openVariances||[]);
+    if(!vars.length){
+      body.innerHTML = '<div class="chip green">'+IC_OK+'<span>'+L('All counts match.','Semua sama — tiada beza.')+'</span></div>';
+      setTxt(scope,'All match','Semua sama');
+      scope.style.color = 'var(--ok)';
+      note.hidden = true;
+      return;
+    }
+    setTxt(scope, vars.length + ' not matching', vars.length + ' tidak sama');
+    scope.style.color = 'var(--fault)';
+    var rows = vars.slice().sort(function(a,b){ return Math.abs(intOr0(b.variance))-Math.abs(intOr0(a.variance)); });
+    var html = '<table class="act"><thead><tr><th>Pallet</th><th>Status</th><th class="rm">'+L('System','Sistem')+'</th><th class="rm">'+L('Counted','Fizikal')+'</th><th class="rm">'+L('Difference','Beza')+'</th><th>'+L('Date','Tarikh')+'</th></tr></thead><tbody>';
+    rows.forEach(function(v){
+      var d = intOr0(v.variance);
+      // Shortage (variance<0) = real loss: red. Overage (variance>0) = amber, not alarming.
+      var loss = d < 0;
+      var rowCls = loss ? 'fail' : 'warn';
+      var stCls  = loss ? 'st-fail' : 'st-warn';
+      html += '<tr class="'+rowCls+'">'
+        + '<td class="pkey">'+esc(v.displayName||v.palletKey)+'<div class="psub">'+esc(v.palletKey)+'</div></td>'
+        + '<td><span class="'+stCls+'">'+esc(stateName(v.state))+'</span></td>'
+        + '<td class="rm">'+fmtInt(v.computedBalance)+'</td>'
+        + '<td class="rm">'+fmtInt(v.physicalCount)+'</td>'
+        + '<td class="rm '+stCls+'">'+(d>0?'+':'')+d+'</td>'
+        + '<td>'+esc(fmtDate(v.reconcileDate))+'</td></tr>';
+    });
+    body.innerHTML = html + '</tbody></table>';
+    note.hidden = false;
+  }
+
+  // ---------- 3. Pallets on lorries (getPalletDashboard .lorriesOut) ----------
+  function renderLorries(dash){
+    var body = $('lorryBody'), note = $('lorryNote');
+    if(!dash || !Array.isArray(dash.lorriesOut)){
+      body.innerHTML = notLoaded('This does not mean none.','Bukan bermakna tiada.');
+      clearTxt(note); return;
+    }
+    var rows = dash.lorriesOut;
+    if(!rows.length){
+      body.innerHTML = '<div class="empty">'+L('All lorries have returned their pallets.','Semua lori sudah pulangkan pallet.')+'</div>';
+      clearTxt(note); return;
+    }
+    var total = 0, late = 0, SHOW = 60;
+    rows.forEach(function(r){ total += intOr0(r.total); if(intOr0(r.daysOut) >= 1) late++; });
+    var html = '<div style="overflow-x:auto;"><table class="act"><thead><tr><th>'+L('Lorry','Lori')+'</th><th>'+L('Date out','Tarikh keluar')+'</th><th>'+L('Still out','Pallet belum pulang')+'</th><th class="rm">'+L('Qty','Kuantiti')+'</th></tr></thead><tbody>';
+    rows.slice(0, SHOW).forEach(function(r){
+      var d = num(r.daysOut);
+      var cls = (d != null && d >= 3) ? ' class="fail"' : ((d != null && d >= 1) ? ' class="warn"' : '');
+      var age = d == null ? '' : (d <= 0 ? L('today','hari ini') : (d + L((d === 1 ? ' day' : ' days'),' hari')));
+      var lines = (r.lines || []).map(function(l){ return esc(l.displayName || l.palletKey) + ' ×' + fmtInt(l.onLorry); }).join('<br>');
+      html += '<tr' + cls + '><td class="pkey">' + esc(r.lorryNo || '—') + '<div class="psub">' + esc(r.shipmentKey) + (r.driverName ? (' · ' + esc(r.driverName)) : '') + '</div></td>'
+        + '<td>' + esc(r.assignDate || '—') + '<div class="psub">' + age + '</div></td>'
+        + '<td>' + lines + '</td>'
+        + '<td class="rm"><span class="chip blue mono">' + fmtInt(r.total) + '</span></td></tr>';
+    });
+    body.innerHTML = html + '</tbody></table></div>';
+    setTxt(note,
+      fmtInt(total) + (total === 1 ? ' pallet · ' : ' pallets · ') + rows.length + (rows.length === 1 ? ' shipment' : ' shipments') + ' · ' + late + ' out 1+ days'
+        + (rows.length > SHOW ? (' · Showing the ' + SHOW + ' out longest') : ''),
+      fmtInt(total) + ' pallet · ' + rows.length + ' shipment · ' + late + ' sudah 1+ hari'
+        + (rows.length > SHOW ? (' · Tunjuk ' + SHOW + ' yang paling lama sahaja') : ''));
+  }
+
+  // ---------- 4. Out by customer ----------
+  function renderOutstanding(out){
+    var body = $('outBody'), note = $('outNote');
+    if(!out){ body.innerHTML = notLoaded(); clearTxt(note); return; }
+    var rows = (out.outstanding||[]).filter(function(o){ return intOr0(o.qtyOutstanding)>0; });
+    if(!rows.length){
+      body.innerHTML = '<div class="empty">'+L('No pallets recorded out.','Tiada rekod pallet di luar.')+'</div>';
+      clearTxt(note);
+      return;
+    }
+    // name lookup for display (balances carries displayName per palletKey)
+    var nameOf = {};
+    BALANCES.forEach(function(b){ nameOf[b.palletKey] = b.displayName || b.palletKey; });
+    rows.sort(function(a,b){ return intOr0(b.qtyOutstanding)-intOr0(a.qtyOutstanding); });
+    var total = rows.reduce(function(s,o){ return s+intOr0(o.qtyOutstanding); },0);
+    var html = '<table class="act"><thead><tr><th>'+L('Customer','Pelanggan')+'</th><th>Pallet</th><th class="rm">'+L('Out','Luar')+'</th></tr></thead><tbody>';
+    rows.forEach(function(o){
+      var cust = (o.custCode && o.custCode !== '(unassigned)') ? esc(o.custCode) : '<span class="psub">'+L('On lorry, no customer yet','Atas lori, pelanggan belum direkodkan')+'</span>';
+      html += '<tr><td>'+cust+'</td>'
+        + '<td class="pkey">'+esc(nameOf[o.palletKey]||o.palletKey)+'<div class="psub">'+esc(o.palletKey)+'</div></td>'
+        + '<td class="rm"><span class="chip blue mono">'+fmtInt(o.qtyOutstanding)+'</span></td></tr>';
+    });
+    body.innerHTML = html + '</tbody></table>';
+    var atCust = rows.reduce(function(s,o){ return s + ((o.custCode && o.custCode !== '(unassigned)') ? intOr0(o.qtyOutstanding) : 0); }, 0);
+    setTxt(note,
+      fmtInt(atCust) + ' at customers · ' + fmtInt(total - atCust) + ' on lorries, no customer yet',
+      fmtInt(atCust) + ' di pelanggan · ' + fmtInt(total - atCust) + ' atas lori, pelanggan belum direkodkan');
+  }
+
+  // ---------- 5. By pallet type ----------
   function passFilter(b){
     if(HELD_ONLY && intOr0(b.totalHeld)<=0) return false;
     if(SEARCH){
@@ -493,118 +705,72 @@
     return true;
   }
   function renderPerPallet(){
-    var wrap = $('perPalletWrap');
+    var wrap = $('perPalletWrap'), note = $('perNote');
     if(!BALANCES || !BALANCES.length){
-      wrap.innerHTML = '<span class="unavail"><svg class="i i16" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg><span>Balance data unavailable — tap Refresh · Data baki tidak tersedia — tekan Muat semula</span></span>';
+      wrap.innerHTML = notLoaded();
+      note.hidden = true;
       return;
     }
+    // the three movement numbers show a dash when the records did not load: say what the dash means
+    note.hidden = LEDGER_LOADED;
     var list = BALANCES.filter(passFilter).slice().sort(function(a,b){
       return (intOr0(a.sortOrder)-intOr0(b.sortOrder)) || (intOr0(b.totalHeld)-intOr0(a.totalHeld)) || String(a.palletKey).localeCompare(String(b.palletKey));
     });
-    if(!list.length){ wrap.innerHTML = '<div class="empty">No pallets match'+(HELD_ONLY?' (try All)':'')+' · Tiada palet yang sepadan'+(HELD_ONLY?' (cuba Semua)':'')+'.</div>'; return; }
+    if(!list.length){ wrap.innerHTML = '<div class="empty">'+L('No pallets match.','Tiada pallet dijumpai.')+(HELD_ONLY ? (' '+L('Try All.','Cuba Semua.')) : '')+'</div>'; return; }
 
     wrap.innerHTML = '<div class="grid" style="margin-top:6px;">' + list.map(function(b){
       var f = FLOWS[b.palletKey] || null;
       var luar = fmtInt(b.luar), rosak = fmtInt(b.rosak), bal = fmtInt(b.totalHeld!=null?b.totalHeld:(intOr0(b.dalam)+intOr0(b.luar)+intOr0(b.rosak)));
-      // derived (flow) numbers — show "—" when the ledger isn't loaded so 0 never lies
+      // derived (flow) numbers: show a dash when the ledger is not loaded so 0 never lies
       var out    = (LEDGER_LOADED && f) ? fmtInt(f.out)      : (LEDGER_LOADED ? '0' : '—');
       var ret    = (LEDGER_LOADED && f) ? fmtInt(f.returned) : (LEDGER_LOADED ? '0' : '—');
       var fix    = (LEDGER_LOADED && f) ? fmtInt(f.fixed)    : (LEDGER_LOADED ? '0' : '—');
       return '<div class="card c4">'
         + '<div class="pcard-head"><span class="name">'+esc(b.displayName||b.palletKey)+'</span><span class="key">'+esc(b.palletKey)+'</span></div>'
-        + '<div class="six">'
-        +   '<div class="cell out"><div class="n">'+out+'</div><div class="k">Out · Keluar</div></div>'
-        +   '<div class="cell luar"><div class="n">'+luar+'</div><div class="k">Outgoing · Luar</div></div>'
-        +   '<div class="cell ret"><div class="n">'+ret+'</div><div class="k">Return · Pulang</div></div>'
-        +   '<div class="cell dmg"><div class="n">'+rosak+'</div><div class="k">Damaged · Rosak</div></div>'
-        +   '<div class="cell fix"><div class="n">'+fix+'</div><div class="k">Fixed · Dibaiki</div></div>'
-        +   '<div class="cell bal"><div class="n">'+bal+'</div><div class="k">Balance · Baki</div></div>'
+        + '<div class="now">'
+        +   '<div class="cell dalam"><div class="n" data-k="dalam">'+fmtInt(b.dalam)+'</div><div class="k">'+L('Inside','Dalam')+'</div></div>'
+        +   '<div class="cell luar"><div class="n" data-k="luar">'+luar+'</div><div class="k">'+L('Out','Luar')+'</div></div>'
+        +   '<div class="cell rosak"><div class="n" data-k="rosak">'+rosak+'</div><div class="k">'+L('Damaged','Rosak')+'</div></div>'
+        +   '<div class="cell total"><div class="n" data-k="total">'+bal+'</div><div class="k">'+L('Total','Jumlah')+'</div></div>'
         + '</div>'
-        + '<div class="derived-note">Inside · Dalam: <b>'+fmtInt(b.dalam)+'</b></div>'
+        + '<div class="flow">'+L('Sent out','Dihantar')+' <b data-k="out">'+out+'</b> · '+L('Returned','Pulang')+' <b data-k="ret">'+ret+'</b> · '+L('Repaired','Dibaiki')+' <b data-k="fix">'+fix+'</b></div>'
         + '</div>';
     }).join('') + '</div>';
   }
 
-  // ---------- Lorries that still hold pallets (getPalletDashboard .lorriesOut) ----------
-  function renderLorries(dash){
-    var body = $('lorryBody'), note = $('lorryNote');
-    if(!dash || !Array.isArray(dash.lorriesOut)){
-      body.innerHTML = '<div class="empty">Unavailable — not loaded (this is not the same as "none") · Tidak tersedia — belum dimuatkan (bukan bermakna tiada)</div>';
-      note.textContent = ''; return;
-    }
-    var rows = dash.lorriesOut;
-    if(!rows.length){
-      body.innerHTML = '<div class="empty">Every lorry has returned its pallets · Semua lori sudah pulangkan palet</div>';
-      note.textContent = ''; return;
-    }
-    var total = 0, late = 0, SHOW = 60;
-    rows.forEach(function(r){ total += intOr0(r.total); if(intOr0(r.daysOut) >= 1) late++; });
-    var html = '<div style="overflow-x:auto;"><table class="act"><thead><tr><th>Lorry · Lori</th><th>Went out · Keluar</th><th>Still out · Belum pulang</th><th class="rm">Qty · Jumlah</th></tr></thead><tbody>';
-    rows.slice(0, SHOW).forEach(function(r){
-      var d = num(r.daysOut);
-      var cls = (d != null && d >= 3) ? ' class="fail"' : ((d != null && d >= 1) ? ' class="warn"' : '');
-      var age = d == null ? '' : (d <= 0 ? 'today · hari ini' : (d + (d === 1 ? ' day · hari' : ' days · hari')));
-      var lines = (r.lines || []).map(function(l){ return esc(l.displayName || l.palletKey) + ' ×' + fmtInt(l.onLorry); }).join('<br>');
-      html += '<tr' + cls + '><td class="pkey">' + esc(r.lorryNo || '—') + '<div class="psub">' + esc(r.shipmentKey) + (r.driverName ? (' · ' + esc(r.driverName)) : '') + '</div></td>'
-        + '<td>' + esc(r.assignDate || '—') + '<div class="psub">' + age + '</div></td>'
-        + '<td>' + lines + '</td>'
-        + '<td class="rm"><span class="chip blue mono">' + fmtInt(r.total) + '</span></td></tr>';
-    });
-    body.innerHTML = html + '</tbody></table></div>';
-    note.textContent = rows.length + ' shipment(s), ' + fmtInt(total) + ' pallet(s) not back — ' + late + ' out for 1 day or more · '
-      + rows.length + ' shipment, ' + fmtInt(total) + ' palet belum pulang — ' + late + ' sudah 1 hari atau lebih'
-      + (rows.length > SHOW ? ('. Showing the ' + SHOW + ' longest out · Menunjukkan ' + SHOW + ' yang paling lama') : '');
-  }
-
-  // ---------- Outstanding by customer ----------
-  function renderOutstanding(out){
-    var body = $('outBody');
-    if(!out){ body.innerHTML = '<span class="unavail"><svg class="i i16" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg><span>Outstanding data unavailable — tap Refresh · Data palet tertunggak tidak tersedia — tekan Muat semula</span></span>'; $('outNote').textContent=''; return; }
-    var rows = (out.outstanding||[]).filter(function(o){ return intOr0(o.qtyOutstanding)>0; });
-    if(!rows.length){
-      body.innerHTML = '<div class="chip green"><svg class="i i16" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg><span>Nothing outstanding by customer — or not yet tracked per customer (MVP) · Tiada palet tertunggak mengikut pelanggan — atau belum dijejak mengikut pelanggan</span></div>';
-      $('outNote').textContent='';
-      return;
-    }
-    // name lookup for display (balances carries displayName per palletKey)
-    var nameOf = {};
-    BALANCES.forEach(function(b){ nameOf[b.palletKey] = b.displayName || b.palletKey; });
-    rows.sort(function(a,b){ return intOr0(b.qtyOutstanding)-intOr0(a.qtyOutstanding); });
-    var total = rows.reduce(function(s,o){ return s+intOr0(o.qtyOutstanding); },0);
-    var html = '<table class="act"><thead><tr><th>Customer · Pelanggan</th><th>Pallet · Palet</th><th class="rm">Outstanding · Tertunggak</th></tr></thead><tbody>';
-    rows.forEach(function(o){
-      var cust = (o.custCode && o.custCode !== '(unassigned)') ? esc(o.custCode) : '<span class="psub">Outgoing — on lorries, customer not recorded · Luar — atas lori, pelanggan tidak direkodkan</span>';
-      html += '<tr><td>'+cust+'</td>'
-        + '<td class="pkey">'+esc(nameOf[o.palletKey]||o.palletKey)+'<div class="psub">'+esc(o.palletKey)+'</div></td>'
-        + '<td class="rm"><span class="chip blue mono">'+fmtInt(o.qtyOutstanding)+'</span></td></tr>';
-    });
-    body.innerHTML = html + '</tbody></table>';
-    var atCust = rows.reduce(function(s,o){ return s + ((o.custCode && o.custCode !== '(unassigned)') ? intOr0(o.qtyOutstanding) : 0); }, 0);
-    $('outNote').textContent = rows.length + ' line(s), ' + fmtInt(total) + ' outgoing — ' + fmtInt(atCust) + ' at a recorded customer, ' + fmtInt(total - atCust) + ' not yet recorded · ' + rows.length + ' baris, ' + fmtInt(total) + ' di luar — ' + fmtInt(atCust) + ' di pelanggan yang direkodkan, ' + fmtInt(total - atCust) + ' belum direkodkan.';
-  }
-
-  // ---------- Audit ledger ----------
+  // ---------- 6. Manager actions (audit list) ----------
   var AUDIT_ACTIONS = ['ADJUST','REVERSE','OPENING','RECONCILE'];  // manager/office actions only
+  // Only entries dated AUDIT_FROM or later are listed. An entry without a readable date is not listed.
+  function auditDateOk(v){
+    var d = fmtDate(v);
+    return /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(d) && d >= AUDIT_FROM;
+  }
   function renderAudit(){
     var wrap = $('auditWrap');
-    if(!LEDGER_LOADED){ wrap.innerHTML = '<span class="unavail"><svg class="i i16" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg><span>Ledger unavailable — tap Refresh · Lejar tidak tersedia — tekan Muat semula</span></span>'; return; }
+    if(!LEDGER_LOADED){ wrap.innerHTML = notLoaded(); return; }
     var rows = LEDGER.filter(function(r){
+      if(!auditDateOk(r.entryDate)) return false;
       var a = String(r.action||'').toUpperCase();
       if(AUDIT_FILTER==='all') return AUDIT_ACTIONS.indexOf(a)>=0;
       return a === AUDIT_FILTER;
     });
-    // PIN-verified float to top, then newest first (ledger already newest→oldest)
+    // PIN-verified float to top, then newest first (ledger already newest to oldest)
     rows = rows.slice().sort(function(a,b){
       var pa = (a.pinVerified===true||a.pinVerified==='TRUE')?1:0, pb=(b.pinVerified===true||b.pinVerified==='TRUE')?1:0;
       if(pa!==pb) return pb-pa;
       return 0;
     });
-    if(!rows.length){ wrap.innerHTML = '<div class="empty">No '+(AUDIT_FILTER==='all'?'manager/office':esc(AUDIT_FILTER))+' actions recorded · Tiada tindakan '+(AUDIT_FILTER==='all'?'pengurus/pejabat':esc(AUDIT_FILTER))+' direkodkan.</div>'; return; }
-    var html = '<table class="act"><thead><tr><th>Date · Tarikh</th><th>Action · Tindakan</th><th>Pallet · Palet</th><th>Move · Pergerakan</th><th class="rm">Qty · Kuantiti</th><th>Operator</th><th>Reason · Sebab</th></tr></thead><tbody>';
+    if(!rows.length){
+      wrap.innerHTML = '<div class="empty">'+(AUDIT_FILTER==='all'
+        ? L('No manager actions since 25 Nov 2026.','Tiada rekod pelarasan sejak 25 Nov 2026.')
+        : L('No '+esc(AUDIT_FILTER)+' actions since 25 Nov 2026.','Tiada rekod '+esc(AUDIT_FILTER)+' sejak 25 Nov 2026.'))+'</div>';
+      return;
+    }
+    var html = '<table class="act"><thead><tr><th>'+L('Date','Tarikh')+'</th><th>'+L('Action','Tindakan')+'</th><th>Pallet</th><th>'+L('From → To','Dari → Ke')+'</th><th class="rm">'+L('Qty','Kuantiti')+'</th><th>'+L('By','Oleh')+'</th><th>'+L('Reason','Sebab')+'</th></tr></thead><tbody>';
     rows.forEach(function(r){
       var a = String(r.action||'').toUpperCase();
       var pin = (r.pinVerified===true||r.pinVerified==='TRUE') ? '<span class="badge pin">PIN</span>' : '';
-      var move = (r.fromState||r.toState) ? (esc(r.fromState||'·')+' → '+esc(r.toState||'·')) : '<span class="psub">—</span>';
+      var move = (r.fromState||r.toState) ? (esc(r.fromState ? stateName(r.fromState) : '—')+' → '+esc(r.toState ? stateName(r.toState) : '—')) : '<span class="psub">—</span>';
       var link = r.linkedEntryId ? '<div class="psub">↳ '+esc(r.linkedEntryId)+'</div>' : '';
       html += '<tr>'
         + '<td>'+esc(fmtDate(r.entryDate))+'</td>'
@@ -631,8 +797,13 @@
   }
 
   // ---------- init ----------
-  function init(){
-    $('refreshBtn').addEventListener('click', load);
+  // Page-only controls (language, help, filters, collapse): wired at start, they never call the backend.
+  function initUi(){
+    applyLang();
+    document.addEventListener('click', function(e){
+      var t = e.target, b = (t && t.closest) ? t.closest('[data-lang]') : null;
+      if(b) setLang(b.getAttribute('data-lang'));
+    });
     $('searchInput').addEventListener('input', function(){ SEARCH = String(this.value||'').trim().toLowerCase(); renderPerPallet(); });
     function setHeld(v){ HELD_ONLY=v; $('fAll').classList.toggle('active',!v); $('fHeld').classList.toggle('active',v); renderPerPallet(); }
     $('fAll').addEventListener('click', function(){ setHeld(false); });
@@ -651,11 +822,27 @@
     $('aOpening').addEventListener('click', function(){ setAudit('OPENING', this); });
     $('aReconcile').addEventListener('click', function(){ setAudit('RECONCILE', this); });
 
-    // audit collapse
+    // audit collapse (closed at start)
     $('auditToggle').addEventListener('click', function(){
       var b=$('auditBody'), c=$('auditCaret'); var open=(b.style.display==='none');
       b.style.display = open?'block':'none'; c.textContent = open?'▾':'▸';
+      this.setAttribute('aria-expanded', open?'true':'false');
+      if(open) setTxt($('auditLabel'),'Hide list','Tutup senarai'); else setTxt($('auditLabel'),'Show list','Buka senarai');
     });
+
+    // help blocks: one per section, closed at start
+    Array.prototype.forEach.call(document.querySelectorAll('.help-btn'), function(btn){
+      btn.addEventListener('click', function(){
+        var box = $(btn.getAttribute('aria-controls')); if(!box) return;
+        var open = box.hidden;
+        box.hidden = !open;
+        btn.setAttribute('aria-expanded', open?'true':'false');
+        btn.querySelector('.help-caret').textContent = open?'▾':'▸';
+      });
+    });
+  }
+  function init(){
+    $('refreshBtn').addEventListener('click', load);
 
     // auto-refresh: every 5 min while visible; on tab return if >2 min stale; label re-ages each minute
     setInterval(function(){ if(!document.hidden) load(); }, 5*60000);
@@ -674,7 +861,8 @@
     await _rgEnsure();
     init();
   }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', _bootGated); else _bootGated();
+  function _boot(){ initUi(); _bootGated(); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', _boot); else _boot();
 
 /* ============================================================================
    READ GRANT (management reads)                                  [2026-07-30]
@@ -730,17 +918,20 @@ function _rgShowLock(msg){
   if (!ov){
     ov = document.createElement('div'); ov.id = 'rgLock';
     ov.className = 'lock';
-    ov.innerHTML = '<div class="lock__card">'
+    ov.innerHTML = '<div class="lock__in">'
+      + '<div class="lock__bar"><span class="lang" role="group" aria-label="Language" data-en-aria="Language" data-bm-aria="Bahasa"><button type="button" class="lang-btn" data-lang="en">EN</button><button type="button" class="lang-btn" data-lang="bm">BM</button></span></div>'
+      + '<div class="lock__card">'
       + '<div class="lock__ic"><svg class="i i32" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>'
-      + '<div class="lock__title">Sign in to view this data · Log masuk untuk melihat data ini</div>'
-      + '<div class="lock__sub">Authorised staff only · Kakitangan yang dibenarkan sahaja</div>'
-      + '<label for="rgEmp">Staff ID · ID Kakitangan</label>'
-      + '<input id="rgEmp" autocomplete="off" placeholder="e.g. · cth. TER282">'
+      + '<div class="lock__title" data-en="Sign in" data-bm="Log masuk">Sign in</div>'
+      + '<div class="lock__sub" data-en="Staff only" data-bm="Untuk staf sahaja">Staff only</div>'
+      + '<label for="rgEmp" data-en="Staff ID" data-bm="ID Staf">Staff ID</label>'
+      + '<input id="rgEmp" autocomplete="off" placeholder="e.g. TER282" data-en-ph="e.g. TER282" data-bm-ph="cth. TER282">'
       + '<label for="rgPin">PIN</label>'
-      + '<input id="rgPin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN">'
+      + '<input id="rgPin" type="password" inputmode="numeric" autocomplete="off">'
       + '<div id="rgErr" class="lock__err"></div>'
-      + '<button id="rgBtn" class="lock__btn">Unlock · Buka kunci</button></div>';
+      + '<button id="rgBtn" class="lock__btn" data-en="Sign in" data-bm="Log masuk">Sign in</button></div></div>';
     document.body.appendChild(ov);
+    applyLang();
     document.getElementById('rgBtn').onclick = _rgUnlock;
     document.getElementById('rgPin').addEventListener('keydown', function(e){ if(e.key==='Enter') _rgUnlock(); });
   }
@@ -754,8 +945,8 @@ async function _rgUnlock(){
   var emp = document.getElementById('rgEmp').value.trim().toUpperCase();
   var pin = document.getElementById('rgPin').value.trim();
   var err = document.getElementById('rgErr');
-  if (!emp || !pin){ err.textContent = 'Enter Staff ID + PIN · Masukkan ID Kakitangan + PIN'; return; }
-  var btn = document.getElementById('rgBtn'); btn.disabled = true; btn.textContent = 'Checking… · Menyemak…';
+  if (!emp || !pin){ setTxt(err, 'Enter your Staff ID and PIN.', 'Masukkan ID Staf dan PIN.'); return; }
+  var btn = document.getElementById('rgBtn'); btn.disabled = true; setTxt(btn, 'Checking…', 'Menyemak…');
   var tok = 'ulk_' + Date.now() + '_' + Math.random().toString(36).slice(2,10);
   var fd = new FormData();
   fd.append('data', JSON.stringify({ formType:'PALLET_UNLOCK', empNo:emp, pin:pin, clientToken:tok }));
@@ -771,16 +962,17 @@ async function _rgUnlock(){
       }catch(e){}
     }
   }catch(e){}
-  btn.disabled = false; btn.textContent = 'Unlock · Buka kunci';
+  btn.disabled = false; setTxt(btn, 'Sign in', 'Log masuk');
   if (rd && rd.status === 'success' && rd.authToken){
     try{ localStorage.setItem('clf_pallet_auth', JSON.stringify({ token:rd.authToken, empNo:rd.empNo, name:rd.name })); }catch(e){}
-    document.getElementById('rgPin').value = ''; err.textContent = '';
+    document.getElementById('rgPin').value = ''; clearTxt(err);
     _rgClear();
     await _rgEnsure();
     _rgHideLock();
     load();
   } else {
-    err.textContent = (rd && rd.message) ? rd.message : 'Could not unlock - check connection · Tidak dapat buka kunci - semak sambungan';
+    if (rd && rd.message){ clearTxt(err); err.textContent = rd.message; }
+    else setTxt(err, 'Could not sign in. Check your internet and try again.', 'Tidak dapat log masuk. Semak sambungan internet dan cuba lagi.');
   }
 }
 // A READ_AUTH refusal means "unlock", not "no data".
