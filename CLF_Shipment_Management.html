@@ -3,146 +3,241 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CLF Trading — Shipment Management</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap" rel="stylesheet">
-<!-- SheetJS: lets the office upload the Delivery Form as .xlsx (parsed in the browser into the CSV the backend already reads) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<title>CLF Shipments</title>
+<!-- SheetJS 0.18.5 (Apache-2.0), self-hosted: lets the office upload the Delivery Form as .xlsx (parsed in the browser into the CSV the backend already reads) -->
+<script src="vendor/xlsx-0.18.5.full.min.js"></script>
 <style>
-:root {
-  --blue-50:#EFF6FF; --blue-500:#3B82F6; --blue-600:#2563EB; --blue-700:#1D4ED8; --blue-900:#1E3A8A;
-  --gray-50:#F9FAFB; --gray-100:#F3F4F6; --gray-200:#E5E7EB; --gray-300:#D1D5DB;
-  --gray-400:#9CA3AF; --gray-500:#6B7280; --gray-700:#374151; --gray-900:#111827;
-  --success-50:#ECFDF5; --success-500:#10B981; --success-700:#047857;
-  --warning-50:#FFFBEB; --warning-500:#F59E0B; --warning-700:#B45309;
-  --danger-50:#FEF2F2; --danger-500:#EF4444; --danger-700:#B91C1C;
-  --surface-page:#F9FAFB; --surface-card:#FFFFFF;
-  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:24px; --space-6:32px;
-  --text-h1:26px; --text-h2:20px; --text-h3:16px; --text-body:14px; --text-caption:12px;
-  --radius:12px; --shadow:0 1px 2px rgba(17,24,39,.06),0 1px 3px rgba(17,24,39,.1);
-}
-@media (max-width:767px){ :root{ --text-h1:21px; --text-h2:18px; } }
-*{ box-sizing:border-box; margin:0; padding:0; }
-body{ font-family:'Geist',-apple-system,system-ui,sans-serif; background:var(--surface-page); color:var(--gray-900); font-size:var(--text-body); line-height:1.5; -webkit-font-smoothing:antialiased; }
-.mono{ font-family:'Geist Mono',ui-monospace,monospace; }
+  /* ==========================================================================
+     LOOK: style B (same as CLF_POD_Admin / CLF_Pallet_Dashboard). Navy band +
+     white logo + 3px red line (red is used ONLY there), warm page, white cards,
+     pill buttons and tags. navy = neutral / actions, green = done, amber = part
+     done, dark red = fault, lime = the status dot. System fonts only.
+     ========================================================================== */
+  :root{
+    --page:#FAF7F2; --surface:#FFFFFF; --text:#1A1B2E; --muted:#5F6072; --line:#ECE7DE; --soft:#F4F0EA; --hover:#FCFBF8;
+    --ctl:#C5C8E0; --navy:#141C77; --navy-2:#2A3189; --navy-tint:#EEF0FA; --on-navy:#D9DBF2;
+    --ok:#15803D; --ok-tint:#ECFDF3; --warn:#B45309; --warn-tint:#FFFBEB; --fault:#C8101E; --fault-tint:#FDF1F1;
+    --red:#FC091B; --lime:#87C329;
+    --shadow:0 1px 2px rgba(26,27,46,.05),0 8px 24px rgba(26,27,46,.07);
+  }
+  *,*::before,*::after{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+  [hidden]{display:none !important;}
+  body{margin:0;min-height:100vh;background:var(--page);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:14px;line-height:1.4;-webkit-font-smoothing:antialiased;padding-bottom:60px;}
+  h1,h2,p{margin:0;}
+  button,input{font:inherit;color:inherit;}
+  button{cursor:pointer;}
+  button:disabled{cursor:default;}
+  :focus-visible{outline:3px solid var(--navy);outline-offset:2px;}
+  .band :focus-visible{outline-color:#fff;}
+  .mono{font-variant-numeric:tabular-nums;}
 
-/* Header */
-.header{ background:var(--surface-card); border-bottom:1px solid var(--gray-200); position:sticky; top:0; z-index:50; padding:0 var(--space-5); }
-.header-inner{ max-width:1100px; margin:0 auto; height:60px; display:flex; align-items:center; justify-content:space-between; gap:var(--space-4); }
-.header-title{ font-size:var(--text-h2); font-weight:700; letter-spacing:-.01em; }
-.header-title span{ color:var(--blue-600); }
-.header-link{ font-size:var(--text-caption); color:var(--gray-500); text-decoration:none; padding:6px 12px; border:1px solid var(--gray-200); border-radius:8px; }
-.header-link:hover{ background:var(--gray-50); color:var(--gray-700); }
+  /* line icons (24px grid, drawn inline: no icon font, no emoji) */
+  .i{flex:none;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-4px;}
+  .i.i16{width:16px;height:16px;vertical-align:-3px;}
+  .i.i22{width:22px;height:22px;}
 
-.container{ max-width:1100px; margin:0 auto; padding:var(--space-5); }
+  /* ---- navy band ---- */
+  .band{position:relative;background:var(--navy);color:#fff;overflow:hidden;padding:13px 0;}
+  .band::after{content:"";position:absolute;right:-60px;top:-260px;width:600px;height:600px;border-radius:50%;background:#1B2485;}
+  .band__in{position:relative;z-index:1;display:flex;align-items:center;gap:10px 18px;flex-wrap:wrap;max-width:1328px;margin:0 auto;padding:0 24px;}
+  .band__logo{display:block;height:40px;width:auto;}
+  .band__sep{width:1px;height:38px;background:#4148A0;}
+  .band__txt{flex:1 1 200px;min-width:0;}
+  .band h1{font-size:21px;font-weight:800;line-height:1.2;}
+  .band__meta{display:flex;align-items:center;gap:8px;margin-top:2px;min-height:18px;color:var(--on-navy);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;}
+  .band__meta::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--lime);}
+  .band__meta:empty::before{display:none;}
+  .band__link{flex:none;display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:6px 18px;border:1.5px solid #4148A0;border-radius:999px;color:#fff;font-size:14px;font-weight:800;line-height:1.2;text-decoration:none;}
+  .band__link:hover{background:var(--navy-2);}
+  .redline{height:3px;background:var(--red);}
 
-/* Toolbar */
-.toolbar{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-3); margin-bottom:var(--space-5); }
-.toolbar .field-label{ font-size:var(--text-caption); color:var(--gray-500); font-weight:500; margin-right:var(--space-1); }
-input[type=date]{ font-family:inherit; font-size:var(--text-body); padding:8px 10px; border:1px solid var(--gray-300); border-radius:8px; background:#fff; color:var(--gray-900); }
+  .wrap{max-width:1328px;margin:0 auto;padding:16px 24px 24px;}
+  .card{background:var(--surface);border-radius:18px;box-shadow:var(--shadow);padding:18px;}
+  h2{font-size:17px;font-weight:800;line-height:1.25;}
+  .sub{font-size:13px;font-weight:600;color:var(--muted);}
+  .lbl{display:block;margin-bottom:4px;font-size:12px;font-weight:700;color:var(--muted);}
 
-/* Buttons */
-.btn{ font-family:inherit; font-size:var(--text-body); font-weight:600; padding:9px 16px; border-radius:8px; border:1px solid transparent; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:.12s; }
-.btn:disabled{ opacity:.55; cursor:not-allowed; }
-.btn-primary{ background:var(--blue-600); color:#fff; }
-.btn-primary:hover:not(:disabled){ background:var(--blue-700); }
-.btn-ghost{ background:#fff; color:var(--gray-700); border-color:var(--gray-300); }
-.btn-ghost:hover:not(:disabled){ background:var(--gray-50); }
-.btn-sm{ padding:7px 13px; font-size:var(--text-caption); }
-.btn-danger{ background:#fff; color:var(--danger-700); border-color:var(--danger-500); }
-.btn-danger:hover:not(:disabled){ background:var(--danger-50); }
+  /* ---- buttons ---- */
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:0 18px;border:1.5px solid var(--ctl);border-radius:999px;background:var(--surface);color:var(--navy);font-size:14px;font-weight:800;line-height:1.2;white-space:nowrap;}
+  .btn:hover:not(:disabled){background:var(--navy-tint);}
+  .btn:disabled{opacity:.55;}
+  .btn-primary{border-color:var(--navy);background:var(--navy);color:#fff;}
+  .btn-primary:hover:not(:disabled){background:var(--navy-2);}
+  .btn-danger{border-color:var(--fault);color:var(--fault);}
+  .btn-danger:hover:not(:disabled){background:var(--fault-tint);}
 
-/* Upload card */
-.upload-card{ background:var(--surface-card); border:1px dashed var(--gray-300); border-radius:var(--radius); padding:var(--space-5); margin-bottom:var(--space-5); display:flex; align-items:center; justify-content:space-between; gap:var(--space-4); flex-wrap:wrap; }
-.upload-card .uc-text{ flex:1; min-width:220px; }
-.upload-card .uc-title{ font-size:var(--text-h3); font-weight:600; }
-.upload-card .uc-sub{ font-size:var(--text-caption); color:var(--gray-500); margin-top:2px; }
+  /* ---- one closed help toggle per section ---- */
+  .help-btn{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 12px;border:0;border-radius:999px;background:transparent;color:var(--navy);font-size:13px;font-weight:800;white-space:nowrap;}
+  .help-btn:hover{background:var(--navy-tint);}
+  .help-btn[aria-expanded="true"] .i{transform:rotate(180deg);}
+  .help{margin-top:12px;padding:12px 16px;border-radius:14px;background:var(--soft);font-size:13px;font-weight:500;}
+  .help ol{margin:0;padding-left:20px;}
+  .help li+li{margin-top:4px;}
 
-/* Section title */
-.section-title{ font-size:var(--text-h3); font-weight:600; color:var(--gray-700); margin-bottom:var(--space-3); display:flex; align-items:center; gap:var(--space-2); }
-.section-title .count{ font-size:var(--text-caption); color:var(--gray-500); font-weight:500; }
+  /* ---- import: one compact row ---- */
+  .imp__row{display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;}
+  .imp__ic{display:inline-flex;align-items:center;justify-content:center;flex:none;width:40px;height:40px;border-radius:12px;background:var(--navy-tint);color:var(--navy);}
+  .imp__txt{flex:1 1 220px;min-width:0;}
 
-/* Shipment cards grid */
-.grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(330px,1fr)); gap:var(--space-4); }
-.card{ background:var(--surface-card); border:1px solid var(--gray-200); border-radius:var(--radius); box-shadow:var(--shadow); padding:var(--space-4); border-top:3px solid var(--blue-600); }
-.card.is-done{ border-top-color:var(--success-500); }
-.card.is-partial{ border-top-color:var(--warning-500); }
-.card-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:var(--space-2); }
-.card-lorry{ font-size:var(--text-h2); font-weight:700; letter-spacing:-.01em; }
-.card-ship{ font-size:var(--text-caption); color:var(--gray-500); margin-top:1px; }
-.badge{ font-size:10.5px; font-weight:600; padding:3px 8px; border-radius:999px; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; }
-.badge-imported{ background:var(--gray-100); color:var(--gray-500); }
-.badge-assigned{ background:var(--blue-50); color:var(--blue-700); }
-.badge-done{ background:var(--success-50); color:var(--success-700); }
+  /* ---- toolbar: date, branch, refresh, print ---- */
+  .controls{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin:16px 0 20px;}
+  .fld{display:flex;flex-direction:column;min-width:0;}
+  .fld input[type=date]{height:40px;min-width:170px;padding:0 14px;border:1.5px solid var(--ctl);border-radius:14px;background:#fff;color:var(--text);font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;}
+  .fld__val{display:inline-flex;align-items:center;height:40px;padding:0 16px;border-radius:14px;background:var(--navy-tint);color:var(--navy);font-size:14px;font-weight:800;white-space:nowrap;}
 
-/* progress */
-.prog{ margin:var(--space-3) 0; }
-.prog-row{ display:flex; justify-content:space-between; font-size:var(--text-caption); margin-bottom:5px; }
-.prog-num{ font-weight:600; color:var(--gray-900); }
-.prog-sub{ color:var(--gray-500); }
-.prog-bar{ height:8px; background:var(--gray-100); border-radius:99px; overflow:hidden; }
-.prog-fill{ height:100%; background:var(--blue-600); border-radius:99px; transition:width .3s; }
-.card.is-done .prog-fill{ background:var(--success-500); }
-.card.is-partial .prog-fill{ background:var(--warning-500); }
-.pill-warn{ display:inline-block; margin-top:6px; font-size:11px; color:var(--warning-700); background:var(--warning-50); border:1px solid var(--warning-500); border-radius:6px; padding:2px 7px; }
+  .sec{display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;margin:0 0 4px;}
+  .sec + .help{margin:0 0 12px;}
+  #list{margin-top:8px;}
 
-/* crew */
-.crew{ border-top:1px solid var(--gray-100); margin-top:var(--space-3); padding-top:var(--space-3); }
-.crew-row{ display:flex; gap:var(--space-2); margin-bottom:var(--space-2); }
-.crew-field{ flex:1; }
-.field-label{ display:block; font-size:11px; font-weight:500; color:var(--gray-500); margin-bottom:3px; }
-.select{ width:100%; font-family:inherit; font-size:var(--text-body); padding:8px 9px; border:1px solid var(--gray-300); border-radius:8px; background:#fff; color:var(--gray-900); }
-.crew-actions{ display:flex; justify-content:space-between; align-items:center; gap:var(--space-2); }
+  /* ---- shipment list: one card per shipment, the top row lines up from card to card ---- */
+  .grid{display:grid;gap:12px;}
+  .ship{padding:16px 18px;}
+  .ship__top{display:grid;grid-template-columns:minmax(200px,1.5fr) 64px 84px 150px minmax(250px,1.5fr);gap:8px 22px;align-items:start;}
+  .ship__cell{min-width:0;}
+  .ship__cell b{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .ship__cell.num{text-align:right;}
+  .card-lorry{font-size:18px;font-weight:800;line-height:1.25;overflow-wrap:anywhere;}
+  .lorry2{font-size:13px;font-weight:700;color:var(--navy-2);white-space:nowrap;}
+  .card-ship{margin-top:1px;font-size:12px;font-weight:600;color:var(--muted);overflow-wrap:anywhere;}
+  .badge{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap;}
+  .badge-imported{background:var(--soft);color:var(--muted);}
+  .badge-assigned,.badge-sm{background:var(--navy-tint);color:var(--navy);}
+  .badge-done{background:var(--ok-tint);color:var(--ok);}
+  .prog-row{display:flex;align-items:center;gap:4px 8px;flex-wrap:wrap;margin-bottom:6px;}
+  .prog-num{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;}
+  .prog-sub{font-size:13px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;}
+  .prog-pct{margin-left:auto;}
+  .prog-bar{height:8px;border-radius:99px;background:var(--soft);overflow:hidden;}
+  .prog-fill{height:100%;border-radius:99px;background:var(--navy);transition:width .3s;}
+  .ship.is-done .prog-fill{background:var(--ok);}
+  .ship.is-partial .prog-fill{background:var(--warn);}
+  .prog-notes{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;}
+  .pill-warn{display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;background:var(--fault-tint);color:var(--fault);font-size:12px;font-weight:800;font-variant-numeric:tabular-nums;}
 
-/* states */
-.empty,.loading{ text-align:center; color:var(--gray-500); padding:var(--space-6) var(--space-4); background:var(--surface-card); border:1px solid var(--gray-200); border-radius:var(--radius); }
-.empty .e-title{ font-size:var(--text-h3); color:var(--gray-700); font-weight:600; margin-bottom:4px; }
+  /* crew row: search boxes + the actions of this shipment */
+  .crew{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 12px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line);}
+  .crew-field{position:relative;flex:1 1 180px;max-width:280px;min-width:0;}
+  .crew-search{display:block;width:100%;height:40px;padding:0 14px;border:1.5px solid var(--ctl);border-radius:14px;background:#fff;color:var(--text);font-size:14px;font-weight:600;}
+  .crew-search::placeholder{color:var(--muted);font-weight:600;opacity:1;}
+  .crew-panel{position:absolute;left:0;right:0;top:100%;z-index:30;margin-top:4px;max-height:244px;overflow-y:auto;border-radius:14px;background:var(--surface);box-shadow:var(--shadow),0 0 0 1px var(--ctl);}
+  .crew-panel__h{padding:6px 14px;background:var(--soft);color:var(--muted);font-size:12px;font-weight:800;}
+  .dp-row,.sm-row,.sm-load-hint{display:flex;align-items:center;gap:8px;min-height:44px;padding:8px 14px;border-top:1px solid var(--line);font-size:14px;font-weight:600;cursor:pointer;overflow-wrap:anywhere;}
+  .dp-row:hover,.sm-row:hover,.sm-load-hint:hover{background:var(--navy-tint);}
+  .dp-row b,.sm-row b{flex:none;font-weight:800;font-variant-numeric:tabular-nums;}
+  .sm-row .badge{margin-left:auto;}
+  .sm-load-hint{color:var(--navy);font-weight:800;}
+  .crew-panel__none{padding:12px 14px;color:var(--muted);font-size:14px;font-weight:600;}
+  .crew-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto;}
+  .sm-note{flex:1 1 220px;min-width:0;font-size:15px;font-weight:600;overflow-wrap:anywhere;}
+  .sm-note b{font-weight:800;font-variant-numeric:tabular-nums;}
 
-/* toast */
-.toast{ position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px); opacity:0; pointer-events:none; min-width:260px; max-width:90vw; padding:12px 16px; border-radius:10px; font-size:var(--text-body); font-weight:500; box-shadow:0 8px 24px rgba(17,24,39,.18); transition:.25s; z-index:100; }
-.toast.is-visible{ opacity:1; transform:translateX(-50%) translateY(0); }
-.toast.is-success{ background:var(--success-50); color:var(--success-700); border:1px solid var(--success-500); }
-.toast.is-warning{ background:var(--warning-50); color:var(--warning-700); border:1px solid var(--warning-500); }
-.toast.is-danger{ background:var(--danger-50); color:var(--danger-700); border:1px solid var(--danger-500); }
-.toast.is-info{ background:var(--blue-50); color:var(--blue-700); border:1px solid var(--blue-500); }
+  /* ---- loading / empty / error ---- */
+  .empty,.loading{padding:28px 18px;border-radius:18px;background:var(--surface);box-shadow:var(--shadow);color:var(--muted);font-size:14px;font-weight:600;text-align:center;overflow-wrap:anywhere;}
+  .empty .e-title{margin-bottom:4px;font-size:16px;font-weight:800;color:var(--text);}
+  .empty.is-err .e-title{color:var(--fault);}
+  .empty .e-next{margin-top:6px;color:var(--text);}
+
+  /* ---- toast ---- */
+  .toast{position:fixed;left:50%;bottom:24px;z-index:100;width:max-content;min-width:260px;max-width:min(680px,calc(100vw - 32px));padding:12px 18px;border-radius:14px;background:var(--navy-tint);color:var(--navy);font-size:14px;font-weight:700;box-shadow:var(--shadow),0 0 0 1.5px var(--navy);transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;transition:.25s;}
+  .toast.is-visible{opacity:1;transform:translateX(-50%) translateY(0);}
+  .toast.is-success{background:var(--ok-tint);color:var(--ok);box-shadow:var(--shadow),0 0 0 1.5px var(--ok);}
+  .toast.is-warning{background:var(--warn-tint);color:var(--warn);box-shadow:var(--shadow),0 0 0 1.5px var(--warn);}
+  .toast.is-danger{background:var(--fault-tint);color:var(--fault);box-shadow:var(--shadow),0 0 0 1.5px var(--fault);}
+
+  /* ---- medium and narrow: the card stacks (lorry, the three numbers, status, crew, actions) ---- */
+  @media (max-width:960px){
+    .ship__top{grid-template-columns:minmax(0,.6fr) minmax(0,.7fr) minmax(0,1.3fr);gap:12px 16px;}
+    .ship__lorry,.ship__status{grid-column:1 / -1;}
+    .ship__cell.num{text-align:left;}
+  }
+  /* ---- narrow screens: 16px gutter, 44px controls, never scroll the page sideways ---- */
+  @media (max-width:720px){
+    .band__in,.wrap{padding-left:16px;padding-right:16px;}
+    .band__in{gap:10px 12px;}
+    .band__sep{display:none;}
+    .band__logo{height:32px;}
+    .band h1{font-size:18px;}
+    .band__txt{flex:1 1 0;min-width:calc(100% - 120px);}
+    .band__link{padding:6px 16px;}
+    .card{padding:16px;}
+    .btn,.help-btn{min-height:44px;}
+    .imp__row .btn{flex:1 1 150px;}
+    .controls{gap:10px;}
+    .fld{flex:1 1 140px;}
+    .fld input[type=date],.fld__val{height:44px;min-width:0;width:100%;}
+    .controls .btn{flex:1 1 140px;}
+    .crew-field{flex:1 1 100%;max-width:none;}
+    .crew-search{height:44px;}
+    .crew-actions{width:100%;margin-left:0;}
+    .crew-actions .btn{flex:1 1 0;padding:0 12px;}
+    .crew-actions .save-crew{flex:1 1 100%;}
+    .toast{bottom:16px;}
+  }
 </style>
 </head>
 <body>
-<header class="header">
-  <div class="header-inner">
-    <div class="header-title">CLF <span>Shipment</span> Management <span id="branchBadge" class="badge badge-assigned" style="vertical-align:middle;margin-left:6px;">—</span></div>
-    <div style="display:flex;align-items:center;gap:10px;">
-      <a class="header-link" id="podAdminLink" href="CLF_POD_Admin.html" style="color:var(--blue-700);border-color:var(--blue-500);">📇 POD Admin →</a>
-      <a class="header-link" href="CLF_Dashboard.html">← Dashboard</a>
+<header class="band">
+  <div class="band__in">
+    <img class="band__logo" src="data:image/png;base64,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" alt="CLF Trading">
+    <span class="band__sep"></span>
+    <div class="band__txt">
+      <h1>Shipments</h1>
+      <div class="band__meta" id="shipCount" role="status">Loading…</div>
     </div>
+    <a class="band__link" id="podAdminLink" href="CLF_POD_Admin.html">POD Admin</a>
+    <a class="band__link" href="CLF_Dashboard.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>Dashboard</a>
   </div>
 </header>
+<div class="redline"></div>
 
-<div class="container">
-  <!-- Upload -->
-  <div class="upload-card">
-    <div class="uc-text">
-      <div class="uc-title">📥 Upload Delivery Form (CSV / Excel)</div>
-      <div class="uc-sub">Export the Shipment from your system as CSV or Excel (.xlsx), then upload it here. One file per lorry.</div>
+<main class="wrap">
+  <!-- Import: one compact row -->
+  <section class="card imp" aria-labelledby="impTitle">
+    <div class="imp__row">
+      <span class="imp__ic"><svg class="i i22" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg></span>
+      <div class="imp__txt">
+        <h2 id="impTitle">Import delivery form</h2>
+        <div class="sub">CSV or Excel. One file per lorry.</div>
+      </div>
+      <input type="file" id="csvFile" accept=".csv,.xlsx,.xls" hidden>
+      <button type="button" class="btn btn-primary" id="uploadBtn">Choose file</button>
+      <button type="button" class="help-btn" aria-expanded="false" aria-controls="impHelp">How to use<svg class="i i16" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg></button>
     </div>
-    <input type="file" id="csvFile" accept=".csv,.xlsx,.xls" style="display:none">
-    <button class="btn btn-primary" id="uploadBtn">Choose CSV / Excel file…</button>
-  </div>
+    <div class="help" id="impHelp" hidden>
+      <ol>
+        <li>Export the shipment from your system as CSV or Excel (.xlsx).</li>
+        <li>Press Choose file and pick it. One file per lorry.</li>
+        <li>The invoices must add up to the form total. If they do not, nothing is imported and the message shows the difference.</li>
+        <li>If the lorry or the route already has a shipment that day, you are asked: add a 2nd trip or 2nd lorry, replace, or cancel.</li>
+      </ol>
+    </div>
+  </section>
 
   <!-- Toolbar -->
-  <div class="toolbar">
-    <span class="field-label">Date</span>
-    <input type="date" id="dateInput">
-    <button class="btn btn-ghost btn-sm" id="refreshBtn">↻ Refresh</button>
-    <button class="btn btn-ghost btn-sm" id="printAllCmb">🖨 Combination invoices (all)</button>
+  <div class="controls">
+    <label class="fld"><span class="lbl">Date</span><input type="date" id="dateInput"></label>
+    <div class="fld"><span class="lbl">Branch</span><span class="fld__val" id="branchBadge">—</span></div>
+    <button type="button" class="btn" id="refreshBtn"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12a9 9 0 0 1 15.5-6.3L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.5 6.3L3 16"/><path d="M3 21v-5h5"/></svg>Refresh</button>
+    <button type="button" class="btn" id="printAllCmb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>Print all invoices</button>
   </div>
 
-  <div class="section-title">Lorries / Shipments <span class="count" id="shipCount"></span></div>
+  <div class="sec">
+    <h2>Shipments</h2>
+    <button type="button" class="help-btn" aria-expanded="false" aria-controls="listHelp">How to use<svg class="i i16" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg></button>
+  </div>
+  <div class="help" id="listHelp" hidden>
+    <ol>
+      <li>Crew: type a staff ID or a name, pick the person, then press Save crew. A driver is required, a helper is optional.</li>
+      <li>Salesman delivery: type the salesman in the Driver box and pick him. An office sign-in is asked the first time.</li>
+      <li>Print invoices opens the combination invoices of that lorry. Print all invoices opens every lorry of this date.</li>
+      <li>Delete shipment removes the card and its invoice rows. It cannot be undone. Delivered photo records are kept.</li>
+    </ol>
+  </div>
   <div id="list"><div class="loading">Loading…</div></div>
-</div>
+</main>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status"></div>
 
 <script>
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxabHh2Kd04z7k0zZOOoaJs2i5hgycQsO_AYoRS99xZx2WqMJ6cowumY0e1znehiRM1/exec';
@@ -175,7 +270,7 @@ async function loadDrivers(){
     const res = await fetch(SCRIPT_URL + '?action=getDrivers&branch=' + encodeURIComponent(BRANCH));
     const data = await res.json();
     _drivers = (data && data.drivers) ? data.drivers : [];
-  }catch(e){ _drivers = []; showToast('Could not load driver list — assignment dropdowns may be empty.', 'warning'); }
+  }catch(e){ _drivers = []; showToast('Could not load the driver list. Crew boxes will find no one. Reload the page to try again.', 'warning'); }
 }
 
 async function loadShipments(useCache){
@@ -183,27 +278,29 @@ async function loadShipments(useCache){
   await _rgEnsure();
   const list = document.getElementById('list');
   list.innerHTML = '<div class="loading">Loading…</div>';
+  document.getElementById('shipCount').textContent = 'Loading…';
   try{
     // Default is FRESH (bypass the 90s server cache) so a just-imported / deleted shipment shows
     // immediately. Only the initial page load + date-flip opt into the cache (useCache=true) for speed.
     const res = await fetch(_rgUrl(SCRIPT_URL + '?action=getShipmentsForDate&date=' + encodeURIComponent(_date) + '&branch=' + encodeURIComponent(BRANCH) + (useCache ? '' : '&fresh=1')));   // [ReadAuth 2026-07-30]
     const data = await res.json();
-    if(!data || data.status !== 'ok'){ list.innerHTML = '<div class="empty"><div class="e-title">Could not load</div>'+escHtml((data&&data.message)||'Unexpected response')+'</div>'; return; }
+    if(!data || data.status !== 'ok'){ document.getElementById('shipCount').textContent = 'Could not load'; list.innerHTML = '<div class="empty is-err"><div class="e-title">Could not load the shipments</div>'+escHtml((data&&data.message)||'Unexpected response')+'<div class="e-next">Press Refresh to try again.</div></div>'; return; }
     renderShipments(data.shipments || []);
   }catch(e){
-    list.innerHTML = '<div class="empty"><div class="e-title">Cannot reach server</div>'+escHtml(e.message||'network error')+'</div>';
+    document.getElementById('shipCount').textContent = 'Cannot reach the server';
+    list.innerHTML = '<div class="empty is-err"><div class="e-title">Cannot reach the server</div>'+escHtml(e.message||'network error')+'<div class="e-next">Check the internet, then press Refresh.</div></div>';
   }
 }
 
 // ── render ──
 // Staff-ID search picker for a crew slot. Hidden input (class sel-<role>) keeps the NAME
 // — exactly what saveCrew() reads. Search by Staff ID or name; tidy short list, no name-wall.
-function crewPicker(roleClass, selected){
+function crewPicker(roleClass, selected, label){
   var d = _drivers.find(function(x){ return x.name === selected; });
-  var display = selected ? ((d && d.staffId ? d.staffId + ' · ' : '') + selected) : '';
-  return '<input type="text" class="crew-search select" autocomplete="off" placeholder="Staff ID atau nama" value="'+escHtml(display)+'">'
+  var display = selected ? ((d && d.staffId ? d.staffId + ' - ' : '') + selected) : '';
+  return '<input type="text" class="crew-search" autocomplete="off" placeholder="Staff ID or name" aria-label="'+label+'" value="'+escHtml(display)+'">'
     + '<input type="hidden" class="sel-'+roleClass+'" value="'+escHtml(selected||'')+'">'
-    + '<div class="crew-panel" style="display:none;position:absolute;left:0;right:0;z-index:30;border:1px solid #D1D5DB;border-top:none;border-radius:0 0 8px 8px;max-height:220px;overflow-y:auto;background:#fff;box-shadow:0 8px 20px rgba(17,24,39,.12);"></div>';
+    + '<div class="crew-panel" style="display:none;"></div>';
 }
 
 // Wire all crew search boxes (scoped per .crew-field). One shared document-click closer
@@ -233,8 +330,8 @@ function wireCrewPickers(){
       }).slice(0, 8);
       var isPrimary = !!field.querySelector('.sel-primary');
       var html2 = matches.length
-        ? '<div style="padding:6px 12px;background:#F9FAFB;color:#6B7280;font-size:11px;font-weight:700;text-transform:uppercase;">Driver · Pemandu</div>'
-          + matches.map(function(d){ return '<div class="dp-row" data-name="'+escHtml(d.name)+'" style="padding:10px 12px;border-bottom:1px solid #F3F4F6;cursor:pointer;font-size:13px;color:#111827;"><b>'+escHtml(d.staffId||'')+'</b> · '+escHtml(d.name)+'</div>'; }).join('')
+        ? '<div class="crew-panel__h">Drivers</div>'
+          + matches.map(function(d){ return '<div class="dp-row" data-name="'+escHtml(d.name)+'"><b>'+escHtml(d.staffId||'')+'</b><span>'+escHtml(d.name)+'</span></div>'; }).join('')
         : '';
       // [Salesman] the primary slot also offers the Salesmen group — picking one MARKS the whole DL
       if (isPrimary){
@@ -243,13 +340,13 @@ function wireCrewPickers(){
                  (d.name && d.name.toLowerCase().indexOf(nameq) >= 0);
         }).slice(0, 6);
         if (_salesmen.length && smm.length){
-          html2 += '<div style="padding:6px 12px;background:#F5F3FF;color:#6D28D9;font-size:11px;font-weight:700;text-transform:uppercase;">Salesman · Jurujual</div>'
-            + smm.map(function(d){ return '<div class="sm-row" data-sm="'+escHtml(d.staffId)+'" data-smname="'+escHtml(d.name)+'" style="padding:10px 12px;border-bottom:1px solid #EDE9FE;cursor:pointer;font-size:13px;color:#5B21B6;background:#FCFAFF;"><b>'+escHtml(d.staffId||'')+'</b> · '+escHtml(d.name)+' <span style="font-size:10px;font-weight:700;background:#6D28D9;color:#fff;border-radius:999px;padding:1px 7px;margin-left:4px;">SALESMAN</span></div>'; }).join('');
+          html2 += '<div class="crew-panel__h">Salesmen</div>'
+            + smm.map(function(d){ return '<div class="sm-row" data-sm="'+escHtml(d.staffId)+'" data-smname="'+escHtml(d.name)+'"><b>'+escHtml(d.staffId||'')+'</b><span>'+escHtml(d.name)+'</span><span class="badge badge-sm">Salesman</span></div>'; }).join('');
         } else if (!_salesmen.length){
-          html2 += '<div class="sm-load-hint" style="padding:9px 12px;border-top:1px solid #EDE9FE;color:#6D28D9;font-size:12px;cursor:pointer;background:#FCFAFF;">&#129333; Assign to a salesman&hellip; (tap to load list)</div>';
+          html2 += '<div class="sm-load-hint">Assign to a salesman (load list)</div>';
         }
       }
-      panel.innerHTML = html2 || '<div style="padding:10px 12px;color:#9CA3AF;font-size:13px;">No match · Tiada padanan</div>';
+      panel.innerHTML = html2 || '<div class="crew-panel__none">No match</div>';
       panel.style.display = 'block';
     }
     search.addEventListener('input', function(){ hidden.value = ''; render(search.value); });
@@ -268,22 +365,51 @@ function wireCrewPickers(){
       var name = row.getAttribute('data-name');
       var d = _drivers.find(function(x){ return x.name === name; });
       hidden.value = name;
-      search.value = (d && d.staffId ? d.staffId + ' · ' : '') + name;
+      search.value = (d && d.staffId ? d.staffId + ' - ' : '') + name;
       panel.style.display = 'none';
     });
   });
 }
 
+// One card per shipment. Top row: lorry, trips, invoices, amount, status (lined up from card to card).
+// Bottom row: crew search boxes + the actions. The numbers are the ones the server sends (trips, totalAmount) or the
+// same ones the page always showed (planned, delivered, failed, pending, pct).
+function shipCell(label, inner, cls){ return '<div class="ship__cell'+(cls ? ' '+cls : '')+'"><span class="lbl">'+label+'</span>'+inner+'</div>'; }
+function shipFacts(s, planned){
+  var trips = Number(s.trips), amt = Number(s.totalAmount);
+  var blank = (s.totalAmount == null || s.totalAmount === '');
+  var amount = blank ? '—' : ('RM ' + (isFinite(amt) ? amt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : escHtml(s.totalAmount)));
+  return shipCell('Trips', '<b>'+((isFinite(trips) && trips > 0) ? trips : '—')+'</b>', 'num')
+    + shipCell('Invoices', '<b>'+planned+'</b>', 'num')
+    + shipCell('Amount', '<b>'+amount+'</b>', 'num');
+}
+function shipStatus(badge, delivered, planned, pct, failed, pending, showPending){
+  return shipCell('Status', '<div class="prog-row">'+badge+'<span class="prog-num">'+delivered+' / '+planned+' delivered</span><span class="prog-sub prog-pct">'+pct+'%</span></div>'
+    + '<div class="prog-bar"><div class="prog-fill" style="width:'+pct+'%"></div></div>'
+    + ((failed > 0 || showPending) ? '<div class="prog-notes">'
+      + (failed > 0 ? '<span class="pill-warn">'+failed+' failed</span>' : '')
+      + (showPending ? '<span class="prog-sub prog-pending">'+pending+' pending</span>' : '')+'</div>' : ''), 'ship__status');
+}
+function shipLorry(s){
+  return shipCell('Lorry', '<div class="card-lorry">'+escHtml(s.lorryNo || '—')
+    + (s.lorry2 ? ' <span class="lorry2">+ '+escHtml(s.lorry2)+' (2nd lorry)</span>' : '')+'</div>'
+    + '<div class="card-ship mono">'+escHtml(s.shipmentNo)+'</div>', 'ship__lorry');
+}
+// the caller passes the label HTML-escaped
+function crewField(roleClass, selected, label){
+  return '<div class="crew-field"><span class="lbl">'+label+'</span>'+crewPicker(roleClass, selected, label)+'</div>';
+}
+
 function renderShipments(ships){
-  document.getElementById('shipCount').textContent = ships.length ? ('· ' + ships.length) : '';
+  document.getElementById('shipCount').textContent = ships.length ? (ships.length + (ships.length === 1 ? ' shipment' : ' shipments')) : 'No shipments';
   const list = document.getElementById('list');
   if(!ships.length){
-    list.innerHTML = '<div class="empty"><div class="e-title">No shipments for ' + escHtml(_date) + '</div>Upload a Delivery Form (CSV / Excel) above to get started.</div>';
+    list.innerHTML = '<div class="empty"><div class="e-title">No shipments for ' + escHtml(_date) + '</div>Import a delivery form above to start.</div>';
     return;
   }
   let html = '<div class="grid">';
   ships.forEach(s => {
-    if (s.handledBy && s.handledBy.type === 'SALESMAN'){ html += smCardHtml(s); return; }   // [Salesman] purple card, no crew UI
+    if (s.handledBy && s.handledBy.type === 'SALESMAN'){ html += smCardHtml(s); return; }   // [Salesman] no crew UI
     const planned = Number(s.planned) || 0;
     const delivered = Number(s.delivered) || 0;
     const failed = Number(s.failed) || 0;
@@ -294,34 +420,21 @@ function renderShipments(ships){
     const badge = allDone ? '<span class="badge badge-done">Done</span>'
                 : (s.status === 'assigned' ? '<span class="badge badge-assigned">Assigned</span>'
                 : '<span class="badge badge-imported">Imported</span>');
-    html += '<div class="card '+cls+'" data-ship="'+escHtml(s.shipmentNo)+'">'
-      + '<div class="card-head"><div><div class="card-lorry">'+escHtml(s.lorryNo || '—')
-      + (s.lorry2 ? ' <span style="font-size:13px;font-weight:600;color:#1A56DB">+ '+escHtml(s.lorry2)+' (2nd lorry)</span>' : '')+'</div>'
-      + '<div class="card-ship mono">'+escHtml(s.shipmentNo)+'</div></div>'+badge+'</div>'
-      + '<div class="prog"><div class="prog-row"><span class="prog-num">'+delivered+' / '+planned+' delivered</span>'
-      + '<span class="prog-sub">'+pct+'%</span></div>'
-      + '<div class="prog-bar"><div class="prog-fill" style="width:'+pct+'%"></div></div>'
-      + (failed > 0 ? '<span class="pill-warn">'+failed+' failed</span>' : '')
-      + (pending > 0 && !allDone ? ' <span class="prog-sub" style="font-size:11px">'+pending+' pending</span>' : '')
-      + '</div>'
-      + '<div class="crew"><div class="crew-row">'
-      + '<div class="crew-field" style="position:relative;"><label class="field-label">'+(s.lorry2 ? escHtml(s.lorryNo)+' — driver' : 'Primary driver')+'</label>'
-      + crewPicker('primary', s.assignedPrimary || '')+'</div>'
-      + '<div class="crew-field" style="position:relative;"><label class="field-label">'+(s.lorry2 ? escHtml(s.lorryNo)+' — helper (optional)' : 'Helper (optional)')+'</label>'
-      + crewPicker('secondary', s.assignedSecondary || '')+'</div>'
-      + '</div>'
-      + (s.lorry2 ? ('<div class="crew-row" style="margin-top:8px;">'
-        + '<div class="crew-field" style="position:relative;"><label class="field-label" style="color:#1A56DB;">'+escHtml(s.lorry2)+' (2nd lorry) — driver</label>'
-        + crewPicker('l2primary', s.lorry2Primary || '')+'</div>'
-        + '<div class="crew-field" style="position:relative;"><label class="field-label" style="color:#1A56DB;">'+escHtml(s.lorry2)+' — helper (optional)</label>'
-        + crewPicker('l2secondary', s.lorry2Secondary || '')+'</div>'
-        + '</div>') : '')
+    const l1 = escHtml(s.lorryNo), l2 = escHtml(s.lorry2);
+    html += '<article class="card ship '+cls+'" data-ship="'+escHtml(s.shipmentNo)+'">'
+      + '<div class="ship__top">' + shipLorry(s) + shipFacts(s, planned)
+      + shipStatus(badge, delivered, planned, pct, failed, pending, pending > 0 && !allDone) + '</div>'
+      + '<div class="crew">'
+      + crewField('primary', s.assignedPrimary || '', s.lorry2 ? l1+' driver' : 'Driver')
+      + crewField('secondary', s.assignedSecondary || '', s.lorry2 ? l1+' helper (optional)' : 'Helper (optional)')
+      + (s.lorry2 ? (crewField('l2primary', s.lorry2Primary || '', l2+' driver')
+        + crewField('l2secondary', s.lorry2Secondary || '', l2+' helper (optional)')) : '')
       + '<div class="crew-actions">'
-      + '<button class="btn btn-ghost btn-sm print-cmb" data-lorry="'+escHtml(s.lorryNo || '')+'">🖨 Combination invoice</button>'
-      + '<button class="btn btn-danger btn-sm del-ship">Delete</button>'
-      + '<button class="btn btn-primary btn-sm save-crew">Save assignment</button>'
+      + '<button type="button" class="btn btn-primary save-crew">Save crew</button>'
+      + '<button type="button" class="btn print-cmb" data-lorry="'+escHtml(s.lorryNo || '')+'">Print invoices</button>'
+      + '<button type="button" class="btn btn-danger del-ship">Delete shipment</button>'
       + '</div></div>'
-      + '</div>';
+      + '</article>';
   });
   html += '</div>';
   list.innerHTML = html;
@@ -363,7 +476,7 @@ function renderShipments(ships){
 
 // ── writes ──
 async function saveCrew(shipmentNo, primary, secondary, btn, l2primary, l2secondary){
-  if(!primary){ showToast('Pick a primary driver first.', 'warning'); return; }
+  if(!primary){ showToast('Pick a driver first: type a staff ID or a name, then choose from the list.', 'warning'); return; }
   btn.disabled = true; const old = btn.textContent; btn.textContent = 'Saving…';
   try{
     // l2primary/l2secondary are null when the card has no 2nd lorry — only send them when present
@@ -410,7 +523,7 @@ async function deleteShipment(shipmentNo, btn, force){
       const ok = confirm('⚠ ' + (data.message || 'This shipment has delivered invoices.')
         + '\n\nDelete ANYWAY? The lorry card and invoice rows are removed, but the delivered POD photo records are KEPT (driver KPI is unaffected).');
       if(ok) deleteShipment(shipmentNo, btn, true);   // retry forced
-      else showToast('Delete cancelled — POD records kept.', 'info');
+      else showToast('Delete cancelled. Nothing was removed.', 'info');
       return;
     }
     showToast('Delete failed: ' + ((data && data.message) || 'unknown'), 'danger');
@@ -473,13 +586,13 @@ async function uploadCsv(file, mode){
   let text;
   try{
     if(/\.xlsx?$/i.test(file.name)){
-      if(typeof XLSX === 'undefined'){ showToast('❌ Excel reader not loaded — check the internet and retry, or upload the CSV version.', 'danger'); return; }
+      if(typeof XLSX === 'undefined'){ showToast('NOT imported: the Excel reader did not load. Reload the page and try again, or upload the CSV version.', 'danger'); return; }
       text = await xlsxFileToDeliveryCsv(file);
     } else {
       text = await file.text();
     }
-  }catch(e){ showToast('❌ Could not read this file — NOT imported.' + (e&&e.message?(' ('+e.message+')'):''), 'danger'); return; }
-  if(!text || !text.trim()){ showToast('❌ This file is empty — NOT imported.', 'danger'); return; }
+  }catch(e){ showToast('Could not read this file. NOT imported.' + (e&&e.message?(' ('+e.message+')'):'') + ' Check it is the delivery form, then try again.', 'danger'); return; }
+  if(!text || !text.trim()){ showToast('This file is empty. NOT imported. Export the delivery form again.', 'danger'); return; }
   // NOTE: no comma pre-check — space-aligned fixed-width forms with small amounts have no commas.
   // The server-side arithmetic gate (sum == TOTAL) is the real guard against a wrong/garbage file.
 
@@ -509,7 +622,7 @@ async function uploadCsv(file, mode){
   }
 
   if(!result){
-    showToast('Upload sent, but no confirmation yet. Tap ↻ Refresh in a moment to check.', 'warning');
+    showToast('Upload sent, but no confirmation yet. Press Refresh in a moment to check.', 'warning');
     loadShipments();
     return;
   }
@@ -531,7 +644,7 @@ async function uploadCsv(file, mode){
         : ('Replace ' + result.existingLorry + ' with ' + result.newLorry + ' on this route?\n\n'
            + 'OK = Replace.\nCancel = do nothing.');
       if(confirm(repMsg2)){ uploadCsv(file, 'replace'); return; }
-      showToast('Import cancelled — nothing changed.', 'info');
+      showToast('Import cancelled. Nothing changed.', 'info');
       loadShipments();
       return;
     }
@@ -550,31 +663,31 @@ async function uploadCsv(file, mode){
       : ('Replace / overwrite the first shipment with THIS file?\n\n'
          + 'OK = REPLACE (the first one is removed).\nCancel = do nothing.');
     if(confirm(replaceMsg)){ uploadCsv(file, 'replace'); return; }
-    showToast('Import cancelled — nothing changed.', 'info');
+    showToast('Import cancelled. Nothing changed.', 'info');
     loadShipments();
     return;
   }
   if(result.status === 'success'){
     if(result.mode === 'append'){
-      showToast('✅ Added ' + result.added + ' stop(s) to ' + (result.lorryNo || '') +
-                ' as a 2nd trip — now ' + result.itemCount + ' total.', 'success');
+      showToast('Added ' + result.added + ' stop(s) to ' + (result.lorryNo || '') +
+                ' as a 2nd trip. Now ' + result.itemCount + ' total.', 'success');
     }else if(result.mode === 'lorry2'){
-      showToast('✅ ' + (result.lorry2 || '') + ' added as a 2nd lorry on route ' +
+      showToast((result.lorry2 || '') + ' added as a 2nd lorry on route ' +
                 (result.shipmentNo || result.shipmentKey || '') + ' (shared with ' + (result.lorryNo || '') +
-                ' — counted once).', 'success');
+                ', counted once).', 'success');
     }else{
       const via = result.parserUsed === 'gemini' ? ' (auto-recovered)' : '';
-      showToast('✅ Imported ' + (result.lorryNo || result.shipmentNo || '') + ' — ' +
+      showToast('Imported ' + (result.lorryNo || result.shipmentNo || '') + ': ' +
                 result.itemCount + ' invoices.' + via, 'success');
     }
   }else if(result.status === 'failed' && result.formTotal != null){
-    showToast('❌ TOTAL ERROR — invoices add up to RM ' + fmtNum(result.parsedSum) +
+    showToast('TOTAL ERROR: invoices add up to RM ' + fmtNum(result.parsedSum) +
               ' but the form TOTAL is RM ' + fmtNum(result.formTotal) +
-              ' (off by RM ' + fmtNum(result.diff) + '). NOT imported — please check the file.', 'danger');
+              ' (off by RM ' + fmtNum(result.diff) + '). NOT imported. Check the file, then import again.', 'danger');
   }else if(result.status === 'failed'){
-    showToast('❌ Could not read this file — NOT imported.', 'danger');
+    showToast('Could not read this file. NOT imported. Check it is the delivery form, then try again.', 'danger');
   }else{
-    showToast('Import error: ' + (result.message || 'unknown') + ' — not imported.', 'danger');
+    showToast('Import error: ' + (result.message || 'unknown') + '. NOT imported.', 'danger');
   }
   loadShipments();
 }
@@ -590,10 +703,19 @@ document.getElementById('refreshBtn').addEventListener('click', () => loadShipme
 document.getElementById('printAllCmb').addEventListener('click', () => window.open('CLF_Combination_Invoice.html?date=' + encodeURIComponent(_date) + '&branch=' + encodeURIComponent(BRANCH), '_blank'));  // all lorries this date/branch
 document.getElementById('dateInput').addEventListener('change', e => { _date = e.target.value || todayStr(); loadShipments(true); });  // cached: just navigating dates
 
+// "How to use" toggles: closed by default, a real button with aria-expanded
+document.querySelectorAll('.help-btn').forEach(function(b){
+  b.addEventListener('click', function(){
+    var open = b.getAttribute('aria-expanded') !== 'true';
+    b.setAttribute('aria-expanded', open ? 'true' : 'false');
+    document.getElementById(b.getAttribute('aria-controls')).hidden = !open;
+  });
+});
+
 (async function init(){
   // Branch badge so the supervisor sees which branch they're managing
   const badge = document.getElementById('branchBadge');
-  if (badge) badge.textContent = BRANCH_LABEL + ' · ' + BRANCH;
+  if (badge) badge.textContent = (BRANCH_LABEL === BRANCH) ? BRANCH : (BRANCH_LABEL + ' (' + BRANCH + ')');
   // POD Admin barcode board — carry the current branch through so Wayne (KTN) / Nich (MTK) land scoped
   const padminLink = document.getElementById('podAdminLink');
   if (padminLink) padminLink.href = 'CLF_POD_Admin.html?branch=' + encodeURIComponent(BRANCH);
@@ -681,26 +803,21 @@ async function unmarkSalesman(shipmentNo){
   else showToast((rd && rd.message) || 'Unmark failed', 'warning');
 }
 
-// purple card for a salesman-handled DL (no crew pickers - backend rejects them anyway)
+// card for a salesman-handled DL (no crew pickers: the backend rejects them anyway)
 function smCardHtml(s){
   const planned = Number(s.planned) || 0, delivered = Number(s.delivered) || 0;
   const failed = Number(s.failed) || 0, pending = Number(s.pending) || 0;
   const pct = (s.pct == null) ? 0 : Number(s.pct);
   const hb = s.handledBy || {};
-  return '<div class="card" data-ship="'+escHtml(s.shipmentNo)+'" style="border-top:3px solid #6D28D9;">'
-    + '<div class="card-head"><div><div class="card-lorry" style="color:#5B21B6;">&#129333; '+escHtml(hb.name || hb.id || 'SALESMAN')+'</div>'
-    + '<div class="card-ship mono">'+escHtml(s.shipmentNo)+(s.lorryNo ? ' · '+escHtml(s.lorryNo) : '')+'</div></div>'
-    + '<span class="badge" style="background:#EDE9FE;color:#5B21B6;">SALESMAN'+(hb.id ? ' · '+escHtml(hb.id) : '')+'</span></div>'
-    + '<div class="prog"><div class="prog-row"><span class="prog-num">'+delivered+' / '+planned+' delivered</span>'
-    + '<span class="prog-sub">'+pct+'%</span></div>'
-    + '<div class="prog-bar"><div class="prog-fill" style="width:'+pct+'%;background:#6D28D9;"></div></div>'
-    + (failed > 0 ? '<span class="pill-warn">'+failed+' failed</span>' : '')
-    + (pending > 0 ? ' <span class="prog-sub" style="font-size:11px">'+pending+' pending</span>' : '')
-    + '</div>'
+  return '<article class="card ship is-sm" data-ship="'+escHtml(s.shipmentNo)+'">'
+    + '<div class="ship__top">' + shipLorry(s) + shipFacts(s, planned)
+    + shipStatus('<span class="badge badge-sm">Salesman</span>', delivered, planned, pct, failed, pending, pending > 0) + '</div>'
+    + '<div class="crew">'
+    + '<div class="sm-note"><span class="lbl">Salesman</span>'+(hb.id ? '<b>'+escHtml(hb.id)+'</b> ' : '')+(hb.name ? escHtml(hb.name) : (hb.id ? '' : 'SALESMAN'))+'</div>'
     + '<div class="crew-actions">'
-    + '<button class="btn btn-ghost btn-sm unmark-sm">Unmark salesman</button>'
-    + '<button class="btn btn-danger btn-sm del-ship">Delete</button>'
-    + '</div></div>';
+    + '<button type="button" class="btn unmark-sm">Unmark salesman</button>'
+    + '<button type="button" class="btn btn-danger del-ship">Delete shipment</button>'
+    + '</div></div></article>';
 }
 
 
