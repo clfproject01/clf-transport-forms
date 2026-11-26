@@ -130,8 +130,7 @@
   .foot > div { display:flex; flex-direction:column; justify-content:flex-end; }
   .foot .sig { flex:1; }
   .foot .sig .box { height:50px; border-bottom:1px solid #15233b; }
-  .foot .qr { flex:0 0 30mm; text-align:center; }
-  .foot .qr img { width:28mm; height:28mm; display:block; margin:0 auto; border:1px solid #e4e8ee; }
+  /* [2026-11-26] QR code removed (owner: not needed for now). It was drawn by an outside site. */
   .foot .cap { font-size:10.5px; color:#5b6675; margin-top:6px; line-height:1.45; min-height:2.9em; }
 
   @page { size:A4; margin:0; }
@@ -256,8 +255,6 @@
       tot += Number(iv.amount)||0;
       rows += '<tr><td class="n">'+(i+1)+'</td><td>'+esc(iv.invoiceNo)+'</td><td class="r">'+money(iv.amount)+'</td></tr>';
     });
-    var confirmUrl = CONFIRM_BASE + '?g=' + encodeURIComponent(g.groupToken||'');
-    var qr = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=6&data=' + encodeURIComponent(confirmUrl);
     return '<div class="sheet">'
       + '<div class="lh"><div>'
         + '<div class="co">'+esc(b.name)+'</div><div class="reg">'+REG+'</div>'
@@ -282,7 +279,7 @@
       + '<div class="foot">'
         + '<div class="sig"><div class="box"></div><div class="cap">Customer\'s chop &amp; signature<br>Cop &amp; tandatangan pelanggan</div></div>'
         + '<div class="sig"><div class="box"></div><div class="cap">Date received<br>Tarikh diterima</div></div>'
-        + '<div class="qr"><img src="'+qr+'" alt="QR"><div class="cap">Scan to confirm<br>Imbas untuk sahkan</div></div>'
+
       + '</div>'
     + '</div>';
   }
