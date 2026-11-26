@@ -548,7 +548,7 @@ function showLock(msg){
       +'<div class="lock__title">POD Admin is locked</div>'
       +'<div class="lock__sub">Authorised staff only &middot; Staf sah sahaja</div>'
       +'<label for="lk-emp">Staff ID &middot; ID Staf</label>'
-      +'<input id="lk-emp" autocomplete="off" placeholder="e.g. TER282">'
+      +'<input id="lk-emp" autocomplete="off" placeholder="e.g. TER000">'
       +'<label for="lk-pin">PIN</label>'
       +'<input id="lk-pin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN">'
       +'<div id="lk-err" class="lock__err"></div>'
@@ -1211,34 +1211,34 @@ function demoData(){
     +'<text x="20" y="44" font-family="monospace" font-size="18" fill="#6B7280">SAMPLE ONLY</text><text x="20" y="96" font-family="monospace" font-size="30" font-weight="700">'+no+'</text></svg>'); }
   return { status:'ok', date: todayKL(), branch: BRANCH, lorries:[
     { vehicleNo:'VBT 1234', shipmentKey:'SHIP-DEMO-1', drivers:'Ahmad · Rosli', nas:{ state:'' }, invoices:[
-      { invoiceNo:'IV100231', barcodeRaw:'IV100231', customer:'Kedai Runcit Aman', custCode:'C0231', area:'Mentakab', amount:1240.50, status:'delivered', deliveredAt:'10:14', matchSource:'barcode', efiScanned:true, efiBy:'TER282', photoUrls:[P('IV100231')] },
+      { invoiceNo:'IV100231', barcodeRaw:'IV100231', customer:'Kedai Runcit Aman', custCode:'C0231', area:'Mentakab', amount:1240.50, status:'delivered', deliveredAt:'10:14', matchSource:'barcode', efiScanned:true, efiBy:'TER000', photoUrls:[P('IV100231')] },
       { invoiceNo:'IV100232', barcodeRaw:'', customer:'Restoran Sri Muda', custCode:'C0244', area:'Temerloh', amount:398.00, status:'delivered', deliveredAt:'10:52', matchSource:'ai', efiScanned:false, photoUrls:[P('IV100232')] },
       { invoiceNo:'IV100240', barcodeRaw:'', customer:'Pasar Mini Jaya', custCode:'C0261', area:'Lanchang', amount:2015.75, status:'delivered', deliveredAt:'11:37', matchSource:'none', efiScanned:false, photoUrls:[P('IV100240')] },
       { invoiceNo:'IV100255', customer:'Warung Pak Din', custCode:'C0288', area:'Kerdau', amount:150.00, status:'failed', failReason:'Shop closed', photoUrls:[] }
     ]},
     { vehicleNo:'WXX 5678', shipmentKey:'SHIP-DEMO-2', drivers:'Kumar', nas:{ state:'' }, invoices:[
-      { invoiceNo:'IV100301', barcodeRaw:'IV100301', customer:'Gerai Selera Kampung', custCode:'C0301', area:'Mentakab', amount:730.25, status:'delivered', deliveredAt:'09:41', matchSource:'barcode', efiScanned:true, efiBy:'TER278', photoUrls:[P('IV100301')] },
+      { invoiceNo:'IV100301', barcodeRaw:'IV100301', customer:'Gerai Selera Kampung', custCode:'C0301', area:'Mentakab', amount:730.25, status:'delivered', deliveredAt:'09:41', matchSource:'barcode', efiScanned:true, efiBy:'TER001', photoUrls:[P('IV100301')] },
       { invoiceNo:'IV100302', barcodeRaw:'IV100309', customer:'Gerai Selera Kampung', custCode:'C0301', area:'Mentakab', amount:412.00, status:'delivered', deliveredAt:'09:41', matchSource:'barcode', mismatch:true, efiScanned:false, photoUrls:[P('IV100309')] },
       { invoiceNo:'IV100305', barcodeRaw:'IV100305', customer:'Kedai Buku Ilmu', custCode:'C0312', area:'Bandar', amount:88.90, status:'delivered', deliveredAt:'12:03', matchSource:'barcode', efiScanned:false, photoUrls:[P('IV100305')] },
       { invoiceNo:'IV100320', customer:'Hardware Seng Hin', custCode:'C0333', area:'Mentakab', amount:0, status:'pending', photoUrls:[] }
     ]},
     // [2026-11] one lorry per NAS state (not on NAS + ready / queued / done / error), and one re-uploaded row
     { vehicleNo:'CDK 7781', shipmentKey:'SHIP-DEMO-3', drivers:'Faizal · Hakim', nas:{ state:'' }, invoices:[
-      { invoiceNo:'IV100401', barcodeRaw:'IV100401', customer:'Kedai Runcit Maju', custCode:'C0401', area:'Temerloh', amount:560.00, status:'delivered', deliveredAt:'09:12', matchSource:'barcode', efiScanned:true, efiBy:'TER282', photoUrls:[P('IV100401')] },
-      { invoiceNo:'IV100402', barcodeRaw:'', reupBy:'TER282', customer:'Mini Market Sentosa', custCode:'C0402', area:'Temerloh', amount:1320.40, status:'delivered', deliveredAt:'09:48', matchSource:'none', efiScanned:false, photoUrls:[P('IV100402')] },
+      { invoiceNo:'IV100401', barcodeRaw:'IV100401', customer:'Kedai Runcit Maju', custCode:'C0401', area:'Temerloh', amount:560.00, status:'delivered', deliveredAt:'09:12', matchSource:'barcode', efiScanned:true, efiBy:'TER000', photoUrls:[P('IV100401')] },
+      { invoiceNo:'IV100402', barcodeRaw:'', reupBy:'TER000', customer:'Mini Market Sentosa', custCode:'C0402', area:'Temerloh', amount:1320.40, status:'delivered', deliveredAt:'09:48', matchSource:'none', efiScanned:false, photoUrls:[P('IV100402')] },
       { invoiceNo:'IV100403', customer:'Kedai Kopi Lama', custCode:'C0403', area:'Mengkarak', amount:95.00, status:'failed', failReason:'Shop closed', photoUrls:[] }
     ]},
-    { vehicleNo:'PKA 2206', shipmentKey:'SHIP-DEMO-4', drivers:'Suresh', nas:{ state:'queued', at:'13:40', by:'TER282', files:2, msg:'' }, invoices:[
-      { invoiceNo:'IV100411', barcodeRaw:'IV100411', customer:'Pasaraya Seri Jaya', custCode:'C0411', area:'Jerantut', amount:2480.00, status:'delivered', deliveredAt:'10:05', matchSource:'barcode', efiScanned:true, efiBy:'TER282', photoUrls:[P('IV100411')] },
-      { invoiceNo:'IV100412', barcodeRaw:'IV100412', customer:'Kedai Ubat Sihat', custCode:'C0412', area:'Jerantut', amount:310.60, status:'delivered', deliveredAt:'10:40', matchSource:'barcode', efiScanned:true, efiBy:'TER282', photoUrls:[P('IV100412')] }
+    { vehicleNo:'PKA 2206', shipmentKey:'SHIP-DEMO-4', drivers:'Suresh', nas:{ state:'queued', at:'13:40', by:'TER000', files:2, msg:'' }, invoices:[
+      { invoiceNo:'IV100411', barcodeRaw:'IV100411', customer:'Pasaraya Seri Jaya', custCode:'C0411', area:'Jerantut', amount:2480.00, status:'delivered', deliveredAt:'10:05', matchSource:'barcode', efiScanned:true, efiBy:'TER000', photoUrls:[P('IV100411')] },
+      { invoiceNo:'IV100412', barcodeRaw:'IV100412', customer:'Kedai Ubat Sihat', custCode:'C0412', area:'Jerantut', amount:310.60, status:'delivered', deliveredAt:'10:40', matchSource:'barcode', efiScanned:true, efiBy:'TER000', photoUrls:[P('IV100412')] }
     ]},
-    { vehicleNo:'JQB 9034', shipmentKey:'SHIP-DEMO-5', drivers:'Azman · Lim', nas:{ state:'done', at:'14:02', by:'TER278', files:3, msg:'' }, invoices:[
-      { invoiceNo:'IV100421', barcodeRaw:'IV100421', customer:'Restoran Nasi Kukus', custCode:'C0421', area:'Bera', amount:645.30, status:'delivered', deliveredAt:'08:55', matchSource:'barcode', efiScanned:true, efiBy:'TER278', photoUrls:[P('IV100421')] },
-      { invoiceNo:'IV100422', barcodeRaw:'IV100422', customer:'Kedai Runcit Bera', custCode:'C0422', area:'Bera', amount:1105.00, status:'delivered', deliveredAt:'09:30', matchSource:'barcode', efiScanned:true, efiBy:'TER278', photoUrls:[P('IV100422')] },
-      { invoiceNo:'IV100423', barcodeRaw:'IV100423', customer:'Kantin Sekolah Triang', custCode:'C0423', area:'Triang', amount:228.75, status:'delivered', deliveredAt:'10:20', matchSource:'barcode', efiScanned:true, efiBy:'TER278', photoUrls:[P('IV100423')] }
+    { vehicleNo:'JQB 9034', shipmentKey:'SHIP-DEMO-5', drivers:'Azman · Lim', nas:{ state:'done', at:'14:02', by:'TER001', files:3, msg:'' }, invoices:[
+      { invoiceNo:'IV100421', barcodeRaw:'IV100421', customer:'Restoran Nasi Kukus', custCode:'C0421', area:'Bera', amount:645.30, status:'delivered', deliveredAt:'08:55', matchSource:'barcode', efiScanned:true, efiBy:'TER001', photoUrls:[P('IV100421')] },
+      { invoiceNo:'IV100422', barcodeRaw:'IV100422', customer:'Kedai Runcit Bera', custCode:'C0422', area:'Bera', amount:1105.00, status:'delivered', deliveredAt:'09:30', matchSource:'barcode', efiScanned:true, efiBy:'TER001', photoUrls:[P('IV100422')] },
+      { invoiceNo:'IV100423', barcodeRaw:'IV100423', customer:'Kantin Sekolah Triang', custCode:'C0423', area:'Triang', amount:228.75, status:'delivered', deliveredAt:'10:20', matchSource:'barcode', efiScanned:true, efiBy:'TER001', photoUrls:[P('IV100423')] }
     ]},
-    { vehicleNo:'BMH 4410', shipmentKey:'SHIP-DEMO-6', drivers:'Ravi', nas:{ state:'error', at:'14:10', by:'TER278', files:0, msg:'The NAS could not be reached' }, invoices:[
-      { invoiceNo:'IV100431', barcodeRaw:'IV100431', customer:'Kedai Serbaneka Karak', custCode:'C0431', area:'Karak', amount:890.00, status:'delivered', deliveredAt:'11:15', matchSource:'barcode', efiScanned:true, efiBy:'TER278', photoUrls:[P('IV100431')] },
+    { vehicleNo:'BMH 4410', shipmentKey:'SHIP-DEMO-6', drivers:'Ravi', nas:{ state:'error', at:'14:10', by:'TER001', files:0, msg:'The NAS could not be reached' }, invoices:[
+      { invoiceNo:'IV100431', barcodeRaw:'IV100431', customer:'Kedai Serbaneka Karak', custCode:'C0431', area:'Karak', amount:890.00, status:'delivered', deliveredAt:'11:15', matchSource:'barcode', efiScanned:true, efiBy:'TER001', photoUrls:[P('IV100431')] },
       { invoiceNo:'IV100432', barcodeRaw:'IV100432', customer:'Gerai Buah Bentong', custCode:'C0432', area:'Bentong', amount:156.20, status:'delivered', deliveredAt:'12:02', matchSource:'barcode', efiScanned:false, photoUrls:[P('IV100432')] }
     ]}
   ]};

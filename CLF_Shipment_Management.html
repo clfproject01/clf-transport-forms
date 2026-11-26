@@ -141,6 +141,10 @@
   /* ---- toast ---- */
   .toast{position:fixed;left:50%;bottom:24px;z-index:100;width:max-content;min-width:260px;max-width:min(680px,calc(100vw - 32px));padding:12px 18px;border-radius:14px;background:var(--navy-tint);color:var(--navy);font-size:14px;font-weight:700;box-shadow:var(--shadow),0 0 0 1.5px var(--navy);transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;transition:.25s;}
   .toast.is-visible{opacity:1;transform:translateX(-50%) translateY(0);}
+  .toast.is-sticky{display:flex;align-items:center;gap:14px;}
+  .toast.is-sticky.is-visible{pointer-events:auto;}
+  .toast__msg{flex:1 1 auto;min-width:0;}
+  .toast__x{flex:none;min-height:36px;padding:6px 14px;border:1.5px solid currentColor;border-radius:999px;background:transparent;color:inherit;font:inherit;font-size:13px;cursor:pointer;}
   .toast.is-success{background:var(--ok-tint);color:var(--ok);box-shadow:var(--shadow),0 0 0 1.5px var(--ok);}
   .toast.is-warning{background:var(--warn-tint);color:var(--warn);box-shadow:var(--shadow),0 0 0 1.5px var(--warn);}
   .toast.is-danger{background:var(--fault-tint);color:var(--fault);box-shadow:var(--shadow),0 0 0 1.5px var(--fault);}
@@ -258,10 +262,21 @@ function fmtNum(n){ return (n == null) ? '?' : Number(n).toLocaleString('en-US',
 function todayStr(){ const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
 function showToast(msg, type){
   const t = document.getElementById('toast');
-  t.className = 'toast is-' + (type || 'info') + ' is-visible';
-  t.textContent = msg;
+  // [2026-11-26] Warnings and errors (TOTAL ERROR, NOT imported, Save failed...) used to vanish after 5 s like any note.
+  // They now stay until Close is pressed or the next message replaces them. Notes and confirmations still leave after 5 s.
+  const sticky = (type === 'danger' || type === 'warning');
+  t.className = 'toast is-' + (type || 'info') + (sticky ? ' is-sticky' : '') + ' is-visible';
+  t.setAttribute('role', sticky ? 'alert' : 'status');
+  t.textContent = '';
+  const m = document.createElement('span'); m.className = 'toast__msg'; m.textContent = msg; t.appendChild(m);
   clearTimeout(showToast._t);
-  showToast._t = setTimeout(() => t.classList.remove('is-visible'), 5000);
+  if (sticky){
+    const x = document.createElement('button'); x.type = 'button'; x.className = 'toast__x'; x.textContent = 'Close';
+    x.addEventListener('click', () => t.classList.remove('is-visible'));
+    t.appendChild(x);
+  } else {
+    showToast._t = setTimeout(() => t.classList.remove('is-visible'), 5000);
+  }
 }
 
 // ── data loads ──
@@ -758,7 +773,7 @@ async function smPost(payload){
 
 async function ensureOfficeSession(){
   if (_smToken()) return true;
-  var emp = prompt('Office unlock - Staff ID (e.g. TER282):'); if (!emp) return false;
+  var emp = prompt('Office unlock - Staff ID (e.g. TER000):'); if (!emp) return false;
   var pin = prompt('PIN:'); if (!pin) return false;
   var rd = await smPost({ formType:'PALLET_UNLOCK', empNo: emp.trim().toUpperCase(), pin: pin.trim() });
   if (rd && rd.status === 'success' && rd.authToken){

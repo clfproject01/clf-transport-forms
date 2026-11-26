@@ -1163,7 +1163,12 @@
       });
     });
   }
+  // [2026-11-26] init() used to run only when the page opened already signed in. After a sign-in ON this page only
+  // load() ran, so the Refresh button and the 5-minute auto-refresh were never wired until the page was reloaded.
+  var _inited = false;
   function init(){
+    if (_inited) { load(); return; }
+    _inited = true;
     $('refreshBtn').addEventListener('click', load);
 
     // auto-refresh: every 5 min while visible; on tab return if >2 min stale; label re-ages each minute
@@ -1247,7 +1252,7 @@ function _rgShowLock(msg){
       + '<div class="lock__title" data-en="Sign in" data-bm="Log masuk">Sign in</div>'
       + '<div class="lock__sub" data-en="Staff only" data-bm="Untuk staf sahaja">Staff only</div>'
       + '<label for="rgEmp" data-en="Staff ID" data-bm="ID Staf">Staff ID</label>'
-      + '<input id="rgEmp" autocomplete="off" placeholder="e.g. TER282" data-en-ph="e.g. TER282" data-bm-ph="cth. TER282">'
+      + '<input id="rgEmp" autocomplete="off" placeholder="e.g. TER000" data-en-ph="e.g. TER000" data-bm-ph="cth. TER000">'
       + '<label for="rgPin">PIN</label>'
       + '<input id="rgPin" type="password" inputmode="numeric" autocomplete="off">'
       + '<div id="rgErr" class="lock__err"></div>'
@@ -1291,7 +1296,7 @@ async function _rgUnlock(){
     _rgClear();
     await _rgEnsure();
     _rgHideLock();
-    load();
+    init();
   } else {
     if (rd && rd.message){ clearTxt(err); err.textContent = rd.message; }
     else setTxt(err, 'Could not sign in. Check your internet and try again.', 'Tidak dapat log masuk. Semak sambungan internet dan cuba lagi.');
