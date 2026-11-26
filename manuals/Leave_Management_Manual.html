@@ -6,7 +6,7 @@
 <title>Leave Management — Staff Manual (Office / Admin)</title>
 <style>
   body {
-    font-family: 'Noto Sans TC', -apple-system, sans-serif;
+    font-family: 'Segoe UI', Roboto, -apple-system, Arial, sans-serif;
     background: #ffffff;
     color: #1a1a1a;
     line-height: 1.75;
@@ -57,6 +57,10 @@
   th { background: #f6f6f6; font-weight: 700; }
   hr { border: none; border-top: 1px solid #e5e5e5; margin: 2.5em 0; }
   .lede { color: #555555; }
+  b.ui { font-weight: 700; background: #f4f4f4; padding: 0 5px; border-radius: 3px; white-space: nowrap; }
+  figure { margin: 0.8em 0 1.2em; }
+  figure img { display: block; max-width: 100%; height: auto; border: 1px solid #dddddd; border-radius: 6px; }
+  figcaption { font-size: 0.82em; color: #666666; margin-top: 5px; }
 </style>
 </head>
 <body>
@@ -64,152 +68,198 @@
 <h1>Leave — Staff Manual (Staff Admin &rarr; Leave tab)</h1>
 
 <blockquote style="border-left:4px solid #1A56DB;background:#EBF5FF;">
-  <p><strong>Where this tool lives now (updated 2026-07-27):</strong> leave management moved into
+  <p><strong>Where this tool lives:</strong> leave is recorded in
   <strong>Staff Admin &rarr; Leave</strong> &mdash;
   <a href="../CLF_Staff_Admin.html#leave"><strong>open Staff Admin</strong></a>.
-  The old stand-alone Leave page is retired (it needed no login, so anyone with the link could edit
-  attendance). You now sign in once with your Staff ID + PIN; your Role must be
-  <strong>LEAVE</strong> or <strong>ADMIN</strong>.</p>
-  <p>This guide was rewritten on 2026-07-30 against the new tab, so the steps below match what you
-  actually see. The <em>process</em> is unchanged &mdash; a driver tells the office, the office records it
-  so the dashboard does not false-alarm on his fuel/POD for those days.</p>
+  The old stand-alone Leave page is retired; its link now opens Staff Admin on the Leave tab.</p>
+  <p>This guide was updated on 26 Nov 2026 for the new look of Staff Admin (24 Nov 2026), with pictures.
+  The <em>process</em> is unchanged &mdash; a driver tells the office, the office records it, and the dashboards
+  then know he is on leave.</p>
 </blockquote>
-<p class="lede">For the office person who records driver leave. Updated 2026-07-30 for the <strong>Staff Admin &rarr; Leave</strong> tab, which replaced the old stand-alone Leave page.</p>
+<p class="lede">For the office person who records driver leave. The page is in English. All pictures show sample data only.</p>
 
 <blockquote>
-  <p><strong>Two branches · Dua cawangan:</strong> each branch is managed separately. Open <strong>YOUR branch's link</strong> — you will see and manage only your own branch's drivers · Buka pautan cawangan <strong>ANDA</strong> — anda hanya melihat dan menguruskan pemandu cawangan anda sendiri. <strong>MTK (Mentakab)</strong> and <strong>KTN (Kuantan)</strong> are kept separate · MTK dan KTN diasingkan.</p>
+  <p><strong>Two branches · Dua cawangan:</strong> the driver list on this tab holds <strong>both</strong> branches. Each driver is shown as staff ID, name and branch, for example <em>KTN 901 &mdash; AZMAN BIN YUSOF (KTN)</em>. Check the branch before you save · Senarai pemandu dalam tab ini ada <strong>dua-dua</strong> cawangan. Setiap pemandu ditunjuk sebagai ID Staf, nama dan cawangan. Semak cawangan sebelum anda simpan.</p>
 </blockquote>
 
 <hr>
 
-<h2>1. Where this lives and what it does</h2>
+<h2>1. Open the Leave tab</h2>
 
-<p>Leave is recorded in <strong>Staff Admin</strong> &rarr; the <strong>Leave</strong> tab
-(<a href="../CLF_Staff_Admin.html#leave">open it here</a>). You sign in once with your
-<strong>Staff ID + PIN</strong>; your Role in <code>Pallet_Access</code> must be
-<strong>LEAVE</strong> or <strong>ADMIN</strong>. The old stand-alone Leave page is retired.</p>
+<ol>
+  <li>Open <a href="../CLF_Staff_Admin.html#leave">Staff Admin</a>.</li>
+  <li>Sign in with your <b class="ui">Staff ID</b> and <b class="ui">PIN</b> and press <b class="ui">Unlock</b>. No PIN? Ask the office.
+  If you signed in on another office page on the same computer and browser, you are not asked again.
+  <figure><img src="img/office/staff-signin.png" alt="Sign-in box of Staff Admin with a Staff ID box, a PIN box and the Unlock button" width="388" height="435">
+  <figcaption>The sign-in box (sample Staff ID).</figcaption></figure></li>
+  <li>Press the <b class="ui">Leave</b> tab if it is not already open. The top of the page shows who is signed in.</li>
+</ol>
+
+<figure><img src="img/office/staff-leave-tab.png" alt="Staff Admin, Leave tab: the cards Mark leave, Remove leave, Company holiday and On leave today" width="1280" height="988">
+<figcaption>The Leave tab (sample data).</figcaption></figure>
 
 <p>The Leave tab has four cards:</p>
 
 <table>
   <thead><tr><th>Card</th><th>What it does</th></tr></thead>
   <tbody>
-    <tr><td><strong>&#128197; Mark leave</strong></td><td>Record leave for one driver &mdash; a single day or a date range.</td></tr>
-    <tr><td><strong>&#10060; Remove leave</strong></td><td>Delete a leave record (pick the driver + the exact date).</td></tr>
-    <tr><td><strong>&#127958;&#65039; Company holiday</strong></td><td>Turn a company-wide holiday / rest day on or off for ALL drivers.</td></tr>
-    <tr><td><strong>&#128203; Today on leave</strong></td><td>Read-only list of who is off today.</td></tr>
+    <tr><td><b class="ui">Mark leave</b></td><td>Record leave for one driver &mdash; a single day or a date range.</td></tr>
+    <tr><td><b class="ui">Remove leave</b></td><td>Delete one leave record (the driver + the exact date).</td></tr>
+    <tr><td><b class="ui">Company holiday</b></td><td>Turn a holiday or rest day on or off for the whole fleet.</td></tr>
+    <tr><td><b class="ui">On leave today</b></td><td>Read-only list of who is off today, with the leave type and the remarks.</td></tr>
   </tbody>
 </table>
 
 <blockquote>
-  <p><strong>Why it matters:</strong> the driver tells you verbally, you record it here, and the
-  dashboard then stops counting his missing fuel / POD for those days. If you do not record it, the
-  16:00 alert and the compliance figures treat him as if he simply did not submit.</p>
+  <p><strong>Who can open it:</strong> your role must be <strong>LEAVE</strong> or <strong>ADMIN</strong>.
+  With LEAVE you see the <b class="ui">Leave</b> tab only; with ADMIN you also see <b class="ui">Drivers</b> and <b class="ui">Salesmen</b>.
+  Anyone else sees <b class="ui">Staff Admin is restricted</b>: ask the boss to set your role, then sign in again.</p>
+</blockquote>
+<figure><img src="img/office/staff-restricted.png" alt="Notice Staff Admin is restricted: Ask the boss to set your Role in Pallet_Access, ADMIN for driver and salesman management, or LEAVE for leave only, with a Sign out button" width="1100" height="309">
+<figcaption>What you see when your role does not allow Staff Admin.</figcaption></figure>
+
+<blockquote>
+  <p><strong>Why it matters:</strong> the driver tells you, you record it here, and the dashboards then show him as on
+  leave instead of as a driver who did not send his fuel slip (see section 5). If you do not record it, he is chased for nothing.</p>
 </blockquote>
 
 <hr>
 
-<h2>2. How to record a driver's leave</h2>
+<h2>2. Record a driver's leave</h2>
 
-<p>Use the <strong>&#128197; Mark leave</strong> card.</p>
+<p>Use the <b class="ui">Mark leave</b> card.</p>
 
-<h3>Step by step</h3>
+<h3>One day</h3>
 
 <ol>
-  <li><strong>Driver</strong> &mdash; pick the driver from the dropdown. It lists the live roster as
-  <strong>staff ID &mdash; name</strong>, so drivers who share a first name are easy to tell apart.</li>
-  <li><strong>Leave type</strong> &mdash; choose from the five options in the table below.</li>
-  <li><strong>Mode</strong> &mdash; this is the important one:
-    <ul>
-      <li><strong>Single day</strong> &rarr; only one <strong>Date</strong> box appears.</li>
-      <li><strong>Date range</strong> &rarr; a <strong>Date</strong> and an <strong>End date</strong> box appear;
-      every working day in between is recorded.</li>
-    </ul>
-  </li>
-  <li><strong>Date</strong> (and <strong>End date</strong> in range mode) &mdash; pick the day(s) off.</li>
-  <li><strong>Remarks</strong> &mdash; optional, e.g. a clinic name or who called in.</li>
-  <li>Press <strong>Mark leave</strong>. A toast confirms it and the <strong>Today on leave</strong>
-  list refreshes if the date is today.</li>
+  <li><b class="ui">Driver</b> &mdash; pick the driver. The list shows staff ID, name and branch, so two drivers with the same first name are easy to tell apart.</li>
+  <li><b class="ui">Leave type</b> &mdash; choose one of the five types in the table below.</li>
+  <li><b class="ui">Mode</b> &mdash; leave it on <b class="ui">Single day</b>.</li>
+  <li><b class="ui">Date</b> &mdash; the day off. It starts on today.</li>
+  <li><b class="ui">Remarks (optional)</b> &mdash; for example the clinic name or who called in.
+  <figure><img src="img/office/leave-single-day.png" alt="Mark leave card filled in for one day: driver, leave type EL Emergency, mode Single day, one Date box, remarks, the line Marked by, and the Mark leave button" width="548" height="520">
+  <figcaption>One day of leave, ready to save (sample driver).</figcaption></figure></li>
+  <li>Press <b class="ui">Mark leave</b>. A box asks you to confirm the driver, the type, the number of days and the date: read it, then press OK.</li>
+  <li>Wait for the green message <b class="ui">Leave marked</b>. If the date is today, the driver now appears under <b class="ui">On leave today</b>.
+  <figure><img src="img/office/leave-saved.png" alt="Leave tab after saving: a green message Leave marked, Saved 1 day(s), and the driver listed under On leave today" width="1280" height="700">
+  <figcaption>Saved: the green message at the bottom, and the driver in <em>On leave today</em>.</figcaption></figure></li>
+</ol>
+
+<h3>Several days in a row</h3>
+
+<ol>
+  <li>Pick the <b class="ui">Driver</b> and the <b class="ui">Leave type</b> as above.</li>
+  <li>Set <b class="ui">Mode</b> to <b class="ui">Date range</b>. Two boxes appear: <b class="ui">Start date</b> and <b class="ui">End date</b>.</li>
+  <li>Set the first and the last day off.
+  <figure><img src="img/office/leave-date-range.png" alt="Mark leave card with mode Date range: Start date 1 December and End date 3 December, leave type AL Annual" width="548" height="520">
+  <figcaption>A leave from 1 to 3 December (sample driver).</figcaption></figure></li>
+  <li>Press <b class="ui">Mark leave</b>. The confirm box shows the number of days and both dates. Press OK.</li>
+  <li>Wait for <b class="ui">Leave marked</b>. The message says how many days were saved. If some of the days were recorded before, it adds how many were "already marked": they are not saved twice.</li>
 </ol>
 
 <blockquote>
-  <p><strong>You are recorded as the person who did it.</strong> There is no "marked by" box to fill &mdash;
-  whoever is signed in is stamped automatically by the server.</p>
+  <p><strong>You are recorded as the person who did it.</strong> The line <b class="ui">Marked by:</b> under the remarks shows
+  your staff ID. You cannot type another name there.</p>
+  <p><strong>The page refuses when something is missing.</strong> A red message says what: "Select a driver",
+  "Pick the date", "Pick the end date" or "End date must be on or after the start date". Fix it and press
+  <b class="ui">Mark leave</b> again. Nothing is saved until you see <b class="ui">Leave marked</b>.</p>
 </blockquote>
 
-<h3>The exact leave types the tab offers</h3>
+<h3>The leave types the tab offers</h3>
 
 <table>
-  <thead><tr><th>Code</th><th>Meaning</th></tr></thead>
+  <thead><tr><th>In the list</th><th>Meaning</th></tr></thead>
   <tbody>
-    <tr><td><strong>AL</strong></td><td>Annual leave</td></tr>
-    <tr><td><strong>MC</strong></td><td>Medical certificate</td></tr>
-    <tr><td><strong>EL</strong></td><td>Emergency leave</td></tr>
-    <tr><td><strong>PH</strong></td><td>Public holiday (for ONE driver &mdash; for the whole company use the Company holiday card)</td></tr>
-    <tr><td><strong>OTHER</strong></td><td>Anything else &mdash; put the reason in Remarks</td></tr>
+    <tr><td><b class="ui">AL, Annual</b></td><td>Annual leave</td></tr>
+    <tr><td><b class="ui">MC, Medical</b></td><td>Medical certificate</td></tr>
+    <tr><td><b class="ui">EL, Emergency</b></td><td>Emergency leave</td></tr>
+    <tr><td><b class="ui">PH, Public Holiday</b></td><td>Public holiday for ONE driver &mdash; for the whole company use the Company holiday card (section 3)</td></tr>
+    <tr><td><b class="ui">OTHER</b></td><td>Anything else &mdash; put the reason in the remarks</td></tr>
   </tbody>
 </table>
 
 <blockquote>
-  <p>These five are the whole list. If you were used to an <strong>Unpaid (UL)</strong> option on the old
-  page: it is not in the new tab &mdash; use <strong>OTHER</strong> and write "unpaid" in Remarks.</p>
+  <p>These five are the whole list. There is no "Unpaid" type: use <b class="ui">OTHER</b> and write "unpaid" in the remarks.</p>
 </blockquote>
 
 <hr>
 
-<h2>3. Recording a public holiday or rest day for ALL drivers</h2>
+<h2>3. A public holiday or rest day for ALL drivers</h2>
 
-<p>Use the <strong>&#127958;&#65039; Company holiday</strong> card &mdash; not the Mark leave card. This
-covers every driver at once, so you do not record 59 separate entries.</p>
+<p>Use the <b class="ui">Company holiday</b> card &mdash; not the Mark leave card. It covers the whole fleet at once,
+so you do not record one entry per driver.</p>
 
 <ol>
-  <li><strong>Date</strong> &mdash; the holiday date.</li>
-  <li><strong>Holiday name</strong> &mdash; a short label, e.g. <em>Hari Raya</em> or <em>Sunday off</em>.</li>
-  <li>Press <strong>Toggle holiday</strong>.</li>
+  <li><b class="ui">Date</b> &mdash; the holiday date.</li>
+  <li><b class="ui">Holiday name</b> &mdash; a short name, for example <em>Hari Raya Haji</em>. The page refuses an empty name ("Enter the holiday name").
+  <figure><img src="img/office/leave-holiday.png" alt="Company holiday card with the date 25 December, the holiday name Christmas and the Toggle holiday button" width="548" height="251">
+  <figcaption>A company holiday, ready to save (sample).</figcaption></figure></li>
+  <li>Press <b class="ui">Toggle holiday</b>. A box asks you to confirm the date and the name. Press OK.</li>
+  <li>Wait for the green message.</li>
 </ol>
 
 <blockquote>
-  <p><strong>It is a toggle.</strong> Pressing it on a date that is already a holiday turns it back OFF.
-  So if you press it twice you have undone it &mdash; press once and check.</p>
+  <p><strong>It is a switch.</strong> The confirm box says it: "If it is off it turns on; if it is on it turns off."
+  Pressing it on a date that is already a holiday turns the holiday OFF. Press <strong>once</strong>.
+  This tab has no list of the holidays already set, so if you are not sure whether a date is already a holiday,
+  ask the office before you press.</p>
 </blockquote>
 
 <hr>
 
-<h2>4. Removing a leave record</h2>
+<h2>4. Delete a leave record</h2>
 
-<p>Use the <strong>&#10060; Remove leave</strong> card &mdash; this is new; the old page could not delete.</p>
+<p>Use the <b class="ui">Remove leave</b> card when leave was entered by mistake, on the wrong date, or the driver came in after all.</p>
 
 <ol>
-  <li><strong>Driver</strong> &mdash; pick the driver.</li>
-  <li><strong>Leave date</strong> &mdash; type the exact date of the record you want gone.</li>
-  <li>Press <strong>Remove leave</strong>.</li>
+  <li><b class="ui">Driver</b> &mdash; pick the driver.</li>
+  <li><b class="ui">Leave date</b> &mdash; the exact date of the record you want gone.
+  <figure><img src="img/office/leave-remove.png" alt="Remove leave card with a driver chosen, the leave date and the red Remove leave button" width="548" height="274">
+  <figcaption>Deleting one day of leave (sample driver).</figcaption></figure></li>
+  <li>Press <b class="ui">Remove leave</b>. A box asks you to confirm: "The leave record for this date is deleted." Press OK.</li>
+  <li>Wait for the green message <b class="ui">Removed</b>. If the date was today, the driver leaves the <b class="ui">On leave today</b> list.</li>
 </ol>
 
-<p>Use it when leave was entered by mistake, on the wrong date, or the driver came in after all. To
-change a leave <em>type</em> or <em>date</em>, remove the old record and mark a new one &mdash; there is no
-edit-in-place.</p>
+<ul>
+  <li>One press deletes one date. For a leave of several days, repeat for each date.</li>
+  <li>There is no edit. To change the type or the date of a leave, remove the old record and mark a new one.</li>
+</ul>
 
 <hr>
 
-<h2>5. How leave connects to the rest of the system</h2>
-
-<p>Recording leave here is not just paperwork — it keeps the main <strong>Dashboard</strong> accurate.</p>
-
-<p>The Dashboard has two alert cards that flag drivers who have not sent in their daily paperwork:</p>
+<h2>5. How leave connects to the dashboards</h2>
 
 <ul>
-  <li><strong>🚩 Haven't submitted POD</strong></li>
-  <li><strong>🚩 Haven't submitted fuel today</strong> — its subtitle reads <em>"Drivers with no fuel entry today · on-leave excluded"</em>.</li>
+  <li><strong>Fleet Dashboard (new):</strong> the <b class="ui">Lorries out</b> card shows the number of drivers on leave today. Press the card: the names are listed under <b class="ui">Drivers on leave</b>.
+  <figure><img src="img/office/dash-lorries.png" alt="Lorries out list on the Fleet Dashboard: Standby, On road, Not out, and at the bottom Drivers on leave with one driver" width="520" height="826">
+  <figcaption>The new dashboard lists today's leave at the bottom of <em>Lorries out</em> (sample data).</figcaption></figure></li>
+  <li><strong>Classic dashboard:</strong> the list <b class="ui">Fuel slips not in yet</b> leaves out drivers on leave (its small print says "on-leave excluded"). On a company holiday it shows "Rest day / public holiday" instead of names.</li>
 </ul>
 
-<p>A driver who is marked on leave is <strong>left out of these "haven't submitted" alerts</strong>. So:</p>
+<p>So:</p>
 
 <ul>
-  <li>If you <strong>record a driver's leave</strong>, they will correctly drop off the alerts — no one chases a driver who is off.</li>
-  <li>If you <strong>forget to record leave</strong>, an off-duty driver will keep showing as "haven't submitted", and the team may waste time chasing them.</li>
+  <li>If you <strong>record a driver's leave</strong>, he drops off the chase list &mdash; no one chases a driver who is off.</li>
+  <li>If you <strong>forget</strong>, an off-duty driver keeps showing as not having sent his fuel slip, and the team may waste time chasing him.</li>
 </ul>
 
-<p><strong>Bottom line: recording leave promptly keeps the Dashboard's chase-up lists clean and trustworthy.</strong></p>
+<p><strong>Bottom line: record leave as soon as you know, so the chase lists stay clean.</strong></p>
+
+<hr>
+
+<h2>6. If something goes wrong</h2>
+
+<table>
+  <thead><tr><th>What you see</th><th>What to do</th></tr></thead>
+  <tbody>
+    <tr><td>The sign-in box comes back</td><td>Your session ended. Sign in again with your Staff ID and PIN, then repeat the step.</td></tr>
+    <tr><td>Red message <b class="ui">Not saved</b>, <b class="ui">Not removed</b> or <b class="ui">Failed</b></td><td>Nothing was changed. Read the reason in the message, fix it, and press the button again.</td></tr>
+    <tr><td>"No connection"</td><td>The request did not go out. Check the internet and press the button again.</td></tr>
+    <tr><td>"No confirmation — refresh and check"</td><td>The page did not get an answer. Do not press again straight away: press <b class="ui">Refresh</b> (top right) and look at <b class="ui">On leave today</b>, or ask the office to check the record, then repeat only if it is missing.</td></tr>
+    <tr><td>The driver list says "Could not load drivers — Refresh"</td><td>Press <b class="ui">Refresh</b> at the top right.</td></tr>
+    <tr><td><b class="ui">Staff Admin is restricted</b></td><td>Your role does not allow this page. Ask the boss.</td></tr>
+  </tbody>
+</table>
 
 <hr>
 
@@ -217,22 +267,20 @@ edit-in-place.</p>
 
 <h3>Do</h3>
 <ul>
-  <li><strong>Do</strong> record leave as soon as you know about it, so the Dashboard alerts stay accurate (Section 5).</li>
-  <li><strong>Do</strong> read the confirmation pop-up carefully — it states the driver, leave type, number of days, and the date range.</li>
-  <li><strong>Do</strong> set <strong>End Date</strong> equal to <strong>Start Date</strong> for a single day off.</li>
-  <li><strong>Do</strong> use the <strong>staff ID — name</strong> shown in the dropdown to pick the right person when two drivers share a first name.</li>
-  <li><strong>Do</strong> wait for the green success message / notice before assuming the leave was saved.</li>
-  <li><strong>Do</strong> use the <strong>Company holiday</strong> card (not the leave form) for company-wide rest days and public holidays.</li>
+  <li><strong>Do</strong> record leave as soon as you know about it (section 5).</li>
+  <li><strong>Do</strong> read the confirm box carefully &mdash; it states the driver, the leave type, the number of days and the date(s).</li>
+  <li><strong>Do</strong> use the staff ID and the branch shown in the list to pick the right person when two drivers share a name.</li>
+  <li><strong>Do</strong> wait for the green message before you assume the leave was saved.</li>
+  <li><strong>Do</strong> use the <b class="ui">Company holiday</b> card (not Mark leave) for rest days and public holidays that cover everyone.</li>
+  <li><strong>Do</strong> press <b class="ui">Sign out</b> when you leave a shared computer.</li>
 </ul>
 
 <h3>Don't</h3>
 <ul>
-  <li><strong>Don't</strong> use the leave form for a holiday that affects everyone — toggle it in the <strong>Company holiday</strong> card instead.</li>
-  <li><strong>Don't</strong> assume you can edit or cancel a driver's leave on this page — you can't. Get the driver and dates right before confirming.</li>
-  <li><strong>Don't</strong> worry about re-running a date range — days already recorded are skipped, not duplicated.</li>
-  <li><strong>Don't</strong> ignore a red error message under the <strong>Mark Leave</strong> button; nothing is saved until it clears.</li>
-  <li><strong>Don't</strong> ignore a "Network error" or "Cannot reach server" notice — the save did not go through. Check your connection and try again.</li>
-  <li><strong>Don't</strong> expect a holiday date that isn't already in the 30-day list to appear by itself — ask your system administrator to add it.</li>
+  <li><strong>Don't</strong> press <b class="ui">Toggle holiday</b> twice on the same date &mdash; the second press turns the holiday off.</li>
+  <li><strong>Don't</strong> look for an edit button &mdash; remove the wrong record (section 4) and mark the right one.</li>
+  <li><strong>Don't</strong> ignore a red message; nothing is saved until the green one appears.</li>
+  <li><strong>Don't</strong> share your PIN. Every record carries the staff ID of the person who was signed in.</li>
 </ul>
 
 </body>

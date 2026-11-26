@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Manual Sistem Pallet (Bahasa Melayu) — CLF Trading</title>
+<title>Manual Sistem Pallet (Bahasa Malaysia) — CLF Trading</title>
 <style>
   body {
     font-family: 'Noto Sans TC', -apple-system, sans-serif;
@@ -32,137 +32,553 @@
   hr { border: none; border-top: 1px solid #e5e5e5; margin: 2em 0; }
   .lead { color: #555; font-size: 1.02em; }
   a { color: #1a1a1a; }
+  /* ditambah Nov 2026: gambar, perkataan pada skrin, kandungan */
+  .ui { font-weight: 700; }
+  .msg { background: #f4f4f4; border: 1px solid #e5e5e5; border-radius: 4px; padding: 0.05em 0.4em; font-weight: 600; }
+  blockquote.warn { border-left-color: #c0392b; background: #fdf3f2; }
+  figure { margin: 1.1em 0 1.4em; }
+  figure img { display: block; max-width: 100%; height: auto; border: 1px solid #d8d8d8; border-radius: 8px; }
+  figure.phone img { max-width: 320px; }
+  figcaption { font-size: 0.9em; color: #555; margin-top: 0.4em; }
+  .toc { columns: 2; column-gap: 2em; padding-left: 1.2em; }
+  .toc li { margin: 0.15em 0; break-inside: avoid; }
+  @media (max-width: 560px) { .toc { columns: 1; } figure.phone img { max-width: 100%; } }
 </style>
 </head>
 <body>
 
 <h1>Manual Sistem Pallet</h1>
-<p class="lead">Panduan lengkap sistem pallet CLF Trading. Sistem ini menjejak setiap pallet: <strong>terima dari principal &rarr; naik lori &rarr; hantar ke pelanggan &rarr; balik ke stor &rarr; pulang ke principal</strong>. Butang pada skrin dalam Bahasa Inggeris/Melayu (contoh <strong>Assign &middot; Naik Lori</strong>). Manual ini memetik butang persis seperti yang anda nampak.</p>
+<p class="lead">Panduan lengkap sistem pallet CLF Trading. Sistem ini menjejak setiap pallet: <strong>terima dari prinsipal &rarr; naik lori &rarr; hantar ke pelanggan &rarr; balik ke stor &rarr; pulang ke prinsipal</strong>. Halaman menunjukkan satu bahasa pada satu masa, Inggeris atau Bahasa Malaysia. Manual ini memetik butang Bahasa Malaysia persis seperti yang anda nampak. <a href="Pallet_Manual_EN.html">English version</a>.</p>
+<p class="lead">Dikemas kini 26 November 2026 untuk rupa baru halaman, suis EN | BM, tab Driver Sahkan, Pallet atas lori, Rekod pallet dan Ubah kuantiti.</p>
 
 <blockquote>
-<p><strong>Siapa guna apa:</strong> halaman stor (<strong>Pallet Store</strong>) <strong>berkunci</strong> — hanya penyelia yang dibenarkan boleh buka (sekarang KHOO MEY LAN, LIM KOK HENG, dan bos). Pemandu guna <strong>borang POD</strong> — tidak berkunci, guna macam biasa.</p>
+<p><strong>Siapa guna apa:</strong> staf stor guna halaman <strong>Stor Pallet</strong> (telefon atau komputer). Pejabat dan pengurus guna halaman <strong>Dashboard Pallet</strong>. Dua-dua halaman <strong>berkunci</strong>: log masuk dengan ID Staf dan PIN. Driver guna <strong>borang POD</strong> macam biasa.</p>
 </blockquote>
 
-<h2>1. Fahami 4 nombor dahulu (konsep asas)</h2>
-<p>Sistem membahagi semua pallet kepada 4 keadaan. Bahagian <strong>Holdings</strong> di atas Dashboard menunjukkan 4 nombor ini:</p>
+<ul class="toc">
+  <li><a href="#numbers">1. 4 nombor</a></li>
+  <li><a href="#signin">2. Log masuk dan bahasa</a></li>
+  <li><a href="#store">3. Halaman Stor Pallet</a>
+    <ul>
+      <li><a href="#assign">Naik Lori</a></li>
+      <li><a href="#accept">Driver Sahkan</a></li>
+      <li><a href="#returns">Lori Balik</a></li>
+      <li><a href="#principal">Prinsipal</a></li>
+      <li><a href="#stocktake">Kira Stok</a></li>
+      <li><a href="#reconcile">Semak Baki</a></li>
+      <li><a href="#damage">Rosak</a></li>
+      <li><a href="#notsaved">Tidak disimpan / gagal dimuatkan</a></li>
+    </ul>
+  </li>
+  <li><a href="#dashboard">4. Halaman Dashboard Pallet</a>
+    <ul>
+      <li><a href="#history">Rekod pallet</a></li>
+      <li><a href="#edit">Ubah kuantiti</a></li>
+      <li><a href="#manager">Rekod pelarasan</a></li>
+    </ul>
+  </li>
+  <li><a href="#driver">5. Driver (borang POD)</a></li>
+  <li><a href="#rules">6. Beberapa peraturan tegas</a></li>
+</ul>
+
+<h2 id="numbers">1. Fahami 4 nombor dahulu (konsep asas)</h2>
+<p>Sistem membahagi semua pallet kepada 3 keadaan, kemudian menjumlahkannya. Bahagian pertama Dashboard, <b class="ui">Stok pallet</b>, menunjukkan 4 nombor ini:</p>
 <table>
 <tr><th>Pada skrin</th><th>Maksud</th></tr>
-<tr><td><strong>Inside (DALAM)</strong><br>in store + yard</td><td><strong>Ada dengan kita</strong> — di dalam stor + di laman luar. Selagi pallet di kawasan syarikat, ia Inside.</td></tr>
-<tr><td><strong>Outgoing (LUAR)</strong><br>lorry / customer</td><td><strong>Sudah keluar</strong> — atas lori, dalam perjalanan, atau di tangan pelanggan.</td></tr>
-<tr><td><strong>Damaged (ROSAK)</strong></td><td><strong>Pallet rosak</strong> — masih dengan kita tetapi pecah, menunggu dibaiki atau dipulangkan ke principal untuk tukar.</td></tr>
-<tr><td><strong>Total held</strong></td><td><strong>Jumlah anda pegang</strong> (Inside + Outgoing + Damaged). Nombor ini ≈ jumlah anda hutang kepada syarikat pool (LOSCAM / CHEP), untuk penyesuaian akaun.</td></tr>
+<tr><td><b class="ui">Dalam</b><br>Stor + yard</td><td><strong>Ada dengan kita</strong>: di dalam stor <em>dan</em> di yard luar. Selagi pallet di kawasan syarikat, ia Dalam.</td></tr>
+<tr><td><b class="ui">Luar</b><br>Atas lori atau di pelanggan</td><td><strong>Sudah keluar</strong>: atas lori, dalam perjalanan, atau di tangan pelanggan.</td></tr>
+<tr><td><b class="ui">Rosak</b></td><td><strong>Pallet rosak</strong>: masih dengan kita tetapi rosak, menunggu dibaiki atau dihantar balik ke prinsipal.</td></tr>
+<tr><td><b class="ui">Jumlah</b><br>Dalam + Luar + Rosak</td><td><strong>Jumlah yang anda pegang.</strong> Guna nombor ini bila semak akaun dengan syarikat pool (LOSCAM / CHEP).</td></tr>
 </table>
 
+<figure>
+  <a href="img/pallet/bm-dash-top.png"><img width="1280" height="297" loading="lazy" decoding="async" src="img/pallet/bm-dash-top.png" alt="Bahagian atas Dashboard Pallet: butang Muat semula, Dikemas kini 10:05, dan bahagian Stok pallet dengan Dalam 365, Luar 32, Rosak 6, Jumlah 403"></a>
+  <figcaption>Dashboard Pallet, bahagian <b>Stok pallet</b>. Semua nombor dan nama dalam gambar manual ini adalah contoh.</figcaption>
+</figure>
+
 <blockquote>
-<p><strong>Penting:</strong> Outgoing (LUAR) = sudah keluar dari syarikat, <strong>bukan</strong> semestinya "di tangan pelanggan". Hanya bila pemandu rekod pallet untuk pelanggan tertentu di POD, barulah Dashboard tunjuk "di pelanggan itu". Yang lain = "atas lori, belum direkod pelanggan".</p>
+<p><strong>Penting:</strong> <b class="ui">Luar</b> = sudah keluar dari syarikat. Ia <strong>bukan</strong> semestinya "di tangan pelanggan". Hanya bila pallet direkod untuk seorang pelanggan, barulah Dashboard senaraikan pallet itu di bawah pelanggan tersebut. Yang lain ditunjukkan sebagai <span class="msg">Atas lori, pelanggan belum direkodkan</span>.</p>
 </blockquote>
 
 <h3>Kitaran hidup pallet (aliran penuh)</h3>
 <blockquote>
-<p>Principal hantar pallet &rarr; <strong>Receive from principal</strong> (masuk Inside)<br>
-Inside &rarr; <strong>Assign</strong> naik lori (jadi Outgoing) &rarr; pemandu hantar<br>
-Di pelanggan: <strong>Drop</strong> beri pallet / <strong>Collect</strong> ambil balik pallet kosong<br>
-Lori balik: <strong>Receive from lorry</strong> terima (elok masuk Inside, rosak masuk Damaged)<br>
-Bila cukup banyak &rarr; <strong>Return to principal</strong> pulang (keluar syarikat, jumlah turun)</p>
+<p>Prinsipal hantar pallet &rarr; stor: tab <b class="ui">Prinsipal</b>, <b class="ui">Terima Masuk</b> (masuk Dalam)<br>
+Dalam &rarr; stor: tab <b class="ui">Naik Lori</b>, naik ke lori (jadi Luar) &rarr; driver hantar<br>
+Di pelanggan &rarr; driver, borang POD: <b class="ui">Beri</b> tinggalkan pallet / <b class="ui">Ambil</b> ambil balik pallet kosong<br>
+Lori balik &rarr; stor: tab <b class="ui">Lori Balik</b> (elok masuk Dalam, rosak masuk Rosak)<br>
+Bila sudah banyak &rarr; stor: tab <b class="ui">Prinsipal</b>, <b class="ui">Hantar Balik</b> (keluar dari syarikat, Jumlah turun)</p>
 </blockquote>
 
 <hr>
 
-<h2>2. Penyelia Stor (halaman Pallet Store · berkunci)</h2>
+<h2 id="signin">2. Log masuk dan bahasa</h2>
 
-<h3>1. Buka kunci (kali pertama / tukar telefon)</h3>
+<h3>Log masuk (dua-dua halaman)</h3>
 <ol>
-  <li>Buka pautan Pallet Store. Anda akan nampak <strong>skrin kunci</strong> (🔒 <strong>Pallet Store is locked</strong>).</li>
-  <li>Masukkan <strong>Staff ID &middot; ID Staf</strong> anda (contoh <code>TER282</code>) dan <strong>PIN</strong> anda.</li>
-  <li>Tekan <strong>Unlock &middot; Buka</strong>. Selepas berjaya, telefon/komputer ini <strong>ingat selama 30 hari</strong> — lepas ini terus boleh guna, tak perlu masuk PIN setiap kali.</li>
+  <li>Buka halaman. Kotak log masuk menutup halaman. Di Stor Pallet tertulis <span class="msg">Stor Pallet dikunci</span>. Di Dashboard Pallet tertulis <span class="msg">Log masuk</span>.</li>
+  <li>Taip <b class="ui">ID Staf</b> anda.</li>
+  <li>Taip <b class="ui">PIN</b> anda. Belum ada PIN? Tanya pejabat.</li>
+  <li>Tekan <b class="ui">Log masuk</b>. Di Stor Pallet, mesej hijau <span class="msg">Log masuk berjaya</span> menunjukkan nama anda.</li>
 </ol>
-<blockquote>
-<p>Salah PIN <strong>5 kali</strong> akan dikunci 15 minit. Setiap rekod yang anda buat akan dicop dengan <strong>nama anda (ID)</strong> secara automatik — orang lain tak boleh guna nama anda.</p>
+
+<figure class="phone">
+  <img width="378" height="438" loading="lazy" decoding="async" src="img/pallet/bm-store-signin.png" alt="Kotak log masuk Stor Pallet: suis EN BM, Stor Pallet dikunci, Staf dibenarkan sahaja, ID Staf TER000, PIN ditunjukkan sebagai titik, butang Log masuk">
+  <figcaption>Kotak log masuk Stor Pallet. Suis EN | BM ada di atas kanan kotak.</figcaption>
+</figure>
+
+<ul>
+  <li>Telefon atau komputer ini ingat anda. Sekali log masuk membuka Stor Pallet dan Dashboard Pallet dalam pelayar yang sama.</li>
+  <li>Kalau kotak itu keluar semula dengan <span class="msg">Sesi tamat — log masuk semula</span>, log masuk sekali lagi. Tiada apa-apa hilang.</li>
+  <li><span class="msg">Isi ID Staf dan PIN</span>: satu daripada dua kotak itu kosong.</li>
+  <li>ID Staf atau PIN salah: kotak menunjukkan sebabnya dengan tulisan merah. Selepas 5 kali salah, log masuk dikunci 15 minit. Tunggu, kemudian cuba lagi. Kalau lupa PIN, tanya pejabat.</li>
+  <li><span class="msg">Gagal log masuk — semak internet dan cuba lagi</span>: semak internet, kemudian tekan <b class="ui">Log masuk</b> sekali lagi.</li>
+</ul>
+
+<h3>Bahasa: EN | BM</h3>
+<ol>
+  <li>Cari suis <b class="ui">EN</b> | <b class="ui">BM</b>: di atas kanan setiap halaman, dan pada kotak log masuk. Halaman dibuka dalam Bahasa Inggeris sehingga anda pilih.</li>
+  <li>Tekan <b class="ui">BM</b> untuk Bahasa Malaysia, atau <b class="ui">EN</b> untuk Inggeris.</li>
+</ol>
+<p>Perkataan bertukar serta-merta. Apa yang sudah ditaip tidak hilang. Telefon ingat pilihan anda, untuk dua-dua halaman.</p>
+
+<hr>
+
+<h2 id="store">3. Staf stor (halaman Stor Pallet)</h2>
+<p>Halaman ini ada 7 tab: <b class="ui">Kira Stok</b>, <b class="ui">Semak Baki</b>, <b class="ui">Rosak</b>, <b class="ui">Naik Lori</b>, <b class="ui">Driver Sahkan</b>, <b class="ui">Lori Balik</b>, <b class="ui">Prinsipal</b>. Butang <b class="ui">Dashboard</b> di atas membuka Dashboard Pallet.</p>
+
+<figure class="phone">
+  <img width="390" height="225" loading="lazy" decoding="async" src="img/pallet/bm-store-tabs.png" alt="Bahagian atas Stor Pallet pada telefon: suis EN BM, butang Dashboard, dan tujuh tab Kira Stok, Semak Baki, Rosak, Naik Lori, Driver Sahkan, Lori Balik, Prinsipal">
+  <figcaption>7 tab. Tab yang gelap ialah tab yang sedang dibuka.</figcaption>
+</figure>
+
+<p>Sama pada setiap tab:</p>
+<ul>
+  <li><b class="ui">Cara guna</b> membuka tiga baris peringatan ringkas. Tekan sekali lagi untuk tutup.</li>
+  <li>Bintang merah (*) bermaksud kotak itu wajib diisi.</li>
+  <li><b class="ui">ID Staf</b> diisi sendiri selepas log masuk, dengan tanda hijau dan nama anda di bawahnya. Kalau tertulis <span class="msg">ID Staf tak dikenali</span>, taip ID Staf anda semula.</li>
+</ul>
+
+<h3 id="assign">3.1 Naik Lori: pallet naik ke lori</h3>
+<p>Hantar pallet dari Dalam naik ke sebuah lori, untuk satu shipment.</p>
+<ol>
+  <li>Tekan tab <b class="ui">Naik Lori</b>.</li>
+  <li><b class="ui">Tarikh</b>: pilih hari shipment. Kalau dibiarkan kosong, halaman guna hari ini.</li>
+  <li><b class="ui">No. lori</b>: taip nombor lori, cth. <code>WTA 1234</code>.</li>
+  <li>Tekan <b class="ui">Cari Shipment</b>. Tanda hijau dengan nombor shipment bermaksud shipment dijumpai. Tak perlu taip nombor shipment.</li>
+  <li>Baca baris di bawah butang: <span class="msg">Belum ada pallet naik</span>, atau <span class="msg">Sudah naik: </span> dengan pallet yang sudah ada atas lori.</li>
+  <li>Di bawah <b class="ui">Pallet Naik Lori</b>, tekan <b class="ui">+</b> atau <b class="ui">−</b> untuk set berapa setiap jenis pallet naik ke lori. Setiap baris tunjuk berapa yang ada Dalam sekarang.</li>
+  <li>Semak <b class="ui">ID Staf</b> menunjukkan nama anda.</li>
+  <li>Tekan <b class="ui">Simpan Naik Lori</b>. Mesej hijau <span class="msg">Naik lori disimpan</span> menunjukkan lori dan shipment.</li>
+</ol>
+
+<figure class="phone">
+  <img width="346" height="828" loading="lazy" decoding="async" src="img/pallet/bm-store-assign.png" alt="Tab Naik Lori: tarikh 26/11/2026, lori WTA 1234, shipment dijumpai dengan tanda hijau, Belum ada pallet naik, LOSCAM Merah 10, CHEP Biru 4, Plastik Hitam 0, ID Staf TER000 dengan nama, butang Simpan Naik Lori">
+  <figcaption>Naik Lori: shipment dijumpai, 10 dan 4 pallet sudah diset, sedia untuk tekan <b>Simpan Naik Lori</b>.</figcaption>
+</figure>
+
+<ul>
+  <li><span class="msg">Tiada shipment untuk WTA 1234 pada 2026-11-26</span>: semak no. lori dan tarikh, kemudian tekan <b class="ui">Cari Shipment</b> sekali lagi.</li>
+  <li>Lori itu ada beberapa shipment pada hari itu: halaman tulis <span class="msg">shipment pada tarikh ini. Pilih satu:</span>. Pilih yang betul daripada senarai.</li>
+  <li>Tak boleh naikkan lebih daripada yang ada. Halaman letak semula nombornya dan tunjuk <span class="msg">Hanya ada 219 Dalam</span>.</li>
+  <li><span class="msg">Tak dapat semak pallet yang sudah naik. Tekan Cari Shipment sekali lagi sebelum simpan.</span>: buat itu dulu, supaya pallet yang sama tidak dinaikkan dua kali.</li>
+  <li>Kalau mesej kata ada baris yang <strong>TIDAK</strong> disimpan, mesej itu sebut namanya. Baris yang sudah disimpan jadi 0 semula. <span class="msg">Tekan Simpan Naik Lori sekali lagi untuk simpan yang ini sahaja.</span></li>
+</ul>
+
+<h3 id="accept">3.2 Driver Sahkan: driver sahkan pallet yang naik</h3>
+<p>Guna tab ini bila driver semak pallet bersama anda di stor. (Driver juga boleh betulkan jumlah sendiri di borang POD, lihat <a href="#driver">bahagian 5</a>.)</p>
+<ol>
+  <li>Tekan tab <b class="ui">Driver Sahkan</b>.</li>
+  <li><b class="ui">Tarikh shipment</b>: biarkan hari ini, kecuali lori keluar hari lain.</li>
+  <li><b class="ui">No. lori</b>: taip nombor lori.</li>
+  <li>Tekan <b class="ui">Cari Shipment</b>. Di bawah <b class="ui">Pallet Naik Lori</b> ada satu baris bagi setiap jenis pallet, dengan <span class="msg">Naik lori: 10</span>.</li>
+  <li>Driver semak setiap baris. Jumlah betul: biarkan, butang <b class="ui">Betul</b> kekal hijau.</li>
+  <li>Jumlah salah: tekan <b class="ui">−</b> atau <b class="ui">+</b> sehingga <b class="ui">Diterima</b> menunjukkan jumlah yang driver betul-betul terima. (Tekan <b class="ui">Betul</b> untuk letak semula jumlah asal.)</li>
+  <li><b class="ui">Nama driver</b>: taip nama driver.</li>
+  <li>Tekan <b class="ui">Sahkan Terima</b>. Mesej hijau <span class="msg">Disahkan</span> keluar.</li>
+</ol>
+
+<figure class="phone">
+  <img width="346" height="848" loading="lazy" decoding="async" src="img/pallet/bm-store-accept.png" alt="Tab Driver Sahkan: lori WTA 1234, shipment dijumpai, LOSCAM Merah naik lori 10 diterima 9, CHEP Biru naik lori 4 diterima 4 dengan Betul berwarna hijau, nama driver Ahmad bin Rosli, butang Sahkan Terima">
+  <figcaption>Driver Sahkan: driver terima 9 LOSCAM, bukan 10. CHEP betul.</figcaption>
+</figure>
+
+<ul>
+  <li><span class="msg">Belum ada pallet naik untuk shipment ini</span>: tiada pallet dinaikkan untuk shipment ini. Semak no. lori dan tarikh.</li>
+  <li>Kalau anda pilih hari lain, tanda jingga <span class="msg">Bukan hari ini: 2026-11-25</span> keluar di sebelah shipment. Semak itu memang hari yang anda mahu.</li>
+  <li>Kalau ada baris yang <strong>TIDAK</strong> disahkan, hanya baris itu tinggal pada skrin. Tekan <b class="ui">Sahkan Terima</b> sekali lagi.</li>
+</ul>
+
+<h3 id="returns">3.3 Lori Balik: terima dari lori</h3>
+<p>Bila lori balik, stor kira dan terima. Ini tempat semakan yang paling penting.</p>
+<ol>
+  <li>Tekan tab <b class="ui">Lori Balik</b>.</li>
+  <li><b class="ui">Tarikh shipment</b>: biarkan hari ini, kecuali lori keluar hari lain. Kalau begitu, pilih hari itu.</li>
+  <li><b class="ui">No. lori</b>: taip nombor lori.</li>
+  <li>Tekan <b class="ui">Cari Lori</b>. Di bawah <b class="ui">Masih Atas Lori</b>, setiap jenis pallet tunjuk <span class="msg">Patut ada:</span> dan satu nombor. Itu jumlah yang sepatutnya masih ada atas lori.</li>
+  <li>Kira pallet sebenar. Taip nombor di <b class="ui">Elok</b> dan <b class="ui">Rosak</b>.</li>
+  <li>Elok + Rosak = Patut ada: baris itu tunjuk <span class="msg">Cukup</span>.</li>
+  <li>Kurang daripada patut ada: baris itu tunjuk <span class="msg">Kurang 2 — tinggal di pelanggan mana?</span> Pilih pelanggan. Kuantiti di sebelahnya mesti sama dengan jumlah yang kurang.</li>
+  <li>Lebih daripada patut ada: baris itu tunjuk <span class="msg">Lebih 1 — ambil dari pelanggan mana?</span> Pilih pelanggan yang pulangkan pallet itu.</li>
+  <li>Tekan <b class="ui">Terima Semua</b>. Mesej hijau <span class="msg">Diterima</span> senaraikan setiap baris. Pallet elok masuk Dalam, pallet rosak masuk Rosak.</li>
+</ol>
+
+<figure class="phone">
+  <img width="346" height="959" loading="lazy" decoding="async" src="img/pallet/bm-store-returns.png" alt="Tab Lori Balik: tarikh shipment 25/11/2026, lori WTA 1234, shipment dijumpai dengan tanda Bukan hari ini: 2026-11-25, LOSCAM Merah patut ada 6 elok 4, Kurang 2 tinggal di pelanggan mana dengan pelanggan C0001 Kedai Maju dipilih, CHEP Biru patut ada 4 elok 4 Cukup, butang Terima Semua">
+  <figcaption>Lori Balik untuk lori yang keluar semalam (tanda <b>Bukan hari ini</b>). 2 LOSCAM kurang dan direkod kepada pelanggan yang simpan pallet itu.</figcaption>
+</figure>
+
+<blockquote class="warn">
+<p>Halaman itu sendiri beri amaran: <span class="msg">Driver tak tahu pallet ke mana? JANGAN terima — tanya dulu.</span> Langkah ini memang untuk memaksa perbualan itu, supaya pallet tidak hilang begitu sahaja.</p>
 </blockquote>
 
-<h3>2. Naik lori — <strong>Assign &middot; Naik Lori</strong></h3>
-<p>Hantar pallet dari Inside naik ke sebuah lori (ikut satu shipment).</p>
-<ol>
-  <li>Isi <strong>Date &middot; Tarikh</strong> (lalai hari ini) dan <strong>Lorry No &middot; No. Lori</strong> (contoh <code>WTA 1234</code>).</li>
-  <li>Tekan <strong>Load Shipment &middot; Muat Shipment</strong> — sistem <strong>cari sendiri shipment lori itu hari ini</strong> (tak perlu taip nombor shipment). Kalau lori buat banyak trip, akan ada senarai untuk pilih.</li>
-  <li>Di <strong>Pallets Out &middot; Pallet Keluar</strong>, guna + / − untuk set berapa setiap jenis (<strong>tak boleh lebih dari baki Inside</strong>).</li>
-  <li>Masukkan ID Staf anda (nama keluar sendiri), tekan <strong>Assign Pallets &middot; Tugas Pallet</strong>.</li>
-</ol>
+<ul>
+  <li>Kalau anda tekan <b class="ui">Terima Semua</b> tanpa pilih pelanggan, tiada apa-apa disimpan. Mesej merah minta anda pilih pelanggan dan kata kuantiti mesti sama.</li>
+  <li>Selepas simpan, senarai dimuat semula. <span class="msg">Tiada pallet atas lori ini</span> bermaksud semua pallet shipment ini sudah dikira.</li>
+  <li>Halaman hanya terima <strong>satu pelanggan bagi setiap jenis pallet</strong> untuk pallet yang kurang. Kalau pallet itu ditinggalkan di dua pelanggan berlainan, beritahu pejabat sebelum terima.</li>
+  <li><span class="msg">Sebahagian TIDAK disimpan</span>: <span class="msg">Senarai dimuat semula. Kira semula yang masih ada.</span></li>
+</ul>
 
-<h3>3. Terima balik dari lori — <strong>Returns &middot; Pulang</strong> (Receive from Lorry)</h3>
-<p>Bila lori balik, stor sendiri kira dan terima. Ini titik penyesuaian yang paling penting.</p>
-<ol>
-  <li>Isi no. lori, tekan <strong>Load Lorry &middot; Muat Lori</strong> — setiap jenis pallet tunjuk <strong>"sepatutnya berapa" (Expected on lorry)</strong> = yang dinaikkan − yang sudah diberi kepada pelanggan.</li>
-  <li>Kira betul-betul, isi <strong>Good &middot; Elok</strong> dan <strong>Damaged &middot; Rosak</strong>.</li>
-  <li>Kalau tak padan, sistem <strong>paksa anda jelaskan beza itu</strong>:
-    <ul>
-      <li><strong>Kurang (Short)</strong> &rarr; "Tinggal di pelanggan mana?" Pilih pelanggan, isi jumlah (direkod sebagai Drop; hutang pelanggan itu naik).</li>
-      <li><strong>Lebih (Extra)</strong> &rarr; "Pelanggan mana pulangkan?" Pilih pelanggan, isi jumlah (direkod sebagai Collect; hutang pelanggan itu turun).</li>
-    </ul>
-  </li>
-  <li>Setiap baris mesti "seimbang" (elok + rosak + tinggal pelanggan = sepatutnya) baru boleh tekan <strong>Receive All &middot; Terima Semua</strong>. Elok masuk Inside, rosak masuk Damaged.</li>
-</ol>
-<blockquote>
-<p><strong>Pemandu tak boleh cakap ke mana pallet yang kurang?</strong> Jangan terima dulu — tanya sampai jelas. Langkah ini memang untuk memaksa perbualan itu, supaya pallet tak hilang begitu sahaja.</p>
-</blockquote>
+<p><strong>Kalau senarai gagal dimuatkan</strong>, anda nampak kotak merah, bukan lori kosong:</p>
+<figure class="phone">
+  <img width="346" height="164" loading="lazy" decoding="async" src="img/pallet/bm-store-loadfail.png" alt="Kotak merah di bawah Masih Atas Lori: Gagal memuatkan. Ini BUKAN bermakna lori kosong. Tekan Cari Lori sekali lagi">
+  <figcaption><b>Gagal memuatkan</b> bukan bermakna lori kosong. Semak internet dan tekan <b>Cari Lori</b> sekali lagi.</figcaption>
+</figure>
 
-<h3>4. Principal — pulang / terima <strong>Balik Prinsipal</strong></h3>
-<p>Keluar-masuk pallet dengan syarikat pool (LOSCAM, CHEP). Di atas, <strong>Direction &middot; Arah</strong> pilih hala:</p>
+<h3 id="principal">3.4 Prinsipal: hantar balik / terima masuk</h3>
+<p>Keluar-masuk pallet dengan syarikat pool (LOSCAM, CHEP).</p>
 <table>
-<tr><th>Hala</th><th>Bila guna</th><th>Kesan</th></tr>
-<tr><td><strong>Return to &middot; Pulang ke</strong></td><td>Pulang pallet ke principal (elok dari Inside, atau rosak dari Damaged untuk tukar)</td><td>Jumlah <strong>turun</strong> (keluar syarikat)</td></tr>
-<tr><td><strong>Receive from &middot; Terima dari</strong></td><td>Principal hantar pallet baru / tukar masuk</td><td>Jumlah <strong>naik</strong> (masuk Inside)</td></tr>
+<tr><th>Pilih</th><th>Bila guna</th><th>Kesan</th></tr>
+<tr><td><b class="ui">Hantar Balik</b></td><td>Anda hantar pallet balik ke prinsipal: yang elok dari Dalam, atau yang rosak dari Rosak.</td><td>Stok <strong>turun</strong>.</td></tr>
+<tr><td><b class="ui">Terima Masuk</b></td><td>Prinsipal hantar pallet masuk.</td><td>Stok <strong>naik</strong> (masuk Dalam).</td></tr>
 </table>
-<p>Pilih jenis pallet &rarr; isi jumlah &rarr; isi <strong>Reference &middot; Rujukan</strong> (no. DO / nota principal — WAJIB, untuk semak kemudian) &rarr; ID Staf &rarr; hantar.</p>
+<ol>
+  <li>Tekan tab <b class="ui">Prinsipal</b>.</li>
+  <li><b class="ui">Jenis pallet</b>: pilih jenis pallet.</li>
+  <li>Tekan <b class="ui">Hantar Balik</b> atau <b class="ui">Terima Masuk</b>.</li>
+  <li>Untuk <b class="ui">Hantar Balik</b> sahaja: di bawah <b class="ui">Hantar dari</b>, tekan <b class="ui">Dalam</b> atau <b class="ui">Rosak</b>.</li>
+  <li>Taip kuantiti (<b class="ui">Jumlah hantar</b> atau <b class="ui">Jumlah terima</b>). Jalur di bawah kotak tunjuk baki selepas simpan.</li>
+  <li><b class="ui">No. rujukan</b>: taip nombor DO atau nota prinsipal. Ini wajib.</li>
+  <li>Semak <b class="ui">Tarikh</b> dan <b class="ui">ID Staf</b>.</li>
+  <li>Tekan <b class="ui">Hantar Balik Prinsipal</b> (atau <b class="ui">Terima daripada Prinsipal</b>). Mesej hijau <span class="msg">Dihantar balik ke prinsipal</span> (atau <span class="msg">Diterima daripada prinsipal</span>) keluar.</li>
+</ol>
 
-<h3>5. Kira Stok · Padan · Rosak (penyelenggaraan harian)</h3>
+<figure class="phone">
+  <img width="346" height="993" loading="lazy" decoding="async" src="img/pallet/bm-store-principal.png" alt="Tab Prinsipal: pallet LOSCAM Merah, Hantar Balik dipilih, Hantar dari Dalam, kad baki sistem, jumlah hantar 20, no. rujukan DO-1002, tarikh, ID Staf TER000, butang Hantar Balik Prinsipal">
+  <figcaption>Hantar balik 20 pallet LOSCAM yang elok ke prinsipal, dengan nombor DO sebagai rujukan.</figcaption>
+</figure>
+
 <ul>
-  <li><strong>Stocktake &middot; Kira Stok:</strong> kira fizikal sesuatu jenis pallet sekarang berapa, isi masuk; sistem betulkan beza supaya rekod = fizikal.</li>
-  <li><strong>Reconcile &middot; Padan:</strong> lihat ada beza antara rekod dan fizikal atau tidak; kalau tiada beza tunjuk <strong>✓ balanced</strong>.</li>
-  <li><strong>Damage &middot; Rosak:</strong> tanda pallet elok jadi rosak (masuk Damaged). <strong>WAJIB ambil foto</strong> pallet yang pecah. Bila dibaiki, guna <strong>Fixed</strong> untuk rekod balik ke Inside.</li>
+  <li><span class="msg">Isi no. rujukan</span>: kotak rujukan kosong. Tiada apa-apa disimpan tanpa rujukan.</li>
+  <li>Tak boleh hantar lebih daripada yang ada: jalur tunjuk berapa yang ada, dan halaman tolak dengan <span class="msg">Hanya ada 213 Dalam.</span></li>
 </ul>
 
-<h3>6. Dashboard — <strong>Pallet Dashboard</strong></h3>
-<p>Lihat jumlah, butiran setiap jenis, dan pelanggan mana masih hutang pallet. <strong>Reconcile ✓ balanced</strong> bermaksud rekod = fizikal. "Outgoing — by customer" akan tunjuk nama pelanggan sebenar bila pemandu mula rekod drop.</p>
+<h3 id="stocktake">3.5 Kira Stok: sistem ikut kiraan anda</h3>
+<p><b class="ui">Kira Stok</b> <strong>menggantikan</strong> baki sistem dengan nombor yang anda kira. Rekod lama tidak dipadam.</p>
+<ol>
+  <li>Tekan tab <b class="ui">Kira Stok</b>.</li>
+  <li><b class="ui">Jenis pallet</b>: pilih jenis pallet.</li>
+  <li><b class="ui">Status</b>: tekan <b class="ui">Dalam</b>, <b class="ui">Luar</b> atau <b class="ui">Rosak</b>. Kad <b class="ui">Baki sistem</b> tunjuk apa yang ada dalam sistem sekarang.</li>
+  <li><b class="ui">Kiraan sebenar</b>: taip nombor yang anda betul-betul kira. Jalur terus tunjuk bezanya.</li>
+  <li>Semak <b class="ui">Tarikh</b> dan <b class="ui">ID Staf</b>.</li>
+  <li>Tekan <b class="ui">Simpan Kiraan</b>.</li>
+  <li>Kalau kiraan anda tidak sama dengan sistem, satu kotak bertanya <span class="msg">Tukar baki?</span> Kotak itu tunjuk <b class="ui">Sistem</b>, <b class="ui">Kiraan anda</b> dan <b class="ui">Beza</b>. Baca nombornya.</li>
+  <li>Tekan <b class="ui">Ya, simpan</b> kalau betul. Tekan <b class="ui">Batal</b> untuk patah balik: tiada apa-apa disimpan.</li>
+</ol>
+
+<figure class="phone">
+  <img width="386" height="334" loading="lazy" decoding="async" src="img/pallet/bm-store-confirm.png" alt="Kotak pengesahan Tukar baki? CHEP Biru Dalam: Sistem 106, Kiraan anda 12, Beza tolak 94, baris merah Beza besar — semak nombor sekali lagi, butang Batal dan Ya, simpan">
+  <figcaption>Kotak pengesahan. Di sini 12 ditaip, bukan 120: baris merah <b>Beza besar — semak nombor sekali lagi</b> menangkap kesilapan itu.</figcaption>
+</figure>
+
+<p>Selepas simpan, mesej hijau <span class="msg">Kiraan disimpan</span> menunjukkan baki baru.</p>
+
+<h3 id="reconcile">3.6 Semak Baki: banding sahaja</h3>
+<p><b class="ui">Semak Baki</b> hanya <strong>membandingkan</strong> kiraan anda dengan sistem dan merekod bezanya. Baki tidak berubah. Beza itu keluar di Dashboard di bawah <b class="ui">Semakan stok</b> untuk pejabat lihat.</p>
+<ol>
+  <li>Tekan tab <b class="ui">Semak Baki</b>.</li>
+  <li>Pilih <b class="ui">Jenis pallet</b> dan <b class="ui">Status</b>, sama seperti Kira Stok.</li>
+  <li><b class="ui">Kiraan sebenar</b>: taip nombor yang anda kira.</li>
+  <li><b class="ui">Catatan</b>: tambah catatan ringkas jika ada.</li>
+  <li>Tekan <b class="ui">Simpan Semakan</b>.</li>
+  <li>Sama dengan sistem: mesej hijau <span class="msg">Sama</span>. Selesai.</li>
+  <li>Tidak sama: mesej jingga <span class="msg">Beza direkod</span>, dan bahagian <b class="ui">Laras Baki (Pengurus)</b> terbuka di bawah.</li>
+</ol>
+<p><strong>Laras Baki (pengurus sahaja).</strong> Pengurus boleh laras baki sistem ikut kiraan sebenar:</p>
+<ol>
+  <li><b class="ui">PIN pengurus</b>: pengurus taip PIN pengurus.</li>
+  <li><b class="ui">Sebab</b>: taip sebabnya, cth. "salah kira".</li>
+  <li>Tekan <b class="ui">Laras Baki</b>. Mesej hijau <span class="msg">Baki dilaras</span> menunjukkan baki lama dan baki baru.</li>
+</ol>
+
+<figure class="phone">
+  <img width="346" height="865" loading="lazy" decoding="async" src="img/pallet/bm-store-adjust.png" alt="Tab Semak Baki selepas Simpan Semakan: kiraan sebenar 187, jalur Beza tolak 6: sistem 193, kiraan 187, kemudian Laras Baki (Pengurus) dengan PIN pengurus ditunjukkan sebagai titik, Sebab kira dua kali, butang Laras Baki">
+  <figcaption>Semak Baki jumpa beza −6. Pengurus taip PIN dan sebab, kemudian tekan <b>Laras Baki</b>.</figcaption>
+</figure>
+
+<ul>
+  <li><span class="msg">PIN salah atau kosong</span> / <span class="msg">Baki TIDAK berubah.</span>: taip PIN pengurus yang betul dan tekan sekali lagi.</li>
+  <li><span class="msg">Dihantar — belum pasti</span>: halaman tidak dapat jawapan. Semak baki dalam 1 minit <strong>sebelum</strong> hantar lagi.</li>
+</ul>
+
+<h3 id="damage">3.7 Rosak: pallet rosak dan pallet siap baiki</h3>
+<p><strong>Tanda pallet sebagai rosak</strong> (Dalam atau Luar &rarr; Rosak). Wajib ambil gambar.</p>
+<ol>
+  <li>Tekan tab <b class="ui">Rosak</b>.</li>
+  <li><b class="ui">Jenis pallet</b>: pilih jenis pallet.</li>
+  <li><b class="ui">Pindah dari</b>: tekan <b class="ui">Dalam</b> atau <b class="ui">Luar</b>.</li>
+  <li><b class="ui">Jumlah rosak</b>: taip nombornya.</li>
+  <li><b class="ui">Gambar</b>: tekan <b class="ui">Ambil gambar</b> dan ambil gambar bahagian rosak dengan jelas. Boleh tambah sehingga 10.</li>
+  <li><b class="ui">Sebab</b>: tambah jika ada, cth. "kena forklift".</li>
+  <li>Semak <b class="ui">Tarikh</b> dan <b class="ui">ID Staf</b>.</li>
+  <li>Tekan <b class="ui">Tanda Rosak</b>. Mesej hijau <span class="msg">Ditanda rosak</span> keluar.</li>
+</ol>
+
+<figure class="phone">
+  <img width="346" height="1166" loading="lazy" decoding="async" src="img/pallet/bm-store-damage.png" alt="Tab Rosak: pallet LOSCAM Merah, Pindah dari Dalam, kad baki sistem, jumlah rosak 2, satu gambar ditambah, sebab kena forklift, tarikh, ID Staf TER000, butang Tanda Rosak">
+  <figcaption>Rosak: 2 pallet, satu gambar ditambah (lukisan contoh), sedia untuk tekan <b>Tanda Rosak</b>.</figcaption>
+</figure>
+
+<ul>
+  <li><span class="msg">Ambil sekurang-kurangnya 1 gambar</span>: belum ada gambar. Tiada apa-apa disimpan tanpa gambar.</li>
+  <li><span class="msg">Dihantar — belum pasti</span> / <span class="msg">Semak Dashboard dalam 1 minit sebelum hantar lagi.</span>: buat betul-betul begitu. Gambar anda masih ada pada skrin.</li>
+</ul>
+
+<p><strong>Pallet siap baiki</strong> (Rosak &rarr; Dalam), di bahagian bawah tab yang sama, di bawah <b class="ui">Pallet Siap Baiki</b>. Tak perlu gambar.</p>
+<ol>
+  <li><b class="ui">Jenis pallet</b>: pilih jenis pallet.</li>
+  <li><b class="ui">Jumlah siap baiki</b>: taip nombornya. Tak boleh lebih daripada nombor Rosak pada kad.</li>
+  <li>Semak <b class="ui">Tarikh</b> dan <b class="ui">ID Staf</b>.</li>
+  <li>Tekan <b class="ui">Tanda Siap Baiki</b>. Mesej hijau <span class="msg">Siap baiki</span> keluar.</li>
+</ol>
+
+<h3 id="notsaved">3.8 Bila tidak disimpan atau gagal dimuatkan</h3>
+<figure class="phone">
+  <img width="378" height="107" loading="lazy" decoding="async" src="img/pallet/bm-store-notsaved.png" alt="Mesej merah di bawah skrin: TIDAK disimpan. Tiada internet. Semak, kemudian tekan sekali lagi.">
+  <figcaption>Mesej merah sentiasa beritahu apa yang perlu dibuat.</figcaption>
+</figure>
+<ul>
+  <li><span class="msg">TIDAK disimpan</span> dengan <span class="msg">Tiada internet. Semak, kemudian tekan sekali lagi.</span>: semak internet, kemudian tekan <strong>butang yang sama sekali lagi</strong>. Ini selamat. Kalau cubaan pertama sebenarnya sudah sampai ke sistem, jawapannya <span class="msg">Sudah disimpan tadi</span> dan ia tidak direkod dua kali.</li>
+  <li><span class="msg">TIDAK disimpan</span> dengan sebab lain: baca sebabnya, betulkan, tekan sekali lagi.</li>
+  <li><span class="msg">Gagal memuatkan</span>: halaman tidak dapat baca data. Ia <strong>bukan</strong> kosong. Semak internet dan tekan <b class="ui">Cari Shipment</b> atau <b class="ui">Cari Lori</b> sekali lagi.</li>
+  <li><span class="msg">Dihantar — belum pasti</span> (langkah gambar dan PIN pengurus): tunggu 1 minit dan semak dulu. Hantar lagi hanya kalau memang tiada.</li>
+</ul>
 
 <hr>
 
-<h2>3. Pemandu (borang POD)</h2>
-<p>Pemandu <strong>tak berkunci, tak perlu rekod benda rumit</strong>. Kerja pallet ikut sahaja aliran penghantaran.</p>
+<h2 id="dashboard">4. Pejabat dan pengurus (halaman Dashboard Pallet)</h2>
+<p>Tekan gambar yang lebar dalam bahagian ini untuk lihat saiz penuh.</p>
+<p>Dashboard untuk dibaca. Hanya satu perkara boleh diubah di sini: kuantiti satu rekod, oleh pengurus (<a href="#edit">4.7</a>).</p>
+<ul>
+  <li><b class="ui">Muat semula</b> membaca nombor terbaru. Di sebelahnya tertulis bila nombor dibaca, cth. <span class="msg">Dikemas kini 10:05</span>.</li>
+  <li>Kalau <b class="ui">Muat semula</b> tidak buat apa-apa sejurus selepas anda log masuk di halaman ini, muat semula halaman sekali.</li>
+  <li><b class="ui">Apa maksud nombor ini?</b> di bawah sesuatu bahagian membuka penerangan ringkas.</li>
+  <li><b class="ui">Stor Pallet</b> di atas membuka halaman stor.</li>
+</ul>
+<p>Bahagian-bahagiannya, dari atas ke bawah: <b class="ui">Stok pallet</b>, <b class="ui">Semakan stok</b>, <b class="ui">Pallet atas lori</b>, <b class="ui">Luar ikut pelanggan</b>, <b class="ui">Ikut jenis pallet</b>, <b class="ui">Rekod pallet</b>, <b class="ui">Rekod pelarasan</b>.</p>
 
-<h3>1. Terima secara lalai — kalau betul, tak perlu buat apa-apa</h3>
+<h3>4.1 Stok pallet</h3>
+<p>4 nombor untuk seluruh syarikat: <b class="ui">Dalam</b>, <b class="ui">Luar</b>, <b class="ui">Rosak</b>, <b class="ui">Jumlah</b>. Lihat <a href="#numbers">bahagian 1</a>.</p>
+
+<h3>4.2 Semakan stok</h3>
+<p>Menunjukkan setiap kiraan daripada tab <b class="ui">Semak Baki</b> di stor yang tidak sama dengan sistem dan masih belum selesai.</p>
+<ul>
+  <li><span class="msg">Semua sama — tiada beza.</span>: tiada apa perlu dibuat.</li>
+  <li>Kalau tidak, ada jadual: <b class="ui">Sistem</b> = apa yang ada dalam sistem, <b class="ui">Fizikal</b> = apa yang stor kira, <b class="ui">Beza</b> = Fizikal − Sistem.</li>
+  <li>Baris merah dengan tanda tolak = pallet <strong>kurang</strong>. Baris kuning dengan tanda tambah = pallet <strong>lebih</strong>.</li>
+</ul>
+
+<figure>
+  <a href="img/pallet/bm-dash-stockcount.png"><img width="1252" height="306" loading="lazy" decoding="async" src="img/pallet/bm-dash-stockcount.png" alt="Bahagian Semakan stok, 2 tidak sama: LOSCAM Merah Dalam sistem 219 fizikal 217 beza tolak 2 berwarna merah, CHEP Biru Rosak sistem 2 fizikal 3 beza tambah 1 berwarna kuning"></a>
+  <figcaption><b>Semakan stok</b>: satu kiraan kurang (merah), satu ada pallet lebih (kuning).</figcaption>
+</figure>
+
+<h3>4.3 Pallet atas lori</h3>
+<p>Satu baris = satu shipment: pallet yang keluar dengan lori dan <strong>belum diterima balik</strong> oleh stor.</p>
+<ul>
+  <li>Lajur: <b class="ui">Lori</b> (dengan shipment dan driver), <b class="ui">Tarikh keluar</b>, <b class="ui">Pallet belum pulang</b> (jenis pallet dan jumlah), <b class="ui">Kuantiti</b>.</li>
+  <li><strong>Warna:</strong> <span class="msg">Merah 3+ hari · Kuning 1–2 hari</span>. Baris tanpa warna keluar hari ini.</li>
+  <li>Baris di atas jadual menjumlahkannya, cth. <span class="msg">24 pallet · 3 shipment · 2 sudah 1+ hari</span>.</li>
+  <li><span class="msg">Pallet yang ditinggalkan di pelanggan tidak dikira di sini.</span> Pallet itu ada di bawah <b class="ui">Luar ikut pelanggan</b>.</li>
+  <li><span class="msg">Semua lori sudah pulangkan pallet.</span>: tiada pallet atas lori.</li>
+</ul>
+
+<figure>
+  <a href="img/pallet/bm-dash-lorries.png"><img width="1252" height="409" loading="lazy" decoding="async" src="img/pallet/bm-dash-lorries.png" alt="Pallet atas lori: WTC 9012 sudah 5 hari berwarna merah dengan CHEP Biru 4, WTB 5678 sudah 2 hari berwarna kuning dengan LOSCAM Merah 6, WTA 1234 keluar hari ini dengan LOSCAM Merah 10 dan CHEP Biru 4; ringkasan 24 pallet, 3 shipment, 2 sudah 1+ hari"></a>
+  <figcaption><b>Pallet atas lori</b>: kejar baris merah dulu (3 hari atau lebih), kemudian yang kuning.</figcaption>
+</figure>
+
+<h3>4.4 Luar ikut pelanggan</h3>
+<p>Di mana pallet <b class="ui">Luar</b> berada.</p>
+<ul>
+  <li>Baris dengan kod pelanggan: pallet itu direkod di pelanggan tersebut.</li>
+  <li>Baris <span class="msg">Atas lori, pelanggan belum direkodkan</span>: sudah keluar dengan lori, pelanggan belum direkod.</li>
+  <li><span class="msg">Tiada rekod pallet di luar.</span>: tiada pallet di luar.</li>
+</ul>
+
+<figure>
+  <a href="img/pallet/bm-dash-customers.png"><img width="1252" height="410" loading="lazy" decoding="async" src="img/pallet/bm-dash-customers.png" alt="Luar ikut pelanggan: 8 di pelanggan, 24 atas lori, pelanggan belum direkodkan; baris Atas lori pelanggan belum direkodkan LOSCAM Merah 16 dan CHEP Biru 8, pelanggan C0001 LOSCAM Merah 4, pelanggan C0002 CHEP Biru 4"></a>
+  <figcaption><b>Luar ikut pelanggan</b>: 8 pallet di dua pelanggan, 24 masih atas lori.</figcaption>
+</figure>
+
+<h3>4.5 Ikut jenis pallet</h3>
+<p>Satu kad bagi setiap jenis pallet.</p>
+<ul>
+  <li>Nombor besar: <b class="ui">Dalam</b>, <b class="ui">Luar</b>, <b class="ui">Rosak</b>, <b class="ui">Jumlah</b> untuk jenis itu, sekarang.</li>
+  <li>Baris kecil: <b class="ui">Dihantar</b>, <b class="ui">Pulang</b>, <b class="ui">Dibaiki</b>. Tiga nombor ini dikira daripada 400 rekod terkini sahaja.</li>
+  <li><b class="ui">Cari pallet</b>: taip sebahagian nama untuk cari satu jenis.</li>
+  <li><b class="ui">Ada stok</b> menyembunyikan jenis yang tiada stok. <b class="ui">Semua</b> tunjuk setiap jenis.</li>
+</ul>
+
+<figure>
+  <a href="img/pallet/bm-dash-types.png"><img width="1252" height="342" loading="lazy" decoding="async" src="img/pallet/bm-dash-types.png" alt="Ikut jenis pallet: kotak carian, butang Semua dan Ada stok, tiga kad LOSCAM Merah 219 20 4 243, CHEP Biru 106 12 2 120, Plastik Hitam 40 0 0 40, setiap satu dengan Dihantar, Pulang, Dibaiki"></a>
+  <figcaption><b>Ikut jenis pallet</b>: satu kad bagi setiap jenis pallet.</figcaption>
+</figure>
+
+<h3 id="history">4.6 Rekod pallet (ikut bulan)</h3>
+<p>Semua rekod pallet bagi satu bulan, terbaru di atas. Guna untuk lihat siapa rekod apa, dan untuk cari rekod yang salah.</p>
 <ol>
-  <li>Pemandu buka POD, masukkan no. lori. Bila shipment dimuat, akan keluar sepanduk <strong>Pallets on lorry &middot; Pallet atas lori</strong> di atas — senaraikan pallet yang stor naikkan ke lori ini.</li>
-  <li><strong>Betul &rarr; tak perlu buat apa-apa</strong> (sistem anggap pemandu sudah terima). Skrin tulis <strong>Correct? Do nothing &middot; Betul? Tak perlu buat apa-apa</strong>.</li>
-  <li><strong>Angka salah</strong> &rarr; tekan <strong>Wrong count? Fix here &middot; Angka salah? Betulkan</strong>, ubah kepada jumlah sebenar diterima, hantar — stor akan nampak pembetulan.</li>
+  <li>Skrol ke <b class="ui">Rekod pallet</b>. Ia dibuka pada bulan ini.</li>
+  <li>Bulan lain: tekan <b class="ui">‹</b> untuk bulan sebelum, <b class="ui">›</b> untuk bulan berikut, atau pilih bulan daripada senarai (36 bulan terakhir).</li>
+  <li>Satu jenis rekod sahaja: buka senarai <b class="ui">Semua tindakan</b> dan pilih satu, cth. ASSIGN.</li>
+  <li>Rekod yang diubah sahaja: tanda <b class="ui">Yang diubah sahaja</b>.</li>
+</ol>
+<p>Bilangan rekod yang ditunjukkan ada di kanan, cth. <span class="msg">13 rekod</span>. Lajur: <b class="ui">Tarikh</b>, <b class="ui">Tindakan</b>, <b class="ui">Pallet</b>, <b class="ui">Dari → Ke</b>, <b class="ui">Kuantiti</b>, <b class="ui">Lori · Pelanggan</b>, <b class="ui">Oleh</b> (siapa yang rekod), <b class="ui">Diubah</b>. EXT = luar CLF (prinsipal).</p>
+
+<figure>
+  <a href="img/pallet/bm-dash-history.png"><img width="1252" height="908" loading="lazy" decoding="async" src="img/pallet/bm-dash-history.png" alt="Rekod pallet untuk Nov 2026: pemilih bulan, senarai Semua tindakan, kotak Yang diubah sahaja, 13 rekod, jadual rekod dengan butang Ubah; rekod DAMAGE 18 Nov tunjuk 3 dipotong dan 2, diubah oleh Lim Wei Jie (TER001) dengan tarikh, masa dan sebab"></a>
+  <figcaption><b>Rekod pallet</b>. Rekod 18 Nov pernah diubah: kuantiti asal dipotong, kuantiti baru, siapa, bila dan kenapa.</figcaption>
+</figure>
+
+<h3 id="edit">4.7 Ubah kuantiti (pengurus sahaja)</h3>
+<p>Untuk rekod yang <strong>kuantitinya salah</strong>, cth. salah taip. Perlu <strong>PIN pengurus</strong> dan <strong>sebab</strong>. Angka stok ikut berubah serta-merta.</p>
+<ol>
+  <li>Di <b class="ui">Rekod pallet</b>, cari rekod itu. Guna bulan dan senarai tindakan supaya lebih cepat jumpa.</li>
+  <li>Tekan <b class="ui">Ubah</b> di hujung barisnya. Kotak <b class="ui">Ubah kuantiti</b> terbuka. Ia tunjuk rekod itu dan kuantiti <b class="ui">Sekarang</b>.</li>
+  <li><b class="ui">Kuantiti baru</b>: taip nombor yang betul (nombor bulat, 0 atau lebih).</li>
+  <li><b class="ui">Sebab</b>: taip kenapa anda ubah.</li>
+  <li><b class="ui">PIN pengurus</b>: pengurus taip PIN pengurus.</li>
+  <li>Tekan <b class="ui">Simpan</b>. (<b class="ui">Batal</b> menutup kotak dan tidak ubah apa-apa.)</li>
 </ol>
 
-<h3>2. Drop / Collect ikut pelanggan (+ foto)</h3>
-<p>Pada kad penghantaran setiap pelanggan, tekan <strong>Pallet? &middot; Ada pallet?</strong> untuk buka:</p>
+<figure class="phone">
+  <img width="432" height="471" loading="lazy" decoding="async" src="img/pallet/bm-dash-edit.png" alt="Kotak Ubah kuantiti: 2026-11-19 RECEIVE_PRINCIPAL PRINSIPAL A CHEP BIRU, Sekarang 60, Kuantiti baru 50, Sebab taip 60, DO tulis 50, PIN pengurus ditunjukkan sebagai titik, butang Batal dan Simpan">
+  <figcaption><b>Ubah kuantiti</b>: 60 tersalah taip, DO tulis 50.</figcaption>
+</figure>
+
+<p>Bila sudah disimpan, baris hijau tulis <span class="msg">Disimpan: kuantiti 60 → 50.</span> dan seluruh Dashboard dibaca semula. Baris itu sekarang tunjuk <strong>kuantiti asal dipotong</strong>, kuantiti baru, dan di bawah <b class="ui">Diubah</b>: <strong>siapa</strong> yang ubah, <strong>bila</strong>, dan <strong>kenapa</strong>. Kuantiti asal tidak pernah hilang.</p>
+
+<figure>
+  <a href="img/pallet/bm-dash-edit-saved.png"><img width="1252" height="992" loading="lazy" decoding="async" src="img/pallet/bm-dash-edit-saved.png" alt="Rekod pallet selepas simpan: baris hijau Disimpan: kuantiti 60 ke 50; baris RECEIVE_PRINCIPAL 19 Nov tunjuk 60 dipotong dan 50, diubah oleh Siti Aminah binti Yusof (TER000), 2026-11-26 10:05, taip 60, DO tulis 50"></a>
+  <figcaption>Selepas simpan: baris 19 Nov tunjuk 60 dipotong, 50, dan siapa / bila / kenapa.</figcaption>
+</figure>
+
+<p><strong>Apa yang ditolak:</strong></p>
 <ul>
-  <li><strong>Drop &middot; Beri</strong> = tinggalkan berapa pallet untuk pelanggan ini.</li>
-  <li><strong>Collect &middot; Ambil</strong> = ambil balik berapa pallet kosong dari pelanggan ini.</li>
-  <li><strong>Photo evidence &middot; Foto bukti (pilihan):</strong> ambil gambar sebagai bukti — sangat digalakkan, senang jika ada pertikaian nanti. Foto akan dimuat naik automatik bersama rekod.</li>
+  <li><strong>Tiada butang Ubah</strong> pada: rekod REVERSE dan ACCEPT, rekod yang dibatalkan, dan muatan yang pemandu sudah betulkan. Rekod ini tidak boleh diubah.</li>
+  <li><strong>Bawah sifar.</strong> Kalau kuantiti baru menyebabkan stok pallet itu jadi bawah sifar, tiada apa-apa disimpan. Mesejnya bermula <span class="msg">Tidak disimpan: stok pallet ini akan jadi bawah sifar</span> dan memberi angkanya. Mungkin ada rekod lain untuk pallet ini yang juga salah: betulkan rekod itu dahulu.</li>
+  <li><span class="msg">PIN pengurus salah. Tiada perubahan dibuat.</span>: taip PIN yang betul dan tekan <b class="ui">Simpan</b> sekali lagi. Selepas <strong>5 kali PIN salah</strong>, fungsi ubah dikunci selama <strong>15 minit</strong>. Tunggu, kemudian cuba lagi.</li>
+  <li><span class="msg">Sama seperti sekarang. Tiada perubahan.</span> / <span class="msg">Masukkan sebab.</span> / <span class="msg">Masukkan PIN pengurus.</span> / <span class="msg">Masukkan nombor bulat, 0 atau lebih.</span>: isi kotak yang disebut.</li>
+  <li><span class="msg">Sesi log masuk tamat. Tiada perubahan dibuat. Muat semula halaman dan log masuk semula.</span>: buat begitu, kemudian ubah sekali lagi.</li>
 </ul>
+
+<figure class="phone">
+  <img width="432" height="525" loading="lazy" decoding="async" src="img/pallet/bm-dash-edit-refused.png" alt="Kotak Ubah kuantiti dengan mesej merah: Tidak disimpan: stok pallet ini akan jadi bawah sifar (Dalam -15). Mungkin ada rekod lain untuk pallet ini yang juga salah. Betulkan rekod itu dahulu.">
+  <figcaption>Ditolak: perubahan itu akan menyebabkan stok jadi bawah sifar. Tiada apa-apa disimpan.</figcaption>
+</figure>
+
+<p><strong>Tiada jawapan daripada sistem.</strong> Kalau halaman tidak dapat jawapan, kotak kekal terbuka dengan mesej ini:</p>
+<figure class="phone">
+  <img width="432" height="507" loading="lazy" decoding="async" src="img/pallet/bm-dash-edit-noanswer.png" alt="Kotak Ubah kuantiti dengan mesej merah: Tiada jawapan daripada sistem, jadi mungkin belum disimpan. Masukkan PIN dan tekan Simpan sekali lagi untuk semak: ia tidak akan disimpan dua kali.">
+  <figcaption>Tiada jawapan: taip PIN semula dan tekan <b>Simpan</b> sekali lagi.</figcaption>
+</figure>
+<ol>
+  <li>Biarkan kuantiti dan sebab seperti yang ada.</li>
+  <li>Taip PIN pengurus semula.</li>
+  <li>Tekan <b class="ui">Simpan</b> sekali lagi. <span class="msg">ia tidak akan disimpan dua kali</span>: perubahan dibuat sekali sahaja.</li>
+</ol>
+
+<p>Kalau <b class="ui">Rekod pallet</b> tunjuk <span class="msg">Fungsi ubah belum dihidupkan.</span> dan tiada butang Ubah, beritahu pejabat.</p>
+
+<h3 id="manager">4.8 Rekod pelarasan</h3>
+<p>Senarai pembetulan oleh pengurus dan pejabat: siapa, bila, kenapa.</p>
+<ol>
+  <li>Tekan <b class="ui">Buka senarai</b>. (<b class="ui">Tutup senarai</b> menutupnya.)</li>
+  <li>Tekan <b class="ui">Semua</b>, <b class="ui">ADJUST</b>, <b class="ui">REVERSE</b>, <b class="ui">OPENING</b> atau <b class="ui">RECONCILE</b> untuk lihat satu jenis sahaja.</li>
+</ol>
+<ul>
+  <li>ADJUST = pelarasan manual. REVERSE = batalkan rekod. OPENING = baki pembukaan. RECONCILE = pembetulan selepas kira stok.</li>
+  <li>Rekod yang disahkan dengan PIN berada di atas sekali dan bertanda <b class="ui">PIN</b>.</li>
+  <li><strong>Senarai ini hanya tunjuk rekod mulai 25 Nov 2026.</strong> Pembetulan yang lebih lama tidak ditunjukkan di sini. Ia masih ada dalam rekod, dan boleh dilihat bulan demi bulan di <b class="ui">Rekod pallet</b>.</li>
+  <li><span class="msg">Tiada rekod pelarasan sejak 25 Nov 2026.</span>: belum ada apa-apa untuk ditunjukkan.</li>
+</ul>
+
+<figure>
+  <a href="img/pallet/bm-dash-manager.png"><img width="1252" height="468" loading="lazy" decoding="async" src="img/pallet/bm-dash-manager.png" alt="Senarai Rekod pelarasan terbuka: butang tapis Semua, ADJUST, REVERSE, OPENING, RECONCILE; dua baris REVERSE dan ADJUST bertanda PIN, oleh Lim Wei Jie (TER001) dengan sebab; teks bantuan Hanya rekod mulai 25 Nov 2026 disenaraikan"></a>
+  <figcaption><b>Rekod pelarasan</b>, senarai terbuka, dengan penerangan dibuka.</figcaption>
+</figure>
+
+<h3>4.9 Bila Dashboard gagal dimuatkan</h3>
+<ul>
+  <li>Bahagian yang tidak dapat dibaca tulis <span class="msg">Belum dimuatkan. Tekan Muat semula.</span> Ia <strong>tidak</strong> tunjuk 0, dan ia bukan kosong. Untuk lori ia tambah <span class="msg">Bukan bermakna tiada.</span></li>
+  <li>Satu baris di atas tulis <span class="msg">Sebahagian data gagal dimuatkan. Bahagian bertanda "Belum dimuatkan" bukan kosong. Tekan Muat semula.</span></li>
+  <li><span class="msg">Tidak dapat sambung ke sistem. Semak internet, kemudian tekan Muat semula.</span>: buat begitu.</li>
+  <li>Pada kad pallet, <span class="msg">"—" = belum dimuatkan, bukan 0. Tekan Muat semula.</span></li>
+</ul>
+
+<figure>
+  <a href="img/pallet/bm-dash-notloaded.png"><img width="1252" height="697" loading="lazy" decoding="async" src="img/pallet/bm-dash-notloaded.png" alt="Dashboard dengan baris di atas Sebahagian data gagal dimuatkan; Stok pallet tunjuk nombor; Semakan stok tulis Belum dimuatkan. Tekan Muat semula; Pallet atas lori tulis Belum dimuatkan. Tekan Muat semula. Bukan bermakna tiada."></a>
+  <figcaption>Sebahagian data gagal dimuatkan. Tekan <b>Muat semula</b>. Jangan baca bahagian ini sebagai "tiada".</figcaption>
+</figure>
+
+<hr>
+
+<h2 id="driver">5. Driver (borang POD)</h2>
+<p>Driver tak perlu buat benda rumit. Kerja pallet ikut sahaja aliran penghantaran. Gambar langkah-langkah ini ada dalam <a href="POD_Driver_Manual_BM.html#pallet-lori">manual driver POD</a>.</p>
+
+<h3>1. Pallet atas lori: kalau jumlah betul, tak perlu buat apa-apa</h3>
+<ol>
+  <li>Driver buka borang POD macam biasa. Bila stor sudah naikkan pallet untuk shipment itu, kotak <b class="ui">Pallet atas lori</b> senaraikan pallet itu di atas senarai kedai.</li>
+  <li>Jumlah betul: tak perlu buat apa-apa. Kotak itu tulis <span class="msg">Betul? Tak perlu buat apa-apa.</span></li>
+  <li>Jumlah salah: tekan <b class="ui">Jumlah salah? Betulkan</b>.</li>
+  <li>Tukar setiap nombor kepada jumlah yang anda betul-betul terima.</li>
+  <li>Tekan <b class="ui">Hantar jumlah sebenar</b>. Mesej hijau <span class="msg">Pembetulan dihantar</span> keluar.</li>
+</ol>
+
+<h3>2. Beri / Ambil di kedai (+ foto)</h3>
+<p>Isi bahagian ini <strong>sebelum</strong> tekan <b class="ui">Simpan</b> pada kad kedai. Pallet dihantar bersama Simpan.</p>
+<ol>
+  <li>Pada kad kedai, tekan <b class="ui">Ada pallet di kedai ini?</b></li>
+  <li>Pilih jenis pallet.</li>
+  <li><b class="ui">Beri</b> = berapa pallet anda tinggalkan di kedai ini. <b class="ui">Ambil</b> = berapa pallet kosong anda ambil balik.</li>
+  <li><b class="ui">Foto pallet (pilihan)</b>: ambil satu sebagai bukti. Sangat digalakkan, senang kalau ada pertikaian nanti.</li>
+  <li>Tekan <b class="ui">Simpan</b>. Mesej hijau <span class="msg">Pallet direkod</span> (atau <span class="msg">Pallet diambil</span>) keluar.</li>
+</ol>
 <blockquote>
-<p>Ini <strong>tidak sekali-kali menghalang penghantaran</strong> — walaupun pallet ada masalah, POD tetap boleh dihantar; hanya keluar peringatan supaya beritahu pejabat. Penghantaran sentiasa utama.</p>
+<p>Pallet <strong>tidak sekali-kali menghalang penghantaran</strong>. Kalau mesej merah tulis <span class="msg">Pallet TIDAK direkod</span>, POD tetap disimpan. Mesej itu tulis: <span class="msg">POD sudah disimpan. Beritahu pejabat jumlah pallet.</span> Buat begitu.</p>
 </blockquote>
 
 <h3>3. Bawa pallet balik ke stor</h3>
-<p>Pemandu <strong>tak perlu "pulang" pallet dalam sistem</strong> — <strong>bawa balik sahaja</strong> pallet yang tak sempat hantar / yang diambil balik ke stor, penyelia akan guna "Receive from Lorry" untuk terima. (Halaman Return pemandu yang lama sudah ditamatkan.)</p>
+<p>Driver <strong>tak perlu</strong> "pulang" pallet dalam sistem. <strong>Bawa balik sahaja</strong> pallet yang tak sempat dihantar dan yang diambil balik. Stor terima dengan tab <b class="ui">Lori Balik</b> (<a href="#returns">3.3</a>).</p>
+<p>Halaman lama driver "Pulang Pallet" sekarang hanya satu notis:</p>
+<figure class="phone">
+  <img width="390" height="512" loading="lazy" decoding="async" src="img/pallet/bm-return.png" alt="Halaman lama Pulang Pallet: Halaman ini tidak digunakan lagi. Driver tak perlu hantar pallet di sini lagi. Bawa balik pallet sahaja. Stor akan terima bila lori balik. Pallet yang ditinggalkan atau dipulangkan pelanggan direkod di borang POD.">
+  <figcaption>Halaman lama Pulang Pallet: <b>Halaman ini tidak digunakan lagi</b>.</figcaption>
+</figure>
 
 <hr>
 
-<h2>4. Beberapa peraturan tegas</h2>
+<h2 id="rules">6. Beberapa peraturan tegas</h2>
 <ul>
-  <li>Pallet <strong>hilang tanpa sebab</strong> &rarr; masa terima lori, tanya sampai jelas, agih kepada pelanggan atau minta pemandu jawab. Jangan terima buta-buta.</li>
-  <li>Keluar-masuk dengan principal <strong>mesti isi Reference (no. rujukan)</strong> — ini bukti untuk semak dengan syarikat pool nanti.</li>
-  <li>Lapor rosak <strong>mesti ambil foto</strong>.</li>
-  <li>Rekod (ledger) <strong>hanya tambah, tak boleh padam</strong> — kalau tersilap, betulkan melalui Adjust / Reconcile dalam sistem, jangan padam rekod. Semua tinggalkan jejak.</li>
-  <li>PIN adalah <strong>peribadi</strong>, jangan pinjamkan; kalau bocor beritahu bos untuk tukar.</li>
+  <li>Pallet <strong>hilang tanpa sebab</strong>: masa terima lori, tanya sampai jelas, dan rekod kepada pelanggan yang simpan pallet itu. Jangan terima buta-buta.</li>
+  <li>Keluar-masuk pallet dengan prinsipal <strong>mesti ada No. rujukan</strong>. Itu bukti anda bila semak dengan syarikat pool nanti.</li>
+  <li>Laporan rosak <strong>mesti ada gambar</strong>.</li>
+  <li>Rekod <strong>tidak pernah dipadam</strong>. Nombor stok yang salah dibetulkan dengan Kira Stok, atau Semak Baki dan Laras Baki. Kuantiti yang salah dalam satu rekod dibetulkan oleh pengurus di Rekod pallet. Setiap perubahan menyimpan siapa, bila dan kenapa.</li>
+  <li><span class="msg">TIDAK disimpan</span> bermaksud tidak disimpan. Tekan butang yang sama sekali lagi. Jangan taip rekod itu kali kedua dengan cara lain.</li>
+  <li><span class="msg">Gagal memuatkan</span> dan <span class="msg">Belum dimuatkan</span> tidak pernah bermaksud "tiada". Muat semula dulu sebelum buat apa-apa keputusan.</li>
+  <li>PIN anda <strong>peribadi</strong>. Jangan pinjamkan. Kalau orang lain tahu PIN anda, beritahu pejabat.</li>
 </ul>
 
-<p class="lead" style="margin-top:2em;">CLF Trading · Sistem Pallet · Manual ini ditulis mengikut butang sebenar sistem · Jika sistem dikemas kini, ikut skrin.</p>
+<p class="lead" style="margin-top:2em;">CLF Trading · Sistem Pallet · Manual ini ditulis mengikut butang sebenar sistem (26 Nov 2026) · Jika sistem dikemas kini, ikut skrin.</p>
 
 </body>
 </html>

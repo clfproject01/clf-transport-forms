@@ -32,137 +32,553 @@
   hr { border: none; border-top: 1px solid #e5e5e5; margin: 2em 0; }
   .lead { color: #555; font-size: 1.02em; }
   a { color: #1a1a1a; }
+  /* added Nov 2026: pictures, on-screen words, contents */
+  .ui { font-weight: 700; }
+  .msg { background: #f4f4f4; border: 1px solid #e5e5e5; border-radius: 4px; padding: 0.05em 0.4em; font-weight: 600; }
+  blockquote.warn { border-left-color: #c0392b; background: #fdf3f2; }
+  figure { margin: 1.1em 0 1.4em; }
+  figure img { display: block; max-width: 100%; height: auto; border: 1px solid #d8d8d8; border-radius: 8px; }
+  figure.phone img { max-width: 320px; }
+  figcaption { font-size: 0.9em; color: #555; margin-top: 0.4em; }
+  .toc { columns: 2; column-gap: 2em; padding-left: 1.2em; }
+  .toc li { margin: 0.15em 0; break-inside: avoid; }
+  @media (max-width: 560px) { .toc { columns: 1; } figure.phone img { max-width: 100%; } }
 </style>
 </head>
 <body>
 
 <h1>Pallet System Manual</h1>
-<p class="lead">The complete guide to CLF Trading's pallet system. The system tracks every pallet through its life: <strong>receive from principal &rarr; assign to lorry &rarr; deliver to customer &rarr; return to store &rarr; return to principal</strong>. On-screen buttons are in English/Malay (for example <strong>Assign &middot; Naik Lori</strong>). This guide quotes the buttons exactly as you see them.</p>
+<p class="lead">The complete guide to CLF Trading's pallet system. The system tracks every pallet through its life: <strong>receive from principal &rarr; assign to lorry &rarr; deliver to customer &rarr; return to store &rarr; return to principal</strong>. The pages show one language at a time, English or Bahasa Malaysia. This guide quotes the English buttons exactly as you see them. <a href="Pallet_Manual_BM.html">Versi Bahasa Malaysia</a>.</p>
+<p class="lead">Updated 26 November 2026 for the new look of the pages, the EN | BM switch, the Accept tab, Pallets on lorries, Pallet history and Edit quantity.</p>
 
 <blockquote>
-<p><strong>Who uses what:</strong> the store side (<strong>Pallet Store</strong> page) is <strong>locked</strong> — only authorised supervisors can open it (currently KHOO MEY LAN, LIM KOK HENG, and the boss). Drivers use the <strong>POD form</strong> — not locked, used as normal.</p>
+<p><strong>Who uses what:</strong> store staff use the <strong>Pallet Store</strong> page (phone or computer). The office and the manager use the <strong>Pallet Dashboard</strong> page. Both pages are <strong>locked</strong>: you sign in with your Staff ID and PIN. Drivers use the <strong>POD form</strong> as normal.</p>
 </blockquote>
 
-<h2>1. Understand the 4 numbers first (core idea)</h2>
-<p>The system sorts all your pallets into 4 states. The <strong>Holdings</strong> section at the top of the Dashboard shows these 4 numbers:</p>
+<ul class="toc">
+  <li><a href="#numbers">1. The 4 numbers</a></li>
+  <li><a href="#signin">2. Sign in and language</a></li>
+  <li><a href="#store">3. Pallet Store page</a>
+    <ul>
+      <li><a href="#assign">Assign</a></li>
+      <li><a href="#accept">Accept</a></li>
+      <li><a href="#returns">Returns</a></li>
+      <li><a href="#principal">Principal</a></li>
+      <li><a href="#stocktake">Stocktake</a></li>
+      <li><a href="#reconcile">Reconcile</a></li>
+      <li><a href="#damage">Damage</a></li>
+      <li><a href="#notsaved">Not saved / not loaded</a></li>
+    </ul>
+  </li>
+  <li><a href="#dashboard">4. Pallet Dashboard page</a>
+    <ul>
+      <li><a href="#history">Pallet history</a></li>
+      <li><a href="#edit">Edit quantity</a></li>
+      <li><a href="#manager">Manager actions</a></li>
+    </ul>
+  </li>
+  <li><a href="#driver">5. Driver (POD form)</a></li>
+  <li><a href="#rules">6. A few firm rules</a></li>
+</ul>
+
+<h2 id="numbers">1. Understand the 4 numbers first (core idea)</h2>
+<p>The system sorts all your pallets into 3 states and adds them up. The first section of the Dashboard, <b class="ui">Our pallets</b>, shows these 4 numbers:</p>
 <table>
 <tr><th>On screen</th><th>Meaning</th></tr>
-<tr><td><strong>Inside (DALAM)</strong><br>in store + yard</td><td><strong>With us</strong> — inside the store <em>and</em> the outside yard both count. As long as a pallet is on company ground, it is Inside.</td></tr>
-<tr><td><strong>Outgoing (LUAR)</strong><br>lorry / customer</td><td><strong>Genuinely out</strong> — on a lorry, in transit, or in a customer's hands.</td></tr>
-<tr><td><strong>Damaged (ROSAK)</strong></td><td><strong>Broken pallets</strong> — still with us but damaged, waiting to be repaired or sent back to the principal for exchange.</td></tr>
-<tr><td><strong>Total held</strong></td><td><strong>How many you hold in total</strong> (Inside + Outgoing + Damaged). This number ≈ what you owe the pool companies (LOSCAM / CHEP), used for reconciliation.</td></tr>
+<tr><td><b class="ui">Inside</b><br>Store + yard</td><td><strong>With us</strong>: inside the store <em>and</em> the outside yard both count. As long as a pallet is on company ground, it is Inside.</td></tr>
+<tr><td><b class="ui">Out</b><br>On lorries or at customers</td><td><strong>Genuinely out</strong>: on a lorry, in transit, or in a customer's hands.</td></tr>
+<tr><td><b class="ui">Damaged</b></td><td><strong>Broken pallets</strong>: still with us but damaged, waiting to be repaired or sent back to the principal.</td></tr>
+<tr><td><b class="ui">Total</b><br>Inside + Out + Damaged</td><td><strong>How many you hold in total.</strong> Use this number when you reconcile with the pool companies (LOSCAM / CHEP).</td></tr>
 </table>
 
+<figure>
+  <a href="img/pallet/en-dash-top.png"><img width="1280" height="297" loading="lazy" decoding="async" src="img/pallet/en-dash-top.png" alt="Top of the Pallet Dashboard: Refresh button, Updated 10:05, and the section Our pallets with Inside 365, Out 32, Damaged 6, Total 403"></a>
+  <figcaption>Pallet Dashboard, section <b>Our pallets</b>. All numbers and names in the pictures of this manual are samples.</figcaption>
+</figure>
+
 <blockquote>
-<p><strong>Key point:</strong> Outgoing (LUAR) = out of the company — <strong>not</strong> necessarily "in a customer's hands". Only when a driver records a drop for a specific customer on the POD does the Dashboard show "at that customer". The rest is "on a lorry, customer not yet recorded".</p>
+<p><strong>Key point:</strong> <b class="ui">Out</b> = out of the company. It does <strong>not</strong> always mean "in a customer's hands". Only when a pallet is recorded for a customer does the Dashboard list it under that customer. The rest shows as <span class="msg">On lorry, no customer yet</span>.</p>
 </blockquote>
 
 <h3>Pallet life cycle (the full flow)</h3>
 <blockquote>
-<p>Principal sends pallets &rarr; <strong>Receive from principal</strong> (into Inside)<br>
-Inside &rarr; <strong>Assign</strong> onto a lorry (becomes Outgoing) &rarr; driver delivers<br>
-At the customer: <strong>Drop</strong> leave pallets / <strong>Collect</strong> take back empty pallets<br>
-Lorry returns: <strong>Receive from lorry</strong> (good into Inside, damaged into Damaged)<br>
-When enough pile up &rarr; <strong>Return to principal</strong> (leaves the company, total drops)</p>
+<p>Principal sends pallets &rarr; store: <b class="ui">Principal</b> tab, <b class="ui">Receive from</b> (into Inside)<br>
+Inside &rarr; store: <b class="ui">Assign</b> tab, onto a lorry (becomes Out) &rarr; driver delivers<br>
+At the customer &rarr; driver, POD form: <b class="ui">Drop</b> leave pallets / <b class="ui">Collect</b> take back empty pallets<br>
+Lorry returns &rarr; store: <b class="ui">Returns</b> tab (good into Inside, damaged into Damaged)<br>
+When enough pile up &rarr; store: <b class="ui">Principal</b> tab, <b class="ui">Return to</b> (leaves the company, Total drops)</p>
 </blockquote>
 
 <hr>
 
-<h2>2. Store Supervisor (Pallet Store page · locked)</h2>
+<h2 id="signin">2. Sign in and language</h2>
 
-<h3>1. Unlock (first time / new phone)</h3>
+<h3>Sign in (both pages)</h3>
 <ol>
-  <li>Open the Pallet Store link. You will first see a <strong>lock screen</strong> (🔒 <strong>Pallet Store is locked</strong>).</li>
-  <li>Enter your <strong>Staff ID &middot; ID Staf</strong> (e.g. <code>TER282</code>) and your <strong>PIN</strong>.</li>
-  <li>Tap <strong>Unlock &middot; Buka</strong>. Once successful, this phone/computer <strong>remembers for 30 days</strong> — after that it opens straight in, no PIN each time.</li>
+  <li>Open the page. A sign-in box covers it. On the Pallet Store it says <span class="msg">Pallet Store is locked</span>. On the Pallet Dashboard it says <span class="msg">Sign in</span>.</li>
+  <li>Type your <b class="ui">Staff ID</b>.</li>
+  <li>Type your <b class="ui">PIN</b>. No PIN yet? Ask the office.</li>
+  <li>Tap <b class="ui">Sign in</b>. On the Pallet Store a green message <span class="msg">Signed in</span> shows your name.</li>
 </ol>
-<blockquote>
-<p>5 wrong PINs locks you out for 15 minutes. Every entry you make is <strong>stamped with your name (ID)</strong> automatically — nobody can use your name. <strong>To add / remove a person:</strong> add a row in the <code>Pallet_Access</code> sheet (Staff ID, Name, PIN, Active=TRUE); to deactivate set that row's <code>Active</code> to <code>FALSE</code>.</p>
+
+<figure class="phone">
+  <img width="378" height="438" loading="lazy" decoding="async" src="img/pallet/en-store-signin.png" alt="Sign-in box of the Pallet Store: EN BM switch, Pallet Store is locked, Authorised staff only, Staff ID TER000, PIN shown as dots, Sign in button">
+  <figcaption>The sign-in box of the Pallet Store. The EN | BM switch is at the top right of the box.</figcaption>
+</figure>
+
+<ul>
+  <li>This phone or computer remembers you. One sign-in opens both the Pallet Store and the Pallet Dashboard in the same browser.</li>
+  <li>If the box comes back with <span class="msg">Session ended. Sign in again.</span>, sign in again. Nothing is lost.</li>
+  <li><span class="msg">Enter Staff ID and PIN</span>: one of the two boxes is empty.</li>
+  <li>Wrong Staff ID or PIN: the box shows the reason in red. After 5 wrong tries the sign-in is locked for 15 minutes. Wait, then try again. If you forgot your PIN, ask the office.</li>
+  <li><span class="msg">Could not sign in. Check the connection and try again.</span>: check your internet, then tap <b class="ui">Sign in</b> again.</li>
+</ul>
+
+<h3>Language: EN | BM</h3>
+<ol>
+  <li>Find the <b class="ui">EN</b> | <b class="ui">BM</b> switch: top right of each page, and on the sign-in box. The page opens in English until you choose.</li>
+  <li>Tap <b class="ui">BM</b> for Bahasa Malaysia, or <b class="ui">EN</b> for English.</li>
+</ol>
+<p>The words change at once. What you already typed stays. The phone remembers your choice, for both pages.</p>
+
+<hr>
+
+<h2 id="store">3. Store staff (Pallet Store page)</h2>
+<p>The page has 7 tabs: <b class="ui">Stocktake</b>, <b class="ui">Reconcile</b>, <b class="ui">Damage</b>, <b class="ui">Assign</b>, <b class="ui">Accept</b>, <b class="ui">Returns</b>, <b class="ui">Principal</b>. The <b class="ui">Dashboard</b> button at the top opens the Pallet Dashboard.</p>
+
+<figure class="phone">
+  <img width="390" height="225" loading="lazy" decoding="async" src="img/pallet/en-store-tabs.png" alt="Top of the Pallet Store on a phone: EN BM switch, Dashboard button, and the seven tabs Stocktake, Reconcile, Damage, Assign, Accept, Returns, Principal">
+  <figcaption>The 7 tabs. The dark tab is the one you are in.</figcaption>
+</figure>
+
+<p>The same on every tab:</p>
+<ul>
+  <li><b class="ui">How to use</b> opens three short reminder lines. Tap it again to close.</li>
+  <li>A red star (*) marks a box you must fill.</li>
+  <li><b class="ui">Staff ID</b> is filled in for you after sign-in, with a green tick and your name under it. If it says <span class="msg">Staff ID not found</span>, type your Staff ID again.</li>
+</ul>
+
+<h3 id="assign">3.1 Assign: pallets onto a lorry</h3>
+<p>Send pallets from Inside onto a lorry, for one shipment.</p>
+<ol>
+  <li>Tap the <b class="ui">Assign</b> tab.</li>
+  <li><b class="ui">Date</b>: pick the day of the shipment. If you leave it empty, the page uses today.</li>
+  <li><b class="ui">Lorry no.</b>: type the plate, for example <code>WTA 1234</code>.</li>
+  <li>Tap <b class="ui">Find shipment</b>. A green tick with the shipment number means it is found. You do not type a shipment number.</li>
+  <li>Read the line under the button: <span class="msg">Nothing assigned yet</span>, or <span class="msg">Already assigned: </span> with what is on the lorry already.</li>
+  <li>Under <b class="ui">Pallets for lorry</b>, tap <b class="ui">+</b> or <b class="ui">−</b> to set how many of each pallet type go on the lorry. Each line shows how many are Inside now.</li>
+  <li>Check that <b class="ui">Staff ID</b> shows your name.</li>
+  <li>Tap <b class="ui">Assign pallets</b>. A green message <span class="msg">Assigned</span> shows the lorry and the shipment.</li>
+</ol>
+
+<figure class="phone">
+  <img width="346" height="828" loading="lazy" decoding="async" src="img/pallet/en-store-assign.png" alt="Assign tab: date 26/11/2026, lorry WTA 1234, shipment found with a green tick, Nothing assigned yet, LOSCAM Merah 10, CHEP Biru 4, Plastik Hitam 0, Staff ID TER000 with name, Assign pallets button">
+  <figcaption>Assign: shipment found, 10 and 4 pallets set, ready to tap <b>Assign pallets</b>.</figcaption>
+</figure>
+
+<ul>
+  <li><span class="msg">No shipment for WTA 1234 on 2026-11-26</span>: check the lorry no. and the date, then tap <b class="ui">Find shipment</b> again.</li>
+  <li>The lorry has several shipments that day: the page says <span class="msg">shipments on this date. Choose one:</span>. Pick the right one from the list.</li>
+  <li>You cannot assign more than you have. The page puts the number back and shows <span class="msg">Only 219 Inside</span>.</li>
+  <li><span class="msg">Could not check what is already assigned. Tap Find shipment again before assigning.</span>: do that first, so you do not load the same pallets twice.</li>
+  <li>If the message says some lines are <strong>NOT</strong> saved, it names them. The saved lines go back to 0. <span class="msg">Tap Assign pallets again to send only these.</span></li>
+</ul>
+
+<h3 id="accept">3.2 Accept: the driver confirms what was loaded</h3>
+<p>Use this tab when the driver checks the pallets with you at the store. (A driver can also correct the count alone on the POD form, see <a href="#driver">part 5</a>.)</p>
+<ol>
+  <li>Tap the <b class="ui">Accept</b> tab.</li>
+  <li><b class="ui">Shipment date</b>: leave it on today, unless the lorry left on another day.</li>
+  <li><b class="ui">Lorry no.</b>: type the plate.</li>
+  <li>Tap <b class="ui">Find shipment</b>. Under <b class="ui">Assigned pallets</b> you see one line per pallet type, with <span class="msg">Assigned 10</span>.</li>
+  <li>The driver checks each line. Count correct: leave it, the <b class="ui">Correct</b> button stays green.</li>
+  <li>Count wrong: tap <b class="ui">−</b> or <b class="ui">+</b> until <b class="ui">Received</b> shows what the driver really got. (Tap <b class="ui">Correct</b> to put the assigned number back.)</li>
+  <li><b class="ui">Driver name</b>: type the driver's name.</li>
+  <li>Tap <b class="ui">Confirm received</b>. A green message <span class="msg">Confirmed</span> appears.</li>
+</ol>
+
+<figure class="phone">
+  <img width="346" height="848" loading="lazy" decoding="async" src="img/pallet/en-store-accept.png" alt="Accept tab: lorry WTA 1234, shipment found, LOSCAM Merah assigned 10 received 9, CHEP Biru assigned 4 received 4 with Correct in green, driver name Ahmad bin Rosli, Confirm received button">
+  <figcaption>Accept: the driver received 9 LOSCAM, not 10. CHEP is correct.</figcaption>
+</figure>
+
+<ul>
+  <li><span class="msg">No pallets assigned to this shipment yet</span>: nothing was assigned to this shipment. Check the lorry no. and the date.</li>
+  <li>If you picked another day, an orange tag <span class="msg">Not today: 2026-11-25</span> shows next to the shipment. Check that this is the day you want.</li>
+  <li>If some lines are <strong>NOT</strong> confirmed, only those lines stay on the screen. Tap <b class="ui">Confirm received</b> again.</li>
+</ul>
+
+<h3 id="returns">3.3 Returns: receive from the lorry</h3>
+<p>When the lorry comes back, the store counts and receives. This is the most important checking point.</p>
+<ol>
+  <li>Tap the <b class="ui">Returns</b> tab.</li>
+  <li><b class="ui">Shipment date</b>: leave it on today, unless the lorry left on another day. Then pick that day.</li>
+  <li><b class="ui">Lorry no.</b>: type the plate.</li>
+  <li>Tap <b class="ui">Check lorry</b>. Under <b class="ui">Still on lorry</b> each pallet type shows <span class="msg">Expected:</span> and a number. That is what should still be on the lorry.</li>
+  <li>Count the real pallets. Type the numbers in <b class="ui">Good</b> and <b class="ui">Damaged</b>.</li>
+  <li>Good + Damaged = Expected: the line shows <span class="msg">Matches expected</span>.</li>
+  <li>Fewer than expected: the line shows <span class="msg">Short 2. Left at which customer?</span> Choose the customer. The quantity next to it must be the missing number.</li>
+  <li>More than expected: the line shows <span class="msg">Extra 1. From which customer?</span> Choose the customer who returned them.</li>
+  <li>Tap <b class="ui">Receive all</b>. A green message <span class="msg">Received</span> lists every line. Good pallets go into Inside, damaged pallets into Damaged.</li>
+</ol>
+
+<figure class="phone">
+  <img width="346" height="959" loading="lazy" decoding="async" src="img/pallet/en-store-returns.png" alt="Returns tab: shipment date 25/11/2026, lorry WTA 1234, shipment found with the tag Not today: 2026-11-25, LOSCAM Merah expected 6 good 4, Short 2 Left at which customer with customer C0001 Kedai Maju chosen, CHEP Biru expected 4 good 4 Matches expected, Receive all button">
+  <figcaption>Returns for a lorry that left yesterday (tag <b>Not today</b>). 2 LOSCAM are short and are booked to the customer who kept them.</figcaption>
+</figure>
+
+<blockquote class="warn">
+<p>The page itself warns: <span class="msg">Driver does not know where they went? Do NOT receive. Ask first.</span> This step exists to force that talk, so pallets do not just vanish.</p>
 </blockquote>
 
-<h3>2. Assign onto a lorry — <strong>Assign &middot; Naik Lori</strong></h3>
-<p>Send pallets from Inside onto a lorry (with a shipment).</p>
-<ol>
-  <li>Fill in <strong>Date &middot; Tarikh</strong> (today by default) and <strong>Lorry No &middot; No. Lori</strong> (e.g. <code>WTA 1234</code>).</li>
-  <li>Tap <strong>Load Shipment &middot; Muat Shipment</strong> — the system <strong>finds that lorry's shipment for today by itself</strong> (no need to type a shipment number). If the lorry runs several trips, a dropdown lets you pick one.</li>
-  <li>In <strong>Pallets Out &middot; Pallet Keluar</strong>, use + / − to set how many of each type (<strong>cannot exceed the current Inside stock</strong>).</li>
-  <li>Enter your Staff ID (your name appears), tap <strong>Assign Pallets &middot; Tugas Pallet</strong>.</li>
-</ol>
+<ul>
+  <li>If you tap <b class="ui">Receive all</b> without choosing the customer, nothing is saved. A red message says to choose the customer and that the quantity must match.</li>
+  <li>After saving, the list loads again. <span class="msg">Nothing left on this lorry</span> means all pallets of this shipment are accounted for.</li>
+  <li>The page takes <strong>one customer per pallet type</strong> for a shortage. If the missing pallets were left at two different customers, tell the office before you receive.</li>
+  <li><span class="msg">Some lines NOT saved</span>: <span class="msg">The list has reloaded. Count again what is still shown.</span></li>
+</ul>
 
-<h3>3. Receive from Lorry — <strong>Returns &middot; Pulang</strong></h3>
-<p>When the lorry returns, the store counts and receives. This is the most important reconciliation point.</p>
-<ol>
-  <li>Enter the lorry no, tap <strong>Load Lorry &middot; Muat Lori</strong> — each pallet type shows <strong>"Expected on lorry"</strong> = assigned out − already given to customers.</li>
-  <li>Count for real, fill in <strong>Good &middot; Elok</strong> and <strong>Damaged &middot; Rosak</strong>.</li>
-  <li>If it doesn't match, the system <strong>forces you to explain the difference</strong>:
-    <ul>
-      <li><strong>Short</strong> &rarr; "Left at which customer?" Pick the customer, enter the qty (recorded as a Drop; that customer's outstanding goes up).</li>
-      <li><strong>Extra</strong> &rarr; "Which customer returned them?" Pick the customer, enter the qty (recorded as a Collect; that customer's outstanding goes down).</li>
-    </ul>
-  </li>
-  <li>Each line must "balance" (good + damaged + left-at-customer = expected) before you can tap <strong>Receive All &middot; Terima Semua</strong>. Good goes into Inside, damaged into Damaged.</li>
-</ol>
-<blockquote>
-<p><strong>Driver can't say where the missing pallets went?</strong> Do not receive yet — ask until it's clear. This step exists precisely to force that conversation, so pallets don't just vanish.</p>
-</blockquote>
+<p><strong>If the list does not load</strong>, you see a red box, not an empty lorry:</p>
+<figure class="phone">
+  <img width="346" height="164" loading="lazy" decoding="async" src="img/pallet/en-store-loadfail.png" alt="Red box under Still on lorry: Could not load. This does NOT mean the lorry is empty. Tap Check lorry again">
+  <figcaption><b>Could not load</b> does not mean the lorry is empty. Check your internet and tap <b>Check lorry</b> again.</figcaption>
+</figure>
 
-<h3>4. Principal — return / receive <strong>Balik Prinsipal</strong></h3>
-<p>Pallets in and out with the pool companies (LOSCAM, CHEP). At the top, <strong>Direction &middot; Arah</strong> picks the way:</p>
+<h3 id="principal">3.4 Principal: return to / receive from the principal</h3>
+<p>Pallets in and out with the pool companies (LOSCAM, CHEP).</p>
 <table>
-<tr><th>Direction</th><th>When to use</th><th>Effect</th></tr>
-<tr><td><strong>Return to &middot; Pulang ke</strong></td><td>Send pallets back to the principal (good from Inside, or damaged from Damaged for exchange)</td><td>Total <strong>drops</strong> (leaves the company)</td></tr>
-<tr><td><strong>Receive from &middot; Terima dari</strong></td><td>Principal sends new / replacement pallets in</td><td>Total <strong>rises</strong> (into Inside)</td></tr>
+<tr><th>Choose</th><th>When to use</th><th>Effect</th></tr>
+<tr><td><b class="ui">Return to</b></td><td>You send pallets back to the principal: good ones from Inside, or broken ones from Damaged.</td><td>Stock goes <strong>down</strong>.</td></tr>
+<tr><td><b class="ui">Receive from</b></td><td>The principal sends pallets in.</td><td>Stock goes <strong>up</strong> (into Inside).</td></tr>
 </table>
-<p>Pick the pallet type &rarr; enter the quantity &rarr; fill in <strong>Reference &middot; Rujukan</strong> (the principal's DO / note no — REQUIRED, so you can check it later) &rarr; Staff ID &rarr; submit.</p>
+<ol>
+  <li>Tap the <b class="ui">Principal</b> tab.</li>
+  <li><b class="ui">Pallet</b>: choose the pallet type.</li>
+  <li>Tap <b class="ui">Return to</b> or <b class="ui">Receive from</b>.</li>
+  <li>For <b class="ui">Return to</b> only: under <b class="ui">From</b>, tap <b class="ui">Inside</b> or <b class="ui">Damaged</b>.</li>
+  <li>Type the quantity (<b class="ui">How many returned?</b> or <b class="ui">How many received?</b>). A strip under the box shows the balance after saving.</li>
+  <li><b class="ui">Reference no.</b>: type the principal's DO or note number. It is required.</li>
+  <li>Check <b class="ui">Date</b> and <b class="ui">Staff ID</b>.</li>
+  <li>Tap <b class="ui">Return to principal</b> (or <b class="ui">Receive from principal</b>). A green message <span class="msg">Returned to principal</span> (or <span class="msg">Received from principal</span>) appears.</li>
+</ol>
 
-<h3>5. Stocktake · Reconcile · Damage (daily upkeep)</h3>
+<figure class="phone">
+  <img width="346" height="993" loading="lazy" decoding="async" src="img/pallet/en-store-principal.png" alt="Principal tab: pallet LOSCAM Merah, Return to chosen, From Inside, system balance card, how many returned 20, reference no. DO-1002, date, Staff ID TER000, Return to principal button">
+  <figcaption>Return 20 good LOSCAM pallets to the principal, with the DO number as reference.</figcaption>
+</figure>
+
 <ul>
-  <li><strong>Stocktake &middot; Kira Stok:</strong> physically count how many of a pallet type there are now, enter it; the system corrects the difference so the record = physical.</li>
-  <li><strong>Reconcile &middot; Padan:</strong> see whether there is a gap between record and physical; if none it shows <strong>✓ balanced</strong>.</li>
-  <li><strong>Damage &middot; Rosak:</strong> mark good pallets as damaged (into Damaged). <strong>A photo of the broken pallet is REQUIRED.</strong> When repaired, use <strong>Fixed</strong> to record them back into Inside.</li>
+  <li><span class="msg">Enter reference no.</span>: the reference box is empty. Nothing is saved without it.</li>
+  <li>You cannot return more than you have: the strip shows how many there are, and the page refuses with <span class="msg">Only 213 in the system.</span></li>
 </ul>
 
-<h3>6. Dashboard — <strong>Pallet Dashboard</strong></h3>
-<p>See totals, the breakdown per pallet type, and which customer still owes pallets. <strong>Reconcile ✓ balanced</strong> means record = physical. "Outgoing — by customer" fills with real customer names as drivers start recording drops.</p>
+<h3 id="stocktake">3.5 Stocktake: make the system follow your count</h3>
+<p><b class="ui">Stocktake</b> <strong>replaces</strong> the system balance with the number you counted. Old records are kept.</p>
+<ol>
+  <li>Tap the <b class="ui">Stocktake</b> tab.</li>
+  <li><b class="ui">Pallet</b>: choose the pallet type.</li>
+  <li><b class="ui">Which stock</b>: tap <b class="ui">Inside</b>, <b class="ui">Out</b> or <b class="ui">Damaged</b>. The card <b class="ui">System balance</b> shows what the system has now.</li>
+  <li><b class="ui">Your count</b>: type the number you really counted. A strip shows the difference at once.</li>
+  <li>Check <b class="ui">Date</b> and <b class="ui">Staff ID</b>.</li>
+  <li>Tap <b class="ui">Save count</b>.</li>
+  <li>If your count is different from the system, a box asks <span class="msg">Change the balance?</span> It shows <b class="ui">System</b>, <b class="ui">Your count</b> and <b class="ui">Change</b>. Read the numbers.</li>
+  <li>Tap <b class="ui">Yes, save</b> if they are right. Tap <b class="ui">Cancel</b> to go back: nothing is saved.</li>
+</ol>
+
+<figure class="phone">
+  <img width="386" height="334" loading="lazy" decoding="async" src="img/pallet/en-store-confirm.png" alt="Confirm box Change the balance? CHEP Biru Inside: System 106, Your count 12, Change minus 94, red line Big change. Check the number again, buttons Cancel and Yes, save">
+  <figcaption>The confirm box. Here 12 was typed, not 120: the red line <b>Big change. Check the number again.</b> catches it.</figcaption>
+</figure>
+
+<p>After saving, a green message <span class="msg">Count saved</span> shows the new balance.</p>
+
+<h3 id="reconcile">3.6 Reconcile: compare only</h3>
+<p><b class="ui">Reconcile</b> only <strong>compares</strong> your count with the system and records the difference. The balance does not change. The difference shows on the Dashboard under <b class="ui">Stock count</b> for the office to see.</p>
+<ol>
+  <li>Tap the <b class="ui">Reconcile</b> tab.</li>
+  <li>Choose <b class="ui">Pallet</b> and <b class="ui">Which stock</b>, as in Stocktake.</li>
+  <li><b class="ui">Your count</b>: type the number you counted.</li>
+  <li><b class="ui">Note</b>: add a short note if you want.</li>
+  <li>Tap <b class="ui">Save check</b>.</li>
+  <li>Same as the system: green message <span class="msg">Count matches</span>. Done.</li>
+  <li>Not the same: orange message <span class="msg">Difference recorded</span>, and a part <b class="ui">Manager adjust</b> opens below.</li>
+</ol>
+<p><strong>Manager adjust (manager only).</strong> The manager can set the system balance to the real count:</p>
+<ol>
+  <li><b class="ui">Manager PIN</b>: the manager types the manager PIN.</li>
+  <li><b class="ui">Reason</b>: type why, for example "miscount".</li>
+  <li>Tap <b class="ui">Adjust balance</b>. A green message <span class="msg">Balance adjusted</span> shows the old and the new balance.</li>
+</ol>
+
+<figure class="phone">
+  <img width="346" height="865" loading="lazy" decoding="async" src="img/pallet/en-store-adjust.png" alt="Reconcile tab after Save check: your count 187, strip Difference minus 6: system 193, counted 187, then Manager adjust with Manager PIN shown as dots, Reason counted twice, Adjust balance button">
+  <figcaption>Reconcile found a difference of −6. The manager types the PIN and a reason, then taps <b>Adjust balance</b>.</figcaption>
+</figure>
+
+<ul>
+  <li><span class="msg">Wrong or missing PIN</span> / <span class="msg">Balance NOT changed.</span>: type the right manager PIN and tap again.</li>
+  <li><span class="msg">Sent, not confirmed</span>: the page got no answer. Check the balance in 1 minute <strong>before</strong> you send again.</li>
+</ul>
+
+<h3 id="damage">3.7 Damage: broken and repaired pallets</h3>
+<p><strong>Mark pallets as damaged</strong> (Inside or Out &rarr; Damaged). A photo is required.</p>
+<ol>
+  <li>Tap the <b class="ui">Damage</b> tab.</li>
+  <li><b class="ui">Pallet</b>: choose the pallet type.</li>
+  <li><b class="ui">From</b>: tap <b class="ui">Inside</b> or <b class="ui">Out</b>.</li>
+  <li><b class="ui">How many damaged?</b>: type the number.</li>
+  <li><b class="ui">Photo</b>: tap <b class="ui">Take photo</b> and take a clear picture of the damage. You can add up to 10.</li>
+  <li><b class="ui">Reason</b>: add one if you want, for example "forklift".</li>
+  <li>Check <b class="ui">Date</b> and <b class="ui">Staff ID</b>.</li>
+  <li>Tap <b class="ui">Mark damaged</b>. A green message <span class="msg">Marked damaged</span> appears.</li>
+</ol>
+
+<figure class="phone">
+  <img width="346" height="1166" loading="lazy" decoding="async" src="img/pallet/en-store-damage.png" alt="Damage tab: pallet LOSCAM Merah, From Inside, system balance card, how many damaged 2, one photo added, reason forklift, date, Staff ID TER000, Mark damaged button">
+  <figcaption>Damage: 2 pallets, one photo added (sample drawing), ready to tap <b>Mark damaged</b>.</figcaption>
+</figure>
+
+<ul>
+  <li><span class="msg">Take at least 1 photo</span>: no photo yet. Nothing is saved without a photo.</li>
+  <li><span class="msg">Sent, not confirmed</span> / <span class="msg">Check the Dashboard in 1 minute before sending again.</span>: do exactly that. Your photos stay on the screen.</li>
+</ul>
+
+<p><strong>Repaired pallets</strong> (Damaged &rarr; Inside), lower on the same tab under <b class="ui">Repaired pallets</b>. No photo needed.</p>
+<ol>
+  <li><b class="ui">Pallet</b>: choose the pallet type.</li>
+  <li><b class="ui">How many repaired?</b>: type the number. It cannot be more than the Damaged number on the card.</li>
+  <li>Check <b class="ui">Date</b> and <b class="ui">Staff ID</b>.</li>
+  <li>Tap <b class="ui">Mark repaired</b>. A green message <span class="msg">Marked repaired</span> appears.</li>
+</ol>
+
+<h3 id="notsaved">3.8 When something is not saved or not loaded</h3>
+<figure class="phone">
+  <img width="378" height="87" loading="lazy" decoding="async" src="img/pallet/en-store-notsaved.png" alt="Red message at the bottom of the screen: NOT saved. No connection. Check it and tap again.">
+  <figcaption>A red message always says what to do next.</figcaption>
+</figure>
+<ul>
+  <li><span class="msg">NOT saved</span> with <span class="msg">No connection. Check it and tap again.</span>: check your internet, then tap the <strong>same button again</strong>. This is safe. If the first try did reach the system, the answer is <span class="msg">Already saved</span> and it is not counted twice.</li>
+  <li><span class="msg">NOT saved</span> with another reason: read the reason, correct it, tap again.</li>
+  <li><span class="msg">Could not load</span>: the page could not read the data. It is <strong>not</strong> empty. Check your internet and tap <b class="ui">Find shipment</b> or <b class="ui">Check lorry</b> again.</li>
+  <li><span class="msg">Sent, not confirmed</span> (photo and manager PIN steps): wait 1 minute and check first. Send again only if it is really not there.</li>
+</ul>
 
 <hr>
 
-<h2>3. Driver (POD form)</h2>
-<p>Drivers are <strong>not locked and record nothing complicated</strong>. The pallet actions follow the delivery naturally.</p>
+<h2 id="dashboard">4. Office and manager (Pallet Dashboard page)</h2>
+<p>Tap a wide picture in this part to see it full size.</p>
+<p>The Dashboard is for reading. Only one thing can be changed here: the quantity of an entry, by a manager (<a href="#edit">4.7</a>).</p>
+<ul>
+  <li><b class="ui">Refresh</b> reads the newest numbers. Next to it you see when the numbers were read, for example <span class="msg">Updated 10:05</span>.</li>
+  <li>If <b class="ui">Refresh</b> does nothing just after you signed in on this page, reload the page once.</li>
+  <li><b class="ui">What do these numbers mean?</b> under a section opens a short explanation.</li>
+  <li><b class="ui">Pallet Store</b> at the top opens the store page.</li>
+</ul>
+<p>The sections, from top to bottom: <b class="ui">Our pallets</b>, <b class="ui">Stock count</b>, <b class="ui">Pallets on lorries</b>, <b class="ui">Out by customer</b>, <b class="ui">By pallet type</b>, <b class="ui">Pallet history</b>, <b class="ui">Manager actions</b>.</p>
 
-<h3>1. Default-accept — if the count is right, do nothing</h3>
+<h3>4.1 Our pallets</h3>
+<p>The 4 numbers for the whole company: <b class="ui">Inside</b>, <b class="ui">Out</b>, <b class="ui">Damaged</b>, <b class="ui">Total</b>. See <a href="#numbers">part 1</a>.</p>
+
+<h3>4.2 Stock count</h3>
+<p>Shows every count from the store's <b class="ui">Reconcile</b> tab that did not match the system and is still open.</p>
+<ul>
+  <li><span class="msg">All counts match.</span>: nothing to do.</li>
+  <li>Otherwise a table: <b class="ui">System</b> = what the system has, <b class="ui">Counted</b> = what the store counted, <b class="ui">Difference</b> = Counted − System.</li>
+  <li>Red row with a minus = pallets <strong>short</strong>. Yellow row with a plus = <strong>extra</strong> pallets found.</li>
+</ul>
+
+<figure>
+  <a href="img/pallet/en-dash-stockcount.png"><img width="1252" height="306" loading="lazy" decoding="async" src="img/pallet/en-dash-stockcount.png" alt="Stock count section, 2 not matching: LOSCAM Merah Inside system 219 counted 217 difference minus 2 in red, CHEP Biru Damaged system 2 counted 3 difference plus 1 in yellow"></a>
+  <figcaption><b>Stock count</b>: one count is short (red), one has an extra pallet (yellow).</figcaption>
+</figure>
+
+<h3>4.3 Pallets on lorries</h3>
+<p>One row per shipment: pallets that went out on a lorry and are <strong>not yet received back</strong> by the store.</p>
+<ul>
+  <li>Columns: <b class="ui">Lorry</b> (with shipment and driver), <b class="ui">Date out</b>, <b class="ui">Still out</b> (pallet type and number), <b class="ui">Qty</b>.</li>
+  <li><strong>Colours:</strong> <span class="msg">Red 3+ days · Yellow 1–2 days</span>. A row with no colour went out today.</li>
+  <li>The line above the table adds it up, for example <span class="msg">24 pallets · 3 shipments · 2 out 1+ days</span>.</li>
+  <li><span class="msg">Pallets left at a customer are not counted here.</span> They are under <b class="ui">Out by customer</b>.</li>
+  <li><span class="msg">All lorries have returned their pallets.</span>: nothing is out on a lorry.</li>
+</ul>
+
+<figure>
+  <a href="img/pallet/en-dash-lorries.png"><img width="1252" height="409" loading="lazy" decoding="async" src="img/pallet/en-dash-lorries.png" alt="Pallets on lorries: WTC 9012 out 5 days in red with CHEP Biru 4, WTB 5678 out 2 days in yellow with LOSCAM Merah 6, WTA 1234 out today with LOSCAM Merah 10 and CHEP Biru 4; summary 24 pallets, 3 shipments, 2 out 1+ days"></a>
+  <figcaption><b>Pallets on lorries</b>: chase the red row first (out 3 days or more), then the yellow one.</figcaption>
+</figure>
+
+<h3>4.4 Out by customer</h3>
+<p>Where the <b class="ui">Out</b> pallets are.</p>
+<ul>
+  <li>A row with a customer code: those pallets are recorded at that customer.</li>
+  <li>A row <span class="msg">On lorry, no customer yet</span>: went out on a lorry, no customer recorded yet.</li>
+  <li><span class="msg">No pallets recorded out.</span>: nothing is out.</li>
+</ul>
+
+<figure>
+  <a href="img/pallet/en-dash-customers.png"><img width="1252" height="410" loading="lazy" decoding="async" src="img/pallet/en-dash-customers.png" alt="Out by customer: 8 at customers, 24 on lorries, no customer yet; rows On lorry no customer yet LOSCAM Merah 16 and CHEP Biru 8, customer C0001 LOSCAM Merah 4, customer C0002 CHEP Biru 4"></a>
+  <figcaption><b>Out by customer</b>: 8 pallets are at two customers, 24 are still on lorries.</figcaption>
+</figure>
+
+<h3>4.5 By pallet type</h3>
+<p>One card per pallet type.</p>
+<ul>
+  <li>Big numbers: <b class="ui">Inside</b>, <b class="ui">Out</b>, <b class="ui">Damaged</b>, <b class="ui">Total</b> for that type, right now.</li>
+  <li>Small line: <b class="ui">Sent out</b>, <b class="ui">Returned</b>, <b class="ui">Repaired</b>. These three are counted from the latest 400 records only.</li>
+  <li><b class="ui">Search pallets</b>: type part of a name to find a type.</li>
+  <li><b class="ui">With pallets</b> hides the types with nothing in stock. <b class="ui">All</b> shows every type.</li>
+</ul>
+
+<figure>
+  <a href="img/pallet/en-dash-types.png"><img width="1252" height="342" loading="lazy" decoding="async" src="img/pallet/en-dash-types.png" alt="By pallet type: search box, All and With pallets buttons, three cards LOSCAM Merah 219 20 4 243, CHEP Biru 106 12 2 120, Plastik Hitam 40 0 0 40, each with Sent out, Returned, Repaired"></a>
+  <figcaption><b>By pallet type</b>: one card for each pallet type.</figcaption>
+</figure>
+
+<h3 id="history">4.6 Pallet history (by month)</h3>
+<p>Every pallet entry of one month, newest first. Use it to see who recorded what, and to find a wrong entry.</p>
 <ol>
-  <li>The driver opens the POD as usual and enters the lorry no. When the shipment loads, a <strong>Pallets on lorry &middot; Pallet atas lori</strong> banner appears at the top, listing what the store assigned onto this lorry.</li>
-  <li><strong>Count correct &rarr; do nothing</strong> (the system treats it as received). The screen says <strong>Correct? Do nothing &middot; Betul? Tak perlu buat apa-apa</strong>.</li>
-  <li><strong>Count wrong</strong> &rarr; tap <strong>Wrong count? Fix here &middot; Angka salah? Betulkan</strong>, change it to the actual quantity received, send — the store will see the correction.</li>
+  <li>Scroll to <b class="ui">Pallet history</b>. It opens on this month.</li>
+  <li>Another month: tap <b class="ui">‹</b> for the month before, <b class="ui">›</b> for the month after, or pick a month from the list (the last 36 months).</li>
+  <li>One kind of entry only: open the list <b class="ui">All actions</b> and pick one, for example ASSIGN.</li>
+  <li>Changed entries only: tick <b class="ui">Edited only</b>.</li>
+</ol>
+<p>The number of entries shown is at the right, for example <span class="msg">13 entries</span>. Columns: <b class="ui">Date</b>, <b class="ui">Action</b>, <b class="ui">Pallet</b>, <b class="ui">From → To</b>, <b class="ui">Qty</b>, <b class="ui">Lorry · Customer</b>, <b class="ui">By</b> (who recorded it), <b class="ui">Edited</b>. EXT = outside CLF (the principal).</p>
+
+<figure>
+  <a href="img/pallet/en-dash-history.png"><img width="1252" height="908" loading="lazy" decoding="async" src="img/pallet/en-dash-history.png" alt="Pallet history for Nov 2026: month picker, All actions list, Edited only box, 13 entries, table of entries with Edit buttons; the DAMAGE entry of 18 Nov shows 3 struck out and 2, edited by Lim Wei Jie (TER001) with date, time and reason"></a>
+  <figcaption><b>Pallet history</b>. The entry of 18 Nov was changed before: old quantity struck out, new quantity, who, when and why.</figcaption>
+</figure>
+
+<h3 id="edit">4.7 Edit quantity (manager only)</h3>
+<p>For an entry with a <strong>wrong quantity</strong>, for example a typing mistake. It needs the <strong>manager PIN</strong> and a <strong>reason</strong>. Stock numbers follow at once.</p>
+<ol>
+  <li>In <b class="ui">Pallet history</b>, find the entry. Use the month and the action list to find it faster.</li>
+  <li>Tap <b class="ui">Edit</b> at the end of its row. The box <b class="ui">Edit quantity</b> opens. It shows the entry and the quantity <b class="ui">Now</b>.</li>
+  <li><b class="ui">New quantity</b>: type the right number (a whole number, 0 or more).</li>
+  <li><b class="ui">Reason</b>: type why you change it.</li>
+  <li><b class="ui">Manager PIN</b>: the manager types the manager PIN.</li>
+  <li>Tap <b class="ui">Save</b>. (<b class="ui">Cancel</b> closes the box and changes nothing.)</li>
 </ol>
 
-<h3>2. Drop / Collect per customer (+ photo)</h3>
-<p>On each customer's delivery card, tap <strong>Pallet? &middot; Ada pallet?</strong> to open:</p>
+<figure class="phone">
+  <img width="432" height="471" loading="lazy" decoding="async" src="img/pallet/en-dash-edit.png" alt="Edit quantity box: 2026-11-19 RECEIVE_PRINCIPAL PRINSIPAL A CHEP BIRU, Now 60, New quantity 50, Reason typed 60, the DO says 50, Manager PIN shown as dots, Cancel and Save buttons">
+  <figcaption><b>Edit quantity</b>: 60 was typed by mistake, the DO says 50.</figcaption>
+</figure>
+
+<p>When it is saved, a green line says <span class="msg">Saved: quantity 60 → 50.</span> and the whole Dashboard is read again. The row now shows the <strong>old quantity struck out</strong>, the new quantity, and under <b class="ui">Edited</b>: <strong>who</strong> changed it, <strong>when</strong>, and <strong>why</strong>. The old quantity is never lost.</p>
+
+<figure>
+  <a href="img/pallet/en-dash-edit-saved.png"><img width="1252" height="992" loading="lazy" decoding="async" src="img/pallet/en-dash-edit-saved.png" alt="Pallet history after saving: green line Saved: quantity 60 to 50; the RECEIVE_PRINCIPAL row of 19 Nov shows 60 struck out and 50, edited by Siti Aminah binti Yusof (TER000), 2026-11-26 10:05, typed 60, the DO says 50"></a>
+  <figcaption>After saving: the row of 19 Nov shows 60 struck out, 50, and who / when / why.</figcaption>
+</figure>
+
+<p><strong>What is refused:</strong></p>
 <ul>
-  <li><strong>Drop &middot; Beri</strong> = how many pallets you leave with this customer.</li>
-  <li><strong>Collect &middot; Ambil</strong> = how many empty pallets you take back from this customer.</li>
-  <li><strong>Photo evidence &middot; Foto bukti (optional):</strong> take a photo as proof — strongly recommended, it settles any dispute later. The photo uploads automatically with the record.</li>
+  <li><strong>No Edit button</strong> on: REVERSE and ACCEPT entries, cancelled entries, and a loading the driver already corrected. These cannot be edited.</li>
+  <li><strong>Below zero.</strong> If the new quantity would make the stock of that pallet go below zero, nothing is saved. The message starts <span class="msg">Not saved: stock for this pallet would go below zero</span> and gives the figure. Another entry for this pallet is probably wrong too: correct that one first.</li>
+  <li><span class="msg">Wrong manager PIN. Nothing was changed.</span>: type the right PIN and tap <b class="ui">Save</b> again. After <strong>5 wrong PINs</strong>, editing is locked for <strong>15 minutes</strong>. Wait, then try again.</li>
+  <li><span class="msg">Same as now. Nothing to change.</span> / <span class="msg">Enter a reason.</span> / <span class="msg">Enter the manager PIN.</span> / <span class="msg">Enter a whole number, 0 or more.</span>: fill the box that is named.</li>
+  <li><span class="msg">Your sign-in has ended. Nothing was changed. Refresh the page and sign in again.</span>: do that, then edit again.</li>
 </ul>
+
+<figure class="phone">
+  <img width="432" height="525" loading="lazy" decoding="async" src="img/pallet/en-dash-edit-refused.png" alt="Edit quantity box with a red message: Not saved: stock for this pallet would go below zero (Inside -15). Another entry for this pallet is probably wrong too. Correct that one first.">
+  <figcaption>Refused: the change would make the stock go below zero. Nothing was saved.</figcaption>
+</figure>
+
+<p><strong>No answer from the server.</strong> If the page gets no answer, the box stays open with this message:</p>
+<figure class="phone">
+  <img width="432" height="507" loading="lazy" decoding="async" src="img/pallet/en-dash-edit-noanswer.png" alt="Edit quantity box with a red message: No answer from the server, so it may not be saved. Enter the PIN and press Save again to check: it will not be saved twice.">
+  <figcaption>No answer: type the PIN again and tap <b>Save</b> again.</figcaption>
+</figure>
+<ol>
+  <li>Leave the quantity and the reason as they are.</li>
+  <li>Type the manager PIN again.</li>
+  <li>Tap <b class="ui">Save</b> again. <span class="msg">it will not be saved twice</span>: the change is made once only.</li>
+</ol>
+
+<p>If <b class="ui">Pallet history</b> shows <span class="msg">Editing is not switched on yet.</span> and no Edit buttons, tell the office.</p>
+
+<h3 id="manager">4.8 Manager actions</h3>
+<p>The list of manager and office corrections: who, when, why.</p>
+<ol>
+  <li>Tap <b class="ui">Show list</b>. (<b class="ui">Hide list</b> closes it.)</li>
+  <li>Tap <b class="ui">All</b>, <b class="ui">ADJUST</b>, <b class="ui">REVERSE</b>, <b class="ui">OPENING</b> or <b class="ui">RECONCILE</b> to see one kind only.</li>
+</ol>
+<ul>
+  <li>ADJUST = manual correction. REVERSE = cancels an earlier entry. OPENING = starting stock. RECONCILE = change made after a stock count.</li>
+  <li>Entries confirmed with a PIN are listed first and marked <b class="ui">PIN</b>.</li>
+  <li><strong>The list only shows entries from 25 Nov 2026.</strong> Older corrections are not shown here. They are still in the records, and you can see them month by month in <b class="ui">Pallet history</b>.</li>
+  <li><span class="msg">No manager actions since 25 Nov 2026.</span>: nothing to show yet.</li>
+</ul>
+
+<figure>
+  <a href="img/pallet/en-dash-manager.png"><img width="1252" height="468" loading="lazy" decoding="async" src="img/pallet/en-dash-manager.png" alt="Manager actions list open: filter buttons All, ADJUST, REVERSE, OPENING, RECONCILE; two rows REVERSE and ADJUST marked PIN, by Lim Wei Jie (TER001) with reasons; help text Only actions from 25 Nov 2026 are listed"></a>
+  <figcaption><b>Manager actions</b>, list open, with the explanation opened.</figcaption>
+</figure>
+
+<h3>4.9 When the Dashboard does not load</h3>
+<ul>
+  <li>A section that could not be read says <span class="msg">Not loaded. Press Refresh.</span> It does <strong>not</strong> show 0, and it is not empty. For lorries it adds <span class="msg">This does not mean none.</span></li>
+  <li>A line at the top says <span class="msg">Some data did not load. Sections marked "Not loaded" are not empty. Press Refresh.</span></li>
+  <li><span class="msg">Can't reach the server. Check your internet, then press Refresh.</span>: do that.</li>
+  <li>On the pallet cards, <span class="msg">"—" means not loaded, not zero. Press Refresh.</span></li>
+</ul>
+
+<figure>
+  <a href="img/pallet/en-dash-notloaded.png"><img width="1252" height="697" loading="lazy" decoding="async" src="img/pallet/en-dash-notloaded.png" alt="Dashboard with a line at the top Some data did not load; Our pallets shows numbers; Stock count says Not loaded. Press Refresh; Pallets on lorries says Not loaded. Press Refresh. This does not mean none."></a>
+  <figcaption>Part of the data did not load. Press <b>Refresh</b>. Do not read these sections as "none".</figcaption>
+</figure>
+
+<hr>
+
+<h2 id="driver">5. Driver (POD form)</h2>
+<p>Drivers do nothing complicated. The pallet steps follow the delivery. Pictures of these steps are in the <a href="POD_Driver_Manual_EN.html#lorry-pallets">POD driver manual</a>.</p>
+
+<h3>1. Pallets on lorry: if the count is right, do nothing</h3>
+<ol>
+  <li>The driver opens the POD form as usual. When the store has assigned pallets to the shipment, a box <b class="ui">Pallets on lorry</b> lists them above the shops.</li>
+  <li>Count correct: do nothing. The box says <span class="msg">Correct? Do nothing.</span></li>
+  <li>Count wrong: tap <b class="ui">Wrong count? Fix here</b>.</li>
+  <li>Change each number to what you really received.</li>
+  <li>Tap <b class="ui">Send the count you received</b>. A green message <span class="msg">Correction sent</span> appears.</li>
+</ol>
+
+<h3>2. Drop / Collect at a shop (+ photo)</h3>
+<p>Fill this in <strong>before</strong> you tap <b class="ui">Save</b> on the shop's card. The pallets are sent together with the Save.</p>
+<ol>
+  <li>On the shop's card, tap <b class="ui">Pallets at this stop?</b></li>
+  <li>Choose the pallet type.</li>
+  <li><b class="ui">Drop</b> = how many pallets you leave at this shop. <b class="ui">Collect</b> = how many empty pallets you take back.</li>
+  <li><b class="ui">Pallet photo (optional)</b>: take one as proof. Strongly recommended, it settles any dispute later.</li>
+  <li>Tap <b class="ui">Save</b>. A green message <span class="msg">Pallet recorded</span> (or <span class="msg">Pallet collected</span>) appears.</li>
+</ol>
 <blockquote>
-<p>These <strong>never block the delivery</strong> — even if a pallet has a problem, the POD still submits fine; it only shows a reminder to tell the office. The delivery always comes first.</p>
+<p>Pallets <strong>never block the delivery</strong>. If a red message says <span class="msg">Pallet NOT recorded</span>, the POD is still saved. The message says: <span class="msg">POD is saved. Tell the office the pallet count.</span> Do that.</p>
 </blockquote>
 
 <h3>3. Bring the pallets back to the store</h3>
-<p>The driver <strong>does not "return" pallets in the system</strong> — just <strong>bring back</strong> the undelivered / collected pallets to the store, and the supervisor uses "Receive from Lorry" to receive them. (The old driver Return page has been retired.)</p>
+<p>The driver does <strong>not</strong> "return" pallets in the system. Just <strong>bring back</strong> the undelivered and collected pallets. The store receives them with the <b class="ui">Returns</b> tab (<a href="#returns">3.3</a>).</p>
+<p>The old driver page "Pallet Return" is now only a notice:</p>
+<figure class="phone">
+  <img width="390" height="512" loading="lazy" decoding="async" src="img/pallet/en-return.png" alt="Old Pallet Return page: This page is no longer used. Drivers no longer send pallets back here. Just bring the pallets back. The store receives them when your lorry returns. Pallets left at or returned by customers are recorded on the POD form.">
+  <figcaption>The old Pallet Return page: <b>This page is no longer used</b>.</figcaption>
+</figure>
 
 <hr>
 
-<h2>4. A few firm rules</h2>
+<h2 id="rules">6. A few firm rules</h2>
 <ul>
-  <li>Pallets <strong>missing for no reason</strong> &rarr; when receiving the lorry, ask until it's clear, allocate to a customer or make the driver answer. Do not receive blindly.</li>
-  <li>Pallets in/out with a principal <strong>must have a Reference (note no)</strong> — it's your proof when reconciling with the pool company later.</li>
+  <li>Pallets <strong>missing for no reason</strong>: when receiving the lorry, ask until it is clear, and book them to the customer who kept them. Do not receive blindly.</li>
+  <li>Pallets in or out with a principal <strong>must have a Reference no.</strong> It is your proof when reconciling with the pool company later.</li>
   <li>Damage reports <strong>must have a photo</strong>.</li>
-  <li>The ledger is <strong>append-only</strong> — if you make a mistake, correct it via Adjust / Reconcile in the system; do not delete records. Everything leaves a trail.</li>
-  <li>Your PIN is <strong>personal</strong> — don't lend it; if it leaks, tell the boss to change it.</li>
+  <li>Records are <strong>never deleted</strong>. A wrong stock number is corrected with Stocktake, or Reconcile and Manager adjust. A wrong quantity in one entry is corrected by a manager in Pallet history. Every change keeps who, when and why.</li>
+  <li><span class="msg">NOT saved</span> means not saved. Tap the same button again. Do not type the entry a second time in another way.</li>
+  <li><span class="msg">Could not load</span> and <span class="msg">Not loaded</span> never mean "none". Load again before you decide anything.</li>
+  <li>Your PIN is <strong>personal</strong>. Do not lend it. If someone else knows it, tell the office.</li>
 </ul>
 
-<p class="lead" style="margin-top:2em;">CLF Trading · Pallet System · This manual follows the system's actual buttons · If the system is updated, follow the screen.</p>
+<p class="lead" style="margin-top:2em;">CLF Trading · Pallet System · This manual follows the system's actual buttons (26 Nov 2026) · If the system is updated, follow the screen.</p>
 
 </body>
 </html>

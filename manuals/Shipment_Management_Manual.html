@@ -7,7 +7,7 @@
 <style>
   html { -webkit-text-size-adjust: 100%; }
   body {
-    font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background: #ffffff;
     color: #1a1a1a;
     line-height: 1.75;
@@ -73,258 +73,624 @@
   hr { border: none; border-top: 1px solid #ebebeb; margin: 2em 0; }
   .lead { color: #555; font-size: 1.05em; margin-top: 0.4em; }
   .btnref { white-space: nowrap; }
+  /* added Nov 2026: pictures, and the text of the small browser boxes (OK / Cancel) */
+  figure { margin: 1.2em 0; }
+  figure img { display: block; max-width: 100%; height: auto; border: 1px solid #dcdcdc; border-radius: 6px; }
+  figcaption { margin-top: 0.4em; font-size: 0.9em; color: #555; line-height: 1.5; }
+  .dlg {
+    margin: 0.8em 0;
+    padding: 0.7em 1em;
+    border: 1px solid #c9c9c9;
+    border-radius: 6px;
+    background: #fbfbfb;
+    font-size: 0.94em;
+    line-height: 1.6;
+  }
+  .dlg p { margin: 0.5em 0; }
+  var { font-style: italic; color: #555; }
+  span.ui { background: #f3f3f3; border-radius: 4px; padding: 0.05em 0.3em; }
+  .toc { padding-left: 1.4em; }
+  .toc li { margin: 0.15em 0; }
+  .updated { color: #555; font-size: 0.9em; }
 </style>
 </head>
 <body>
 
 <h1>Shipment Management — Staff Manual</h1>
-<p class="lead">For the office / admin person. How to set up each day's deliveries: import the delivery forms and assign drivers to lorries.</p>
+<p class="lead">For the office / admin person. How to set up each day's deliveries: import the delivery forms, put a driver on each lorry, and print the combination invoices.</p>
+<p class="updated">Updated 26 November 2026 for the restyled Shipments page and the Combination Invoice sheet without QR code.</p>
 
 <blockquote>
-<p>Button and field names in this guide are written <strong>exactly</strong> as they appear on the page, so you can match them on screen. Open the page with the title <strong>CLF Shipment Management</strong> at the top.</p>
+<p>Button, box and message names in this guide are written <strong>exactly</strong> as they appear on the page, so you can match them on screen. Words in <var>italics</var> inside a message change from case to case (a lorry number, a count, an amount). The page has the title <strong class="ui">Shipments</strong> in the dark blue bar at the top.</p>
+<p>All pictures use made-up sample data. Click a picture to see it full size.</p>
 </blockquote>
 
 <blockquote>
 <p><strong>Two branches &middot; Dua cawangan:</strong> each branch is managed separately. Open <strong>YOUR branch's link</strong> — you will see and manage only your own branch's lorries and drivers &middot; Buka pautan cawangan <strong>ANDA</strong> — anda hanya melihat dan menguruskan lori dan pemandu cawangan anda sendiri. <strong>MTK (Mentakab)</strong> and <strong>KTN (Kuantan)</strong> are kept separate &middot; MTK dan KTN diasingkan.</p>
 </blockquote>
 
-<h2>1. What this page is for</h2>
-
-<p>The <strong>CLF Shipment Management</strong> page is your <strong>daily setup screen</strong>. Each morning you use it to do two jobs:</p>
-
-<ol>
-  <li><strong>Import the day's deliveries</strong> — upload one CSV delivery form per lorry. Each upload creates a lorry "card" on the page.</li>
-  <li><strong>Assign the drivers</strong> — for each lorry card, pick the <strong>Primary driver</strong> (and a <strong>Helper (optional)</strong> if there is one) and save it.</li>
+<ol class="toc">
+  <li><a href="#s1">What this page is for</a></li>
+  <li><a href="#s2">Opening the page and signing in</a></li>
+  <li><a href="#s3">Date and branch</a></li>
+  <li><a href="#s4">Importing a delivery form</a></li>
+  <li><a href="#s5">The shipment list</a></li>
+  <li><a href="#s6">Assigning or changing the driver and helper</a></li>
+  <li><a href="#s7">Deleting a shipment</a></li>
+  <li><a href="#s8">Printing the Combination Invoice</a></li>
+  <li><a href="#s9">Messages and what to do</a></li>
+  <li><a href="#s10">The daily order, in short</a></li>
 </ol>
 
-<p>Once a lorry is imported and a driver is assigned, the driver will see that shipment automatically in their POD form, and it shows up on the dashboard. You do not need to tell the driver anything by hand.</p>
+<h2 id="s1">1. What this page is for</h2>
+
+<p>The <strong class="ui">Shipments</strong> page is your <strong>daily setup screen</strong>. Each morning you use it to do three jobs:</p>
+
+<ol>
+  <li><strong>Import the day's deliveries</strong> — one delivery form file per lorry (CSV or Excel). Each file makes one shipment card on the page.</li>
+  <li><strong>Assign the crew</strong> — on each card, pick the <strong class="ui">Driver</strong> (and a helper if there is one) and press <strong class="ui">Save crew</strong>.</li>
+  <li><strong>Print the combination invoices</strong> — the sheets the customer signs and chops.</li>
+</ol>
+
+<figure>
+  <a href="img/shipment/01-page-top.png"><img src="img/shipment/01-page-top.png" alt="Top of the Shipments page: title bar with the links POD Admin and Dashboard, the Import delivery form row with the Choose file button, then Date, Branch, Refresh and Print all invoices." width="1280" height="313"></a>
+  <figcaption>The top of the page.</figcaption>
+</figure>
 
 <h3>The parts of the screen</h3>
 
 <table>
   <tr><th>On screen</th><th>What it is</th></tr>
-  <tr><td><span class="btnref">📥 Upload Delivery Form (CSV)</span></td><td>The upload box at the top. Below the title it says: <em>"Export the Shipment CSV from your system, then upload it here. One file per lorry."</em></td></tr>
-  <tr><td><span class="btnref">Choose CSV file…</span></td><td>The blue button you click to pick a file to upload.</td></tr>
-  <tr><td><strong>Date</strong></td><td>The date box. It opens on <strong>today's date</strong>. Change it to view another day's lorries.</td></tr>
-  <tr><td><span class="btnref">↻ Refresh</span></td><td>Reloads the list of lorries for the chosen date.</td></tr>
-  <tr><td><strong>Lorries / Shipments</strong></td><td>The heading above the lorry cards. A small count (e.g. <code>· 3</code>) shows how many lorries are loaded.</td></tr>
+  <tr><td><strong class="ui">Shipments</strong> (top bar)</td><td>The page title. The small line under it counts the cards for the chosen date, for example <span class="ui"><var>4</var> shipments</span>, or says <span class="ui">No shipments</span>.</td></tr>
+  <tr><td><span class="btnref"><strong class="ui">POD Admin</strong></span>, <span class="btnref"><strong class="ui">Dashboard</strong></span></td><td>Links to the POD Admin page (opened for your branch) and to the fleet Dashboard.</td></tr>
+  <tr><td><strong class="ui">Import delivery form</strong></td><td>The import row. Under the title it says <span class="ui">CSV or Excel. One file per lorry.</span></td></tr>
+  <tr><td><span class="btnref"><strong class="ui">Choose file</strong></span></td><td>The dark blue button you press to pick a delivery form file.</td></tr>
+  <tr><td><span class="btnref"><strong class="ui">How to use</strong></span></td><td>Opens a short reminder of the steps. There is one beside <strong class="ui">Choose file</strong> and one beside the <strong class="ui">Shipments</strong> heading of the list. Press it again to close it.</td></tr>
+  <tr><td><strong class="ui">Date</strong></td><td>The day whose shipments are shown. It opens on <strong>today</strong>.</td></tr>
+  <tr><td><strong class="ui">Branch</strong></td><td>Shows the branch this link is for. You cannot change it on the page (see <a href="#s3">section 3</a>).</td></tr>
+  <tr><td><span class="btnref"><strong class="ui">Refresh</strong></span></td><td>Loads the newest list for the chosen date.</td></tr>
+  <tr><td><span class="btnref"><strong class="ui">Print all invoices</strong></span></td><td>Opens the Combination Invoice page for every lorry of this date and branch (see <a href="#s8">section 8</a>).</td></tr>
 </table>
 
-<p>Each lorry card shows the <strong>lorry number</strong> (large), the <strong>shipment number</strong> underneath, a delivered progress bar (e.g. <code>0 / 12 delivered</code>), and a status tag in the top-right corner:</p>
+<h2 id="s2">2. Opening the page and signing in</h2>
+
+<p>The page opens straight away. <strong>It has no sign-in box of its own.</strong> What it does is this:</p>
 
 <table>
-  <tr><th>Tag</th><th>Meaning</th></tr>
-  <tr><td><strong>Imported</strong></td><td>The lorry has been uploaded but <strong>no driver assigned yet</strong>. This is your to-do.</td></tr>
-  <tr><td><strong>Assigned</strong></td><td>A driver has been saved to this lorry. Ready to go.</td></tr>
-  <tr><td><strong>Done</strong></td><td>All planned invoices on this lorry have been delivered.</td></tr>
+  <tr><th>What you do</th><th>Sign-in</th></tr>
+  <tr><td>See the shipment list</td><td>The page quietly uses the office sign-in that this browser already has from the <strong class="ui">POD Admin</strong> page. If this browser has none, the list is refused (see below).</td></tr>
+  <tr><td>Import a file, <strong class="ui">Save crew</strong>, <strong class="ui">Delete shipment</strong>, open the print page</td><td>The page does not ask for a sign-in for these.</td></tr>
+  <tr><td>Hand a shipment to a salesman, or take it back</td><td>Needs the office sign-in. If this browser has none, two small browser boxes ask for it: <span class="ui">Office unlock - Staff ID</span>, then <span class="ui">PIN:</span>. Sign in with your Staff ID and PIN.</td></tr>
+  <tr><td>The Combination Invoice page</td><td>No sign-in.</td></tr>
 </table>
 
-<h2>2. Importing the daily delivery-form CSV</h2>
+<h3>If the list does not load: "Could not load the shipments"</h3>
 
-<h3>How to upload</h3>
+<figure>
+  <a href="img/shipment/02-sign-in-needed.png"><img src="img/shipment/02-sign-in-needed.png" alt="The Shipments page in a browser with no office sign-in: the list area shows the red title Could not load the shipments, a line saying a sign-in is required, and Press Refresh to try again." width="1280" height="455"></a>
+  <figcaption>The list in a browser that has no office sign-in yet. The grey line under the red title comes from the server.</figcaption>
+</figure>
+
+<p>You see the red title <span class="ui">Could not load the shipments</span>, a grey line from the server saying a sign-in is required, and <span class="ui">Press Refresh to try again.</span> Pressing <strong class="ui">Refresh</strong> alone does not help, because this page cannot sign you in. Do this:</p>
 
 <ol>
-  <li>Export the <strong>Shipment CSV</strong> for one lorry from your system. <strong>One file per lorry.</strong></li>
-  <li>Click the blue <strong>Choose CSV file…</strong> button.</li>
-  <li>Pick the CSV file in the file window. The upload starts on its own — you do <strong>not</strong> need to click anything else.</li>
-  <li>A message pops up at the bottom: <em>Uploading "…" — verifying…</em> Wait a few seconds for the result. (Checking can take up to about 15 seconds.)</li>
+  <li>Press <strong class="ui">POD Admin</strong> at the top right.</li>
+  <li>Sign in there with your Staff ID and PIN. (No PIN? Ask the office.)</li>
+  <li>Come back to the Shipments page (the browser's Back button, or your bookmark).</li>
+  <li>Press <strong class="ui">Refresh</strong>. The list now loads.</li>
+</ol>
+
+<blockquote>
+<p>The sign-in is kept by the browser. Use the <strong>same browser on the same computer</strong> for POD Admin and for this page. A different browser, a private window or another computer has to sign in again.</p>
+</blockquote>
+
+<h2 id="s3">3. Date and branch</h2>
+
+<h3>Date</h3>
+<ol>
+  <li>The <strong class="ui">Date</strong> box opens on today.</li>
+  <li>To see another day, click the box and pick the day. The list changes by itself.</li>
+  <li>Press <strong class="ui">Refresh</strong> if you want to be sure you see the newest list for that day.</li>
+</ol>
+<p>A day with nothing imported shows <span class="ui">No shipments for <var>2026-11-26</var></span> and <span class="ui">Import a delivery form above to start.</span></p>
+
+<h3>Branch</h3>
+<p>The <strong class="ui">Branch</strong> box shows <span class="ui">Mentakab (MTK)</span> or <span class="ui">Kuantan (KTN)</span>. It is not a button: the branch comes from the link you opened.</p>
+<ul>
+  <li>The Mentakab link ends with <code>?branch=MTK</code>, the Kuantan link ends with <code>?branch=KTN</code>.</li>
+  <li>A link with no branch at the end opens as Mentakab (MTK).</li>
+  <li>The branch decides which shipments you see, which drivers the crew boxes offer, and which branch the <strong class="ui">POD Admin</strong> link and the print buttons open.</li>
+</ul>
+<p><strong>Before you import or assign, look at the Branch box.</strong> If it shows the wrong branch, close the page and open your own branch's link.</p>
+
+<h2 id="s4">4. Importing a delivery form</h2>
+
+<p>The page accepts three file types: <code>.csv</code>, <code>.xlsx</code> and <code>.xls</code>. <strong>One file per lorry.</strong> For an Excel file only the first sheet is read.</p>
+
+<figure>
+  <a href="img/shipment/03-import-how-to-use.png"><img src="img/shipment/03-import-how-to-use.png" alt="The Import delivery form row with How to use opened: four short steps about exporting the file, pressing Choose file, the invoices adding up to the form total, and the question asked when the lorry or the route already has a shipment that day." width="1260" height="225"></a>
+  <figcaption>The import row with <strong>How to use</strong> opened.</figcaption>
+</figure>
+
+<h3>How to import</h3>
+
+<ol>
+  <li>Export the delivery form for one lorry from your system as CSV or Excel.</li>
+  <li>Press <strong class="ui">Choose file</strong>.</li>
+  <li>Pick the file in the file window. <strong>The import starts at once.</strong> There is no preview and no second button to press.</li>
+  <li>A message appears at the bottom of the page: <span class="ui">Uploading "<var>file name</var>"… verifying…</span> Wait. The answer can take up to about half a minute.</li>
+  <li>Read the next message at the bottom. It stays for about 5 seconds only, so keep your eyes on it.</li>
   <li>Repeat for the next lorry's file.</li>
 </ol>
 
 <blockquote>
-<p>You can upload the <strong>same file again</strong> if you need to — the file picker is cleared after each try, so re-selecting the same file works.</p>
+<p>The page does not send the <strong class="ui">Date</strong> box with the file. The shipment is filed under the delivery date written in the form. If the form is for another day, change <strong class="ui">Date</strong> to that day to see the new card.</p>
 </blockquote>
 
-<h3>What a SUCCESSFUL import looks like</h3>
+<h3>What a good import looks like</h3>
 
-<p>You get a green message at the bottom like:</p>
+<p>A green message at the bottom says:</p>
+<blockquote>
+<p><span class="ui">Imported <var>WTB 5678</var>: <var>8</var> invoices.</span></p>
+</blockquote>
+<p>The list reloads and the lorry has a card, tagged <strong class="ui">Imported</strong>.</p>
+
+<figure>
+  <a href="img/shipment/04-import-done.png"><img src="img/shipment/04-import-done.png" alt="After a good import: a new card for lorry WTB 5678 with Invoices 8, Amount RM 10,025.79 and the tag Imported, and the green message Imported WTB 5678: 8 invoices at the bottom." width="1280" height="620"></a>
+  <figcaption>The new card and the green message.</figcaption>
+</figure>
 
 <blockquote>
-<p>✅ Imported <em>[lorry number]</em> — <em>[number]</em> invoices.</p>
+<p>If the green message ends with <span class="ui">(auto-recovered)</span>, the file was read a second way. The import still succeeded. Check the card as below.</p>
 </blockquote>
 
-<p>A new lorry card then appears (or refreshes) in the <strong>Lorries / Shipments</strong> list below, tagged <strong>Imported</strong>. That lorry is now in the system. Move on to assigning a driver (Step 3).</p>
+<h3>Check every import: invoice count and total amount</h3>
 
-<blockquote>
-<p>Sometimes the green message ends with <strong>(auto-recovered)</strong>. That is normal — the system just had to re-read the file a second way. The import still succeeded; nothing extra is needed from you.</p>
-</blockquote>
-
-<h3>The "TOTAL ERROR" / mismatch message — what it means</h3>
-
-<p>If the file's numbers do not add up, the import is <strong>rejected</strong> and you see a red message like:</p>
-
-<blockquote>
-<p>❌ TOTAL ERROR — invoices add up to RM <em>[parsed sum]</em> but the form TOTAL is RM <em>[form total]</em> (off by RM <em>[difference]</em>). NOT imported — please check the file.</p>
-</blockquote>
-
-<p><strong>What this means in plain words:</strong> the system added up every invoice line in the file, and that total did <strong>not</strong> match the TOTAL printed on the form. This is the system's safety check against a wrong, edited, or broken file. <strong>Nothing was imported</strong> — no lorry card is created.</p>
-
-<p><strong>What to do when it appears:</strong></p>
+<p>Because there is no preview, <strong>you check after the import, on the new card</strong>. Hold the printed delivery form next to the screen:</p>
 
 <ol>
-  <li><strong>Do not</strong> assume it imported — it did not. Check the list; no new card means it was rejected.</li>
-  <li><strong>Re-check the file.</strong> Open the original CSV and look for: a missing or extra invoice line, a typed-over amount, or the wrong file for that lorry.</li>
-  <li>Re-export a clean copy of the Shipment CSV from your system if anything looks edited.</li>
-  <li>Upload the corrected file again with <strong>Choose CSV file…</strong>.</li>
-  <li>If it keeps failing on a file you believe is correct, send the file to your supervisor — do not hand-edit the totals to force it through.</li>
+  <li><strong class="ui">Lorry</strong>: the lorry number is the one on the form. The small line under it is the shipment (route) number.</li>
+  <li><strong class="ui">Invoices</strong>: the number is the same as the number of invoices on the form.</li>
+  <li><strong class="ui">Amount</strong>: the RM figure is the same as the TOTAL on the form.</li>
 </ol>
 
-<h3>Other red messages you might see</h3>
+<p>If any of the three is different, do not send the lorry out on that card. Delete the card (<a href="#s7">section 7</a>), export the form again and import it again. If it is still different, tell your supervisor.</p>
 
-<table>
-  <tr><th>Message</th><th>What it means</th></tr>
-  <tr><td>❌ Could not read this file — NOT imported.</td><td>The file could not be opened or read. Make sure you picked the right <code>.csv</code> file and that it is not corrupted, then try again.</td></tr>
-  <tr><td>❌ This file is empty — NOT imported.</td><td>The file has no content. Re-export it from your system.</td></tr>
-  <tr><td>Upload sent, but no confirmation yet. Tap ↻ Refresh in a moment to check.</td><td>The system was slow to reply. Wait a moment, click <strong>↻ Refresh</strong>, and check whether the lorry card appeared. Do <strong>not</strong> upload the same file again straight away, or you may import it twice.</td></tr>
-</table>
+<h3>The "TOTAL ERROR" message</h3>
 
-<h2>3. Assigning a Primary driver (and optional Helper)</h2>
+<p>If the invoices in the file do not add up to the total written on the form, the file is <strong>refused</strong>. A red message says:</p>
 
-<p>Each lorry card has a crew area at the bottom with two boxes:</p>
+<blockquote>
+<p><span class="ui">TOTAL ERROR: invoices add up to RM <var>10,025.79</var> but the form TOTAL is RM <var>10,225.79</var> (off by RM <var>200</var>). NOT imported. Check the file, then import again.</span></p>
+</blockquote>
+
+<figure>
+  <a href="img/shipment/06-total-error.png"><img src="img/shipment/06-total-error.png" alt="The red TOTAL ERROR message at the bottom of the page. The list above it has no new card." width="1280" height="340"></a>
+  <figcaption>The red message. No card was made.</figcaption>
+</figure>
+
+<p><strong>Nothing was imported.</strong> What to do:</p>
+
+<ol>
+  <li>Look at the list: there is no new card for that lorry.</li>
+  <li>Open the file and look for a missing or extra invoice line, an amount that was typed over, or the wrong file.</li>
+  <li>Export a clean copy from your system.</li>
+  <li>Import it again with <strong class="ui">Choose file</strong>.</li>
+  <li>If a file you believe is correct keeps failing, send it to your supervisor. <strong>Never change the totals by hand to push a file through.</strong></li>
+</ol>
+
+<h3>Importing again for the same lorry or the same route</h3>
+
+<p>If the lorry, or the route, already has a shipment that day, the page stops and asks you in a small browser box with <strong>OK</strong> and <strong>Cancel</strong>. Read the box before you press. Nothing is changed until you answer.</p>
+
+<p><strong>Case A — the same lorry already has another shipment today.</strong> The first box says:</p>
+
+<div class="dlg ui">
+  <p>⚠ <var>WTA 1234</var> already has a shipment today (<var>12</var> stops, <var>0</var> delivered).</p>
+  <p>This NEW file has <var>8</var> stops.</p>
+  <p>OK = ADD these as a 2nd trip (keep the first — already-done stops stay done).<br>Cancel = other options.</p>
+</div>
 
 <ul>
-  <li><strong>Primary driver</strong> — required. This is the main driver of the lorry.</li>
-  <li><strong>Helper (optional)</strong> — optional. The second person / helper, if there is one. Leave it blank if there isn't.</li>
+  <li><strong>OK</strong>: the new invoices are added to the lorry as a second trip. Green message: <span class="ui">Added <var>8</var> stop(s) to <var>WTA 1234</var> as a 2nd trip. Now <var>20</var> total.</span></li>
+  <li><strong>Cancel</strong>: a second box asks whether to replace the first shipment instead:
+    <div class="dlg ui">
+      <p>Replace / overwrite the first shipment with THIS file?</p>
+      <p>OK = REPLACE (the first one is removed).<br>Cancel = do nothing.</p>
+    </div>
+    If the first shipment already has delivered stops, the second box is a warning instead:
+    <div class="dlg ui">
+      <p>⚠ DANGER — Replace will DELETE the first trip, INCLUDING its <var>3</var> DELIVERED stop(s) (they disappear from the dashboard).</p>
+      <p>Only do this if the first import was a mistake.</p>
+      <p>OK = DELETE first &amp; replace.<br>Cancel = do nothing.</p>
+    </div>
+  </li>
+  <li><strong>Cancel</strong> on the second box: <span class="ui">Import cancelled. Nothing changed.</span></li>
 </ul>
 
-<p>Both boxes use a <strong>Staff ID search picker</strong>. The empty box shows the hint <strong>Staff ID atau nama</strong> ("Staff ID or name").</p>
+<p><strong>Case B — the same route (same shipment number) is already on another lorry.</strong> The first box says:</p>
+
+<div class="dlg ui">
+  <p>⚠ Route <var>DL-1001</var> is already assigned to <var>WTA 1234</var> (<var>12</var> stops, <var>0</var> delivered).</p>
+  <p>This new form is for <var>WTB 5678</var>.</p>
+  <p>OK = Add <var>WTB 5678</var> as a 2nd lorry on the SAME route <var></var>(both lorries share this delivery list — counted once, no double-count).<br>Cancel = other options.</p>
+</div>
+
+<ul>
+  <li><strong>OK</strong>: the second lorry is added to the same card. Green message: <span class="ui"><var>WTB 5678</var> added as a 2nd lorry on route <var>DL-1001</var> (shared with <var>WTA 1234</var>, counted once).</span> The card then shows both lorries and has crew boxes for each (see <a href="#s6">section 6</a>).</li>
+  <li><strong>Cancel</strong>: a second box asks whether to replace the first lorry:
+    <div class="dlg ui">
+      <p>Replace <var>WTA 1234</var> with <var>WTB 5678</var> on this route?</p>
+      <p>OK = Replace.<br>Cancel = do nothing.</p>
+    </div>
+    If the first lorry already has delivered stops, it is a warning instead:
+    <div class="dlg ui">
+      <p>⚠ DANGER — Replace will REMOVE <var>WTA 1234</var> from this route, INCLUDING its <var>3</var> DELIVERED stop(s).</p>
+      <p>Only do this if <var>WTA 1234</var> was assigned by mistake.</p>
+      <p>OK = Replace with <var>WTB 5678</var>.<br>Cancel = do nothing.</p>
+    </div>
+  </li>
+  <li><strong>Cancel</strong> on the second box: <span class="ui">Import cancelled. Nothing changed.</span></li>
+</ul>
+
+<blockquote>
+<p><strong>Do not press OK on a box that starts with <span class="ui">⚠ DANGER</span> unless the first import really was a mistake.</strong> Delivered stops are removed. If you are not sure, press Cancel and ask your supervisor.</p>
+</blockquote>
+
+<p><strong>Case C — the very same form again (same route, same lorry).</strong> No box is shown. You get the normal green <span class="ui">Imported</span> message. Check afterwards that the lorry still has <strong>one</strong> card and that <strong class="ui">Invoices</strong> and <strong class="ui">Amount</strong> are right.</p>
+
+<blockquote>
+<p>You can pick the same file again at any time: the file picker is cleared after each try.</p>
+</blockquote>
+
+<h2 id="s5">5. The shipment list</h2>
+
+<p>Under the heading <strong class="ui">Shipments</strong> there is one card per shipment.</p>
+
+<figure>
+  <a href="img/shipment/05-shipment-list.png"><img src="img/shipment/05-shipment-list.png" alt="Four shipment cards. Each has the columns Lorry, Trips, Invoices, Amount and Status. The tags shown are Imported, Assigned, Done and Salesman. One card has two lorries and four crew boxes." width="1260" height="846"></a>
+  <figcaption>Four cards: not assigned yet, two lorries on one route, all delivered, and handed to a salesman.</figcaption>
+</figure>
+
+<h3>The top row of a card</h3>
+
+<table>
+  <tr><th>Column</th><th>What it shows</th></tr>
+  <tr><td><strong class="ui">Lorry</strong></td><td>The lorry number in large letters. Under it, in small letters, the shipment (route) number. If two lorries share the route you also see <span class="ui">+ <var>JQB 5</var> (2nd lorry)</span>.</td></tr>
+  <tr><td><strong class="ui">Trips</strong></td><td>How many trips the lorry has on this card. A dash means the server sent no number.</td></tr>
+  <tr><td><strong class="ui">Invoices</strong></td><td>How many invoices are planned on this card.</td></tr>
+  <tr><td><strong class="ui">Amount</strong></td><td>The total of the invoices, in RM. A dash means the server sent no amount.</td></tr>
+  <tr><td><strong class="ui">Status</strong></td><td>A tag, then how far the deliveries are, for example <span class="ui"><var>8</var> / <var>20</var> delivered</span> with the percentage and a bar. Under the bar: a red <span class="ui"><var>2</var> failed</span> if any delivery failed, and <span class="ui"><var>10</var> pending</span> for what is still to deliver.</td></tr>
+</table>
+
+<h3>The status tags</h3>
+
+<table>
+  <tr><th>Tag</th><th>Meaning</th></tr>
+  <tr><td><strong class="ui">Imported</strong></td><td>The form is in, but no driver is saved yet. <strong>This is your to-do.</strong></td></tr>
+  <tr><td><strong class="ui">Assigned</strong></td><td>A driver is saved on this shipment.</td></tr>
+  <tr><td><strong class="ui">Done</strong></td><td>Every planned invoice on the card is delivered. The bar is green.</td></tr>
+  <tr><td><strong class="ui">Salesman</strong></td><td>The shipment was handed to a salesman. The card shows the salesman instead of crew boxes.</td></tr>
+</table>
+
+<p>The bar is dark blue when nothing is delivered yet, orange-brown when the lorry is part-way or has a failed delivery, and green when all is delivered.</p>
+
+<h3>The bottom row of a card</h3>
+
+<ul>
+  <li>The crew boxes <strong class="ui">Driver</strong> and <strong class="ui">Helper (optional)</strong>.</li>
+  <li><strong class="ui">Save crew</strong> — saves the crew boxes of this card.</li>
+  <li><strong class="ui">Print invoices</strong> — opens the combination invoices of this lorry.</li>
+  <li><strong class="ui">Delete shipment</strong> — removes this card.</li>
+</ul>
+
+<p>A card with the tag <strong class="ui">Salesman</strong> has only <strong class="ui">Unmark salesman</strong> and <strong class="ui">Delete shipment</strong>.</p>
+
+<h2 id="s6">6. Assigning or changing the driver and helper</h2>
+
+<p>Each card has two crew boxes:</p>
+
+<ul>
+  <li><strong class="ui">Driver</strong> — required.</li>
+  <li><strong class="ui">Helper (optional)</strong> — leave it empty if there is no helper.</li>
+</ul>
+
+<p>An empty box shows the hint <span class="ui">Staff ID or name</span>.</p>
 
 <h3>Steps</h3>
 
 <ol>
-  <li>Find the correct lorry card (check the lorry number and shipment number).</li>
-  <li>Click in the <strong>Primary driver</strong> box.</li>
-  <li>Start typing the driver's <strong>Staff ID</strong> or their <strong>name</strong>. A short drop-down list appears showing matches, each as <strong>Staff ID · Name</strong>.</li>
-  <li>Click the correct person in the list. The box fills in with their Staff ID and name.</li>
-  <li>If there is a helper, do the same in the <strong>Helper (optional)</strong> box. Otherwise leave it blank.</li>
-  <li>Click the blue <strong>Save assignment</strong> button on that card.</li>
+  <li>Find the right card. Check the lorry number and the shipment number under it.</li>
+  <li>Click in the <strong class="ui">Driver</strong> box.</li>
+  <li>Type part of the driver's Staff ID or name. A short list opens under the box with the heading <span class="ui">Drivers</span>.</li>
+  <li>Click the right person in the list. The box now shows the Staff ID and the name.</li>
+  <li>If there is a helper, do the same in the <strong class="ui">Helper (optional)</strong> box.</li>
+  <li>Press <strong class="ui">Save crew</strong> on that card.</li>
 </ol>
 
-<p>On success you get a green message like:</p>
+<figure>
+  <a href="img/shipment/07-crew-pick.png"><img src="img/shipment/07-crew-pick.png" alt="The Driver box with the letters ahmad typed in. A list under it has the heading Drivers and two people, each with Staff ID and name, and a last line Assign to a salesman (load list)." width="1260" height="382"></a>
+  <figcaption>Typing in the <strong>Driver</strong> box opens the list. Click the person.</figcaption>
+</figure>
+
+<p>A green message confirms it, and the tag on the card becomes <strong class="ui">Assigned</strong>:</p>
 
 <blockquote>
-<p>Assigned <em>[shipment number]</em> → <em>[driver]</em> (+ <em>[helper]</em>)</p>
+<p><span class="ui">Assigned <var>DL-1001</var> → <var>Ahmad bin Rosli</var> + <var>Lim Wei Jie</var></span></p>
 </blockquote>
 
-<p>The card's tag changes to <strong>Assigned</strong> and the page refreshes.</p>
+<figure>
+  <a href="img/shipment/08-crew-saved.png"><img src="img/shipment/08-crew-saved.png" alt="After Save crew: the first card shows the driver and the helper in the two boxes and the tag Assigned. A green message at the bottom reads Assigned DL-1001, then the driver and the helper." width="1280" height="560"></a>
+  <figcaption>Saved: both boxes are filled, the tag is <strong>Assigned</strong>, and the green message names the crew.</figcaption>
+</figure>
 
 <blockquote>
-<p><strong>Important:</strong> You must <strong>pick from the drop-down list</strong>, not just type a name and stop. If you click <strong>Save assignment</strong> with no driver chosen, you'll see <em>"Pick a primary driver first."</em> and nothing is saved. Re-do the box and choose a name from the list.</p>
+<p><strong>You must click a person in the list.</strong> Typing a name and stopping is not enough. If you press <strong class="ui">Save crew</strong> with no driver picked you see <span class="ui">Pick a driver first: type a staff ID or a name, then choose from the list.</span> and nothing is saved.</p>
+<p>If the list shows <span class="ui">No match</span>, nobody in your branch's driver list fits what you typed. Check the spelling or try the Staff ID.</p>
 </blockquote>
 
-<blockquote>
-<p>If the drop-down list is always empty, you may see <em>"Could not load driver list — assignment dropdowns may be empty."</em> when the page loads. Click <strong>↻ Refresh</strong> or reload the page; if it stays empty, tell your supervisor — the staff list isn't loading.</p>
-</blockquote>
+<h3>Changing the driver or the helper</h3>
 
-<h2>4. Deleting a wrongly-imported shipment</h2>
-
-<p>If you imported the wrong file, or imported the same lorry twice, you can remove a lorry card with the <strong>Delete</strong> button (the white/red button on the card, next to <strong>Save assignment</strong>).</p>
-
-<blockquote>
-<p>Use this only to clean up a <strong>mistaken import</strong>. Do not delete a real lorry that is out delivering.</p>
-</blockquote>
-
-<h3>The 2-step confirmation</h3>
-
-<p><strong>Step 1 — first confirm.</strong> When you click <strong>Delete</strong>, a box asks:</p>
-
-<blockquote>
-<p>Delete shipment <em>[shipment number]</em>? This removes the lorry card and all its invoice rows. This cannot be undone.</p>
-</blockquote>
-
-<p>Click OK to continue, or Cancel to stop.</p>
-
-<p><strong>Step 2 — second confirm (only if the lorry already has deliveries).</strong> If that shipment already has delivered invoices / POD records, the first delete is <strong>blocked</strong> and you get a second warning:</p>
-
-<blockquote>
-<p>⚠ <em>[This shipment has delivered invoices.]</em> Delete ANYWAY? The lorry card and invoice rows are removed, but the delivered POD photo records are KEPT (driver KPI is unaffected).</p>
-</blockquote>
+<ol>
+  <li>Click the box you want to change. The old name is selected.</li>
+  <li>Type the new Staff ID or name and click the person in the list.</li>
+  <li>Press <strong class="ui">Save crew</strong>. The new crew replaces the old one.</li>
+</ol>
 
 <ul>
-  <li>Click OK <strong>only if you are sure</strong> you want to remove it anyway.</li>
-  <li>Click Cancel to keep it — you'll see <em>"Delete cancelled — POD records kept."</em></li>
+  <li><strong>To take the helper off:</strong> empty the <strong class="ui">Helper (optional)</strong> box, then press <strong class="ui">Save crew</strong>.</li>
+  <li>If you start typing in a box and do not pick anyone, that box counts as empty when you save. Pick the person again, or reload the page to get the saved crew back.</li>
+  <li>You do <strong>not</strong> need to delete a shipment to change its driver.</li>
 </ul>
 
-<p>If a delete succeeds you get a green message like <em>"Deleted [shipment number] ([number] invoice rows removed)"</em>, and the card disappears.</p>
+<h3>A card with two lorries</h3>
 
-<h3>What gets removed vs what is kept</h3>
+<p>When two lorries share one route, the card has four boxes, named after the lorries: <span class="ui"><var>CDX 77</var> driver</span>, <span class="ui"><var>CDX 77</var> helper (optional)</span>, <span class="ui"><var>JQB 5</var> driver</span> and <span class="ui"><var>JQB 5</var> helper (optional)</span>. Fill them the same way and press <strong class="ui">Save crew</strong> once. The first lorry's driver is required. The green message then also names the second lorry's crew after <span class="ui">2nd lorry:</span>.</p>
+
+<h3>Salesman delivery</h3>
+
+<p>Use this when a salesman delivers the shipment himself, not a lorry driver.</p>
+
+<ol>
+  <li>Click in the <strong class="ui">Driver</strong> box of the card and type the salesman's Staff ID or name.</li>
+  <li>The first time, the list has the line <span class="ui">Assign to a salesman (load list)</span>. Click it. If the browser boxes <span class="ui">Office unlock - Staff ID</span> and <span class="ui">PIN:</span> appear, sign in with your Staff ID and PIN.</li>
+  <li>The list now has a group <span class="ui">Salesmen</span>. Each line carries the tag <span class="ui">Salesman</span>. Click the salesman.</li>
+  <li>A browser box asks <span class="ui">Hand this DL to the salesman?</span> and shows the shipment number and the salesman. It also says: <span class="ui">The DL disappears from the driver form; the salesman submits POD himself. Driver KPI is untouched.</span> Press <strong>OK</strong> to go on, or <strong>Cancel</strong> to stop.</li>
+  <li>Wait for the green message <span class="ui">Marked: <var>Tan Mei Ling</var> handles <var>DL-1001</var></span>. The card now has the tag <strong class="ui">Salesman</strong>.</li>
+</ol>
+
+<figure>
+  <a href="img/shipment/09-salesman-pick.png"><img src="img/shipment/09-salesman-pick.png" alt="The Driver box with the letters tan typed in. The list under it has the heading Salesmen and one line with a Staff ID, a name and the tag Salesman." width="1260" height="294"></a>
+  <figcaption>The <strong>Salesmen</strong> group in the list of the <strong>Driver</strong> box.</figcaption>
+</figure>
+
+<p><strong>To take it back:</strong> press <strong class="ui">Unmark salesman</strong> on the card. A browser box asks <span class="ui">Remove the salesman from <var>DL-1004</var>?</span> and says <span class="ui">The previous driver crew (if any) is restored and the DL returns to the lorry flow.</span> Press <strong>OK</strong>. The green message is <span class="ui">Unmarked <var>DL-1004</var></span>.</p>
+
+<h2 id="s7">7. Deleting a shipment</h2>
+
+<p>If you imported the wrong file, you can remove the card with the red-edged <strong class="ui">Delete shipment</strong> button on that card.</p>
+
+<blockquote>
+<p>Use this only to clean up a <strong>mistaken import</strong>. Do not delete a real shipment that is out delivering. <strong>A delete cannot be undone.</strong></p>
+</blockquote>
+
+<h3>Step 1 — the first box</h3>
+
+<p>When you press <strong class="ui">Delete shipment</strong>, a browser box asks:</p>
+
+<div class="dlg ui">
+  <p>Delete shipment <var>DL-1001</var>?</p>
+  <p>This removes the lorry card and all its invoice rows. This cannot be undone.</p>
+</div>
+
+<ol>
+  <li>Check the shipment number in the box is the one you mean.</li>
+  <li>Press <strong>OK</strong> to delete, or <strong>Cancel</strong> to stop. Cancel changes nothing and shows no message.</li>
+</ol>
+
+<p>If the shipment has no deliveries yet, it is deleted now. Green message: <span class="ui">Deleted <var>DL-1001</var> (<var>12</var> invoice rows removed)</span>. The card is gone.</p>
+
+<h3>Step 2 — the second box (only if the shipment already has deliveries)</h3>
+
+<p>If drivers have already delivered invoices on that shipment, the delete is <strong>stopped</strong> and a second box appears. It starts with ⚠ and a line from the server that counts the delivered invoices, then asks:</p>
+
+<div class="dlg ui">
+  <p>Delete ANYWAY? The lorry card and invoice rows are removed, but the delivered POD photo records are KEPT (driver KPI is unaffected).</p>
+</div>
+
+<ul>
+  <li>Press <strong>OK</strong> only if you are sure. The card and its invoice rows are removed.</li>
+  <li>Press <strong>Cancel</strong> to keep the shipment. You see <span class="ui">Delete cancelled. Nothing was removed.</span></li>
+</ul>
+
+<h3>What is removed and what is kept</h3>
 
 <table>
   <tr><th>Removed</th><th>Kept</th></tr>
   <tr>
     <td>
       <ul>
-        <li>The <strong>lorry card</strong> for that shipment</li>
+        <li>The <strong>card</strong> of that shipment</li>
         <li><strong>All its invoice rows</strong> (the planned deliveries)</li>
       </ul>
     </td>
     <td>
       <ul>
-        <li>Any <strong>delivered POD photo records</strong> already submitted by the driver</li>
-        <li>The <strong>driver's KPI is unaffected</strong></li>
+        <li>The <strong>delivered POD photo records</strong> the driver already sent</li>
+        <li>The driver's KPI is not affected</li>
       </ul>
     </td>
   </tr>
 </table>
 
+<p>If you delete by mistake, import the file again and assign the driver again.</p>
+
+<h2 id="s8">8. Printing the Combination Invoice</h2>
+
+<p>The Combination Invoice is the sheet the customer signs when the goods arrive. There is one sheet for each customer on a lorry. Each sheet lists that customer's invoices for the lorry.</p>
+
+<h3>Open it from the Shipments page</h3>
+
+<ul>
+  <li>For one lorry: press <strong class="ui">Print invoices</strong> on that lorry's card.</li>
+  <li>For every lorry of the date: press <strong class="ui">Print all invoices</strong> in the row with <strong class="ui">Date</strong> and <strong class="ui">Branch</strong>.</li>
+</ul>
+
+<p>A new browser tab opens with the title <strong class="ui">Combination Invoice</strong>. The date, the branch and (for one lorry) the lorry number are already filled in, and the sheets load by themselves.</p>
+
+<figure>
+  <a href="img/shipment/10-combination-invoice.png"><img src="img/shipment/10-combination-invoice.png" alt="The Combination Invoice page: the boxes Date, Branch and Lorry no., the buttons Load and Print all, the count 3 sheets, and the first sheet with company name, customer, lorry, driver, three invoices, the total, the declaration and two signature lines." width="1280" height="760"></a>
+  <figcaption>The Combination Invoice page with the first of 3 sheets.</figcaption>
+</figure>
+
+<h3>What is on a sheet</h3>
+
+<ul>
+  <li>The company name and branch address, the words <span class="ui">Combination invoice</span> and a sheet number that starts with <span class="ui">CMB-</span>.</li>
+  <li>The customer and the station, then the date, the lorry and the driver.</li>
+  <li>The list of invoice numbers with the amount of each, and the <strong>total</strong> with the number of invoices in brackets.</li>
+  <li>The declaration: <span class="ui">Received the above goods in good order and condition.</span></li>
+  <li>Two signature boxes: <span class="ui">Customer's chop &amp; signature</span> and <span class="ui">Date received</span>.</li>
+</ul>
+
 <blockquote>
-<p>In short: deleting clears the shipment off this setup page, but it does <strong>not</strong> erase work the driver already did. The delivered/POD records stay so nobody loses credit. Deleting <strong>cannot be undone</strong> — if you delete by mistake, you'll have to import the file again and re-assign the driver.</p>
+<p><strong>There is no QR code on the sheet any more</strong> (since 26 November 2026). The customer signs and chops the sheet; nobody scans it.</p>
+<p>The words on the sheet are always printed in English and Malay together. If <strong>Driver</strong> on a sheet shows a dash, save the crew on the Shipments page first, then press <strong class="ui">Load</strong> again.</p>
 </blockquote>
 
-<h2>5. How this feeds the rest of the system</h2>
+<h3>Print</h3>
 
-<p>Everything you set up here flows downstream automatically:</p>
+<ol>
+  <li>Look at the count on the right of the buttons, for example <span class="ui"><var>3</var> sheets</span>. That is how many pages will print.</li>
+  <li>Press <strong class="ui">Print all</strong>. The browser's print window opens.</li>
+  <li>Choose the printer and A4 paper, then print. Every sheet prints on its own page. The boxes and buttons at the top are not printed.</li>
+</ol>
+
+<p><strong class="ui">Print all</strong> is grey until sheets are on the screen.</p>
+
+<h3>Load: another date, branch or lorry</h3>
+
+<ol>
+  <li>Set <strong class="ui">Date</strong>.</li>
+  <li>Set <strong class="ui">Branch</strong>: <span class="ui">All</span>, <span class="ui">Mentakab (MTK)</span> or <span class="ui">Kuantan (KTN)</span>.</li>
+  <li>To get one lorry only, type its number in <strong class="ui">Lorry no.</strong> Leave it empty for all lorries.</li>
+  <li>Press <strong class="ui">Load</strong>.</li>
+</ol>
+
+<p>If you open the page on its own (not from the Shipments page), it shows <span class="ui">Pick a date, then press</span> <span class="ui">Load</span> and loads nothing until you press <strong class="ui">Load</strong>.</p>
+
+<h3>EN | BM</h3>
+
+<p>The switch at the top right changes the language of the boxes, buttons and messages on the screen. In BM, <strong class="ui">Load</strong> is <strong class="ui">Cari</strong> and <strong class="ui">Print all</strong> is <strong class="ui">Cetak semua</strong>. The browser remembers your choice. The printed sheet is the same in both.</p>
+
+<figure>
+  <a href="img/shipment/11-combination-bm.png"><img src="img/shipment/11-combination-bm.png" alt="The top of the Combination Invoice page in BM: title Invois Gabungan, boxes Tarikh, Cawangan and No. lori, buttons Cari and Cetak semua, and the count 3 helaian." width="1280" height="165"></a>
+  <figcaption>The same page with BM chosen.</figcaption>
+</figure>
+
+<h3>When a message appears instead of sheets</h3>
+
+<figure>
+  <a href="img/shipment/12-combination-no-shipments.png"><img src="img/shipment/12-combination-no-shipments.png" alt="The Combination Invoice page with a message card that reads No shipments for this date and the date under it. The Print all button is grey." width="1280" height="328"></a>
+  <figcaption>A message in place of the sheets. <strong>Print all</strong> stays grey.</figcaption>
+</figure>
+
+<table>
+  <tr><th>Message (EN / BM)</th><th>What it means and what to do</th></tr>
+  <tr><td><span class="ui">No shipments for this date.</span><br><span class="ui">Tiada shipment untuk tarikh ini.</span></td><td>Nothing was found for the date, branch and lorry in the boxes. The date is shown under the message. Check the three boxes (a typing mistake in <strong class="ui">Lorry no.</strong> is the usual cause), then press <strong class="ui">Load</strong>. If the delivery form is not imported yet, import it first.</td></tr>
+  <tr><td><span class="ui">Cannot reach the server.</span> <span class="ui">Check your internet, then press Load.</span><br><span class="ui">Tidak dapat sambung ke sistem.</span> <span class="ui">Semak internet, kemudian tekan Cari.</span></td><td>No connection. Check the internet, then press <strong class="ui">Load</strong>.</td></tr>
+  <tr><td><span class="ui">Could not load.</span> <span class="ui">Try again.</span><br><span class="ui">Gagal memuatkan.</span> <span class="ui">Cuba lagi.</span><br>(or a line from the server in its place)</td><td>The server answered with a fault. Press <strong class="ui">Load</strong> again. If it stays, note the words on the screen and tell your supervisor.</td></tr>
+  <tr><td><span class="ui">Loading…</span><br><span class="ui">Memuatkan…</span></td><td>Wait. The sheets are on their way.</td></tr>
+</table>
+
+<h2 id="s9">9. Messages and what to do</h2>
+
+<p>Messages of the Shipments page appear at the bottom of the page for about 5 seconds: green = done, red = fault, amber = warning, blue = information. Messages in the list area stay until you act.</p>
+
+<h3>Loading the page and the list</h3>
+
+<table>
+  <tr><th>Message</th><th>What it means and what to do</th></tr>
+  <tr><td><span class="ui">Could not load the shipments</span> … <span class="ui">Press Refresh to try again.</span></td><td>The server refused or failed. Read the grey line under the title. If it says a sign-in is required, follow <a href="#s2">section 2</a>. Otherwise press <strong class="ui">Refresh</strong>; if it stays, tell your supervisor what the grey line says.</td></tr>
+  <tr><td><span class="ui">Cannot reach the server</span> … <span class="ui">Check the internet, then press Refresh.</span></td><td>No connection. Check the internet, then press <strong class="ui">Refresh</strong>.</td></tr>
+  <tr><td><span class="ui">No shipments for <var>date</var></span></td><td>Nothing is imported for that date in your branch. Check <strong class="ui">Date</strong> and <strong class="ui">Branch</strong>.</td></tr>
+  <tr><td><span class="ui">Could not load the driver list. Crew boxes will find no one. Reload the page to try again.</span></td><td>The crew boxes will be empty. Reload the page. If it comes back, tell your supervisor.</td></tr>
+</table>
+
+<h3>Importing</h3>
+
+<table>
+  <tr><th>Message</th><th>What it means and what to do</th></tr>
+  <tr><td><span class="ui">Uploading "<var>file name</var>"… verifying…</span></td><td>The file is on its way. Wait for the next message.</td></tr>
+  <tr><td><span class="ui">Importing as <var></var>2nd trip<var></var>…</span> / <span class="ui">Importing as <var></var>replacement<var></var>…</span></td><td>Shown after you answered a question box. Wait for the next message.</td></tr>
+  <tr><td><span class="ui">Imported <var>lorry</var>: <var>n</var> invoices.</span></td><td>Done. Check the card: <strong class="ui">Invoices</strong> and <strong class="ui">Amount</strong>.</td></tr>
+  <tr><td><span class="ui">Added <var>n</var> stop(s) to <var>lorry</var> as a 2nd trip. Now <var>n</var> total.</span></td><td>Done: second trip added to the lorry's card.</td></tr>
+  <tr><td><span class="ui"><var>lorry</var> added as a 2nd lorry on route <var>number</var> (shared with <var>lorry</var>, counted once).</span></td><td>Done: the card now has two lorries. Assign a driver for each.</td></tr>
+  <tr><td><span class="ui">TOTAL ERROR: invoices add up to RM</span> … <span class="ui">NOT imported. Check the file, then import again.</span></td><td>The invoices do not add up to the form total. Nothing was imported. See <a href="#s4">section 4</a>.</td></tr>
+  <tr><td><span class="ui">Could not read this file. NOT imported.</span> … <span class="ui">Check it is the delivery form, then try again.</span></td><td>The file is not a delivery form the page can read, or it is damaged. For an Excel file the message may add <span class="ui">(<var></var>no invoice rows recognized in this Excel file<var></var>)</span>. Pick the right file, or export it again.</td></tr>
+  <tr><td><span class="ui">This file is empty. NOT imported. Export the delivery form again.</span></td><td>The file has nothing in it. Export it again.</td></tr>
+  <tr><td><span class="ui">NOT imported: the Excel reader did not load. Reload the page and try again, or upload the CSV version.</span></td><td>The part of the page that reads Excel files did not arrive. Reload the page and import again. If it still fails, export the form as CSV and import that.</td></tr>
+  <tr><td><span class="ui">Upload sent, but no confirmation yet. Press Refresh in a moment to check.</span></td><td>The server was slow. Wait a moment, press <strong class="ui">Refresh</strong>, and look for the lorry's card. <strong>Do not import the same file again straight away.</strong></td></tr>
+  <tr><td><span class="ui">Upload error:</span> …</td><td>The file could not be sent. Check the internet and import again.</td></tr>
+  <tr><td><span class="ui">Import error:</span> … <span class="ui">. NOT imported.</span></td><td>The server refused the file for the reason shown. Nothing was imported. Note the words and tell your supervisor.</td></tr>
+  <tr><td><span class="ui">Import cancelled. Nothing changed.</span></td><td>You pressed Cancel on the question boxes. Nothing was imported.</td></tr>
+</table>
+
+<h3>Crew</h3>
+
+<table>
+  <tr><th>Message</th><th>What it means and what to do</th></tr>
+  <tr><td><span class="ui">Pick a driver first: type a staff ID or a name, then choose from the list.</span></td><td>No driver is picked on that card. Type in the <strong class="ui">Driver</strong> box, click the person in the list, then press <strong class="ui">Save crew</strong>.</td></tr>
+  <tr><td><span class="ui">No match</span> (in the list under a crew box)</td><td>Nobody fits what you typed. Check the spelling, or try the Staff ID.</td></tr>
+  <tr><td><span class="ui">Assigned <var>shipment</var> → <var>driver</var></span></td><td>Saved.</td></tr>
+  <tr><td><span class="ui">Save failed:</span> …</td><td>The server did not save, for the reason shown. Nothing changed. Try again; if it stays, tell your supervisor.</td></tr>
+  <tr><td><span class="ui">Network error:</span> …</td><td>No connection while saving or deleting. Check the internet, press <strong class="ui">Refresh</strong> to see what is really saved, then try again.</td></tr>
+</table>
+
+<h3>Salesman delivery</h3>
+
+<table>
+  <tr><th>Message</th><th>What it means and what to do</th></tr>
+  <tr><td><span class="ui">Unlocked - <var>name</var></span></td><td>Your office sign-in was accepted.</td></tr>
+  <tr><td><span class="ui">Unlock failed</span> (or a line from the server)</td><td>The Staff ID or PIN was not accepted. Try again. If you have no PIN, ask the office.</td></tr>
+  <tr><td><span class="ui">Session expired - try again to unlock.</span> / <span class="ui">Session expired - try again.</span></td><td>Your sign-in ran out. Do the step again and sign in when the boxes ask.</td></tr>
+  <tr><td><span class="ui">Could not load salesmen</span></td><td>The salesman list did not arrive. Try again. If it stays, tell your supervisor.</td></tr>
+  <tr><td>A message that starts <span class="ui">Salesmen sheet is empty</span></td><td>The salesman list has not been set up in the system. Tell your supervisor; you cannot fix this on the page.</td></tr>
+  <tr><td><span class="ui">Marking...</span></td><td>Wait for the next message.</td></tr>
+  <tr><td><span class="ui">Marked: <var>salesman</var> handles <var>shipment</var></span></td><td>Done.</td></tr>
+  <tr><td><span class="ui">Mark failed</span> / <span class="ui">Unmark failed</span> (or a line from the server)</td><td>Nothing changed. Try again; if it stays, tell your supervisor.</td></tr>
+  <tr><td><span class="ui">Unmarked <var>shipment</var></span></td><td>Done: the shipment is back with the lorry.</td></tr>
+  <tr><td><span class="ui">No connection</span> / <span class="ui">No confirmation - refresh and check</span></td><td>The answer did not come back. Press <strong class="ui">Refresh</strong> and look at the card before you try again.</td></tr>
+</table>
+
+<h3>Deleting</h3>
+
+<table>
+  <tr><th>Message</th><th>What it means and what to do</th></tr>
+  <tr><td><span class="ui">Deleted <var>shipment</var> (<var>n</var> invoice rows removed)</span></td><td>Done. The card is gone.</td></tr>
+  <tr><td><span class="ui">Delete cancelled. Nothing was removed.</span></td><td>You pressed Cancel on the second box. The shipment is kept.</td></tr>
+  <tr><td><span class="ui">Delete failed:</span> …</td><td>The server did not delete, for the reason shown. Press <strong class="ui">Refresh</strong> and check the card.</td></tr>
+</table>
+
+<h3>Other common problems</h3>
 
 <ul>
-  <li><strong>The driver's POD form:</strong> once a shipment is imported and a driver is assigned, it <strong>auto-loads in that driver's POD form</strong>. The driver opens their form and the day's deliveries are already there — you do not send anything by hand.</li>
-  <li><strong>The dashboard:</strong> imported and assigned shipments <strong>show up on the dashboard</strong>, where progress (delivered / planned, failed, pending) updates as drivers complete deliveries. You can reach it from the <strong>← Dashboard</strong> link at the top-right of this page.</li>
+  <li><strong>I do not see my import.</strong> Check <strong class="ui">Date</strong> (the shipment is under the delivery date of the form) and <strong class="ui">Branch</strong>, then press <strong class="ui">Refresh</strong>.</li>
+  <li><strong>I missed the message at the bottom.</strong> It only stays about 5 seconds. Press <strong class="ui">Refresh</strong> and look at the list: a new card means the import worked, no card means it did not.</li>
+  <li><strong>Wrong driver saved.</strong> Change the box and press <strong class="ui">Save crew</strong> again (<a href="#s6">section 6</a>). Do not delete the shipment for this.</li>
+  <li><strong>The same lorry shows two cards by mistake.</strong> Delete the wrong one (<a href="#s7">section 7</a>). Keep the one with the right invoices.</li>
 </ul>
 
-<p>So the order each morning is simply: <strong>import every lorry's CSV → assign a Primary driver (and Helper if any) → Save assignment</strong>. After that, drivers and the dashboard take over.</p>
+<h2 id="s10">10. The daily order, in short</h2>
 
-<hr>
+<ol>
+  <li>Open your branch's link. Check <strong class="ui">Branch</strong> and <strong class="ui">Date</strong>.</li>
+  <li>Import each lorry's delivery form with <strong class="ui">Choose file</strong>. After each one, check <strong class="ui">Invoices</strong> and <strong class="ui">Amount</strong> on the card.</li>
+  <li>On each card pick the <strong class="ui">Driver</strong> (and helper), then press <strong class="ui">Save crew</strong>. No card should be left with the tag <strong class="ui">Imported</strong>.</li>
+  <li>Press <strong class="ui">Print all invoices</strong>, check the sheet count, then <strong class="ui">Print all</strong>.</li>
+</ol>
 
-<h2>Tips / Common problems</h2>
-
-<h3>Import error (red "TOTAL ERROR" or "Could not read")</h3>
-<ul>
-  <li><strong>Nothing was imported.</strong> A red message means no lorry card was created — don't assume it worked.</li>
-  <li><strong>Re-check the file:</strong> the TOTAL ERROR means the invoice lines didn't add up to the form's TOTAL. Look for a missing/extra line or an edited amount, re-export a clean CSV, and upload again.</li>
-  <li><strong>Never hand-edit totals</strong> to push a file through. If a file you trust keeps failing, send it to your supervisor.</li>
-</ul>
-
-<h3>Wrong driver assigned</h3>
-<ul>
-  <li>Just fix the box and save again. Click the <strong>Primary driver</strong> (or <strong>Helper (optional)</strong>) box, type the correct Staff ID or name, <strong>pick from the drop-down</strong>, then click <strong>Save assignment</strong>. The new assignment replaces the old one.</li>
-  <li>You do <strong>not</strong> need to delete the lorry just to change a driver — deleting is only for a wrong import.</li>
-</ul>
-
-<h3>"Pick a primary driver first."</h3>
-<ul>
-  <li>You clicked <strong>Save assignment</strong> without choosing a driver from the list. Typing text alone is not enough — you must click a name in the drop-down, then save.</li>
-</ul>
-
-<h3>No lorries show up / I don't see my upload</h3>
-<ul>
-  <li>Check the <strong>Date</strong> box is set to the right day.</li>
-  <li>Click <strong>↻ Refresh</strong>.</li>
-  <li>If you saw <em>"Upload sent, but no confirmation yet"</em>, wait a moment and refresh rather than uploading again — re-uploading can create a duplicate.</li>
-</ul>
-
-<h3>Imported the same lorry twice (duplicate card)</h3>
-<ul>
-  <li>Delete the extra card with <strong>Delete</strong> (see Step 4). Keep the one with the correct driver assigned.</li>
-</ul>
-
-<h3>Driver list won't load</h3>
-<ul>
-  <li>If the search picker is empty and you saw <em>"Could not load driver list…"</em>, refresh the page. If it's still empty, tell your supervisor — the staff list isn't reaching the page.</li>
-</ul>
-
-<h3>Can't reach the server</h3>
-<ul>
-  <li>If the list area shows <em>"Cannot reach server"</em> or <em>"Could not load"</em>, check your internet, then click <strong>↻ Refresh</strong>. If it persists, report it.</li>
-</ul>
+<p>During the day the <strong class="ui">Status</strong> column of each card shows how many invoices are delivered, failed and pending. The <strong class="ui">Dashboard</strong> and <strong class="ui">POD Admin</strong> links at the top right open the other office pages. The drivers' side is in the <a href="POD_Driver_Manual.html">POD Driver Manual</a>.</p>
 
 </body>
 </html>

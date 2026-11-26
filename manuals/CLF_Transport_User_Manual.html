@@ -26,6 +26,11 @@
   .badge { display:inline-block; background:#1A56DB; color:#fff; font-size:.7rem; font-weight:700; letter-spacing:.5px;
     border-radius:99px; padding:2px 10px; vertical-align:middle; }
   hr { border:none; border-top:1px solid #e5e5e5; margin:38px 0; }
+  b.ui { font-weight:600; background:#f3f3f3; padding:0 5px; border-radius:4px; white-space:nowrap; font-style:normal; color:#1a1a1a; }
+  figure { margin:12px 0 16px; }
+  figure img { display:block; max-width:100%; height:auto; border:1px solid #d0d0d0; border-radius:6px; }
+  figcaption { font-size:13px; color:#666; margin-top:5px; font-style:normal; }
+  blockquote figure { margin-bottom:4px; }
 </style>
 </head>
 <body>
@@ -38,7 +43,7 @@
 <ul>
   <li><a href="#branch">0. Branches &amp; links / Cawangan &amp; pautan (MTK · KTN)</a></li>
   <li><a href="#driver">A. DRIVER / PEMANDU</a> — Fuel, No-Fuel, POD</li>
-  <li><a href="#sup">B. SUPERVISOR / PENYELIA</a> — Dashboard, POD Plan, Leave, Shipment</li>
+  <li><a href="#sup">B. SUPERVISOR / PENYELIA</a> — Dashboard, POD Admin, Leave, Drivers, Shipment</li>
 </ul>
 </div>
 
@@ -46,10 +51,12 @@
 <p>The system serves two branches: <strong>MTK (Mentakab)</strong> and <strong>KTN (Kuantan)</strong>. Each form knows its branch from the link / QR you open.<br>
 <span class="bm">Sistem ini untuk dua cawangan: MTK (Mentakab) dan KTN (Kuantan). Setiap borang tahu cawangannya daripada pautan / kod QR yang anda buka.</span></p>
 <ul>
-  <li><strong>KTN</strong> drivers/staff: open the link that ends with <code>?branch=KTN</code> (or scan the <strong>KTN QR</strong> on the lorry). You will only see KTN lorries &amp; drivers.<br>
-  <span class="bm">Pemandu/staf KTN: buka pautan yang berakhir dengan <code>?branch=KTN</code> (atau imbas kod QR KTN pada lori). Anda hanya nampak lori &amp; pemandu KTN.</span></li>
-  <li><strong>MTK</strong> drivers/staff: keep using your current link — it stays MTK automatically. No change needed.<br>
-  <span class="bm">Pemandu/staf MTK: guna pautan sedia ada — ia kekal MTK secara automatik. Tiada perubahan.</span></li>
+  <li><strong>KTN</strong> drivers: open the link that ends with <code>?branch=KTN</code> (or scan the <strong>KTN QR</strong> on the lorry). You will only see KTN lorries &amp; drivers.<br>
+  <span class="bm">Pemandu KTN: buka pautan yang berakhir dengan <code>?branch=KTN</code> (atau imbas kod QR KTN pada lori). Anda hanya nampak lori &amp; pemandu KTN.</span></li>
+  <li><strong>MTK</strong> drivers: keep using your current link — it stays MTK automatically. No change needed.<br>
+  <span class="bm">Pemandu MTK: guna pautan sedia ada — ia kekal MTK secara automatik. Tiada perubahan.</span></li>
+  <li><strong>Office staff:</strong> the office pages have their own branch buttons — see <a href="#b0">B0</a>.<br>
+  <span class="bm">Staf pejabat: halaman pejabat ada butang cawangan sendiri — lihat <a href="#b0">B0</a>.</span></li>
 </ul>
 
 <!-- ============ DRIVER ============ -->
@@ -87,34 +94,193 @@
 
 <!-- ============ SUPERVISOR ============ -->
 <h2 id="sup">B. SUPERVISOR / PENYELIA</h2>
-<p><span class="badge">KTN = Wayne</span> <span class="badge">MTK = Nich</span> &nbsp; Open your screens with <code>?branch=KTN</code> (Wayne) or <code>?branch=MTK</code> (Nich) — you only see your own branch.<br>
-<span class="bm">Buka skrin anda dengan <code>?branch=KTN</code> (Wayne) atau <code>?branch=MTK</code> (Nich) — anda hanya nampak cawangan sendiri.</span></p>
+<p><span class="badge">KTN = Wayne</span> <span class="badge">MTK = Nich</span> &nbsp; Section B was rewritten on 26 Nov 2026 to match the office pages as they are now. The office pages are in English only.<br>
+<span class="bm">Bahagian B ditulis semula pada 26 Nov 2026 supaya sama dengan halaman pejabat sekarang. Halaman pejabat dalam bahasa Inggeris sahaja; label pada skrin ditulis dalam bahasa Inggeris di bawah.</span></p>
 
-<h3>B1. Dashboard / Papan Pemuka</h3>
-<p>Open the Dashboard link. At the top, switch <strong>All / MTK / KTN</strong> and the period <strong>Daily / Weekly / Monthly</strong>.<br>
-<span class="bm">Buka pautan Papan Pemuka. Di atas, tukar All / MTK / KTN dan tempoh Harian / Mingguan / Bulanan.</span></p>
-<p>You can see: who submitted fuel/POD today, compliance %, driver ranking, lorry status, and who is on leave.<br>
-<span class="bm">Anda boleh lihat: siapa hantar minyak/POD hari ini, peratus pematuhan, ranking pemandu, status lori, dan siapa bercuti.</span></p>
+<h3 id="b0">B0. Which page does what / Halaman mana untuk apa</h3>
+<table>
+  <thead><tr><th>Page / Halaman</th><th>Use it for / Guna untuk</th></tr></thead>
+  <tbody>
+    <tr><td><a href="../CLF_Dashboard.html"><strong>Fleet Dashboard</strong></a><br>(new, official from 25 Nov 2026)</td>
+      <td>Today's numbers: deliveries, POD photos, lorries, fuel. You only look; nothing is changed from this page.<br><span class="bm">Angka hari ini: penghantaran, gambar POD, lori, minyak. Lihat sahaja; tiada apa yang diubah dari halaman ini.</span></td></tr>
+    <tr><td><a href="../CLF_Dashboard_classic.html"><strong>Classic dashboard</strong></a><br>(the previous dashboard)</td>
+      <td>Fuel <b class="ui">Edit / Delete</b>, the <b class="ui">Weekly</b> and <b class="ui">Monthly</b> views, the crew and route tables.<br><span class="bm">Ubah / padam rekod minyak, paparan <b class="ui">Weekly</b> dan <b class="ui">Monthly</b>, jadual krew dan laluan.</span></td></tr>
+    <tr><td><a href="../CLF_POD_Admin.html"><strong>POD Admin</strong></a></td>
+      <td>Check the POD photos, scan the barcodes into EFI, replace an unclear photo, save a lorry's PODs to the NAS.<br><span class="bm">Semak gambar POD, imbas kod bar ke EFI, ganti gambar yang tidak jelas, simpan POD satu lori ke NAS.</span></td></tr>
+    <tr><td><a href="../CLF_Staff_Admin.html"><strong>Staff Admin</strong></a></td>
+      <td>Three tabs: <b class="ui">Drivers</b>, <b class="ui">Leave</b>, <b class="ui">Salesmen</b>.<br><span class="bm">Tiga tab: <b class="ui">Drivers</b>, <b class="ui">Leave</b>, <b class="ui">Salesmen</b>.</span></td></tr>
+    <tr><td><a href="../CLF_Driver_Admin.html"><strong>Driver Admin</strong></a></td>
+      <td>The driver list only: add, resign or rejoin a driver.<br><span class="bm">Senarai pemandu sahaja: tambah, berhenti atau masuk semula.</span></td></tr>
+    <tr><td><a href="../CLF_Shipment_Management.html"><strong>Shipments</strong></a></td>
+      <td>Import the day's delivery form and put the crew on each lorry (see B6).<br><span class="bm">Import borang penghantaran hari itu dan tetapkan krew setiap lori (lihat B6).</span></td></tr>
+  </tbody>
+</table>
+<ul>
+  <li><strong>Sign in:</strong> each page asks you to sign in with your <b class="ui">Staff ID</b> and <b class="ui">PIN</b>, then press <b class="ui">Unlock</b>. No PIN? Ask the office. The sign-in is shared by the office pages on the same computer and browser.<br>
+  <span class="bm">Log masuk: setiap halaman minta anda log masuk dengan <b class="ui">Staff ID</b> (ID Staf) dan <b class="ui">PIN</b>, kemudian tekan <b class="ui">Unlock</b>. Tiada PIN? Tanya pejabat. Log masuk ini dikongsi oleh halaman pejabat pada komputer dan pelayar yang sama.</span></li>
+  <li><strong>Branch:</strong> the Fleet Dashboard has a branch button (<b class="ui">MTK</b>, <b class="ui">KTN</b>, <b class="ui">All</b>); POD Admin has <b class="ui">Mentakab</b> / <b class="ui">Kuantan</b>. A link that ends with <code>?branch=KTN</code> opens these two pages on Kuantan. Staff Admin and Driver Admin show both branches in one list, with the branch next to each name.<br>
+  <span class="bm">Cawangan: Fleet Dashboard ada butang cawangan (<b class="ui">MTK</b>, <b class="ui">KTN</b>, <b class="ui">All</b>); POD Admin ada <b class="ui">Mentakab</b> / <b class="ui">Kuantan</b>. Pautan yang berakhir dengan <code>?branch=KTN</code> membuka dua halaman ini pada Kuantan. Staff Admin dan Driver Admin tunjuk dua-dua cawangan dalam satu senarai, dengan cawangan di sebelah setiap nama.</span></li>
+  <li><strong>Old links:</strong> the old Leave page now opens Staff Admin on the <b class="ui">Leave</b> tab. The old "POD Scanify" page only shows <b class="ui">This page is no longer used</b>. The old trial POD form (v2) opens the current POD form.<br>
+  <span class="bm">Pautan lama: halaman Cuti lama kini membuka Staff Admin pada tab <b class="ui">Leave</b>. Halaman "POD Scanify" lama hanya tunjuk <b class="ui">This page is no longer used</b>. Borang POD percubaan lama (v2) membuka borang POD sekarang.</span></li>
+</ul>
 
-<h3>B2. Set POD Plan / Tetapkan Pelan POD</h3>
-<p>On the dashboard, set each driver's planned number of deliveries for the day. The system then knows who is short and flags it.<br>
-<span class="bm">Pada papan pemuka, tetapkan bilangan penghantaran dirancang bagi setiap pemandu hari itu. Sistem akan tahu siapa kurang dan menandakannya.</span></p>
+<h3 id="b1">B1. Fleet Dashboard (new) / Dashboard baru</h3>
+<ol>
+  <li>Open the <a href="../CLF_Dashboard.html">Fleet Dashboard</a>. If you see <b class="ui">Sign in to view this data</b>, sign in with your Staff ID and PIN and press <b class="ui">Unlock</b>.<br>
+  <span class="bm">Buka <a href="../CLF_Dashboard.html">Fleet Dashboard</a>. Jika keluar <b class="ui">Sign in to view this data</b>, log masuk dengan ID Staf dan PIN, kemudian tekan <b class="ui">Unlock</b>.</span>
+  <figure><img src="img/office/dash-signin.png" alt="Sign-in box of the Fleet Dashboard with a Staff ID box, a PIN box and the Unlock button" width="388" height="437">
+  <figcaption>The sign-in box (sample Staff ID). / Kotak log masuk (ID Staf contoh).</figcaption></figure></li>
+  <li>After the sign-in you see six cards for today.<br>
+  <span class="bm">Selepas log masuk anda nampak enam kad untuk hari ini.</span>
+  <figure><img src="img/office/dash-home.png" alt="Fleet Dashboard after sign-in: date row, branch button, Refresh, and the cards Deliveries, Not closed, POD matched, Lorries out, Fuel report and Fuel" width="1280" height="675">
+  <figcaption>The main cards (sample data). / Kad utama (data contoh).</figcaption></figure></li>
+</ol>
+<table>
+  <thead><tr><th>Card / Kad</th><th>What it shows / Apa yang ditunjuk</th></tr></thead>
+  <tbody>
+    <tr><td><b class="ui">Deliveries</b></td><td>Stops with a POD record (delivered or not delivered) out of the stops planned for the day. Red = not delivered.<br><span class="bm">Hentian yang ada rekod POD (dihantar atau tidak dihantar) daripada hentian yang dirancang hari itu. Merah = tidak dihantar.</span></td></tr>
+    <tr><td><b class="ui">Not closed</b></td><td>Shows <b class="ui">Not available yet</b> for now.<br><span class="bm">Buat masa ini tunjuk <b class="ui">Not available yet</b>.</span></td></tr>
+    <tr><td><b class="ui">POD matched</b></td><td>Delivered invoices whose POD photo shows the barcode of that invoice.<br><span class="bm">Invois dihantar yang gambar POD-nya tunjuk kod bar invois itu.</span></td></tr>
+    <tr><td><b class="ui">Lorries out</b></td><td>Lorries on a delivery list, out of the fleet. <b class="ui">Standby</b> = route done. <b class="ui">Leave</b> = drivers on leave today.<br><span class="bm">Lori yang ada senarai penghantaran, daripada semua lori. <b class="ui">Standby</b> = laluan siap. <b class="ui">Leave</b> = pemandu bercuti hari ini.</span></td></tr>
+    <tr><td><b class="ui">Fuel report</b></td><td>Lorries out today that sent a fuel slip or "no fuel". Due by 4 pm.<br><span class="bm">Lori keluar hari ini yang sudah hantar slip minyak atau "tak isi minyak". Perlu sebelum 4 petang.</span></td></tr>
+    <tr><td><b class="ui">Fuel</b> + month</td><td>Fuel cost and number of fills this month.<br><span class="bm">Kos minyak dan bilangan isian bulan ini.</span></td></tr>
+  </tbody>
+</table>
+<ol start="3">
+  <li>Top row: the arrows go to the day before / after; press the date to pick a day; <b class="ui">Today</b> (shown when you look at another day) brings you back. The branch button changes the branch, and the choice is kept (<b class="ui">Remembered on this device.</b>). <b class="ui">Refresh</b> loads the numbers again; the page also updates by itself every 5 minutes.<br>
+  <span class="bm">Baris atas: anak panah pergi ke hari sebelum / selepas; tekan tarikh untuk pilih hari; <b class="ui">Today</b> (keluar bila anda lihat hari lain) bawa anda balik. Butang cawangan tukar cawangan, dan pilihan itu disimpan (<b class="ui">Remembered on this device.</b>). <b class="ui">Refresh</b> muat semula angka; halaman juga kemas kini sendiri setiap 5 minit.</span>
+  <figure><img src="img/office/dash-branch.png" alt="Branch chooser of the Fleet Dashboard with the buttons MTK, KTN and All and the note Remembered on this device" width="560" height="168">
+  <figcaption>The branch chooser. / Pilihan cawangan.</figcaption></figure></li>
+  <li>Press a card to open its list, for example <b class="ui">Deliveries</b>: the shops not delivered, then every lorry. Press a lorry to see its stops. Press <b class="ui">Back</b> to return.<br>
+  <span class="bm">Tekan satu kad untuk buka senarainya, cth. <b class="ui">Deliveries</b>: kedai yang tidak dihantar, kemudian setiap lori. Tekan satu lori untuk lihat hentiannya. Tekan <b class="ui">Back</b> untuk kembali.</span>
+  <figure><img src="img/office/dash-deliveries.png" alt="Deliveries list of the Fleet Dashboard: one shop not delivered and five lorries with their status" width="520" height="594">
+  <figcaption>The list behind the Deliveries card. / Senarai di sebalik kad Deliveries.</figcaption></figure></li>
+  <li>The row named after the month (for example "November summary") shows routes, 2nd trips and leave per driver. <b class="ui">What do these numbers mean?</b> at the bottom explains every card.<br>
+  <span class="bm">Baris dengan nama bulan (cth. "November summary") tunjuk laluan, trip kedua dan cuti setiap pemandu. <b class="ui">What do these numbers mean?</b> di bawah terangkan setiap kad.</span></li>
+</ol>
+<blockquote><p><strong>"Not available yet"</strong> is not an error. Three figures are not ready on this page: the <b class="ui">Not closed</b> card, the last day out of the lorries under <b class="ui">Not out</b>, and the month totals in the month summary (only fuel cost is there). For open invoices of an earlier day, pick that day here, or open it in the classic dashboard (<b class="ui">Needs action</b>).<br>
+<span class="bm">"Not available yet" bukan ralat. Tiga angka belum siap di halaman ini: kad <b class="ui">Not closed</b>, hari terakhir lori keluar di bawah <b class="ui">Not out</b>, dan jumlah bulanan dalam ringkasan bulan (hanya kos minyak ada). Untuk invois hari lepas yang belum selesai, pilih hari itu di sini, atau buka hari itu di dashboard klasik (<b class="ui">Needs action</b>).</span></p>
+<p>If a card says <b class="ui">Could not load</b> or <b class="ui">Old data</b>, press <b class="ui">Retry</b> on that card. If the sign-in box comes back with "Session expired", sign in again.<br>
+<span class="bm">Jika kad tulis <b class="ui">Could not load</b> atau <b class="ui">Old data</b>, tekan <b class="ui">Retry</b> pada kad itu. Jika kotak log masuk keluar semula dengan "Session expired", log masuk semula.</span></p></blockquote>
 
-<h3>B3. Leave / Cuti</h3>
-<p>Open the <strong>Leave</strong> link (your branch — you only see your branch's drivers). Choose a driver, choose the date(s), and mark the leave (one day or a range). Use the holiday option to mark a public holiday for everyone.<br>
-<span class="bm">Buka pautan Cuti (cawangan anda — anda hanya nampak pemandu cawangan anda). Pilih pemandu, pilih tarikh, dan tanda cuti (satu hari atau julat). Guna pilihan holiday untuk tanda cuti umum bagi semua.</span></p>
-<blockquote><p>A driver on leave is automatically not counted as "missing" in the fuel check.<br><span class="bm">Pemandu yang bercuti tidak dikira "tidak hantar" dalam semakan minyak.</span></p></blockquote>
+<h3 id="b2">B2. Classic dashboard: fuel Edit / Delete / Dashboard klasik: ubah / padam minyak</h3>
+<p>The previous dashboard is still there. Use it when you must correct or delete a fuel entry, or want the <b class="ui">Weekly</b> / <b class="ui">Monthly</b> view.<br>
+<span class="bm">Dashboard lama masih ada. Guna bila anda perlu betulkan atau padam rekod minyak, atau mahu paparan <b class="ui">Weekly</b> / <b class="ui">Monthly</b>.</span></p>
+<ol>
+  <li><strong>To get there</strong> from the new dashboard: press <b class="ui">Classic</b> at the top right, or the row <b class="ui">Classic dashboard</b> under the cards. It opens on the same branch.<br>
+  <span class="bm">Untuk ke sana dari dashboard baru: tekan <b class="ui">Classic</b> di atas kanan, atau baris <b class="ui">Classic dashboard</b> di bawah kad. Ia buka pada cawangan yang sama.</span>
+  <figure><img src="img/office/dash-classic-link-top.png" alt="Top bar of the Fleet Dashboard with the links POD Admin and Classic; Classic is outlined in red" width="1280" height="72">
+  <figcaption>The <em>Classic</em> link at the top right (red outline added for this guide). / Pautan <em>Classic</em> di atas kanan (garis merah ditambah untuk panduan ini).</figcaption></figure>
+  <figure><img src="img/office/dash-classic-link-row.png" alt="Rows under the cards of the Fleet Dashboard: November summary and Classic dashboard; Classic dashboard is outlined in red" width="844" height="194">
+  <figcaption>The <em>Classic dashboard</em> row under the cards. / Baris <em>Classic dashboard</em> di bawah kad.</figcaption></figure></li>
+  <li><strong>To come back:</strong> the classic page has a bar on top, <b class="ui">Classic dashboard: kept for fuel Edit / Delete</b>. Press <b class="ui">Open the new dashboard</b> in it.<br>
+  <span class="bm">Untuk balik: halaman klasik ada bar di atas, <b class="ui">Classic dashboard: kept for fuel Edit / Delete</b>. Tekan <b class="ui">Open the new dashboard</b> di situ.</span>
+  <figure><img src="img/office/classic-top.png" alt="Top of the classic dashboard: the bar with the button Open the new dashboard, then the date, Today, Yesterday, Daily, Weekly, Monthly, All, MTK, KTN and Refresh buttons" width="1280" height="132">
+  <figcaption>The top of the classic dashboard (red outline added for this guide). / Bahagian atas dashboard klasik (garis merah ditambah).</figcaption></figure></li>
+  <li>On the classic page choose the day (<b class="ui">Today</b> / <b class="ui">Yesterday</b> or the date box), the period (<b class="ui">Daily</b> / <b class="ui">Weekly</b> / <b class="ui">Monthly</b>) and the branch (<b class="ui">All</b> / <b class="ui">MTK</b> / <b class="ui">KTN</b>).<br>
+  <span class="bm">Di halaman klasik pilih hari (<b class="ui">Today</b> / <b class="ui">Yesterday</b> atau kotak tarikh), tempoh (<b class="ui">Daily</b> / <b class="ui">Weekly</b> / <b class="ui">Monthly</b>) dan cawangan (<b class="ui">All</b> / <b class="ui">MTK</b> / <b class="ui">KTN</b>).</span></li>
+  <li><strong>Edit a fuel entry:</strong> scroll down to <b class="ui">Fuel submissions today</b> and click the title to open it. Check the receipt photo (<em>view</em>) first. Then press the pencil at the end of the row. The page asks for the manager PIN (<b class="ui">Manager PIN to edit fuel</b>; ask the office), then the amount in RM, then the litres (leave empty to keep them). Wait for "Updated".<br>
+  <span class="bm">Ubah rekod minyak: skrol ke <b class="ui">Fuel submissions today</b> dan klik tajuk itu untuk buka. Semak gambar resit (<em>view</em>) dahulu. Kemudian tekan pensel di hujung baris. Halaman minta PIN pengurus (<b class="ui">Manager PIN to edit fuel</b>; tanya pejabat), kemudian jumlah RM, kemudian liter (biar kosong untuk kekalkan). Tunggu "Updated / Dikemaskini".</span>
+  <figure><img src="img/office/classic-fuel-edit.png" alt="Fuel submissions today on the classic dashboard: three rows with time, lorry, driver, odometer, RM, litres, and a pencil and a bin at the end of the row" width="1064" height="246">
+  <figcaption>Pencil = edit, bin = delete (sample data). / Pensel = ubah, tong = padam (data contoh).</figcaption></figure></li>
+  <li><strong>Delete a fuel entry:</strong> press the bin at the end of the row, give the manager PIN, and confirm. Read the box first: it says <b class="ui">Cannot be undone</b>.<br>
+  <span class="bm">Padam rekod minyak: tekan tong di hujung baris, beri PIN pengurus, dan sahkan. Baca kotak itu dahulu: ia tulis <b class="ui">Cannot be undone</b> (tidak boleh batal).</span></li>
+  <li>Shortcut from the new dashboard: open the <b class="ui">Fuel report</b> card, press one slip, then <b class="ui">Edit or delete in Classic</b>.<br>
+  <span class="bm">Jalan pintas dari dashboard baru: buka kad <b class="ui">Fuel report</b>, tekan satu slip, kemudian <b class="ui">Edit or delete in Classic</b>.</span>
+  <figure><img src="img/office/dash-fuel-slip.png" alt="One fuel slip opened on the Fleet Dashboard with odometer, RM, litres, the link Open the receipt photo and the link Edit or delete in Classic" width="560" height="315">
+  <figcaption>A fuel slip on the new dashboard, with the link to the classic page. / Slip minyak di dashboard baru, dengan pautan ke halaman klasik.</figcaption></figure></li>
+</ol>
+<blockquote><p>If the PIN is wrong the page says "Wrong PIN" and nothing is changed: press the pencil or the bin again and type the right PIN.<br>
+<span class="bm">Jika PIN salah, halaman tulis "Wrong PIN / PIN salah" dan tiada apa yang berubah: tekan pensel atau tong sekali lagi dan taip PIN yang betul.</span></p></blockquote>
 
-<h3>B4. Shipment / Assign Crew / Hantaran</h3>
-<p>Open the <strong>Shipment</strong> link (your branch). Import the daily shipment file, and assign the driver (and helper) to each lorry. This pre-fills each driver's POD list.<br>
-<span class="bm">Buka pautan Hantaran (cawangan anda). Import fail hantaran harian, dan tetapkan pemandu (dan pembantu) untuk setiap lori. Ini mengisi senarai POD setiap pemandu.</span></p>
+<h3 id="b3">B3. POD Admin: photos, Re-upload, Save to NAS / Gambar POD, muat naik semula, simpan ke NAS</h3>
+<p>The dashboards have no "POD plan" to set. The planned deliveries come from the delivery form imported on the Shipments page (B6). What the office does every day with PODs is on <a href="../CLF_POD_Admin.html">POD Admin</a>.<br>
+<span class="bm">Dashboard tiada "pelan POD" untuk ditetapkan. Penghantaran yang dirancang datang daripada borang penghantaran yang diimport di halaman Shipments (B6). Kerja harian pejabat dengan POD ada di <a href="../CLF_POD_Admin.html">POD Admin</a>.</span></p>
+<ol>
+  <li>Open POD Admin (the <b class="ui">POD Admin</b> link on the Fleet Dashboard also goes there). If it says <b class="ui">POD Admin is locked</b>, sign in with your Staff ID and PIN.<br>
+  <span class="bm">Buka POD Admin (pautan <b class="ui">POD Admin</b> di Fleet Dashboard juga ke sana). Jika keluar <b class="ui">POD Admin is locked</b>, log masuk dengan ID Staf dan PIN.</span></li>
+  <li>Choose the <b class="ui">Date</b> and <b class="ui">Mentakab</b> or <b class="ui">Kuantan</b>. Each lorry is one row. The page refreshes by itself every 60 seconds.<br>
+  <span class="bm">Pilih <b class="ui">Date</b> dan <b class="ui">Mentakab</b> atau <b class="ui">Kuantan</b>. Setiap lori satu baris. Halaman muat semula sendiri setiap 60 saat.</span>
+  <figure><img src="img/office/pod-admin-board.png" alt="POD Admin: date, Mentakab and Kuantan buttons, the counters Delivered, EFI entered, To deliver, Problem, Photo verified, Needs check and On NAS, then five lorry rows; the first row has an active Save to NAS button" width="1280" height="612">
+  <figcaption>POD Admin with one row per lorry; the <em>Save to NAS</em> button that can be pressed is outlined in red (outline added for this guide; sample data). / POD Admin, satu baris setiap lori; butang <em>Save to NAS</em> yang boleh ditekan bergaris merah (garis ditambah; data contoh).</figcaption></figure></li>
+  <li>Press a lorry to open it, then press a shop to see its invoices. Press a small photo to see it big.<br>
+  <span class="bm">Tekan satu lori untuk buka, kemudian tekan satu kedai untuk lihat invoisnya. Tekan gambar kecil untuk lihat besar.</span>
+  <figure><img src="img/office/pod-admin-lorry-open.png" alt="One lorry opened in POD Admin: two shops with invoices, photo, amount, status Delivered, the buttons Photo OK and Re-upload, the barcode and the EFI tick box" width="1248" height="538">
+  <figcaption>An opened lorry: the tag under the invoice number, the <em>Photo OK</em> and <em>Re-upload</em> buttons, the barcode and the <em>EFI</em> box. / Lori yang dibuka: tanda di bawah nombor invois, butang <em>Photo OK</em> dan <em>Re-upload</em>, kod bar dan kotak <em>EFI</em>.</figcaption></figure></li>
+  <li>Read the tag under each invoice number: <b class="ui">BC</b> with a tick = the barcode on the photo is this invoice. <b class="ui">Not read</b>, <b class="ui">AI match</b>, <b class="ui">No photo</b>, <b class="ui">Wrong photo</b> or <b class="ui">Unclear photo</b> = open the photo and look. The <b class="ui">Needs check</b> button shows only these invoices.<br>
+  <span class="bm">Baca tanda di bawah setiap nombor invois: <b class="ui">BC</b> dengan tanda betul = kod bar pada gambar ialah invois ini. <b class="ui">Not read</b>, <b class="ui">AI match</b>, <b class="ui">No photo</b>, <b class="ui">Wrong photo</b> atau <b class="ui">Unclear photo</b> = buka gambar dan semak. Butang <b class="ui">Needs check</b> tunjuk invois ini sahaja.</span></li>
+  <li>You opened the photo and it is the right invoice: press <b class="ui">Photo OK</b>. (<b class="ui">Undo</b> takes the mark away.)<br>
+  <span class="bm">Anda sudah buka gambar dan ia invois yang betul: tekan <b class="ui">Photo OK</b>. (<b class="ui">Undo</b> buang tanda itu.)</span></li>
+  <li>The photo is not clear: press <b class="ui">Re-upload</b>, choose the clearer photo (JPG or PNG, up to 5), and in the box <b class="ui">Re-upload photo</b> press <b class="ui">Replace</b>. Wait for "Photo replaced". The row then shows <b class="ui">Re-uploaded</b> with your Staff ID. The old photo is kept in Drive.<br>
+  <span class="bm">Gambar tidak jelas: tekan <b class="ui">Re-upload</b>, pilih gambar yang lebih jelas (JPG atau PNG, hingga 5), dan dalam kotak <b class="ui">Re-upload photo</b> tekan <b class="ui">Replace</b>. Tunggu "Photo replaced". Baris itu kemudian tunjuk <b class="ui">Re-uploaded</b> dengan ID Staf anda. Gambar lama disimpan dalam Drive.</span>
+  <figure><img src="img/office/pod-admin-reupload-confirm.png" alt="Box Re-upload photo: Replace the photo of invoice INV-1012? The old photo is kept in Drive. A small picture of the chosen photo, and the buttons Cancel and Replace" width="468" height="282">
+  <figcaption>The page asks before it replaces the photo. / Halaman tanya dahulu sebelum ganti gambar.</figcaption></figure></li>
+  <li>After you enter an invoice into EFI (scan the barcode shown in the row), tick its <b class="ui">EFI</b> box. Your Staff ID appears next to the tick.<br>
+  <span class="bm">Selepas anda masukkan invois ke EFI (imbas kod bar dalam baris itu), tandakan kotak <b class="ui">EFI</b>. ID Staf anda keluar di sebelah tanda.</span></li>
+  <li><strong>Save to NAS, one button per lorry.</strong> When every invoice of the lorry is done and no photo needs a check, press <b class="ui">Save to NAS</b> on that lorry's row, then <b class="ui">Save to NAS</b> again in the box.<br>
+  <span class="bm">Simpan ke NAS, satu butang setiap lori. Bila semua invois lori itu selesai dan tiada gambar perlu disemak, tekan <b class="ui">Save to NAS</b> pada baris lori itu, kemudian <b class="ui">Save to NAS</b> sekali lagi dalam kotak.</span>
+  <figure><img src="img/office/pod-admin-nas-confirm.png" alt="Box Save to NAS: Save all 6 POD files of WTA 1234 to the NAS? with the buttons Cancel and Save to NAS" width="468" height="176">
+  <figcaption>The page asks before it sends the lorry's files. / Halaman tanya dahulu sebelum hantar fail lori itu.</figcaption></figure></li>
+  <li>The row now shows <b class="ui">Queued for NAS</b>. When the copy is finished it shows <b class="ui">On NAS</b> with the number of files and the time.<br>
+  <span class="bm">Baris itu kini tunjuk <b class="ui">Queued for NAS</b>. Bila salinan siap ia tunjuk <b class="ui">On NAS</b> dengan bilangan fail dan masa.</span>
+  <figure><img src="img/office/pod-admin-nas-queued.png" alt="Lorry rows in POD Admin after Save to NAS: the first lorry now shows Queued for NAS, another shows On NAS with 3 files and the time" width="1248" height="342">
+  <figcaption>After the confirm: <em>Queued for NAS</em>; a finished lorry shows <em>On NAS</em>. / Selepas sahkan: <em>Queued for NAS</em>; lori yang siap tunjuk <em>On NAS</em>.</figcaption></figure></li>
+</ol>
+<blockquote><p><strong>The button is grey?</strong> The reason is written next to it, for example "1 photo to check" or "2 not delivered yet". Finish that first (steps 5 and 6, or wait for the driver). <strong><b class="ui">NAS error — try again</b>:</strong> press <b class="ui">Try again</b>; if it stays, tell the office. If a row shows <b class="ui">Not on NAS</b> with "photo changed", save that lorry again.<br>
+<span class="bm">Butang kelabu? Sebabnya ditulis di sebelah, cth. "1 photo to check" atau "2 not delivered yet". Selesaikan itu dahulu (langkah 5 dan 6, atau tunggu pemandu). <b class="ui">NAS error — try again</b>: tekan <b class="ui">Try again</b>; jika masih sama, beritahu pejabat. Jika baris tunjuk <b class="ui">Not on NAS</b> dengan "photo changed", simpan lori itu sekali lagi.</span></p>
+<p>The "Scan copies" link and the POD Scanify page are no longer used. POD copies are saved with <b class="ui">Save to NAS</b> only.<br>
+<span class="bm">Pautan "Scan copies" dan halaman POD Scanify tidak digunakan lagi. Salinan POD disimpan dengan <b class="ui">Save to NAS</b> sahaja.</span></p></blockquote>
 
-<h3>B5. Daily Alert Email / Amaran Harian</h3>
+<h3 id="b4">B4. Leave / Cuti</h3>
+<p>Leave is recorded in <a href="../CLF_Staff_Admin.html#leave">Staff Admin</a>, tab <b class="ui">Leave</b>. Full guide with pictures: <a href="Leave_Management_Manual.html">Leave manual</a>.<br>
+<span class="bm">Cuti direkod dalam <a href="../CLF_Staff_Admin.html#leave">Staff Admin</a>, tab <b class="ui">Leave</b>. Panduan penuh bergambar: <a href="Leave_Management_Manual.html">Panduan Cuti</a>.</span></p>
+<figure><img src="img/office/staff-leave-tab.png" alt="Staff Admin, Leave tab: the cards Mark leave, Remove leave, Company holiday and On leave today" width="1280" height="988">
+<figcaption>The Leave tab with its four cards (sample data). / Tab Leave dengan empat kad (data contoh).</figcaption></figure>
+<ol>
+  <li><strong>Record a leave:</strong> in <b class="ui">Mark leave</b> choose the <b class="ui">Driver</b> and the <b class="ui">Leave type</b>. For one day keep <b class="ui">Mode</b> on <b class="ui">Single day</b> and set the <b class="ui">Date</b>. For several days in a row choose <b class="ui">Date range</b> and set <b class="ui">Start date</b> and <b class="ui">End date</b>. Press <b class="ui">Mark leave</b>, confirm, and wait for <b class="ui">Leave marked</b>.<br>
+  <span class="bm">Rekod cuti: dalam <b class="ui">Mark leave</b> pilih <b class="ui">Driver</b> dan <b class="ui">Leave type</b>. Untuk satu hari biarkan <b class="ui">Mode</b> pada <b class="ui">Single day</b> dan tetapkan <b class="ui">Date</b>. Untuk beberapa hari berturut-turut pilih <b class="ui">Date range</b> dan tetapkan <b class="ui">Start date</b> dan <b class="ui">End date</b>. Tekan <b class="ui">Mark leave</b>, sahkan, dan tunggu <b class="ui">Leave marked</b>.</span></li>
+  <li><strong>Delete a leave record:</strong> in <b class="ui">Remove leave</b> choose the <b class="ui">Driver</b> and the <b class="ui">Leave date</b>, press <b class="ui">Remove leave</b> and confirm. Wait for <b class="ui">Removed</b>.<br>
+  <span class="bm">Padam rekod cuti: dalam <b class="ui">Remove leave</b> pilih <b class="ui">Driver</b> dan <b class="ui">Leave date</b>, tekan <b class="ui">Remove leave</b> dan sahkan. Tunggu <b class="ui">Removed</b>.</span></li>
+  <li><strong>Holiday for everyone:</strong> in <b class="ui">Company holiday</b> set the <b class="ui">Date</b> and the <b class="ui">Holiday name</b> and press <b class="ui">Toggle holiday</b>. Press it once only: a second press on the same date turns the holiday off again.<br>
+  <span class="bm">Cuti umum untuk semua: dalam <b class="ui">Company holiday</b> tetapkan <b class="ui">Date</b> dan <b class="ui">Holiday name</b>, kemudian tekan <b class="ui">Toggle holiday</b>. Tekan sekali sahaja: tekan kali kedua pada tarikh yang sama akan padamkan cuti itu semula.</span></li>
+</ol>
+<blockquote><p>A driver on leave is left out of the classic dashboard's list <b class="ui">Fuel slips not in yet</b> (it says "on-leave excluded"), and is listed under <b class="ui">Drivers on leave</b> on the new dashboard (card <b class="ui">Lorries out</b>).<br>
+<span class="bm">Pemandu yang bercuti tidak dimasukkan dalam senarai <b class="ui">Fuel slips not in yet</b> di dashboard klasik ("on-leave excluded"), dan disenaraikan di bawah <b class="ui">Drivers on leave</b> di dashboard baru (kad <b class="ui">Lorries out</b>).</span></p></blockquote>
+
+<h3 id="b5">B5. Drivers and salesmen / Pemandu dan jurujual</h3>
+<p>Open <a href="../CLF_Driver_Admin.html">Driver Admin</a> (the <b class="ui">Drivers</b> link on POD Admin also goes there). The <b class="ui">Drivers</b> tab of Staff Admin shows the same list and the same buttons.<br>
+<span class="bm">Buka <a href="../CLF_Driver_Admin.html">Driver Admin</a> (pautan <b class="ui">Drivers</b> di POD Admin juga ke sana). Tab <b class="ui">Drivers</b> dalam Staff Admin tunjuk senarai dan butang yang sama.</span></p>
+<figure><img src="img/office/driver-admin-list.png" alt="Driver Admin: the counters Total, Active, Resigned, MTK, KTN, the New driver card, the search box and filters, and the list of drivers with the buttons Resign, Rejoin and Re-add" width="1280" height="1095">
+<figcaption>Driver Admin: counters, <em>New driver</em>, filters and the list (sample names). / Driver Admin: kiraan, <em>New driver</em>, penapis dan senarai (nama contoh).</figcaption></figure>
+<ol>
+  <li><strong>Find a driver:</strong> type in <b class="ui">Search name or ID</b>, or press <b class="ui">MTK</b> / <b class="ui">KTN</b> and <b class="ui">Active</b> / <b class="ui">Resigned</b>.<br>
+  <span class="bm">Cari pemandu: taip dalam <b class="ui">Search name or ID</b>, atau tekan <b class="ui">MTK</b> / <b class="ui">KTN</b> dan <b class="ui">Active</b> / <b class="ui">Resigned</b>.</span></li>
+  <li><strong>New driver:</strong> under <b class="ui">New driver</b> type the <b class="ui">Full name</b> (as per IC) and the <b class="ui">Staff ID</b>, choose the <b class="ui">Branch</b>, press <b class="ui">Add driver</b> and confirm. No spreadsheet work is needed.<br>
+  <span class="bm">Pemandu baru: di bawah <b class="ui">New driver</b> taip <b class="ui">Full name</b> (ikut IC) dan <b class="ui">Staff ID</b>, pilih <b class="ui">Branch</b>, tekan <b class="ui">Add driver</b> dan sahkan. Tidak perlu buka spreadsheet.</span></li>
+  <li><strong>Driver left:</strong> press <b class="ui">Resign</b> on the row and confirm. The driver disappears from the forms, the dashboard and the KPI at once. History is kept.<br>
+  <span class="bm">Pemandu berhenti: tekan <b class="ui">Resign</b> pada baris itu dan sahkan. Pemandu itu terus hilang daripada borang, dashboard dan KPI. Sejarah disimpan.</span></li>
+  <li><strong>Driver came back:</strong> press <b class="ui">Rejoin</b>. If the row shows <b class="ui">Re-add</b> instead (a driver with <b class="ui">No ID row</b>), press it: the name is filled in above; type the Staff ID, choose the branch and press <b class="ui">Add driver</b>.<br>
+  <span class="bm">Pemandu masuk semula: tekan <b class="ui">Rejoin</b>. Jika baris tunjuk <b class="ui">Re-add</b> (pemandu dengan <b class="ui">No ID row</b>), tekan: nama diisi di atas; taip Staff ID, pilih cawangan dan tekan <b class="ui">Add driver</b>.</span></li>
+  <li><strong>Salesmen</strong> (Staff Admin, tab <b class="ui">Salesmen</b>): add with <b class="ui">Add salesman</b>, then press <b class="ui">Reset PIN</b> to give the first PIN. The new PIN is shown once only: write it down, give it to the salesman, then press <b class="ui">I wrote it down, close</b>. <b class="ui">Deactivate</b> stops a salesman signing in; <b class="ui">Activate</b> lets him sign in again.<br>
+  <span class="bm">Jurujual (Staff Admin, tab <b class="ui">Salesmen</b>): tambah dengan <b class="ui">Add salesman</b>, kemudian tekan <b class="ui">Reset PIN</b> untuk beri PIN pertama. PIN baru ditunjuk sekali sahaja: tulis, beri kepada jurujual, kemudian tekan <b class="ui">I wrote it down, close</b>. <b class="ui">Deactivate</b> halang jurujual log masuk; <b class="ui">Activate</b> benarkan semula.</span>
+  <figure><img src="img/office/staff-salesmen-tab.png" alt="Staff Admin, Salesmen tab: the New salesman card and a list of two salesmen with the status PIN set or No PIN and the buttons Reset PIN and Deactivate" width="1096" height="441">
+  <figcaption>The Salesmen tab (sample names). / Tab Salesmen (nama contoh).</figcaption></figure></li>
+</ol>
+<blockquote><p><strong>Who sees what in Staff Admin:</strong> role <strong>ADMIN</strong> sees all three tabs; role <strong>LEAVE</strong> sees the <b class="ui">Leave</b> tab only. Anyone else sees <b class="ui">Staff Admin is restricted</b>: ask the boss to set your role, then sign in again.<br>
+<span class="bm">Siapa nampak apa dalam Staff Admin: peranan ADMIN nampak tiga-tiga tab; peranan LEAVE nampak tab <b class="ui">Leave</b> sahaja. Orang lain nampak <b class="ui">Staff Admin is restricted</b>: minta bos tetapkan peranan anda, kemudian log masuk semula.</span></p>
+<figure><img src="img/office/staff-restricted.png" alt="Notice Staff Admin is restricted: Ask the boss to set your Role in Pallet_Access, ADMIN for driver and salesman management, or LEAVE for leave only, with a Sign out button" width="1100" height="309">
+<figcaption>What a signed-in user without a role sees. / Apa yang dilihat pengguna tanpa peranan.</figcaption></figure></blockquote>
+
+<h3 id="b6">B6. Shipment / Assign Crew / Hantaran</h3>
+<p>On the <a href="../CLF_Shipment_Management.html">Shipments</a> page you import the day's delivery form and put the driver (and helper) on each lorry; that gives each driver's POD form its list for the day. Steps and pictures: <a href="Shipment_Management_Manual.html">Shipment manual</a>.<br>
+<span class="bm">Di halaman <a href="../CLF_Shipment_Management.html">Shipments</a> anda import borang penghantaran hari itu dan tetapkan pemandu (dan pembantu) untuk setiap lori; itu memberi borang POD setiap pemandu senarai hari itu. Langkah dan gambar: <a href="Shipment_Management_Manual.html">Panduan Shipment</a>.</span></p>
+
+<h3 id="b7">B7. Daily Alert Email / Amaran Harian</h3>
 <p>Every working day in the afternoon, the system emails a list of drivers who have <strong>not</strong> submitted fuel, plus any POD shortfalls. KTN's alert goes to <strong>Wayne</strong>; MTK's to the existing recipient. Follow up with those drivers.<br>
 <span class="bm">Setiap hari bekerja pada sebelah petang, sistem menghantar e-mel senarai pemandu yang belum hantar minyak, serta kekurangan POD. Amaran KTN ke Wayne; MTK ke penerima sedia ada. Susuli pemandu tersebut.</span></p>
 
 <hr>
-<p style="font-size:13px;color:#777;">CLF Trading Sdn. Bhd. · Transport Control Tower — User Manual (Driver &amp; Supervisor) · English / Bahasa Melayu.<br>
+<p style="font-size:13px;color:#777;">CLF Trading Sdn. Bhd. · Transport Control Tower — User Manual (Driver &amp; Supervisor) · English / Bahasa Melayu. Section B updated 26 Nov 2026.<br>
 Detailed per-form guides also available: Fuel, POD, Leave, Shipment. / Panduan terperinci setiap borang juga tersedia.</p>
 
 </body>

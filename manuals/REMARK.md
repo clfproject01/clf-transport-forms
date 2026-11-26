@@ -23,4 +23,11 @@ per language, `Fuel_Driver_Manual_BM.html` (drivers' default) and `Fuel_Driver_M
 `img/fuel/` (sample data only; made from the real form by `fuel-redesign/manual_shots.mjs`). The old address
 `Fuel_Driver_Manual.html` is kept as a language chooser. `CLF_Transport_User_Manual.html` A2 / A3 describe the new form.
 
-_First recorded 2026-06-24 (pending) · Published + PDF retired 2026-07-20 · POD manual BM/EN 2026-10-24 · Fuel manual BM/EN 2026-10-24_
+**2026-11-26 — Office and store manuals refreshed after the Nov restyle:** `Pallet_Manual_EN.html`, `Pallet_Manual_BM.html`,
+`Shipment_Management_Manual.html`, `CLF_Transport_User_Manual.html` (supervisor part B) and `Leave_Management_Manual.html` now describe the
+pages as they are live (sign-in, EN / BM switch, Pallet history and quantity edit, fleet Dashboard, POD Admin Save to NAS, Staff Admin leave,
+Combination Invoice without QR). First screenshots added in `img/pallet/`, `img/shipment/`, `img/office/` (fictional sample data only; the
+company logo is hidden in the pictures because it carries Chinese characters). The "Set POD Plan" section was removed: no page has it.
+The Malay text has not yet been proofread by a native speaker.
+
+_First recorded 2026-06-24 (pending) · Published + PDF retired 2026-07-20 · POD manual BM/EN 2026-10-24 · Fuel manual BM/EN 2026-10-24 · Office / store manuals refreshed 2026-11-26_
