@@ -155,6 +155,48 @@
   @media (max-width:560px){ .legend{grid-template-columns:minmax(0,1fr);} }
   .filters{margin:4px 0 12px;}
 
+  /* ---- pallet history (ledger by month) + edit dialog ---- */
+  #histWrap{overflow-x:auto;border-radius:12px;}
+  .hbar{display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap;margin-bottom:12px;}
+  .hbar .grow{flex:1 1 auto;}
+  .hnav{display:inline-flex;align-items:center;gap:6px;max-width:100%;}
+  .ibtn{flex:none;display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;padding:0;border-radius:999px;border:1.5px solid var(--ctl);background:var(--surface);color:var(--navy);font-size:18px;font-weight:800;line-height:1;}
+  .ibtn:hover{background:var(--navy-tint);}
+  .ibtn:disabled{opacity:.4;}
+  .sel{height:38px;min-width:0;max-width:100%;padding:0 12px;border-radius:999px;border:1.5px solid var(--ctl);background:var(--surface);color:var(--navy);font:inherit;font-size:13px;font-weight:800;}
+  .chk{display:inline-flex;align-items:center;gap:6px;min-height:38px;font-size:13px;font-weight:700;color:var(--navy);cursor:pointer;}
+  .chk input{width:18px;height:18px;margin:0;accent-color:var(--navy);}
+  .hcount{font-size:13px;font-weight:700;color:var(--muted);white-space:nowrap;}
+  .ebtn{height:30px;padding:0 14px;border-radius:999px;border:1.5px solid var(--ctl);background:var(--surface);color:var(--navy);font-size:12px;font-weight:800;white-space:nowrap;}
+  .ebtn:hover{background:var(--navy-tint);}
+  .was{margin-right:6px;color:var(--muted);font-weight:500;text-decoration:line-through;}
+  .edby{font-weight:700;color:var(--warn);}
+  .hnote{margin-top:10px;font-size:13px;font-weight:600;color:var(--muted);}
+  .hnote:empty{display:none;}
+  .toast{display:none;margin-bottom:12px;padding:10px 14px;border-radius:14px;background:var(--ok-tint);color:var(--ok);font-size:13px;font-weight:700;}
+  .toast.show{display:block;}
+  .modal{position:fixed;inset:0;z-index:9000;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(26,27,46,.55);}
+  .modal.show{display:flex;}
+  .modal__card{width:100%;max-width:400px;max-height:100%;overflow:auto;padding:22px;border-radius:20px;background:var(--surface);box-shadow:0 20px 60px rgba(0,0,0,.35);}
+  .modal__title{font-size:17px;font-weight:800;line-height:1.3;margin-bottom:4px;}
+  .modal__sum{font-size:13px;color:var(--muted);margin-bottom:14px;}
+  .modal__sum b{color:var(--text);}
+  .modal label{display:block;font-size:13px;font-weight:700;}
+  .modal input{display:block;width:100%;margin:4px 0 12px;padding:11px 14px;font-size:16px;border:1.5px solid var(--ctl);border-radius:14px;background:#fff;}
+  .modal__err{min-height:18px;font-size:13px;font-weight:700;color:var(--fault);}
+  .modal__row{display:flex;gap:10px;margin-top:10px;}
+  .modal__row button{flex:1 1 0;min-height:48px;padding:6px 12px;border-radius:999px;font-size:15px;font-weight:800;}
+  .modal__cancel{border:1.5px solid var(--ctl);background:var(--surface);color:var(--navy);}
+  .modal__save{border:0;background:var(--navy);color:#fff;}
+  .modal__save:hover{background:var(--navy-2);}
+  .modal__save:disabled,.modal__cancel:disabled{opacity:.6;}
+  @media (max-width:720px){
+    .ibtn{width:44px;height:44px;}
+    .sel{height:44px;}
+    .chk{min-height:44px;}
+    .ebtn{height:44px;padding:0 16px;font-size:13px;}
+  }
+
   /* ---- sign-in overlay (built in JS; logic untouched) ---- */
   .lock{position:fixed;inset:0;z-index:9999;background:rgba(20,28,119,.96);display:flex;align-items:center;justify-content:center;padding:20px;}
   .lock__card{width:100%;max-width:360px;padding:26px 22px 22px;border-radius:20px;background:var(--surface);box-shadow:0 20px 60px rgba(0,0,0,.35);}
@@ -370,6 +412,53 @@
     </div>
   </div>
 
+  <!-- ===================== PALLET HISTORY (the ledger, one month at a time) ===================== -->
+  <h2 class="sec"><span class="sec__ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></span><span data-en="Pallet history" data-bm="Rekod pallet">Pallet history</span> <span class="sub" data-en="By month" data-bm="Ikut bulan">By month</span></h2>
+
+  <div class="grid">
+    <div class="card c12">
+      <div class="toast" id="histToast" role="status"></div>
+      <div class="hbar">
+        <span class="hnav">
+          <button type="button" class="ibtn" id="hPrev" aria-label="Previous month" data-en-aria="Previous month" data-bm-aria="Bulan sebelum">‹</button>
+          <select class="sel" id="hMonth" aria-label="Month" data-en-aria="Month" data-bm-aria="Bulan"></select>
+          <button type="button" class="ibtn" id="hNext" aria-label="Next month" data-en-aria="Next month" data-bm-aria="Bulan berikut">›</button>
+        </span>
+        <select class="sel" id="hAction" aria-label="Action" data-en-aria="Action" data-bm-aria="Tindakan"></select>
+        <label class="chk"><input type="checkbox" id="hEdited"><span data-en="Edited only" data-bm="Yang diubah sahaja">Edited only</span></label>
+        <span class="grow"></span>
+        <span class="hcount" id="hCount"></span>
+      </div>
+      <div id="histWrap"></div>
+      <div class="hnote" id="histNote"></div>
+      <button type="button" class="help-btn" aria-expanded="false" aria-controls="helpHist"><span class="help-caret" aria-hidden="true">▸</span><span data-en="How to use" data-bm="Cara guna">How to use</span></button>
+      <div class="help" id="helpHist" hidden>
+        <p data-en="Every pallet entry of the month, newest first. EXT = outside CLF." data-bm="Semua rekod pallet bulan ini, terbaru di atas. EXT = luar CLF.">Every pallet entry of the month, newest first. EXT = outside CLF.</p>
+        <p data-en="Edit changes the quantity of one entry. It needs the manager PIN and a reason. Stock numbers follow at once." data-bm="Ubah menukar kuantiti satu rekod. Perlu PIN pengurus dan sebab. Angka stok ikut berubah serta-merta.">Edit changes the quantity of one entry. It needs the manager PIN and a reason. Stock numbers follow at once.</p>
+        <p data-en="Each change is kept: old quantity, who, when, why." data-bm="Setiap perubahan disimpan: kuantiti asal, siapa, bila, kenapa.">Each change is kept: old quantity, who, when, why.</p>
+        <p data-en="No Edit button: REVERSE and ACCEPT entries, cancelled entries, and a loading the driver already corrected." data-bm="Tiada butang Ubah: rekod REVERSE dan ACCEPT, rekod yang dibatalkan, dan muatan yang pemandu sudah betulkan.">No Edit button: REVERSE and ACCEPT entries, cancelled entries, and a loading the driver already corrected.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="editModal" role="dialog" aria-modal="true" aria-labelledby="emTitle">
+    <div class="modal__card">
+      <div class="modal__title" id="emTitle" data-en="Edit quantity" data-bm="Ubah kuantiti">Edit quantity</div>
+      <div class="modal__sum" id="emSum"></div>
+      <label for="emQty" data-en="New quantity" data-bm="Kuantiti baru">New quantity</label>
+      <input id="emQty" type="text" inputmode="numeric" autocomplete="off" maxlength="7">
+      <label for="emReason" data-en="Reason" data-bm="Sebab">Reason</label>
+      <input id="emReason" type="text" autocomplete="off" maxlength="200">
+      <label for="emPin" data-en="Manager PIN" data-bm="PIN pengurus">Manager PIN</label>
+      <input id="emPin" type="password" inputmode="numeric" autocomplete="off">
+      <div class="modal__err" id="emErr" role="alert"></div>
+      <div class="modal__row">
+        <button type="button" class="modal__cancel" id="emCancel" data-en="Cancel" data-bm="Batal">Cancel</button>
+        <button type="button" class="modal__save" id="emSave" data-en="Save" data-bm="Simpan">Save</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===================== 6. MANAGER ACTIONS (collapsed) ===================== -->
   <h2 class="sec"><span class="sec__ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M13 5h8"/><path d="M13 12h8"/><path d="M13 19h8"/><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/></svg></span><span data-en="Manager actions" data-bm="Rekod pelarasan">Manager actions</span> <span class="sub" data-en="Who, when, why" data-bm="Siapa, bila, kenapa">Who, when, why</span></h2>
 
@@ -388,7 +477,7 @@
         <button type="button" class="help-btn" aria-expanded="false" aria-controls="helpAudit"><span class="help-caret" aria-hidden="true">▸</span><span data-en="What do these numbers mean?" data-bm="Apa maksud nombor ini?">What do these numbers mean?</span></button>
         <div class="help" id="helpAudit" hidden>
           <p data-en="Only actions from 25 Nov 2026 are listed." data-bm="Hanya rekod mulai 25 Nov 2026 disenaraikan.">Only actions from 25 Nov 2026 are listed.</p>
-          <p data-en="Entries confirmed with a PIN are listed first and marked PIN. Nothing in this list is ever changed or deleted." data-bm="Rekod yang disahkan dengan PIN berada di atas sekali dan bertanda PIN. Rekod tidak boleh diubah atau dipadam.">Entries confirmed with a PIN are listed first and marked PIN. Nothing in this list is ever changed or deleted.</p>
+          <p data-en="Entries confirmed with a PIN are listed first and marked PIN. A quantity is changed only in Pallet history, and each change is recorded." data-bm="Rekod yang disahkan dengan PIN berada di atas sekali dan bertanda PIN. Kuantiti hanya diubah di Rekod pallet, dan setiap perubahan direkodkan.">Entries confirmed with a PIN are listed first and marked PIN. A quantity is changed only in Pallet history, and each change is recorded.</p>
           <p data-en="ADJUST = manual correction. REVERSE = cancels an earlier entry. OPENING = starting stock. RECONCILE = change made after a stock count." data-bm="ADJUST = pelarasan manual. REVERSE = batalkan rekod. OPENING = baki pembukaan. RECONCILE = pembetulan selepas kira stok.">ADJUST = manual correction. REVERSE = cancels an earlier entry. OPENING = starting stock. RECONCILE = change made after a stock count.</p>
         </div>
       </div>
@@ -495,6 +584,7 @@
     hideErr();
     setTxt($('dashMeta'),'Loading…','Memuatkan…');
     var seq = ++LOAD_SEQ;
+    loadHistory();
     Promise.all([
       api('getPalletDashboard').catch(function(){return null;}),
       api('getPalletBalances').catch(function(){return null;}),
@@ -573,6 +663,7 @@
     renderOutstanding(LAST_OUT);
     renderPerPallet();
     renderAudit();
+    renderHistory();
   }
 
   function renderTop(dash, bal){
@@ -784,6 +875,235 @@
     wrap.innerHTML = html + '</tbody></table>';
   }
 
+  // ---------- Pallet history: the ledger, one month at a time (owner's request 2026-11-26) ----------
+  // Read: getPalletLedger with from / to (one month, newest first). Works with the older backend too; the Edit
+  // buttons appear only when the reply says editSupported.
+  // Edit: POST formType PALLET_ADJUST + editEntryId (manager PIN in the body, never in a URL). The backend changes
+  // the Qty of that one entry and keeps the old quantity, who and when in the sheet Pallet_Edits.
+  var HIST = null;            // last ledger reply (null = not loaded)
+  var HIST_FOR = '';          // month that HIST belongs to
+  var HIST_MONTH = '';        // month on screen, 'YYYY-MM'
+  var HIST_SEQ = 0;
+  var HIST_LOADING = false;
+  var HIST_ACTION = '';
+  var HIST_EDITED = false;
+  var HIST_BACK = 35;         // how many months back the picker goes
+  var MONTHS_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var MONTHS_BM = ['Jan','Feb','Mac','Apr','Mei','Jun','Jul','Ogo','Sep','Okt','Nov','Dis'];
+  function pad2(n){ return ('0'+n).slice(-2); }
+  function thisMonth(){ var d = new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1); }
+  function monthAdd(m, k){
+    var y = Number(m.slice(0,4)), mo = Number(m.slice(5,7)) - 1 + k;
+    y += Math.floor(mo/12); mo = ((mo % 12) + 12) % 12;
+    return y+'-'+pad2(mo+1);
+  }
+  function monthName(m){ return L(MONTHS_EN, MONTHS_BM)[Number(m.slice(5,7))-1]+' '+m.slice(0,4); }
+  function fmtDateTime(v){
+    var d = new Date(String(v||''));
+    if(isNaN(d.getTime())) return String(v||'');
+    return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())+' '+pad2(d.getHours())+':'+pad2(d.getMinutes());
+  }
+  function fillMonths(){
+    var sel = $('hMonth'), now = thisMonth(), html = '', i, m;
+    for(i=0;i<=HIST_BACK;i++){ m = monthAdd(now, -i); html += '<option value="'+m+'">'+esc(monthName(m))+'</option>'; }
+    sel.innerHTML = html;
+    sel.value = HIST_MONTH;
+    $('hNext').disabled = (HIST_MONTH >= now);
+    $('hPrev').disabled = (HIST_MONTH <= monthAdd(now, -HIST_BACK));
+  }
+  function fillActions(all){
+    var seen = {}, list = [], sel = $('hAction');
+    all.forEach(function(r){ var a = String(r.action||'').toUpperCase(); if(a && !seen[a]){ seen[a] = true; list.push(a); } });
+    list.sort();
+    if(HIST_ACTION && !seen[HIST_ACTION]) HIST_ACTION = '';
+    sel.innerHTML = '<option value="">'+L('All actions','Semua tindakan')+'</option>'
+      + list.map(function(a){ return '<option value="'+esc(a)+'">'+esc(a)+'</option>'; }).join('');
+    sel.value = HIST_ACTION;
+  }
+  function setMonth(m){
+    var now = thisMonth(), first = monthAdd(now, -HIST_BACK);
+    if(m > now) m = now;
+    if(m < first) m = first;
+    if(m === HIST_MONTH) return;
+    HIST_MONTH = m;
+    loadHistory();
+  }
+  function loadHistory(){
+    if(!HIST_MONTH) HIST_MONTH = thisMonth();
+    if(!_rgAuth()) return;
+    var seq = ++HIST_SEQ, m = HIST_MONTH;
+    HIST_LOADING = true;
+    renderHistory();
+    api('getPalletLedger','from='+m+'-01&to='+m+'-31&limit=2000').catch(function(){ return null; }).then(function(r){
+      if(seq !== HIST_SEQ) return;
+      HIST_LOADING = false;
+      HIST = ok(r); HIST_FOR = m;
+      renderHistory();
+    });
+  }
+  function histFind(id){
+    var all = (HIST && HIST.ledger) ? HIST.ledger : [], i;
+    for(i=0;i<all.length;i++){ if(String(all[i].entryId) === String(id)) return all[i]; }
+    return null;
+  }
+  function palletLabel(r){
+    var s = [r.principal, r.type, r.colour].filter(function(x){ return x!=null && String(x)!==''; }).join(' ');
+    return s || String(r.palletKey||'');
+  }
+  function renderHistory(){
+    var wrap = $('histWrap'); if(!wrap) return;
+    if(!HIST_MONTH) HIST_MONTH = thisMonth();
+    var note = $('histNote'), cnt = $('hCount');
+    fillMonths();
+    if(HIST_FOR !== HIST_MONTH || !HIST){
+      wrap.innerHTML = HIST_LOADING ? '<div class="empty">'+L('Loading…','Memuatkan…')+'</div>' : notLoaded();
+      cnt.textContent = ''; note.textContent = '';
+      fillActions([]);
+      return;
+    }
+    var all = HIST.ledger || [];
+    fillActions(all);
+    var canEdit = (HIST.editSupported === true);
+    var rows = all.filter(function(r){
+      if(HIST_ACTION && String(r.action||'').toUpperCase() !== HIST_ACTION) return false;
+      if(HIST_EDITED && !r.edited) return false;
+      return true;
+    });
+    cnt.textContent = fmtInt(rows.length)+' '+L(rows.length===1 ? 'entry' : 'entries','rekod');
+    var notes = [];
+    if(HIST.more) notes.push(L('Only the newest 2,000 entries of this month are shown.','Hanya 2,000 rekod terbaru bulan ini ditunjukkan.'));
+    if(!canEdit) notes.push(L('Editing is not switched on yet.','Fungsi ubah belum dihidupkan.'));
+    note.textContent = notes.join(' ');
+    if(!rows.length){
+      wrap.innerHTML = '<div class="empty">'+(all.length ? L('No entries match.','Tiada rekod yang sepadan.') : L('No entries in '+esc(monthName(HIST_MONTH))+'.','Tiada rekod pada '+esc(monthName(HIST_MONTH))+'.'))+'</div>';
+      return;
+    }
+    var html = '<table class="act"><thead><tr><th>'+L('Date','Tarikh')+'</th><th>'+L('Action','Tindakan')+'</th><th>Pallet</th><th>'+L('From → To','Dari → Ke')+'</th><th class="rm">'+L('Qty','Kuantiti')+'</th><th>'+L('Lorry · Customer','Lori · Pelanggan')+'</th><th>'+L('By','Oleh')+'</th><th>'+L('Edited','Diubah')+'</th><th></th></tr></thead><tbody>';
+    rows.forEach(function(r){
+      var move = (r.fromState||r.toState) ? (esc(r.fromState ? stateName(r.fromState) : '—')+' → '+esc(r.toState ? stateName(r.toState) : '—')) : '—';
+      var where = [r.lorryNo, r.customerName || r.custCode].filter(function(x){ return x!=null && String(x)!==''; }).map(esc).join(' · ') || '—';
+      var who = r.operator || r.driverName || '—';
+      var qty = (r.edited ? '<span class="was">'+fmtInt(r.origQty)+'</span>' : '')+'<b>'+fmtInt(r.qty)+'</b>';
+      var ed = r.edited
+        ? '<span class="edby">'+esc(r.editedBy||'—')+'</span><div class="psub">'+esc(fmtDateTime(r.editedAt))+(r.editReason ? ' · '+esc(r.editReason) : '')+'</div>'
+        : '<span class="psub">—</span>';
+      var btn = (canEdit && r.editable) ? '<button type="button" class="ebtn" data-edit="'+esc(r.entryId)+'">'+L('Edit','Ubah')+'</button>' : '';
+      html += '<tr>'
+        + '<td style="white-space:nowrap;">'+esc(fmtDate(r.entryDate))+'</td>'
+        + '<td><b>'+esc(String(r.action||'').toUpperCase())+'</b></td>'
+        + '<td class="pkey">'+esc(palletLabel(r))+'</td>'
+        + '<td style="white-space:nowrap;">'+move+'</td>'
+        + '<td class="rm">'+qty+'</td>'
+        + '<td>'+where+'</td>'
+        + '<td>'+esc(who)+'</td>'
+        + '<td>'+ed+'</td>'
+        + '<td class="rm">'+btn+'</td></tr>';
+    });
+    wrap.innerHTML = html + '</tbody></table>';
+  }
+
+  // ---------- edit the quantity of one entry ----------
+  var EDIT_ID = '';
+  var EDIT_BUSY = false;
+  var EDIT_TOKENS = {};       // same request sent again carries the same token, so it cannot be applied twice
+  function emErr(en, bm){ if(en) setTxt($('emErr'), en, bm); else clearTxt($('emErr')); }
+  function hideToast(){ var t = $('histToast'); clearTxt(t); t.classList.remove('show'); }
+  function openEdit(id){
+    var r = histFind(id); if(!r) return;
+    EDIT_ID = String(r.entryId);
+    hideToast();
+    $('emSum').innerHTML = esc(fmtDate(r.entryDate))+' · <b>'+esc(String(r.action||'').toUpperCase())+'</b> · '+esc(palletLabel(r))
+      + '<br>'+L('Now','Sekarang')+': <b>'+fmtInt(r.qty)+'</b>';
+    $('emQty').value = ''; $('emReason').value = ''; $('emPin').value = '';
+    emErr('');
+    $('editModal').classList.add('show');
+    try{ $('emQty').focus(); }catch(e){}
+  }
+  function closeEdit(){
+    if(EDIT_BUSY) return;
+    $('emPin').value = '';
+    $('editModal').classList.remove('show');
+    EDIT_ID = '';
+  }
+  function setEditBusy(v){
+    EDIT_BUSY = v;
+    $('emSave').disabled = v; $('emCancel').disabled = v;
+    if(v) setTxt($('emSave'),'Saving…','Menyimpan…'); else setTxt($('emSave'),'Save','Simpan');
+  }
+  async function saveEdit(){
+    if(EDIT_BUSY) return;
+    var r = histFind(EDIT_ID); if(!r){ closeEdit(); return; }
+    var q = String($('emQty').value||'').trim(), reason = String($('emReason').value||'').trim(), pin = String($('emPin').value||'').trim();
+    if(!/^[0-9]{1,7}$/.test(q)){ emErr('Enter a whole number, 0 or more.','Masukkan nombor bulat, 0 atau lebih.'); return; }
+    if(Number(q) === intOr0(r.qty)){ emErr('Same as now. Nothing to change.','Sama seperti sekarang. Tiada perubahan.'); return; }
+    if(!reason){ emErr('Enter a reason.','Masukkan sebab.'); return; }
+    if(!pin){ emErr('Enter the manager PIN.','Masukkan PIN pengurus.'); return; }
+    var a = _rgAuth();
+    if(!a || !a.token){ closeEdit(); _rgShowLock(); return; }
+    var sig = EDIT_ID+'|'+q+'|'+reason;
+    var tok = EDIT_TOKENS[sig] || (EDIT_TOKENS[sig] = 'edq_'+Date.now()+'_'+Math.random().toString(36).slice(2,10));
+    emErr('');
+    setEditBusy(true);
+    var rd = null;
+    try{
+      var fd = new FormData();
+      fd.append('data', JSON.stringify({ formType:'PALLET_ADJUST', editEntryId:EDIT_ID, newQty:q, reason:reason, pin:pin, authToken:a.token, clientToken:tok }));
+      await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body:fd });
+      for(var t=0; t<30; t++){
+        await new Promise(function(res){ setTimeout(res, 1300); });
+        try{
+          var rb = await fetch(SCRIPT_URL + '?action=getImportResult&token=' + encodeURIComponent(tok));
+          var j = await rb.json();
+          if(j && j.status && j.status !== 'pending'){ rd = j; break; }
+        }catch(e){}
+      }
+    }catch(e){}
+    setEditBusy(false);
+    $('emPin').value = '';
+    if(rd && rd.status === 'success'){
+      delete EDIT_TOKENS[sig];
+      var was = fmtInt(rd.oldQty), now = fmtInt(rd.newQty);
+      closeEdit();
+      var toast = $('histToast');
+      setTxt(toast, 'Saved: quantity '+was+' → '+now+'.', 'Disimpan: kuantiti '+was+' → '+now+'.');
+      toast.classList.add('show');
+      load();
+      return;
+    }
+    if(!rd){ emErr('No answer from the server, so it may not be saved. Enter the PIN and press Save again to check: it will not be saved twice.','Tiada jawapan daripada sistem, jadi mungkin belum disimpan. Masukkan PIN dan tekan Simpan sekali lagi untuk semak: ia tidak akan disimpan dua kali.'); return; }
+    var msg = String(rd.message||'');
+    if(rd.code === 'AUTH') emErr('Your sign-in has ended. Nothing was changed. Refresh the page and sign in again.','Sesi log masuk tamat. Tiada perubahan dibuat. Muat semula halaman dan log masuk semula.');
+    else if(rd.code === 'NEGATIVE') emErr('Not saved: stock for this pallet would go below zero ('+stateNameIn('en', rd.state)+' '+fmtInt(rd.wouldBe)+'). Another entry for this pallet is probably wrong too. Correct that one first.','Tidak disimpan: stok pallet ini akan jadi bawah sifar ('+stateNameIn('bm', rd.state)+' '+fmtInt(rd.wouldBe)+'). Mungkin ada rekod lain untuk pallet ini yang juga salah. Betulkan rekod itu dahulu.');
+    else if(rd.needsPin && msg.indexOf('Wrong') === 0) emErr('Wrong manager PIN. Nothing was changed.','PIN pengurus salah. Tiada perubahan dibuat.');
+    else if(msg.indexOf('operator is required') >= 0 || msg.indexOf('Unknown palletKey') >= 0) emErr('Editing is not switched on yet. Nothing was changed.','Fungsi ubah belum dihidupkan. Tiada perubahan dibuat.');
+    else if(msg){ clearTxt($('emErr')); $('emErr').textContent = msg; }
+    else emErr('Not saved. Try again.','Tidak disimpan. Cuba lagi.');
+  }
+  function stateNameIn(lang, s){
+    var u = String(s==null?'':s).toUpperCase(), bm = (lang === 'bm');
+    if(u==='DALAM') return bm ? 'Dalam' : 'Inside';
+    if(u==='LUAR')  return bm ? 'Luar' : 'Out';
+    if(u==='ROSAK') return bm ? 'Rosak' : 'Damaged';
+    return String(s==null?'':s);
+  }
+  function initHistory(){
+    $('hPrev').addEventListener('click', function(){ setMonth(monthAdd(HIST_MONTH || thisMonth(), -1)); });
+    $('hNext').addEventListener('click', function(){ setMonth(monthAdd(HIST_MONTH || thisMonth(), 1)); });
+    $('hMonth').addEventListener('change', function(){ setMonth(String(this.value||'')); });
+    $('hAction').addEventListener('change', function(){ HIST_ACTION = String(this.value||''); renderHistory(); });
+    $('hEdited').addEventListener('change', function(){ HIST_EDITED = !!this.checked; renderHistory(); });
+    $('histWrap').addEventListener('click', function(e){
+      var b = (e.target && e.target.closest) ? e.target.closest('[data-edit]') : null;
+      if(b) openEdit(b.getAttribute('data-edit'));
+    });
+    $('emCancel').addEventListener('click', closeEdit);
+    $('emSave').addEventListener('click', saveEdit);
+    $('editModal').addEventListener('click', function(e){ if(e.target === this) closeEdit(); });
+    ['emQty','emReason','emPin'].forEach(function(id){ $(id).addEventListener('keydown', function(e){ if(e.key === 'Enter') saveEdit(); }); });
+    document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && $('editModal').classList.contains('show')) closeEdit(); });
+    renderHistory();
+  }
+
   // ---------- helpers ----------
   function fmtDate(v){
     if(v==null||v==='') return '—';
@@ -829,6 +1149,8 @@
       this.setAttribute('aria-expanded', open?'true':'false');
       if(open) setTxt($('auditLabel'),'Hide list','Tutup senarai'); else setTxt($('auditLabel'),'Show list','Buka senarai');
     });
+
+    initHistory();
 
     // help blocks: one per section, closed at start
     Array.prototype.forEach.call(document.querySelectorAll('.help-btn'), function(btn){
