@@ -250,7 +250,7 @@
       </div>
       <div>
         <label for="addSid">Staff ID</label>
-        <input id="addSid" autocomplete="off" placeholder="e.g. TER 563">
+        <input id="addSid" autocomplete="off" placeholder="e.g. TER 000">
       </div>
       <div>
         <label for="addBranch">Branch</label>
@@ -260,7 +260,7 @@
     </div>
     <button type="button" class="help-btn" aria-expanded="false" aria-controls="helpDrivers"><span class="help-caret" aria-hidden="true">&#9656;</span>How to use</button>
     <div class="help" id="helpDrivers" hidden>
-      <p><b>Add driver</b> writes the new joiner to the Drivers sheet and to Master_Control. No spreadsheet work is needed. Staff ID looks like TER 563 or KTN 701.</p>
+      <p><b>Add driver</b> writes the new joiner to the Drivers sheet and to Master_Control. No spreadsheet work is needed. Staff ID looks like TER 000 or KTN 000.</p>
       <p><b>Resign</b> removes the driver from the forms, the dashboard and the KPI at once. History is kept.</p>
       <p><b>Rejoin</b> brings a resigned driver back. <b>Re-add</b> shows instead when the driver has no staff ID row: it fills the name above, then enter the staff ID and branch and press Add driver.</p>
       <p><b>No ID row</b>: the driver is in Master_Control but missing from the Drivers sheet. <b>Not in Master_Control</b>: the forms will not show this driver.</p>
@@ -447,7 +447,7 @@ async function addDriver(){
   var branch=$('addBranch').value;
   if(!name){ toast('err','Enter the driver’s full name'); return; }
   if(!/^[A-Z][A-Z .@'\/-]{2,59}$/.test(name)){ toast('err','Name: A-Z letters and spaces only, 3-60 chars'); return; }
-  if(sid && !/^[A-Z]{2,4} ?\d{3,4}$/.test(sid)){ toast('err','Staff ID looks wrong — expected like TER 563 or KTN 701'); return; }
+  if(sid && !/^[A-Z]{2,4} ?\d{3,4}$/.test(sid)){ toast('err','Staff ID looks wrong — expected like TER 000 or KTN 000'); return; }
   if(!confirm('Add new driver?\n\n'+name+'\n'+(sid||'(no staff ID)')+' · '+branch)) return;
   _busy=true; var btn=$('addBtn'); btn.disabled=true; btn.textContent='Adding…';
   var tok=_newToken('add');
